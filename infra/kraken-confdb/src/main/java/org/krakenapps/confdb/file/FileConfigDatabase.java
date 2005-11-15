@@ -173,6 +173,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 		// release thread lock
 		threadLock.unlock();
+
 	}
 
 	@Override
@@ -294,7 +295,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 		try {
 			// prevent duplicated collection name caused by race condition
-			CollectionEntry col = getManifest(changeset, true).getCollectionEntry(name);
+			CollectionEntry col = xact.getManifest().getCollectionEntry(name);
+
 			if (col != null) {
 				logger.trace("kraken confdb: duplicated collection name [{}]", name);
 				xact.rollback();
@@ -555,25 +557,25 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigIterator findAll(Class<?> cls) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
 		if (collection == null)
-			return null;
+			return new EmptyIterator();
 
 		return collection.findAll();
 	}
 
 	@Override
 	public ConfigIterator find(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
 		if (collection == null)
-			return null;
+			return new EmptyIterator();
 
 		return collection.find(pred);
 	}
 
 	@Override
 	public Config findOne(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
 		if (collection == null)
 			return null;
 

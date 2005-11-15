@@ -20,10 +20,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
@@ -31,7 +29,6 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.ConfigIterator;
-import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.Predicate;
@@ -321,45 +318,6 @@ public class FileConfigCollection implements ConfigCollection {
 			fxact.getWriters().put(logFile, writer);
 		}
 		return writer;
-	}
-
-	private static class EmptyIterator implements ConfigIterator {
-		@Override
-		public boolean hasNext() {
-			return false;
-		}
-
-		@Override
-		public Config next() {
-			return null;
-		}
-
-		@Override
-		public void remove() {
-		}
-
-		@Override
-		public void setParser(ConfigParser parser) {
-		}
-
-		@Override
-		public Collection<Object> getDocuments() {
-			return new ArrayList<Object>();
-		}
-
-		@Override
-		public <T> Collection<T> getDocuments(Class<T> cls) {
-			return new ArrayList<T>();
-		}
-
-		@Override
-		public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback) {
-			return new ArrayList<T>();
-		}
-
-		@Override
-		public void close() {
-		}
 	}
 
 	@Override
