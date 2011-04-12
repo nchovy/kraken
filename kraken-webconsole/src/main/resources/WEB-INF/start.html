@@ -1,0 +1,68 @@
+<div id="start">
+    <div id="taskbar" style="background-color: #fff; z-index: 60000; position: absolute; width: 100%; border-bottom: 1px solid #aaa">
+        <ol id="tasks" style="margin-left: 200px">
+        </ol>
+    </div>
+    <span id="startButton" style="position: absolute; z-index: 60001; top: 5px; left: 20px;"></span>
+    <ol id="menu" style="display: none"></ol>
+</div>
+<div id="workspace"></div>
+
+<script type="text/javascript">
+	
+(function () {
+    programManager.startMenu = new Ext.menu.Menu({
+        style: {
+            overflow: 'visible'
+        },
+        items: [],
+        style: {
+            "z-index": "60008"
+        }
+    });
+	
+	function renderButtons() {
+		var btn = new Ext.Button({
+			menu: programManager.startMenu,
+			width: '140px',
+            height: '34px',
+            text: '<div id="startButtonLabel">&nbsp;Start</div>',
+            iconCls: 'ico-startbtn',
+            scale: 'small',
+			listeners: {
+				menushow: StartPage.initStartMenu
+			}
+		});
+		
+		btn.render('startButton');
+	}
+
+    renderButtons();
+	
+	programManager.taskbar = new Ext.Toolbar({
+		renderTo: Ext.get('tasks'),
+		style: {
+			'background': 'none',
+			'border': 'none'
+		},
+		items: ['-']
+	});
+	
+	$("#start").height($("#taskbar").height());
+	
+	function resizeEvent() {
+		$("#workspace").height($(window).height() - $("#taskbar").height() - Window.topSpace);
+		$.each($('.x-window-maximized'), function(idx, win) {
+			var pid = win.id.split('_')[1]
+			var targetwin = windowManager.getWindowByPid(pid).restore();
+			targetwin.maximize();
+		});
+	}
+
+	$(window).resize(resizeEvent);
+	resizeEvent();
+
+})();
+
+</script>
+

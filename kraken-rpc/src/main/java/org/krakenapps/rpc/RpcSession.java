@@ -1,0 +1,28 @@
+package org.krakenapps.rpc;
+
+
+public interface RpcSession {
+	RpcSessionState getState();
+
+	int getId();
+
+	RpcConnection getConnection();
+
+	String getServiceName();
+
+	Object getProperty(String name);
+
+	void setProperty(String name, Object value);
+
+	Object call(String method, Object[] params) throws RpcException, InterruptedException;
+
+	Object call(String method, Object[] params, long timeout) throws RpcException, InterruptedException;
+
+	void post(String method, Object[] params);
+
+	void close();
+
+	void addListener(RpcSessionEventCallback callback);
+
+	void removeListener(RpcSessionEventCallback callback);
+}

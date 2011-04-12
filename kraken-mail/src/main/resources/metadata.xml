@@ -1,0 +1,10 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="mailer-registry" />
+	<instance component="mailer-script-factory" />
+	<instance component="postbox-api" />
+	<instance component="postbox-script-factory" />
+
+	<instance component="mailer-plugin" />
+</ipojo>

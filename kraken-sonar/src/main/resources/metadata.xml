@@ -1,0 +1,15 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="sonar-plugin" />
+	<instance component="sonar-api" />	
+	<instance component="sonar-script-factory" />
+	<instance component="sonar-passive-scanner" />
+	<instance component="sonar-metabase" />
+	<instance component="sonar-arp-detector" />
+	<instance component="sonar-http-app-detector" />
+	<instance component="sonar-http-attack-detector" />
+	<instance component="sonar-tcp-session-monitor" />
+	<instance component="sonar-dhcp-os-detector" />
+	<instance component="sonar-tcp-os-detector" />
+</ipojo>

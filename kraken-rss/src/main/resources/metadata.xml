@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iPOJO>
+	<component className="org.krakenapps.rss.impl.RssReaderImpl"
+		name="rssReader">
+		<provides />
+	</component>
+	<instance component="rssReader" />
+	
+	<component className="org.krakenapps.rss.impl.RssScriptFactory"
+		name="rssScriptFactory" factory="false">
+		<provides>
+			<property name="alias" type="string" value="rss" />
+		</provides>
+	</component>
+	<instance component="rssScriptFactory" />
+</iPOJO>

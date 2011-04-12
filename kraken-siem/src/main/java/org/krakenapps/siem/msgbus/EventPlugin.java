@@ -1,0 +1,109 @@
+/*
+ * Copyright 2011 NCHOVY
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.krakenapps.siem.msgbus;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
+import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.dom.api.PushApi;
+import org.krakenapps.event.api.Event;
+import org.krakenapps.event.api.EventDispatcher;
+import org.krakenapps.event.api.EventPipe;
+import org.krakenapps.msgbus.Request;
+import org.krakenapps.msgbus.Response;
+import org.krakenapps.msgbus.handler.MsgbusMethod;
+import org.krakenapps.msgbus.handler.MsgbusPlugin;
+import org.krakenapps.siem.EventServer;
+
+@Component(name = "siem-event-plugin")
+@MsgbusPlugin
+public class EventPlugin implements EventPipe {
+	@Requires
+	private PushApi pushApi;
+
+	@Requires
+	private EventDispatcher dispatcher;
+
+	@Requires
+	private EventServer evtServer;
+
+	@Validate
+	public void start() {
+		dispatcher.addEventPipe(this);
+	}
+
+	@Invalidate
+	public void stop() {
+		if (dispatcher != null)
+			dispatcher.removeEventPipe(this);
+	}
+
+	@MsgbusMethod
+	public void getEvents(Request req, Response resp) {
+		int offset = req.getInteger("offset");
+		int limit = req.getInteger("limit");
+
+		List<Event> events = evtServer.getEvents(offset, limit);
+		List<Map<String, Object>> marshaledEvents = new ArrayList<Map<String, Object>>();
+
+		for (Event event : events)
+			marshaledEvents.add(marshalEvent(event));
+
+		resp.put("events", marshaledEvents);
+		resp.put("counts", evtServer.getEventsCount());
+	}
+
+	private Map<String, Object> marshalEvent(Event event) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("key_id", event.getKey().getId());
+		m.put("key_source", event.getKey().getSource());
+		m.put("first_seen", dateFormat.format(event.getFirstSeen()));
+		m.put("last_seen", dateFormat.format(event.getLastSeen()));
+		m.put("category", event.getCategory());
+		m.put("severity", event.getSeverity());
+		m.put("host", event.getHostId());
+		m.put("src_ip", event.getSourceIp() != null ? event.getSourceIp().getHostAddress() : null);
+		m.put("src_port", event.getSourcePort());
+		m.put("dst_ip", event.getDestinationIp() != null ? event.getDestinationIp().getHostAddress() : null);
+		m.put("dst_port", event.getDestinationPort());
+		m.put("msg_key", event.getMessageKey());
+		m.put("msg_values", event.getMessageValues());
+		m.put("rule", event.getRule());
+		m.put("cve", event.getCve());
+		m.put("count", event.getCount());
+		return m;
+	}
+
+	@Override
+	public void onEvent(Event event) {
+		Map<String, Object> m = marshalEvent(event);
+		pushApi.push(event.getOrganizationId(), "siem-event", m);
+	}
+
+	@Override
+	public void onEventAcked(Event event) {
+		Map<String, Object> m = marshalEvent(event);
+		pushApi.push(event.getOrganizationId(), "siem-event-ack", m);
+	}
+}

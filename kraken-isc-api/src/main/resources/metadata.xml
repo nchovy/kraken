@@ -1,0 +1,37 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo" xmlns:apikey="org.krakenapps.isc.api.impl">
+
+	<handler classname="org.krakenapps.isc.api.impl.ApiKeyHandler"
+		name="apikey" namespace="org.krakenapps.isc.api.impl">
+		<requires field="config">
+			<callback type="bind" method="setIscClientConfig" />
+		</requires>
+	</handler>
+
+	<component classname="org.krakenapps.isc.api.impl.IscClientService"
+		name="isc-client">
+		<apikey:ApiKey />
+		<provides />
+		<requires field="config" />
+	</component>
+
+	<component classname="org.krakenapps.isc.api.impl.IscClientConfigService"
+		name="isc-client-config">
+		<requires field="prefsvc" />
+		<provides />
+		<callback transition="validate" method="start" />
+	</component>
+
+	<component classname="org.krakenapps.isc.api.impl.IscApiScriptFactory"
+		name="isc-api-script-factory">
+		<provides>
+			<property name="alias" type="string" value="isc" />
+		</provides>
+		<requires field="config" />
+	</component>
+
+	<instance component="isc-client" />
+	<instance component="isc-client-config" />
+	<instance component="isc-api-script-factory" />
+</ipojo>

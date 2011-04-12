@@ -1,0 +1,9 @@
+<archetype>
+	<id>quickstart</id>
+	<sources>
+		<source>src/main/java/sources.txt</source>
+	</sources>
+	<resources>
+		<resource>src/main/resources/metadata.xml</resource>
+	</resources>
+</archetype>

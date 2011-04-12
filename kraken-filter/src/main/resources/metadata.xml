@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iPOJO>
+	<handler classname="org.krakenapps.filter.FilterHandler"
+		name="filter" namespace="org.krakenapps.filter.FilterHandler">
+	</handler>
+	<component className="org.krakenapps.filter.impl.FilterScriptFactory"
+		name="filterScriptFactory" immediate="true" factory="false">
+		<provides>
+			<property name="alias" type="string" value="filter" />
+		</provides>
+	</component>
+	<component className="org.krakenapps.filter.impl.DefaultFilterManager"
+		name="filterManager" immediate="true" factory="false">
+		<provides />
+	</component>
+	<instance component="filterScriptFactory" />
+	<instance component="filterManager" />
+</iPOJO>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iPOJO>
+	<component classname="org.krakenapps.pcap.script.PcapScriptFactory"
+		name="pcap-script-factory" immediate="true">
+		<requires field="streamManager" />
+		<provides>
+			<property name="alias" type="string" value="pcap" />
+		</provides>
+	</component>
+
+	<component classname="org.krakenapps.pcap.live.impl.PcapStreamManagerImpl"
+		name="pcap-stream-manager" immediate="true">
+		<provides />
+
+		<callback transition="validate" method="validate" />
+		<callback transition="invalidate" method="invalidate" />
+	</component>
+
+	<instance component="pcap-script-factory" />
+	<instance component="pcap-stream-manager" />
+</iPOJO>

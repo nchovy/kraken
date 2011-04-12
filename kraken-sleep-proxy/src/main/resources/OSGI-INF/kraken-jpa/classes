@@ -1,0 +1,6 @@
+org.krakenapps.sleepproxy.model.Agent
+org.krakenapps.sleepproxy.model.AgentGroup
+org.krakenapps.sleepproxy.model.NetworkAdapter
+org.krakenapps.sleepproxy.model.SleepLog
+org.krakenapps.sleepproxy.model.PowerLog
+org.krakenapps.sleepproxy.model.SleepPolicy

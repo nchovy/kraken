@@ -1,0 +1,10 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="linux-process-checker" />
+	
+	<instance component="sentry-linux-command-handler" />
+	<instance component="cpu-usage-logger-factory" />
+	<instance component="memory-usage-logger-factory" />
+	<instance component="network-usage-logger-factory" />
+</ipojo>

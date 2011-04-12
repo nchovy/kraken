@@ -1,0 +1,55 @@
+<ipojo xmlns:filter="org.krakenapps.filter.FilterHandler">
+	<component classname="org.krakenapps.arpwatch.impl.ArpWatcherScriptFactory"
+		name="arpwatch-script-factory" immediate="true">
+		<requires field="watcher" />
+		<provides>
+			<property name="alias" type="string" value="arpwatch" />
+		</provides>
+	</component>
+
+	<component classname="org.krakenapps.arpwatch.impl.ArpWatcherImpl"
+		name="arp-watcher" immediate="true">
+		<requires field="streamManager" />
+		<requires field="cache" />
+		<requires field="detector" />
+		<requires field="config" />
+		<provides />
+
+		<callback transition="invalidate" method="stop" />
+	</component>
+
+	<component classname="org.krakenapps.arpwatch.impl.ArpCacheImpl"
+		name="arp-cache" immediate="true">
+		<provides />
+	</component>
+
+	<component classname="org.krakenapps.arpwatch.impl.ArpSpoofDetectorImpl"
+		name="arp-spoof-detector" immediate="true">
+		<provides />
+		<requires field="cache" />
+		<requires field="config" />
+		<callback transition="validate" method="start" />
+		<callback transition="invalidate" method="stop" />
+	</component>
+
+	<component classname="org.krakenapps.arpwatch.impl.ArpStaticBindingConfigImpl"
+		name="arp-staticbinding-config" immediate="true">
+		<provides />
+	</component>
+
+	<component classname="org.krakenapps.arpwatch.impl.ArpEventSource"
+		immediate="true" architecture="true">
+		<provides />
+		<requires field="cache" />
+		<requires field="detector" />
+		<filter:filter />
+		<callback transition="validate" method="validate" />
+		<callback transition="invalidate" method="invalidate" />
+	</component>
+
+	<instance component="arp-cache" />
+	<instance component="arp-spoof-detector" />
+	<instance component="arp-staticbinding-config" />
+	<instance component="arp-watcher" />
+	<instance component="arpwatch-script-factory" />
+</ipojo>

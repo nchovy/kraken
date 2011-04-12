@@ -1,0 +1,9 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="sentry-proxy-registry" />
+	<instance component="base-rpc-service" />
+	<instance component="base-script-factory" />
+	<instance component="sentry-api" />
+	<instance component="sentry-plugin" />
+</ipojo>

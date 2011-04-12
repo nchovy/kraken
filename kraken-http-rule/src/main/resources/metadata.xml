@@ -1,0 +1,7 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="http-rule-engine" />
+	<instance component="http-rule-script-factory" />
+	<instance component="http-rule-plugin" />
+</ipojo>

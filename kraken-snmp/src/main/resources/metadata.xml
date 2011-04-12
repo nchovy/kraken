@@ -1,0 +1,9 @@
+<ipojo xmlns:filter="org.krakenapps.filter.FilterHandler">
+	<component className="org.krakenapps.snmp.TrapReceiver"
+		immediate="true" architecture="true">
+		<provides />
+		<filter:filter />
+	</component>
+
+	<instance component="snmp-script-factory" />
+</ipojo>

@@ -1,0 +1,140 @@
+﻿
+Emergency (00005)
+
+SYN flood! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Emergency (00006)
+
+Teardrop attack! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Emergency (00007)
+
+Ping of Death! From <src-ip> to <dst-ip>, proto 1 (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00004)
+
+WinNuke attack! From <src-ip>:<src-port> to <dst-ip>:139, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00008)
+
+IP spoofing! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00009)
+
+Source Route IP option! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00010)
+
+Land attack! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00011)
+
+ICMP flood! From <src-ip> to <dst-ip>, proto 1 (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00012)
+
+UDP flood! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto UDP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00016)
+
+Port scan! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Alert (00017)
+
+Address sweep! From <src-ip> to <dst-ip>, proto 1 (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00032)
+
+Malicious URL! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00033)
+
+Src IP session limit! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00412)
+
+SYN fragment! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00413)
+
+No TCP flag! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00414)
+
+Unknown protocol! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto <protocol> (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00415)
+
+Bad IP option! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00430)
+
+Dst IP session limit! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00431)
+
+ZIP file blocked! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00432)
+
+Java applet blocked! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00433)
+
+EXE file blocked! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00434)
+
+ActiveX control blocked! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00435)
+
+ICMP fragment! From <src-ip> to <dst-ip>, proto 1 (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00436)
+
+Large ICMP packet! From <src-ip> to <dst-ip>, proto 1 (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00437)
+
+SYN and FIN bits! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00438)
+
+FIN but no ACK bit! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00439)
+
+SYN-ACK-ACK Proxy DoS! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto TCP (zone <zone-name>, int <interface-name>). Occurred <none> times.
+
+
+Critical (00440)
+
+Fragmented traffic! From <src-ip>:<src-port> to <dst-ip>:<dst-port>, proto { TCP | UDP | <protocol> } (zone <zone-name>, int <interface-name>). Occurred <none> times.
+

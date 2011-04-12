@@ -1,0 +1,12 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="sleep-proxy-plugin" />
+	<instance component="sleep-proxy-script-factory" />
+	<instance component="sleep-proxy-log-handler" />
+	<instance component="sleep-proxy-api" />
+	<instance component="sleep-proxy-config-provider" />
+	<instance component="sleep-proxy-policy-provider" />
+	<instance component="sleep-proxy-traffic-monitor" />
+	<instance component="sleep-proxy-power-stats" />
+</ipojo>

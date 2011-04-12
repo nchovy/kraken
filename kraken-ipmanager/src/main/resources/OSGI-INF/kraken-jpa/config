@@ -1,0 +1,12 @@
+hibernate.connection.driver_class = com.mysql.jdbc.Driver
+hibernate.connection.url = jdbc:mysql://localhost/kraken??useUnicode=true&amp;characterEncoding=utf8
+hibernate.connection.username = kraken
+hibernate.connection.password = kraken
+hibernate.dialect = org.hibernate.dialect.MySQLDialect
+hibernate.current_session_context_class = thread
+hibernate.cache.provider_class = org.hibernate.cache.NoCacheProvider
+hibernate.show_sql = false
+hibernate.hbm2ddl.auto = update
+hibernate.autoReconnect = true
+hibernate.autoReconnectForPools = true
+hibernate.is-connection-validation-required = true

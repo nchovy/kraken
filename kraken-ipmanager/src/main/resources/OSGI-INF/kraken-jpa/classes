@@ -1,0 +1,8 @@
+org.krakenapps.ipmanager.model.Agent
+org.krakenapps.ipmanager.model.AllowedMac
+org.krakenapps.ipmanager.model.AuditLog
+org.krakenapps.ipmanager.model.DetectedMac
+org.krakenapps.ipmanager.model.HostEntry
+org.krakenapps.ipmanager.model.HostNic
+org.krakenapps.ipmanager.model.IpEntry
+org.krakenapps.ipmanager.model.IpEventLog

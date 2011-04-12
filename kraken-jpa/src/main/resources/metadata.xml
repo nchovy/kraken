@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iPOJO>
+	<handler classname="org.krakenapps.jpa.handler.TransactionalHandler"
+		name="transactional" namespace="org.krakenapps.jpa.handler">
+		<requires field="jpaService">
+			<callback type="bind" method="setJpaService" /> 
+		</requires>
+		<requires field="threadLocalEntityManager">
+			<callback type="bind" method="setThreadLocalEntityManager" />
+		</requires>
+	</handler>
+	<handler classname="org.krakenapps.jpa.handler.TransactionalHandler"
+		name="jpaconfig" namespace="org.krakenapps.jpa.handler">
+		<requires field="jpaService">
+			<callback type="bind" method="setJpaService" /> 
+		</requires>
+		<requires field="threadLocalEntityManager">
+			<callback type="bind" method="setThreadLocalEntityManager" />
+		</requires>
+	</handler>
+	<component classname="org.krakenapps.jpa.impl.HibernateJpaService"
+		name="jpa-service" immediate="true">
+		<provides />
+		<requires field="loggerControl" />
+		<callback transition="validate" method="start" />
+		<callback transition="invalidate" method="stop" />
+	</component>
+	<component
+		classname="org.krakenapps.jpa.impl.ThreadLocalEntityManagerServiceImpl"
+		name="jpa-thread-local-entity-manager">
+		<provides />
+		<requires field="jpa" />
+	</component>
+	<component className="org.krakenapps.jpa.impl.JpaScriptFactory"
+		name="jpa-script-factory" immediate="true" factory="false">
+		<provides>
+			<property name="alias" type="string" value="jpa" />
+		</provides>
+	</component>
+	<instance component="jpa-service" />
+	<instance component="jpa-thread-local-entity-manager" />
+	<instance component="jpa-script-factory" />
+</iPOJO>

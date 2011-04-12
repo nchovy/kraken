@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>kraken</artifactId>
+		<groupId>org.krakenapps</groupId>
+		<version>1.0.0</version>
+	</parent>
+	<groupId>org.krakenapps</groupId>
+	<artifactId>kraken-codec</artifactId>
+	<version>2.0.0</version>
+	<packaging>bundle</packaging>
+	<name>Kraken Codec</name>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>2.0.1</version>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-SymbolicName>org.krakenapps.codec</Bundle-SymbolicName>
+						<Export-Package>org.krakenapps.codec</Export-Package>
+						<Import-Package>!org.junit,*</Import-Package>
+					</instructions>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

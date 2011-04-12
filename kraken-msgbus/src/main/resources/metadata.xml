@@ -1,0 +1,10 @@
+<ipojo>
+	<handler classname="org.krakenapps.msgbus.handler.MsgbusPluginHandler"
+		name="msgbusplugin" namespace="org.krakenapps.msgbus.handler">
+		<requires field="msgbus" />
+	</handler>
+
+	<instance component="msgbus" />
+	<instance component="msgbus-resource-api" />
+	<instance component="msgbus-script-factory" />
+</ipojo>

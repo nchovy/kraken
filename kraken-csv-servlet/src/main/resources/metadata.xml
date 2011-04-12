@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iPOJO>
+	<instance component="csv-http-script-factory" />
+	<instance component="csv-http-service-api" />
+</iPOJO>

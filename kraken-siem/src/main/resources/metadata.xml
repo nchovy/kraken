@@ -1,0 +1,24 @@
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
+	<instance component="siem-login-failure-analyzer" />
+	<instance component="siem-http-attack-analyzer" />
+	<instance component="siem-log-server" />
+	<instance component="siem-event-server" />
+	<instance component="siem-script-factory" />
+	<instance component="siem-event-plugin" />
+	<instance component="siem-logger-plugin" />
+	<instance component="siem-response-plugin" />
+	<instance component="siem-isc-plugin" />
+	<instance component="siem-dashboard-plugin" />
+
+	<instance component="siem-response-server" />
+	<instance component="siem-response-mapper" />
+	<instance component="siem-firewall-response" />
+	<instance component="siem-mail-response" />
+	<instance component="siem-response-action-loader" />
+	<instance component="siem-logfile-scanner-registry" />
+	<instance component="siem-redhat-logfile-scanner" />
+	<instance component="siem-isc-rule-storage" />
+
+</ipojo>

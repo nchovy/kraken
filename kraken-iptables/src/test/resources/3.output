@@ -1,0 +1,37 @@
+Chain INPUT (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+ 770M  466G RH-Firewall-1-INPUT  all  --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+    0     0 RH-Firewall-1-INPUT  all  --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain OUTPUT (policy ACCEPT 838M packets, 711G bytes)
+ pkts bytes target     prot opt in     out     source               destination
+    0     0 ACCEPT     icmp --  *      *       0.0.0.0/0            0.0.0.0/0           icmp type 12
+    0     0 ACCEPT     icmp --  *      *       0.0.0.0/0            0.0.0.0/0           icmp type 12 code 0
+    0     0 ACCEPT     icmp --  *      *       0.0.0.0/0            0.0.0.0/0           icmp type 12 code 1
+
+Chain RH-Firewall-1-INPUT (2 references)
+ pkts bytes target     prot opt in     out     source               destination
+ 108K   31M ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           tcp dpt:3000
+ 555M  398G ACCEPT     all  --  lo     *       0.0.0.0/0            0.0.0.0/0
+83944 7191K ACCEPT     icmp --  *      *       0.0.0.0/0            0.0.0.0/0           icmp type 255
+    0     0 ACCEPT     esp  --  *      *       0.0.0.0/0            0.0.0.0/0
+    0     0 ACCEPT     ah   --  *      *       0.0.0.0/0            0.0.0.0/0
+    0     0 ACCEPT     udp  --  *      *       0.0.0.0/0            224.0.0.251         udp dpt:5353
+    0     0 ACCEPT     udp  --  *      *       0.0.0.0/0            0.0.0.0/0           udp dpt:631
+    2    88 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           tcp dpt:631
+ 200M   67G ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED
+  258 12200 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:53
+3283K  224M ACCEPT     udp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:53
+    0     0 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:1194
+    0     0 ACCEPT     udp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:1194
+   34  1676 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:943
+   13   636 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:4502
+    0     0 ACCEPT     udp  --  *      *       121.170.167.245      0.0.0.0/0           state NEW udp dpt:162
+ 346K   20M ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:22
+8451K  459M ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:80
+  290 14648 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:443
+2420K  342M REJECT     all  --  *      *       0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+    0     0 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0           tcp dpt:3000

@@ -1,0 +1,7 @@
+org.krakenapps.sonar.metabase.model.IpEndPoint
+org.krakenapps.sonar.metabase.model.Application
+org.krakenapps.sonar.metabase.model.Component
+org.krakenapps.sonar.metabase.model.Vendor
+org.krakenapps.sonar.metabase.model.Environment
+org.krakenapps.sonar.metabase.model.Alert
+org.krakenapps.sonar.metabase.model.IdsLog

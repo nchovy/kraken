@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iPOJO>
+	<component className="org.krakenapps.http.internal.HttpScriptFactory"
+		name="http-script-factory">
+		<provides>
+			<property name="alias" type="string" value="http" />
+		</provides>
+		<requires field="httpServiceManager" />
+		<requires field="uploadFileService" />
+	</component>
+
+	<component className="org.krakenapps.http.internal.HttpServiceManagerImpl"
+		name="http-service-manager" immediate="true">
+		<provides />
+		<callback transition="validate" method="validate" />
+		<callback transition="invalidate" method="invalidate" />
+	</component>
+
+	<component className="org.krakenapps.http.internal.HttpServiceController"
+		name="http-service-controller" immediate="true">
+		<callback transition="validate" method="start" />
+		<callback transition="invalidate" method="stop" />
+	</component>
+
+	<component className="org.krakenapps.http.internal.HttpServletController"
+		name="http-servlet-controller" immediate="true">
+		<provides />
+		<callback transition="validate" method="start" />
+		<callback transition="invalidate" method="stop" />
+	</component>
+
+	<component classname="org.krakenapps.http.internal.FileUploadServlet"
+		name="file-upload-service" immediate="true">
+		<provides />
+		<callback transition="validate" method="start" />
+		<callback transition="invalidate" method="stop" />
+	</component>
+
+	<instance component="http-script-factory" />
+	<instance component="http-service-manager" />
+	<instance component="http-service-controller" />
+	<instance component="http-servlet-controller" />
+	<instance component="file-upload-service" />
+	<instance component="file-upload-plugin" />
+</iPOJO>

@@ -1,0 +1,23 @@
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED
+ACCEPT     icmp --  0.0.0.0/0            0.0.0.0/0
+ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:22
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:80
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:21
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:443
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:123
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:53
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:37
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:53
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:1194
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:123
+REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination
+REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
