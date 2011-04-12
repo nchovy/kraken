@@ -1,0 +1,135 @@
+package org.krakenapps.util;
+
+import java.util.AbstractMap.SimpleEntry;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+public class QuotedKeyValueParser {
+	public static void main(String[] args) {
+		String sample1 = "date=2010-11-23 time=05:06:41 devname=FG300B3909605075 device_id=FG300B3909605075 log_id=0021010001 type=traffic subtype=allowed pri=notice vd=root fwver=040003 SN=643663 duration=200 carrier_ep=N/A user=N/A group=N/A rule=8 policyid=8 proto=6 service=80/tcp app_type=N/A status=accept src=192.168.3.132 srcname=192.168.3.132 dst=82.178.10.116 dstname=82.178.10.116 src_int=\"port4\" dst_int=\"port4\" sent=128 rcvd=1988 sent_pkt=3 rcvd_pkt=4 src_port=53742 dst_port=80 vpn=\"N/A\" tran_ip=192.168.0.26 tran_port=80 dir_disp=org tran_disp=dnat";
+		long started = System.currentTimeMillis();
+		for (int i = 0; i < 1000; ++i) {
+			Map<String, String> result = parse(sample1);
+			for (Entry<String, String> entry : result.entrySet()) {
+				//System.out.println(String.format("[%s] = [%s]", entry.getKey(), entry.getValue()));
+			}
+		}
+		System.out.printf("elapsed: %dms\n", System.currentTimeMillis() - started);
+	}
+
+	public static Map<String, String> parse(String line) {
+		List<SimpleEntry<String, String>> parseArgs = parseArgs(line);
+		HashMap<String, String> result = new HashMap<String, String>();
+		for (SimpleEntry<String, String> entry : parseArgs) {
+			result.put(entry.getKey(), entry.getValue());
+		}
+		return result;
+	}
+
+	private static List<SimpleEntry<String, String>> parseArgs(String argument) {
+		StringBuilder currentValue = null;
+		String currentKey = null;
+		LinkedList<SimpleEntry<String, String>> result = new LinkedList<SimpleEntry<String, String>>();
+
+		// ex: k1=123 k2="asdf asdf asdf" k3= "asdf" k4="" k5="asdf" k6='asdf'
+		// k7='asdf asdf' k8="hello \" stania \"" k9=asdf"asdf asdf asdf"
+		// k10=asdf" asdf"
+		int cur = 0;
+		int end = argument.length();
+
+		while (cur < end) {
+			if (currentKey == null) {
+				// find key
+				int tokenEnd = argument.indexOf('=', cur);
+				if (tokenEnd == -1)
+					break;
+
+				currentKey = argument.substring(cur, tokenEnd);
+				int lastIndexOfSpace = currentKey.lastIndexOf(' ');
+				if (lastIndexOfSpace != -1) {
+					currentKey = currentKey.substring(lastIndexOfSpace + 1);
+				}
+				cur = tokenEnd + 1;
+			} else {
+				// find value
+				int tokenEnd = argument.indexOf(' ', cur);
+				if (tokenEnd == -1) { // end of the string
+					tokenEnd = end;
+				}
+				int quote = findNextQuote(argument, cur);
+
+				// quote found before space
+				if (quote != -1 && quote < tokenEnd) {
+					currentValue = new StringBuilder();
+					char currentQuote = argument.charAt(quote);
+					if (quote != cur) {
+						currentValue.append(argument.substring(cur, quote));
+					}
+					int closingQuote = findNextQuote(argument, quote + 1, currentQuote);
+					if (closingQuote == -1)
+						closingQuote = end;
+					currentValue.append(argument.substring(quote + 1, closingQuote).replace("\\", ""));
+					// proceed to find next space
+					cur = closingQuote + 1;
+				} else {
+					if (currentValue == null) {
+						currentValue = new StringBuilder();
+					}
+					currentValue.append(argument.substring(cur, tokenEnd));
+					result.add(new SimpleEntry<String, String>(currentKey, currentValue.toString()));
+					currentKey = null;
+					currentValue = null;
+					cur = tokenEnd + 1;
+				}
+			}
+		}
+		if (currentKey != null && currentValue != null) {
+			result.add(new SimpleEntry<String, String>(currentKey, currentValue.toString()));
+		}
+
+		return result;
+	}
+
+	private static int findNextQuote(String argument, int cur, char quote) {
+		int quotePos = cur;
+		do {
+			quotePos = argument.indexOf(quote, quotePos);
+			if (quotePos == -1 || quotePos == 0)
+				break;
+			if (argument.charAt(quotePos - 1) == '\\') {
+				// ignore escaped quote
+				quotePos = quotePos + 1;
+				continue;
+			}
+			break;
+		} while (true);
+		return quotePos;
+	}
+
+	private static int findNextQuote(String argument, int cur) {
+		int quotePos = cur;
+		do {
+			int quote1Pos = argument.indexOf('\"', quotePos);
+			int quote2Pos = argument.indexOf('\'', quotePos);
+			if (quote1Pos == -1 && quote2Pos == -1)
+				quotePos = -1;
+			else {
+				quotePos = Math.min(quote1Pos == -1 ? Integer.MAX_VALUE : quote1Pos,
+						quote2Pos == -1 ? Integer.MAX_VALUE : quote2Pos);
+			}
+			if (quotePos == -1 || quotePos == 0)
+				break;
+			if (argument.charAt(quotePos - 1) == '\\') {
+				// ignore escaped quote
+				quotePos = quotePos + 1;
+				continue;
+			}
+			break;
+		} while (true);
+		return quotePos;
+	}
+
+}
