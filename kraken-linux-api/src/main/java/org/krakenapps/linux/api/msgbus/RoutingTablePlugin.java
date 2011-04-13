@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.linux.api.RoutingEntry;
 import org.krakenapps.linux.api.RoutingTable;
 import org.krakenapps.msgbus.Request;
@@ -17,9 +16,8 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@MsgbusPlugin
 @Component(name = "linux-routing-table-plugin")
-@Provides
+@MsgbusPlugin
 public class RoutingTablePlugin {
 	private final Logger logger = LoggerFactory.getLogger(RoutingTablePlugin.class);
 

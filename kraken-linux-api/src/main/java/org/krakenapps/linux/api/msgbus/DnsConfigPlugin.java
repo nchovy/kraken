@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.linux.api.DnsConfig;
 import org.krakenapps.linux.api.DnsConfig.Sortlist;
 import org.krakenapps.msgbus.Request;
@@ -18,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "linux-dns-config-plugin")
-@Provides
 @MsgbusPlugin
 public class DnsConfigPlugin {
 	private final Logger logger = LoggerFactory.getLogger(DnsConfigPlugin.class);
