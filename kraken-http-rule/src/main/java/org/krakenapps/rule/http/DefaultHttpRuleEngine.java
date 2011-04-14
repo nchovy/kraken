@@ -61,8 +61,8 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 	private GenericRuleSyntax syntax = new GenericRuleSyntax();
 
 	private volatile AhoCorasickSearch acm = null;
-	private volatile Map<String, List<HttpRequestRule>> requestRuleMap = null;
-	private volatile Map<String, List<HttpResponseRule>> responseRuleMap = null;
+	private volatile Map<String, List<HttpRequestRule>> requestRuleMap = new ConcurrentHashMap<String, List<HttpRequestRule>>();
+	private volatile Map<String, List<HttpResponseRule>> responseRuleMap = new ConcurrentHashMap<String, List<HttpResponseRule>>();
 
 	public DefaultHttpRuleEngine(BundleContext bc) {
 		this.bc = bc;
@@ -74,16 +74,19 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 	}
 
 	@Override
+	public String getDescription() {
+		return "Default http rule engine";
+	}
+
+	@Override
 	public Collection<Rule> getRules() {
 		List<Rule> rules = new LinkedList<Rule>();
 
-		for (List<HttpRequestRule> r : requestRuleMap.values()) {
-			rules.addAll(requestRuleMap.get(r));
-		}
+		for (List<HttpRequestRule> r : requestRuleMap.values())
+			rules.addAll(r);
 
-		for (List<HttpResponseRule> r : responseRuleMap.values()) {
-			rules.addAll(responseRuleMap.get(r));
-		}
+		for (List<HttpResponseRule> r : responseRuleMap.values())
+			rules.addAll(r);
 
 		return rules;
 	}

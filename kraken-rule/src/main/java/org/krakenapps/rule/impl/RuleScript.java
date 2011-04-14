@@ -15,6 +15,8 @@
  */
 package org.krakenapps.rule.impl;
 
+import java.util.Collection;
+
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.rule.Rule;
@@ -38,7 +40,7 @@ public class RuleScript implements Script {
 		context.println("Engines");
 		context.println("----------------");
 		for (RuleEngine engine : registry.getEngines()) {
-			context.println(engine.getName() + " (" + engine.getRules().size() + "): " + engine.toString());
+			context.println(engine.getName() + " (" + engine.getRules().size() + "): " + engine.getDescription());
 		}
 	}
 
@@ -47,10 +49,11 @@ public class RuleScript implements Script {
 		context.println("-----------------");
 
 		for (RuleEngine engine : registry.getEngines()) {
-			context.println(engine.getName());
+			Collection<Rule> rules = engine.getRules();
+			context.println("engine [" + engine.getName() + "] (" + rules.size() + ")");
 
-			for (Rule rule : engine.getRules()) {
-				context.println(" " + rule.toString());
+			for (Rule rule : rules) {
+				context.println("\t" + rule.toString());
 			}
 		}
 	}

@@ -2,4 +2,7 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 	<instance component="rule-database" />
+	<instance component="rule-script-factory" />
+	<instance component="rule-engine-registry" />
+	<instance component="rule-plugin" />
 </ipojo>

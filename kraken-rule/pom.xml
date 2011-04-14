@@ -25,8 +25,12 @@
 						<Bundle-SymbolicName>org.krakenapps.rule</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.rule,
-							org.krakenapps.rule.parser</Export-Package>
-						<Import-Package>*</Import-Package>
+							org.krakenapps.rule.parser,
+							org.krakenapps.rule.plugin</Export-Package>
+						<Import-Package>
+							org.krakenapps.msgbus;resolution:=optional,
+							org.krakenapps.msgbus.handler;resolution:=optional,
+							*</Import-Package>
 						<Private-Package>
 							org.krakenapps.rule.impl
 						</Private-Package>
@@ -72,6 +76,12 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-bnf</artifactId>
 			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-msgbus</artifactId>
+			<version>1.0.0</version>
+			<optional>true</optional>
 		</dependency>
 	</dependencies>
 </project>

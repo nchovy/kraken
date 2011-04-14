@@ -20,7 +20,9 @@ import java.util.Collection;
 public interface RuleEngine {
 	String getName();
 
+	String getDescription();
+
 	Collection<Rule> getRules();
-	
+
 	void reload();
 }

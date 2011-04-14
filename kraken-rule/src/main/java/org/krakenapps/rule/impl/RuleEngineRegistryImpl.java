@@ -42,6 +42,7 @@ public class RuleEngineRegistryImpl extends ServiceTracker implements RuleEngine
 
 	public RuleEngineRegistryImpl(BundleContext bc) {
 		super(bc, RuleEngine.class.getName(), null);
+		this.bc = bc;
 		engines = new ConcurrentHashMap<String, RuleEngine>();
 	}
 
