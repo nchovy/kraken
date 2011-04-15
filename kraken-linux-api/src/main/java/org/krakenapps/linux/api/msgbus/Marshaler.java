@@ -55,23 +55,23 @@ public class Marshaler {
 	public static Map<String, Object> marshal(EthernetInterface ei) {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("boot_proto", ei.getBootProto());
-		m.put("broadcast", ei.getBroadcast().getHostAddress());
+		m.put("broadcast", ei.getBroadcast() != null ? ei.getBroadcast().getHostAddress() : null);
 		m.put("device", ei.getDevice());
-		m.put("dhcp_hostname", ei.getDhcpHostname().getHostAddress());
-		m.put("dns1", ei.getDns1().getHostAddress());
-		m.put("dns2", ei.getDns2().getHostAddress());
+		m.put("dhcp_hostname", ei.getDhcpHostname() != null ? ei.getDhcpHostname().getHostAddress() : null);
+		m.put("dns1", ei.getDns1() != null ? ei.getDns1().getHostAddress() : null);
+		m.put("dns2", ei.getDns2() != null ? ei.getDns2().getHostAddress() : null);
 		m.put("ethtool_opts", ei.getEthtoolOpts());
-		m.put("gateway", ei.getGateway().getHostAddress());
+		m.put("gateway", ei.getGateway() != null ? ei.getGateway().getHostAddress() : null);
 		m.put("hw_addr", ei.getHwAddr());
-		m.put("ip_addr", ei.getIpAddr().getHostAddress());
+		m.put("ip_addr", ei.getIpAddr() != null ? ei.getIpAddr().getHostAddress() : null);
 		m.put("mac_addr", ei.getMacAddr());
 		m.put("master", ei.getMaster());
-		m.put("netmask", ei.getNetmask().getHostAddress());
-		m.put("network", ei.getNetwork().getHostAddress());
+		m.put("netmask", ei.getNetmask() != null ? ei.getNetmask().getHostAddress() : null);
+		m.put("network", ei.getNetwork() != null ? ei.getNetwork().getHostAddress() : null);
 		m.put("on_boot", ei.getOnBoot());
 		m.put("peer_dns", ei.getPeerDns());
 		m.put("slave", ei.getSlave());
-		m.put("src_addr", ei.getSrcAdrr().getHostAddress());
+		m.put("src_addr", ei.getSrcAdrr() != null ? ei.getSrcAdrr().getHostAddress() : null);
 		m.put("user_ctl", ei.getUserCtl());
 		m.put("address_bindings", marshal(ei.getAddressBindings()));
 		return m;
@@ -80,9 +80,9 @@ public class Marshaler {
 	public static Map<String, Object> marshal(AddressBinding ab) {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("device", ab.getDevice());
-		m.put("ip_addr", ab.getIpAddr().getHostAddress());
-		m.put("broadcast", ab.getBroadcast().getHostAddress());
-		m.put("netmask", ab.getNetmask().getHostAddress());
+		m.put("ip_addr", ab.getIpAddr() != null ? ab.getIpAddr().getHostAddress() : null);
+		m.put("broadcast", ab.getBroadcast() != null ? ab.getBroadcast().getHostAddress() : null);
+		m.put("netmask", ab.getNetmask() != null ? ab.getNetmask().getHostAddress() : null);
 		return m;
 	}
 
