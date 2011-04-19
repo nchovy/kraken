@@ -38,6 +38,7 @@ import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.MavenArtifact;
 import org.krakenapps.api.MavenResolveException;
 import org.krakenapps.api.ProgressMonitor;
+import org.krakenapps.api.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,7 +114,40 @@ public class MavenResolver {
 			}
 		});
 		for (BundleRepository repo : repositories) {
-			File downloadedJar = tryDownload(repo, artifact);
+			File downloadedJar = null;
+
+			if (artifact.getVersion() == null) {
+				try {
+					MavenMetadata metadata = new MavenMetadata(repo, keyStoreManager, artifact.getGroupId(),
+							artifact.getArtifactId());
+
+					if (metadata.getRelease() != null) {
+						artifact.setVersion(metadata.getRelease());
+						downloadedJar = tryDownload(repo, artifact);
+					}
+
+					if (downloadedJar == null && metadata.getLatest() != null) {
+						artifact.setVersion(metadata.getLatest());
+						downloadedJar = tryDownload(repo, artifact);
+					}
+
+					if (downloadedJar == null) {
+						for (Version version : metadata.getVersions()) {
+							artifact.setVersion(version);
+							downloadedJar = tryDownload(repo, artifact);
+							if (downloadedJar != null)
+								break;
+						}
+					}
+				} catch (Exception e) {
+					String metadataUrl = normalize(repo.getUrl())
+							+ String.format("%s/%s/maven-metadata.xml", artifact.getGroupId().replace(".", "/"),
+									artifact.getArtifactId());
+					logger.info("maven resolver: failed to get {} {}", metadataUrl, e.getMessage());
+				}
+			} else
+				downloadedJar = tryDownload(repo, artifact);
+
 			if (downloadedJar != null)
 				return downloadedJar;
 		}

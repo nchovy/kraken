@@ -69,7 +69,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	public BundleManagerService(BundleContext bc) {
 		this.context = bc;
 		bc.addBundleListener(this);
-		
+
 		Preferences systemPrefs = getSystemPreferences();
 		config = new BundleConfig(systemPrefs);
 	}
@@ -178,13 +178,14 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 			throws MavenResolveException {
 		MavenResolver resolver = new MavenResolver(getLocalRepository(), config.getBundleRepositories(), monitor,
 				getKeyStoreManager());
-		MavenArtifact artifact = new MavenArtifact(groupId, artifactId, new Version(version));
+		Version v = (version != null) ? new Version(version) : null;
+		MavenArtifact artifact = new MavenArtifact(groupId, artifactId, v);
 
 		if (isBuiltinArtifact(artifact.getGroupId(), artifact.getArtifactId()))
 			throw new IllegalStateException("provided in system bundle");
 
-		monitor.writeln(String.format("Resolving %s/%s (%s)", artifact.getGroupId(), artifact.getArtifactId(), artifact
-				.getVersion()));
+		monitor.writeln(String.format("Resolving %s/%s", artifact.getGroupId(), artifact.getArtifactId())
+				+ (artifact.getVersion() != null ? (" (" + artifact.getVersion() + ")") : ""));
 
 		File file = resolver.resolve(artifact);
 		String filePath = file.getAbsolutePath();

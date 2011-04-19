@@ -212,12 +212,14 @@ public class BundleScript implements Script {
 					return;
 				}
 			} else {
-				if (args.length != 3) {
+				if (args.length > 3) {
 					throw new IllegalArgumentException();
 				}
 				String groupId = args[0];
 				String artifactId = args[1];
-				String version = args[2];
+				String version = null;
+				if (args.length == 3)
+					version = args[2];
 
 				bundleId = manager.installBundle(new ProgressMonitorImpl(context), groupId, artifactId, version);
 			}
