@@ -79,29 +79,38 @@ public class HttpRuleScript implements Script {
 		}
 	}
 
-	public void ruleTest(String[] args) {
-		try {
-			context.print("rule: ");
-			String rule = context.readLine();
-			context.print("url : ");
-			String url = context.readLine();
+	public void test(String[] args) {
+		for (String s : args)
+			context.println(s);
+	}
 
-			if (ruleTest(rule, url))
-				context.println("catch");
-			else
-				context.println("no attack found");
+	@ScriptUsage(description = "inspect http uri and test attack detection", arguments = { @ScriptArgument(name = "url", type = "string", description = "path + querystring") })
+	public void ruleTest(String[] args) {
+		context.println("Ctrl-C to quit.");
+		try {
+			while (true) {
+				context.print("rule: ");
+				String rule = context.readLine();
+				rule = rule.trim();
+				if (rule.isEmpty() || rule.startsWith(";"))
+					continue;
+				AhoCorasickSearch acs = compile(rule);
+
+				for (String url : args) {
+					if (ruleTest(acs, url))
+						context.println("catch : " + url);
+					else
+						context.println("no attack found : " + url);
+				}
+			}
 		} catch (InterruptedException e) {
 			context.println("interrupted.");
 		} catch (Exception e) {
+			context.println(e.getMessage());
 		}
 	}
 
-	private boolean ruleTest(String ruleString, String url) throws Exception {
-		ruleString = ruleString.trim();
-		if (ruleString.isEmpty() || ruleString.startsWith(";"))
-			return false;
-		AhoCorasickSearch acs = compile(ruleString);
-
+	private boolean ruleTest(AhoCorasickSearch acs, String url) throws Exception {
 		HttpRequestContext c = URLParser.parse("GET", url);
 		byte[] b = c.getPath().getBytes("utf-8");
 		List<Pair> pairs = acs.search(b);
