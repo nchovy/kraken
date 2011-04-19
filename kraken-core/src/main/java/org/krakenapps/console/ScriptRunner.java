@@ -73,16 +73,22 @@ public class ScriptRunner implements Runnable {
 	}
 
 	// http://www.regular-expressions.info/regexbuddy/stringescaped.html
-	private static String tokenizerRegex = "\"([^\"\\\\]*(?:\\.[^\"\\\\]*)*)\"|(\\S+)";
+	private static String tokenizerRegex = "\"([^\"\\\\]*(?:\\\\.[^\"\\\\]*)*)\"|(\\S+)";
+	private static String escapeSequenceRegex = "\\\\(.)(?=[^\"\\\\]*)";
+	private static Pattern tokenizerPattern = Pattern.compile(tokenizerRegex);
+	private static Pattern escapeSequencePattern = Pattern.compile(escapeSequenceRegex);
 	private static String[] tokenize(String line) {
 		ArrayList<String> r = new ArrayList<String>();
-	    Matcher m = Pattern.compile(tokenizerRegex).matcher(line);
+	    Matcher m = tokenizerPattern.matcher(line);
 	    while (m.find()) {
+	    	String matched;
 	        if (m.group(1) != null) {
-	            r.add(m.group(1));
+	            matched = m.group(1);
 	        } else {
-	            r.add(m.group(2));
+	            matched = m.group(2);
 	        }
+	        Matcher em = escapeSequencePattern.matcher(matched);
+	        r.add(em.replaceAll("$1"));
 	    }
 	    
 	    String[] result = new String[r.size()];
@@ -183,5 +189,19 @@ public class ScriptRunner implements Runnable {
 				count++;
 		}
 		return count;
+	}
+
+	/* to test quoted tokenizer
+	 * expected result: 
+	 *   abc "hello" def
+	 *   hah aha
+	 *   abc \" def
+	 */
+	public static void main(String[] args) {
+		String haystack = "\"abc \\\"hello\\\" def\" \"hah aha\" \"abc \\\\\\\" def\"";
+		String[] tokenized = tokenize(haystack);
+		for (String token: tokenized) {
+			System.out.println(token);
+		}
 	}
 }
