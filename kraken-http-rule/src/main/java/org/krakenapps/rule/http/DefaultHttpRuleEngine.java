@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -142,8 +143,9 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 
 	private void loadRules(AhoCorasickSearch fsm, Map<String, List<HttpRequestRule>> reqs,
 			Map<String, List<HttpResponseRule>> resps, File f) {
+		BufferedReader br = null;
 		try {
-			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
 			while (true) {
 				String line = br.readLine();
 				if (line == null)
@@ -151,9 +153,14 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 
 				parse(fsm, reqs, resps, line);
 			}
-
 		} catch (Exception e) {
 			logger.error("kraken http rule: cannot open http-rule file", e);
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+			} catch (IOException e) {
+			}
 		}
 	}
 

@@ -20,17 +20,34 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import org.krakenapps.ahocorasick.AhoCorasickSearch;
+import org.krakenapps.ahocorasick.Pair;
+import org.krakenapps.ahocorasick.Pattern;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.rule.Rule;
 import org.krakenapps.rule.http.HttpRequestContext;
 import org.krakenapps.rule.http.HttpRequestRule;
 import org.krakenapps.rule.http.HttpRuleEngine;
+import org.krakenapps.rule.http.LocalFileInclusionRule;
+import org.krakenapps.rule.http.RemoteFileInclusionRule;
 import org.krakenapps.rule.http.URLParser;
+import org.krakenapps.rule.http.VariableRegexRule;
+import org.krakenapps.rule.parser.GenericRule;
+import org.krakenapps.rule.parser.GenericRuleOption;
+import org.krakenapps.rule.parser.GenericRuleSyntax;
 
 public class HttpRuleScript implements Script {
 	private HttpRuleEngine engine;
@@ -59,6 +76,125 @@ public class HttpRuleScript implements Script {
 			context.println(match.toString());
 		} else {
 			context.println("no attack found");
+		}
+	}
+
+	public void ruleTest(String[] args) {
+		try {
+			context.print("rule: ");
+			String rule = context.readLine();
+			context.print("url : ");
+			String url = context.readLine();
+
+			if (ruleTest(rule, url))
+				context.println("catch");
+			else
+				context.println("no attack found");
+		} catch (InterruptedException e) {
+			context.println("interrupted.");
+		} catch (Exception e) {
+		}
+	}
+
+	private boolean ruleTest(String ruleString, String url) throws Exception {
+		ruleString = ruleString.trim();
+		if (ruleString.isEmpty() || ruleString.startsWith(";"))
+			return false;
+		AhoCorasickSearch acs = compile(ruleString);
+
+		HttpRequestContext c = URLParser.parse("GET", url);
+		byte[] b = c.getPath().getBytes("utf-8");
+		List<Pair> pairs = acs.search(b);
+
+		for (Pair p : pairs) {
+			Rule rule = ((RulePattern) p.getPattern()).getRule();
+			HttpRequestRule httpRule = (HttpRequestRule) rule;
+			if (httpRule.match(c))
+				return true;
+		}
+
+		return false;
+	}
+
+	private AhoCorasickSearch compile(String ruleString) throws Exception {
+		AhoCorasickSearch acs = new AhoCorasickSearch();
+		GenericRule r = new GenericRuleSyntax().eval(ruleString);
+		Rule rule = null;
+
+		String type = r.get("type");
+		String path = r.get("path");
+
+		if (type.equals("rfi")) {
+			String var = r.get("var");
+			rule = new RemoteFileInclusionRule(r.getId(), r.getMessage(), path, var);
+		} else if (type.equals("lfi")) {
+			Map<String, String> params = new HashMap<String, String>();
+
+			String name = null;
+			for (GenericRuleOption o : r.getOptions()) {
+				if (o.getName().equals("var")) {
+					if (name != null)
+						params.put(name, null);
+
+					name = o.getValue();
+				} else if (name != null && o.getName().equals("value")) {
+					params.put(name, o.getValue());
+					name = null;
+				}
+			}
+
+			rule = new LocalFileInclusionRule(r.getId(), r.getMessage(), path, params);
+		} else if (type.equals("regex")) {
+			String var = r.get("var");
+			String regex = r.get("regex");
+			rule = new VariableRegexRule(r.getId(), r.getMessage(), path, var, regex);
+		}
+		if (rule != null) {
+			rule.getReferences().addAll(convert(r.getAll("reference")));
+			rule.getCveNames().addAll(r.getAll("cve"));
+
+			acs.addKeyword(new RulePattern(path, rule));
+		}
+
+		return acs;
+	}
+
+	private Collection<URL> convert(Collection<String> references) {
+		List<URL> urls = new ArrayList<URL>();
+		for (String reference : references) {
+			try {
+				urls.add(new URL(reference));
+			} catch (MalformedURLException e) {
+			}
+		}
+		return urls;
+	}
+
+	private static class RulePattern implements Pattern {
+		private String s;
+		private Rule r;
+
+		public RulePattern(String s, Rule r) {
+			this.s = s;
+			this.r = r;
+		}
+
+		public Rule getRule() {
+			return r;
+		}
+
+		@Override
+		public byte[] getKeyword() {
+			try {
+				return s.getBytes("utf-8");
+			} catch (UnsupportedEncodingException e) {
+				return null;
+			}
+		}
+
+		@Override
+		public String toString() {
+			return r.toString();
 		}
 	}
 
