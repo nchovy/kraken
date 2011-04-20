@@ -54,8 +54,11 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.NamespaceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HttpScript implements Script {
+	private Logger logger = LoggerFactory.getLogger(HttpScript.class);
 	private ScriptContext context;
 	private BundleContext bc;
 	private HttpServiceManager manager;
@@ -411,28 +414,26 @@ public class HttpScript implements Script {
 	}
 
 	@ScriptUsage(description = "open a new http service", arguments = { @ScriptArgument(name = "server name"),
-			@ScriptArgument(name = "port") })
+			@ScriptArgument(name = "port", type = "integer") })
 	public void open(String[] args) {
 		String serverName = args[0];
-		String port = args[1];
+		int port = Integer.parseInt(args[1]);
 
-		try {
-			Integer.parseInt(port);
-		} catch (NumberFormatException e) {
-			context.println("port is not number.");
+		if (port < 0 || port > 65535) {
+			context.println("port out of range");
 			return;
 		}
 
 		Map<String, String> config = new HashMap<String, String>();
 		config.put("ssl", "false");
-		config.put("port", port);
+		config.put("port", Integer.toString(port));
 
 		try {
 			manager.openHttpService(serverName, config);
 			context.println(port + " http service opened.");
 		} catch (Exception e) {
-			context.print(e.toString());
-			e.printStackTrace();
+			context.println(e.toString());
+			logger.warn("kraken-http: open failed. " + e);
 		}
 	}
 
@@ -445,7 +446,11 @@ public class HttpScript implements Script {
 
 			context.print("Port: ");
 			String port = context.readLine();
-			Integer.parseInt(port); // check number
+			int p = Integer.parseInt(port); // check number
+			if (p < 0 || p > 65535) {
+				context.println("port out of range");
+				return;
+			}
 
 			context.print("Resource Base: ");
 			String resourceBase = context.readLine();
@@ -481,18 +486,15 @@ public class HttpScript implements Script {
 				manager.openHttpService(serverName, config);
 				context.println(port + " https service opened.");
 			} catch (Exception e) {
-				context.print(e.toString());
-				e.printStackTrace();
+				context.println(e.toString());
+				logger.warn("kraken-http: open failed. " + e);
 			}
-
 		} catch (InterruptedException e) {
-			e.printStackTrace();
 		} catch (NumberFormatException e) {
-			e.printStackTrace();
 		}
 	}
 
-	@ScriptUsage(description = "close the http server", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias for the http server") })
+	@ScriptUsage(description = "close the http server", arguments = { @ScriptArgument(name = "name", type = "string", description = "http server name") })
 	public void close(String[] args) {
 		try {
 			String httpServiceName = args[0];

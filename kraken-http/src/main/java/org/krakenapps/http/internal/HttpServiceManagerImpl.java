@@ -91,7 +91,7 @@ public class HttpServiceManagerImpl implements HttpServiceManager {
 			ServiceReference[] refs = bc.getServiceReferences(KrakenHttpService.class.getName(), filter);
 
 			if (refs == null) {
-				logger.error("marlin master loader: http service [{}] not found", name);
+				logger.error("kraken-http: http service [{}] not found", name);
 				return null;
 			}
 
@@ -105,8 +105,9 @@ public class HttpServiceManagerImpl implements HttpServiceManager {
 	public void openHttpService(String serverId, Map<String, String> config) throws Exception {
 		// duplicated id check
 		JettyHttpService server = new JettyHttpService(new DispatcherServlet(controller), httpConfig, serverId, config);
-		serverMap.put(serverId, server);
 		server.open();
+
+		serverMap.put(serverId, server);
 
 		HttpServiceConfig serverConfig = new HttpServiceConfig(serverId);
 		serverConfig.setProps(server.getConfig());
@@ -127,7 +128,7 @@ public class HttpServiceManagerImpl implements HttpServiceManager {
 		JettyHttpService server = serverMap.remove(serverId);
 		if (server == null)
 			throw new IllegalStateException("http server not found:" + serverId);
-		
+
 		httpConfig.removeServer(serverId);
 		server.close();
 	}
