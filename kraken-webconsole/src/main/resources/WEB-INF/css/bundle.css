@@ -1,0 +1,179 @@
+
+/* apps */
+
+#Apps div[role="toolbar"] {
+	background: rgba(0,0,0, .5);
+	/* background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, from(rgba(0,0,0,.2)), to(rgba(0,0,0,.5))); */
+	border: 1px solid #ffffff;
+	border-bottom: 0px;
+	-webkit-border-top-left-radius: 3em;
+	-webkit-border-top-right-radius: 3em;
+	border-top-left-radius: 3em 3em;
+	border-top-right-radius: 3em 3em;
+}
+
+.AppsBox {
+	-webkit-border-bottom-left-radius: 3em;
+	-webkit-border-bottom-right-radius: 3em;
+	border-bottom-left-radius: 3em 3em;
+	border-bottom-right-radius: 3em 3em;
+	background: rgba(0,0,0,.5);
+	padding: 20px;
+	border: 1px solid #ffffff;
+	border-top: 0px;
+}
+
+.AppsSearchTextfield {
+	background: rgba(50, 50, 50, .9);
+	border: 1px solid white;
+	-webkit-border-radius: 1em;
+	border-radius: 1em;
+	height: 18px;
+	margin-top: 2px;
+	font-size: 8pt;
+	padding: 0 7px;
+	color: white;
+}
+
+.appicon {
+	float: left;
+	text-align: center;
+	width: 128px;
+	height: 115px;
+	margin: 5px;
+	font-size: 10pt;
+	border: 1px solid #fff;
+	-webkit-border-radius: 1em;
+	/* color: #ffffff; */
+}
+
+.appicon:active {
+	float: left;
+	text-align: center;
+	width: 128px;
+	height: 115px;
+	margin: 5px;
+	font-size: 10pt;
+	border-bottom: 1px solid #fff !important;
+	border-top: 1px solid rgba(0, 0, 0, .15) !important;
+	-webkit-border-radius: 1em;
+	/* color: #ffffff; */
+}
+
+.appicon strong {
+	display: block;
+}
+
+.appicon span {
+	color: #666;
+	font-size: 9pt;
+}
+
+.appicon-hover {
+	cursor: pointer;
+	border-top: 1px solid #fff !important;
+	border-bottom: 1px solid rgba(0, 0, 0, .15) !important;
+	background-color: rgba(100, 100, 100, .15)
+}
+
+.appicon-hover strong {
+	text-decoration: underline;
+}
+
+.bdleicon {
+	float: left;
+	width: 300px;
+	height: 60px;
+	margin: 5px;
+	font-size: 10pt;
+	border: 1px solid #fff;
+	-webkit-border-radius: 1em;
+	/* color: #ffffff; */
+}
+
+.bdleicon strong {
+	display: block;
+	margin-top: 10px;
+	white-space: nowrap;
+	overflow:hidden;
+	text-overflow: ellipsis;
+	width: 200px;
+}
+
+.bdleicon span {
+	color: #666;
+	font-size: 9pt;
+}
+
+.bdleicon img {
+	margin-left: 15px;
+	margin-right: 15px;
+	float: left
+}
+
+
+.bdleicon-hover {
+	cursor: pointer;
+	border: 1px solid #fff !important;
+	border-bottom: 1px solid rgba(0, 0, 0, .15) !important;
+	background-color: rgba(100, 100, 100, .15)
+}
+
+.bdleicon-hover:active {
+	cursor: pointer;
+	border: 1px solid #fff !important;
+	border-top: 1px solid rgba(0, 0, 0, .15) !important;
+	background-color: rgba(100, 100, 100, .15)
+}
+
+.bdleicon-hover strong {
+	display: block;
+	margin-top: 10px;
+	white-space: nowrap;
+	width: 170px;
+	overflow:hidden;
+	text-overflow: clip;
+	overflow-x: -webkit-marquee;
+	-webkit-marquee-direction: auto;
+	-webkit-marquee-increment: small;
+	-webkit-marquee-speed: fast;
+	-webkit-marquee-style: alternate;
+}
+
+.bdleicon-hover strong:hover {
+	text-decoration: underline;
+}
+
+.bdleicon .rightbutton {
+	display: none;
+}
+
+.bdleicon-hover .rightbutton {
+	display: block;
+	float:right;
+	margin-top: -10px;
+	margin-right: 10px;
+}
+
+.rightbutton span {
+	border: 1px solid #aaa;
+	padding: 3px;
+	-webkit-border-radius: 3px;
+	background-image: -webkit-gradient(linear,left bottom,left top,color-stop(0.02, rgb(224,224,224)),color-stop(0.52, rgb(255,255,255)));
+}
+
+.rightbutton span:hover {
+	border: 1px solid #666;
+	background-image: -webkit-gradient(linear,left bottom,left top,color-stop(0.02, rgb(204,204,204)),color-stop(0.52, rgb(255,255,255)));
+}
+
+.rightbutton span:active {
+	border: 1px solid #666;
+	background-image: -webkit-gradient(linear,left bottom,left top,color-stop(0.52, rgb(204,204,204)),color-stop(0.02, rgb(255,255,255)));
+}
+
+.bdleicon-selected {
+	cursor: pointer;
+	border: 1px dashed rgba(100, 100, 100, .2);
+	background-color: rgba(100, 100, 100, .15)
+}

@@ -543,6 +543,7 @@ StartPage.initialize = function() {
 	StartPage.initStartMenu();
 	
 	$("#startButton div").css("float", "left");
+	Ext.QuickTips.init();
 	
 	// need to convert to lazy loading
 	$("head").append("<link>");
