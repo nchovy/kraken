@@ -32,12 +32,14 @@ import java.util.TreeSet;
 import org.krakenapps.api.BundleManager;
 import org.krakenapps.api.BundleRepository;
 import org.krakenapps.api.BundleStatus;
+import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.MavenResolveException;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.main.Kraken;
+import org.krakenapps.pkg.MavenMetadata;
 import org.krakenapps.pkg.ProgressMonitorImpl;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -471,6 +473,35 @@ public class BundleScript implements Script {
 				Date buildTimestamp = status.getBuildTimestamp();
 				context.printf("[%3d] %-41s %s\t  %s\n", key, status.getSymbolicName(), status.getVersion(),
 						buildTimestamp == null ? "N/A" : dateFormat.format(buildTimestamp));
+			}
+		}
+	}
+
+	@ScriptUsage(description = "print installable bundle versions", arguments = {
+			@ScriptArgument(name = "group id", description = "bundle group id"),
+			@ScriptArgument(name = "artifact id", description = "bundle artifact id") })
+	public void versions(String[] args) {
+		BundleContext bc = Kraken.getContext();
+		ServiceReference ref = bc.getServiceReference(KeyStoreManager.class.getName());
+		KeyStoreManager keyman = (KeyStoreManager) bc.getService(ref);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'");
+
+		for (BundleRepository repo : manager.getRemoteRepositories()) {
+			try {
+				MavenMetadata mm = new MavenMetadata(repo, keyman, args[0], args[1]);
+
+				if (mm.getRelease() != null || mm.getLatest() != null || mm.getVersions() != null) {
+					context.println("Repository [" + repo + "]");
+					if (mm.getRelease() != null)
+						context.println("\trelease: " + mm.getRelease());
+					if (mm.getLatest() != null)
+						context.println("\tlatest: " + mm.getLatest());
+					if (mm.getVersions() != null)
+						context.println("\tversions: " + mm.getVersions());
+					if (mm.getLastUpdated() != null)
+						context.println("\tlast updated: " + dateFormat.format(mm.getLastUpdated()));
+				}
+			} catch (Exception e) {
 			}
 		}
 	}
