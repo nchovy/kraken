@@ -28,22 +28,23 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 	@Override
 	public boolean match(HttpRequestContext c) {
 		for (String var : params.keySet()) {
+			String value = c.getParameters().get(var);
+
 			if (params.get(var) == null) {
-				String value = c.getParameters().get(var);
 				if (value == null)
 					return false;
 
-				if (!value.contains("%00"))
-					return false;
 			} else {
 				String expected = params.get(var);
-				String value = c.getParameters().get(var);
 				if (value == null)
 					return false;
 
-				if (!expected.equals(value))
+				if (!expected.matches("(\\.\\./)*" + value))
 					return false;
 			}
+
+			if (!value.contains("%00"))
+				return false;
 		}
 
 		return true;

@@ -48,8 +48,11 @@ import org.krakenapps.rule.http.VariableRegexRule;
 import org.krakenapps.rule.parser.GenericRule;
 import org.krakenapps.rule.parser.GenericRuleOption;
 import org.krakenapps.rule.parser.GenericRuleSyntax;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HttpRuleScript implements Script {
+	private Logger logger = LoggerFactory.getLogger(HttpRuleScript.class);
 	private HttpRuleEngine engine;
 	private ScriptContext context;
 
@@ -106,7 +109,8 @@ public class HttpRuleScript implements Script {
 		} catch (InterruptedException e) {
 			context.println("interrupted.");
 		} catch (Exception e) {
-			context.println(e.getMessage());
+			context.println(e);
+			logger.error("kraken-http-rule: rule test error.", e);
 		}
 	}
 
@@ -164,6 +168,7 @@ public class HttpRuleScript implements Script {
 
 			acs.addKeyword(new RulePattern(path, rule));
 		}
+		acs.compile();
 
 		return acs;
 	}
