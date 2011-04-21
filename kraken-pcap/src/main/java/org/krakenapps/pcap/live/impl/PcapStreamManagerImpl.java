@@ -152,12 +152,7 @@ public class PcapStreamManagerImpl implements PcapStreamManager {
 			}
 
 			stream.thread.interrupt();
-			try {
-				stream.runner.stop();
-				stream.runner.getDevice().close();
-			} catch (IOException e) {
-				logger.error("kraken pcap: cannot stop stream [" + alias + "]", e);
-			}
+			stream.runner.stop();
 		}
 	}
 
