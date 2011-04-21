@@ -22,22 +22,18 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.ipmanager.ArpScanner;
-import org.krakenapps.ipmanager.IpManager;
 import org.krakenapps.ipmanager.IpMonitor;
+import org.krakenapps.jpa.JpaService;
 import org.krakenapps.lookup.mac.MacLookupService;
+import org.osgi.framework.BundleContext;
 
 @Component(name = "ipm-script-factory")
 @Provides
 public class IpManagerScriptFactory implements ScriptFactory {
+	private BundleContext bc;
 
 	@Requires
-	private IpManager ipManager;
-
-	@Requires
-	private ArpScanner arpScanner;
-
-	@Requires
-	private IpMonitor ipMonitor;
+	private JpaService jpa;
 
 	@Requires
 	private MacLookupService macLookup;
@@ -46,9 +42,13 @@ public class IpManagerScriptFactory implements ScriptFactory {
 	@ServiceProperty(name = "alias", value = "ipm")
 	private String alias;
 
+	public IpManagerScriptFactory(BundleContext bc) {
+		this.bc = bc;
+	}
+
 	@Override
 	public Script createScript() {
-		return new IpManagerScript(ipManager, ipMonitor, arpScanner, macLookup);
+		return new IpManagerScript(bc, jpa, macLookup);
 	}
 
 }

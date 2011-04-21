@@ -16,6 +16,7 @@
 package org.krakenapps.ipmanager.impl;
 
 import java.util.List;
+import java.util.Properties;
 
 import org.krakenapps.api.DefaultScript;
 import org.krakenapps.api.ScriptArgument;
@@ -29,24 +30,92 @@ import org.krakenapps.ipmanager.model.Agent;
 import org.krakenapps.ipmanager.model.HostEntry;
 import org.krakenapps.ipmanager.model.IpEntry;
 import org.krakenapps.ipmanager.model.IpEventLog;
+import org.krakenapps.jpa.JpaService;
 import org.krakenapps.lookup.mac.MacLookupService;
 import org.krakenapps.lookup.mac.Vendor;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IpManagerScript extends DefaultScript {
+	private Logger logger = LoggerFactory.getLogger(IpManagerScript.class);
+	private BundleContext bc;
+	private JpaService jpa;
 	private IpManager ipManager;
 	private IpMonitor ipMonitor;
 	private ArpScanner arpScanner;
 	private MacLookupService macLookup;
 
-	public IpManagerScript(IpManager ipManager, IpMonitor ipMonitor, ArpScanner arpScanner, MacLookupService macLookup) {
-		this.ipManager = ipManager;
-		this.ipMonitor = ipMonitor;
-		this.arpScanner = arpScanner;
+	public IpManagerScript(BundleContext bc, JpaService jpa, MacLookupService macLookup) {
+		this.bc = bc;
+		this.jpa = jpa;
 		this.macLookup = macLookup;
+		loadService();
+	}
+
+	public void load(String[] args) {
+		try {
+			String host = readLine("Database Host", "localhost", false);
+			String databaseName = readLine("Database Name", "kraken", false);
+			String user = readLine("Database User", "kraken", false);
+			String password = readLine("Database Password", null, true);
+
+			Properties props = new Properties();
+			props.put("hibernate.connection.url", "jdbc:mysql://" + host + "/" + databaseName
+					+ "??useUnicode=true&amp;characterEncoding=utf8");
+			props.put("hibernate.connection.username", user);
+			props.put("hibernate.connection.password", password);
+
+			jpa.registerEntityManagerFactory("ipm", props, bc.getBundle().getBundleId());
+
+			loadService();
+		} catch (Exception e) {
+			context.println(e.getMessage());
+			logger.error("cannot load jpa model", e.getMessage());
+		}
+	}
+
+	private String readLine(String label, String def, boolean isPassword) throws InterruptedException {
+		context.print(label);
+		if (def != null)
+			context.print("(default: " + def + ")");
+
+		context.print("? ");
+		String line = null;
+		if (isPassword)
+			line = context.readPassword();
+		else
+			line = context.readLine();
+
+		if (line != null && line.isEmpty())
+			return def;
+
+		return line;
+	}
+
+	private void loadService() {
+		this.ipManager = getService(IpManager.class);
+		this.ipMonitor = getService(IpMonitor.class);
+		this.arpScanner = getService(ArpScanner.class);
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T> T getService(Class<T> cls) {
+		ServiceReference ref = bc.getServiceReference(cls.getName());
+		if (ref == null)
+			return null;
+
+		return (T) bc.getService(ref);
 	}
 
 	@ScriptUsage(description = "list all agents", arguments = { @ScriptArgument(type = "int", name = "org id", description = "organization id") })
 	public void agents(String[] args) {
+		if (ipManager == null) {
+			context.println("run load first");
+			return;
+		}
+
 		int orgId = Integer.valueOf(args[0]);
 		List<Agent> agents = ipManager.getAgents(orgId);
 
@@ -59,6 +128,11 @@ public class IpManagerScript extends DefaultScript {
 
 	@ScriptUsage(description = "list all hosts", arguments = { @ScriptArgument(type = "int", name = "org id", description = "organization id") })
 	public void hosts(String[] args) {
+		if (ipManager == null) {
+			context.println("run load first");
+			return;
+		}
+
 		int orgId = Integer.valueOf(args[0]);
 		List<HostEntry> hosts = ipManager.getHosts(orgId);
 
@@ -71,6 +145,11 @@ public class IpManagerScript extends DefaultScript {
 
 	@ScriptUsage(description = "list all ip entries", arguments = { @ScriptArgument(type = "int", name = "org id", description = "organization id") })
 	public void iplist(String[] args) {
+		if (ipManager == null) {
+			context.println("run load first");
+			return;
+		}
+
 		int orgId = Integer.valueOf(args[0]);
 		List<IpEntry> ipEntries = ipManager.getIpEntries(new IpQueryCondition(orgId));
 
@@ -87,7 +166,13 @@ public class IpManagerScript extends DefaultScript {
 		}
 	}
 
+	@ScriptUsage(description = "get/set arp timeout", arguments = { @ScriptArgument(type = "int", name = "timeout", description = "arp timeout", optional = true) })
 	public void arptimeout(String[] args) {
+		if (ipManager == null) {
+			context.println("run load first");
+			return;
+		}
+
 		if (args.length == 0) {
 			int timeout = arpScanner.getTimeout();
 			context.println(timeout + "msec");
@@ -99,6 +184,11 @@ public class IpManagerScript extends DefaultScript {
 	}
 
 	public void arpscan(String[] args) {
+		if (ipManager == null) {
+			context.println("run load first");
+			return;
+		}
+
 		arpScanner.run();
 		context.println("arp scan completed");
 	}
@@ -108,6 +198,11 @@ public class IpManagerScript extends DefaultScript {
 			@ScriptArgument(type = "int", name = "page", description = "page number"),
 			@ScriptArgument(type = "int", name = "page size", description = "page size") })
 	public void logs(String[] args) {
+		if (ipManager == null) {
+			context.println("run load first");
+			return;
+		}
+
 		int orgId = Integer.valueOf(args[0]);
 		int page = Integer.valueOf(args[1]);
 		int pageSize = Integer.valueOf(args[2]);
