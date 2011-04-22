@@ -13,6 +13,7 @@ import org.krakenapps.ftp.FtpClient;
 import org.krakenapps.ftp.FtpConnectProfile;
 import org.krakenapps.ftp.FtpProfileService;
 import org.krakenapps.ftp.ListEntry;
+import org.krakenapps.ftp.FtpClient.TransferMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,8 +147,11 @@ public class FtpClientScript implements Script {
 					for (String str : client.list())
 						context.println(str);
 				} else if (input.matches("(?i)mlsd")) {
-					for (ListEntry entry : client.mlsd())
-						context.println(entry);
+					ListEntry[] mlsd = client.mlsd();
+					if (mlsd != null) {
+						for (ListEntry entry : mlsd)
+							context.println(entry);
+					}
 				} else if (input.matches("(?i)retr .+")) {
 					context.print("download directory: ");
 					client.retrieve(input.substring(5), new File(context.readLine()));
@@ -171,9 +175,15 @@ public class FtpClientScript implements Script {
 				} else if (input.matches("(?i)rmd .+")) {
 					client.removeDirectory(input.substring(4));
 					context.println(client.getLastMessage().toString());
+				} else if (input.matches("(?i)actv")) {
+					client.setTransferMode(TransferMode.Active);
+					context.println("active mode");
+				} else if (input.matches("(?i)pasv")) {
+					client.setTransferMode(TransferMode.Passive);
+					context.println("passive mode");
 				} else if (input.startsWith("?"))
 					context.println("syst, ascii, binary, pwd, cwd, cdup, list, mlsd, retr FILE, "
-							+ "stor FILE, rename, dele FILE, mkd DIR, rmd DIR, quit");
+							+ "stor FILE, rename, dele FILE, mkd DIR, rmd DIR, actv, pasv, quit");
 				else
 					context.println("invalid command. type '?'");
 			}

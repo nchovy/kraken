@@ -9,7 +9,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.BindException;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -29,6 +31,13 @@ public class FtpClient {
 	private BufferedReader reader;
 	private PrintWriter writer;
 	private Vector<FtpServerMessage> messageLog;
+	private TransferMode transferMode;
+	private ServerSocket servSock;
+	private int activeTimeout = 5000;
+
+	public enum TransferMode {
+		Active, Passive;
+	};
 
 	public FtpClient(String host) throws UnknownHostException, IOException {
 		this(host, 21);
@@ -41,6 +50,7 @@ public class FtpClient {
 		this.messageLog = new Vector<FtpServerMessage>();
 		if (!getMessage().isCode(220))
 			throw new IOException("ftp connect failed");
+		this.transferMode = TransferMode.Passive;
 	}
 
 	public boolean isConnected() {
@@ -73,6 +83,14 @@ public class FtpClient {
 		return send("TYPE I").isCode(200);
 	}
 
+	public void setTransferMode(TransferMode transferMode) {
+		this.transferMode = transferMode;
+	}
+
+	public void setActiveTimeout(int activeTimeout) {
+		this.activeTimeout = activeTimeout;
+	}
+
 	public String printWorkingDirectory() throws IOException {
 		FtpServerMessage msg = send("PWD");
 		if (!msg.isCode(257))
@@ -95,12 +113,16 @@ public class FtpClient {
 
 		if (!send("LIST").isCode(150))
 			return null;
+		if (transferMode.equals(TransferMode.Active))
+			data = servSock.accept();
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(data.getInputStream(),
 				Charset.forName(CHARSET)));
 		while (reader.ready())
 			list.add(reader.readLine());
 		data.close();
+		if (servSock != null && !servSock.isClosed())
+			servSock.close();
 
 		if (!getMessage().isCode(226))
 			return null;
@@ -114,12 +136,16 @@ public class FtpClient {
 
 		if (!send("MLSD").isCode(150))
 			return null;
+		if (transferMode.equals(TransferMode.Active))
+			data = servSock.accept();
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(data.getInputStream(),
 				Charset.forName("UTF-8")));
 		while (reader.ready())
 			entries.add(new ListEntry(reader.readLine()));
 		data.close();
+		if (servSock != null && !servSock.isClosed())
+			servSock.close();
 
 		if (!getMessage().isCode(226))
 			return null;
@@ -138,9 +164,14 @@ public class FtpClient {
 		Socket data = openDataPort();
 		if (!send("RETR " + filename).isCode(150))
 			return false;
+		if (transferMode.equals(TransferMode.Active))
+			data = servSock.accept();
 
 		File file = new File(dir, filename);
 		copy(data.getInputStream(), new FileOutputStream(file));
+		data.close();
+		if (servSock != null && !servSock.isClosed())
+			servSock.close();
 
 		if (!getMessage().isCode(226))
 			return false;
@@ -155,8 +186,13 @@ public class FtpClient {
 		Socket data = openDataPort();
 		if (!send("STOR " + file.getName()).isCode(150))
 			return false;
+		if (transferMode.equals(TransferMode.Active))
+			data = servSock.accept();
 
 		copy(new FileInputStream(file), data.getOutputStream());
+		data.close();
+		if (servSock != null && !servSock.isClosed())
+			servSock.close();
 
 		if (!getMessage().isCode(226))
 			return false;
@@ -208,7 +244,34 @@ public class FtpClient {
 	}
 
 	private Socket openDataPort() throws IOException {
-		return passive();
+		if (transferMode.equals(TransferMode.Active))
+			return active();
+		else
+			return passive();
+	}
+
+	private Socket active() throws IOException {
+		for (int port = 10000; port > 0; port--) {
+			try {
+				servSock = new ServerSocket(port);
+				servSock.setSoTimeout(activeTimeout);
+
+				InetAddress local = InetAddress.getLocalHost();
+				if (socket.getInetAddress().equals(InetAddress.getByName("localhost")))
+					local = InetAddress.getByName("localhost");
+				byte[] addr = local.getAddress();
+				String cmd = String.format("PORT %d,%d,%d,%d,%d,%d", addr[0], addr[1], addr[2], addr[3], port >> 8,
+						port % 256);
+				logger.info(cmd);
+				FtpServerMessage msg = send(cmd);
+				if (!msg.isCode(200))
+					servSock.close();
+
+				return null;
+			} catch (BindException e) {
+			}
+		}
+		return null;
 	}
 
 	private Socket passive() throws IOException {
@@ -217,8 +280,8 @@ public class FtpClient {
 			return null;
 
 		String[] addr = extract(msg.getMessages()[0], "(", ")").split(",");
-		InetAddress host = InetAddress.getByAddress(new byte[] { new Byte(addr[0]), new Byte(addr[1]),
-				new Byte(addr[2]), new Byte(addr[3]) });
+		InetAddress host = InetAddress.getByAddress(new byte[] { (byte) Integer.parseInt(addr[0]),
+				(byte) Integer.parseInt(addr[1]), (byte) Integer.parseInt(addr[2]), (byte) Integer.parseInt(addr[3]) });
 		int port = (Integer.parseInt(addr[4]) << 8) + Integer.parseInt(addr[5]);
 		Socket pasv = new Socket(host, port);
 
