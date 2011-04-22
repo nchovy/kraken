@@ -33,6 +33,8 @@ public class FtpClient {
 	private Vector<FtpServerMessage> messageLog;
 	private TransferMode transferMode;
 	private ServerSocket servSock;
+	private int minActvPort = 1024;
+	private int maxActvPort = 65535;
 	private int activeTimeout = 5000;
 
 	public enum TransferMode {
@@ -89,6 +91,13 @@ public class FtpClient {
 
 	public void setActiveTimeout(int activeTimeout) {
 		this.activeTimeout = activeTimeout;
+	}
+
+	public void setActvPortRange(int min, int max) {
+		if (min < 1 || min > 65535 || max < 1 || max > 65535)
+			throw new IllegalArgumentException("port out of range");
+		this.minActvPort = min;
+		this.maxActvPort = max;
 	}
 
 	public String printWorkingDirectory() throws IOException {
@@ -251,7 +260,7 @@ public class FtpClient {
 	}
 
 	private Socket active() throws IOException {
-		for (int port = 10000; port > 0; port--) {
+		for (int port = maxActvPort; port > minActvPort; port--) {
 			try {
 				servSock = new ServerSocket(port);
 				servSock.setSoTimeout(activeTimeout);
