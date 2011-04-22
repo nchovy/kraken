@@ -2,6 +2,8 @@ package org.krakenapps.iptables.msgbus;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +107,53 @@ public class IptablesPlugin {
 				iptables.removeRule(req.getString("chain_name"), index);
 		} catch (IOException e) {
 			logger.error("kraken-iptabls: failed to remove rule.", e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void removeRules(Request req, Response resp) {
+		List<Object> objs = (List<Object>) req.get("rules");
+		List<IptablesPlugin.RuleInfo> rules = new ArrayList<IptablesPlugin.RuleInfo>();
+		for (Object obj : objs) {
+			Map<String, Object> m = (Map<String, Object>) obj;
+			if (m.containsKey("chain_type"))
+				rules.add(new RuleInfo((Integer) m.get("index"), (String) m.get("chain_type"), false));
+			else if (m.containsKey("chain_name"))
+				rules.add(new RuleInfo((Integer) m.get("index"), (String) m.get("chain_name"), true));
+		}
+
+		Collections.sort(rules, new Comparator<RuleInfo>() {
+			@Override
+			public int compare(RuleInfo o1, RuleInfo o2) {
+				return (o2.index - o1.index);
+			}
+		});
+
+		for (RuleInfo info : rules)
+			info.removeRule();
+	}
+
+	private class RuleInfo {
+		public int index;
+		public String chain;
+		public boolean isName;
+
+		public RuleInfo(int index, String chain, boolean isName) {
+			this.index = index;
+			this.chain = chain;
+			this.isName = isName;
+		}
+
+		public void removeRule() {
+			try {
+				if (isName)
+					iptables.removeRule(chain, index);
+				else
+					iptables.removeRule(Chain.valueOf(chain), index);
+			} catch (IOException e) {
+				logger.error("kraken-iptabls: failed to remove rule.", e);
+			}
 		}
 	}
 }
