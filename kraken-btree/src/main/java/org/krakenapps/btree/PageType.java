@@ -16,6 +16,8 @@
 package org.krakenapps.btree;
 
 public class PageType {
-	public static final int LEAF = 1;
-	public static final int INDEX = 2;
+	public static final short LEAF     = 0x1 << 0;
+	public static final short INDEX    = 0x1 << 1;
+	public static final short INTKEY   = 0x1 << 2;
+	public static final short OVERFLOW = 0x1 << 3; 
 }

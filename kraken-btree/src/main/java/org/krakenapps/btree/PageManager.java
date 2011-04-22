@@ -35,14 +35,18 @@ public class PageManager {
 	public void setRootPage(int pageNumber) throws IOException {
 		pf.setRootPage(pageNumber);
 	}
+	
+	public int getRootPage() {
+		return pf.getRootPage();
+	}
 
 	public Page get(int pageNumber) throws IOException {
 		if (pageMap.containsKey(pageNumber)) {
 			Page page = pageMap.get(pageNumber);
 			if (page.getFlag() != 0)
 				return page;
-			
-			return null;
+			else
+				return null;
 		}
 
 		Page page = pf.read(pageNumber);
@@ -72,7 +76,7 @@ public class PageManager {
 
 	public void purge(int number) throws IOException {
 		Page p = get(number);
-		p.setFlag(0);
+		p.clearAllFlag();
 		p.setLeftPage(0);
 		p.setRightPage(0);
 		p.setRightChildPage(0);

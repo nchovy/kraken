@@ -43,7 +43,7 @@ public class BtreeTest {
 		schema = new Schema(pageSize, keyTypes);
 		schema.setRowValueFactory(new IntegerValueFactory());
 
-		btree = Btree.create(file, schema);
+		btree = BtreeImpl.create(file, schema);
 		btree.setRowValueFactory(new IntegerValueFactory());
 	}
 
@@ -341,7 +341,6 @@ public class BtreeTest {
 		c.close();
 	}
 
-	@Ignore
 	@Test
 	public void testDeleteRightChildKey() throws IOException {
 		setup(80);
@@ -353,6 +352,8 @@ public class BtreeTest {
 		btree.delete(new IntegerKey(3));
 
 		btree.sync();
+		trace();
+		
 
 		int index = 1;
 		Cursor c = btree.openCursor(Cursor.ASC);

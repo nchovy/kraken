@@ -44,7 +44,7 @@ public class RowEntry {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		RowKey other = (RowKey) obj;
+		RowEntry other = (RowEntry) obj;
 		if (!Arrays.equals(bytes, other.bytes))
 			return false;
 		return true;

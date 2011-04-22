@@ -84,15 +84,15 @@ public class PageTest {
 
 		Page p = new Page(schema);
 
-		// capacity: 1024, page header: 20, slot metadata: 8,
-		// record header: 4, record data: 8
+		// capacity: 1024, page header: 26, slot metadata: 4,
+		// record header: 2, record data: 8
 		p.insert(new IntegerKey(4), new IntegerValue(400));
 		assertEquals(984, p.getFreeSpace());
 
-		// capacity: 1024, page header: 20, slot metadata: 8 * 2,
-		// record header: 4 * 2, record data: 8 * 2
+		// capacity: 1024, page header: 26, slot metadata: 4 * 2,
+		// record header: 2 * 2, record data: 8 * 2
 		p.insert(new IntegerKey(3), new IntegerValue(300));
-		assertEquals(964, p.getFreeSpace());
+		assertEquals(970, p.getFreeSpace());
 	}
 
 	@Test

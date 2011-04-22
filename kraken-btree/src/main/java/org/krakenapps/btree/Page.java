@@ -13,18 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/*
+ * PAGE_HEADER: flag(2), count(2), left(4), right(4), right-child(4), upper(4), 
+ * 	            first_freeblock (2), first_record_pos(2), number_of_fragmented_freebytes(2), 
+ * +---------------+---------+---------------+-----------------+
+ * |PAGE_HEADER(26)|Slots(8n)| unalloc space | Records         |
+ * +---------------+---------+---------------+-----------------+
+ * 
+ * Slots and Records are managed in sorted order.
+ * 
+ * Record:
+ * +---------------------+----------------------------------+-----+-------+
+ * | data length(varlen) | key length or key itself(varlen) | Key | Value |
+ * +---------------------+----------------------------------+-----+-------+
+ * |<-------------------------- Record Length --------------------------->|
+ *  
+ * if (record.keyLength > page.size * page.maxPayloadFraction) 
+ * 		*record has overflow page*
+ * 
+ * Record which has overflow page:
+ * +---------------------+----------------------------------+-----+-------+-------------------------+
+ * | data length(varlen) | key length or key itself(varlen) | Key | Value | overflow page number(4) |
+ * +---------------------+----------------------------------+-----+-------+-------------------------+
+ * |<-------------------------- Record Length ----------------------------------------------------->|
+ *
+ * Record Length := varlen + varlen + data length + key length      : key length <= page.size * page.maxPayloadFraction
+ *               or varlen + varlen + data length + key length + 4  : key length >  page.size * page.maxPayloadFraction
+ *
+ * Slot:
+ * +-----------+------------------+
+ * | Offset(2) | Record Length(2) |
+ * +-----------+------------------+
+ * 
+ * free block header
+ * +-------------------+-------------------------------------------+
+ * | next block pos(2) | length of this block(2) (excludes header) | 
+ * +-------------------+-------------------------------------------+ 
+ * 
+ */
+	
 package org.krakenapps.btree;
 
 import java.nio.ByteBuffer;
 
 public class Page {
 	// (flag, count), left, right, right-child, upper
-	public static final int PAGE_HEADER_SIZE = 20;
-	public static final int SLOT_SIZE = 8;
+	// (first_freeblock, first_recore_pos), (number_of_fragmented_freebytes, )
+	public static final int PAGE_HEADER_SIZE = 26;
+	public static final int SLOT_SIZE = 4;
 
-	// record = key length(4) + key + value
+	// record = record header + key + value
+	// record header: key length(2) + overflow(1) + non-unique(1)
+	//
+	@Deprecated
 	public static final int RECORD_HEADER_SIZE = 4;
-
+	
 	private boolean dirty;
 	private int number;
 	private Schema schema;
@@ -73,8 +117,8 @@ public class Page {
 		int keyLength = key.getBytes().length;
 		int valueLength = valueBytes.length;
 
-		int reserve = RECORD_HEADER_SIZE + keyLength + valueLength;
-		if (!checkFreeSpace(reserve))
+		int recordLength = getRecordHeaderSize(keyLength, valueLength) + keyLength + valueLength;
+		if (!checkFreeSpace(recordLength))
 			return false;
 
 		int before = findSlotBefore(key);
@@ -84,26 +128,36 @@ public class Page {
 		int offset = 0;
 		if (before >= 0) {
 			int pos = getSlotPosition(before);
-			int beforeOffset = bb.getInt(pos);
-			int beforeLength = bb.getInt(pos + 4);
+			int beforeOffset = bb.getShort(pos) & 0xFFFF;
+			int beforeLength = bb.getShort(pos + 2) & 0xFFFF;
 			offset = beforeOffset + beforeLength;
 		}
 
 		// move existing data
+		// order: last to first
+		// move record one by one
+		// record is already ordered by key.
 		for (int i = getRecordCount(); i > slot; i--) {
-			copyRecord(reserve, i - 1, i);
+			copyRecord(recordLength, i - 1, i);
 		}
 
 		// write slot metadata
 		int pos = getSlotPosition(slot);
-		bb.putInt(pos, offset);
-		bb.putInt(pos + 4, reserve);
+		bb.putShort(pos, (short) offset);
+		bb.putShort(pos + 2, (short) recordLength);
 
-		// write row data
-		bb.position(getPhysicalOffset(offset, reserve));
-		bb.putInt(keyLength);
-		bb.put(key.getBytes());
-		bb.put(valueBytes);
+		// write record
+		int initialRecordPos;
+		int recordPos = getPhysicalOffset(offset, recordLength);
+		initialRecordPos = recordPos;
+		bb.position(recordPos);
+		
+		recordPos += encodeVarNumber(bb, recordPos, valueLength);
+		recordPos += encodeVarNumber(bb, recordPos, keyLength);
+		recordPos += encodeBytes(bb, recordPos, key.getBytes());
+		recordPos += encodeBytes(bb, recordPos, valueBytes);
+		
+		assert initialRecordPos - recordPos != recordLength : "buffer overflow";
 
 		setRecordCount(getRecordCount() + 1);
 		return true;
@@ -117,7 +171,7 @@ public class Page {
 		// if it is not last slot, move data
 		if (slot != recordCount - 1) {
 			int pos = getSlotPosition(slot);
-			int length = bb.getInt(pos + 4);
+			int length = bb.getShort(pos + 2) & 0xFFFF;
 
 			for (int i = slot; i < recordCount - 1; i++) {
 				copyRecord(-length, i + 1, i);
@@ -139,8 +193,8 @@ public class Page {
 			return schema.getPageSize() - PAGE_HEADER_SIZE;
 
 		int pos = getSlotPosition(count - 1);
-		int offset = bb.getInt(pos);
-		int length = bb.getInt(pos + 4);
+		int offset = bb.getShort(pos) & 0xFFFF;
+		int length = bb.getShort(pos + 2) & 0xFFFF;
 		int phyOffset = getPhysicalOffset(offset, length);
 
 		return phyOffset - (PAGE_HEADER_SIZE + SLOT_SIZE * count);
@@ -151,15 +205,16 @@ public class Page {
 	}
 
 	private void copyRecord(int move, int from, int to) {
-		int pos = getSlotPosition(from);
-		int offset = bb.getInt(pos);
-		int length = bb.getInt(pos + 4);
+		int fromSlotPos = getSlotPosition(from);
+		int offset = bb.getShort(fromSlotPos) & 0xFFFF;
+		int length = bb.getShort(fromSlotPos + 2) & 0xFFFF;
+
+		int newOffset = offset + move;
 
 		// move slot metadata
-		int newPos = getSlotPosition(to);
-		int newOffset = offset + move;
-		bb.putInt(newPos, newOffset);
-		bb.putInt(newPos + 4, length);
+		int toSlotPos = getSlotPosition(to);
+		bb.putShort(toSlotPos, (short) newOffset);
+		bb.putShort(toSlotPos + 2, (short) length);
 
 		// move slot data
 		int phyNewOffset = getPhysicalOffset(newOffset, length);
@@ -205,14 +260,15 @@ public class Page {
 			return null;
 
 		int pos = getSlotPosition(slot);
-		int offset = bb.getInt(pos);
-		int length = bb.getInt(pos + 4);
+		int offset = bb.getShort(pos) & 0xFFFF;
+		int length = bb.getShort(pos + 2) & 0xFFFF;
 
 		int phyOffset = getPhysicalOffset(offset, length);
-		int keyLength = bb.getInt(phyOffset);
+		int valueLength = getVarInt(bb, phyOffset);
+		int keyLength = getVarInt(bb, phyOffset + NumberEncoder.lengthOf(valueLength));
 
 		byte[] key = new byte[keyLength];
-		bb.position(phyOffset + 4);
+		bb.position(phyOffset + NumberEncoder.lengthOf(keyLength) + NumberEncoder.lengthOf(valueLength));
 		bb.get(key);
 		return schema.getRowKeyFactory().newKey(key);
 	}
@@ -222,38 +278,77 @@ public class Page {
 			return null;
 
 		int pos = getSlotPosition(slot);
-		int offset = bb.getInt(pos);
-		int length = bb.getInt(pos + 4);
+		int offset = bb.getShort(pos) & 0xFFFF;
+		int length = bb.getShort(pos + 2) & 0xFFFF;
 
 		int phyOffset = getPhysicalOffset(offset, length);
-		int keyLength = bb.getInt(phyOffset);
-		int valueLength = length - RECORD_HEADER_SIZE - keyLength;
+		int valueLength = getVarInt(bb, phyOffset);
+		int keyLength = getVarInt(bb, phyOffset + NumberEncoder.lengthOf(valueLength));
 
 		if (valueLength < 0)
 			throw new IllegalStateException("corrupted value length: " + valueLength);
 
 		byte[] b = new byte[valueLength];
-		int valuePosition = phyOffset + RECORD_HEADER_SIZE + keyLength;
+		int valuePosition = phyOffset + NumberEncoder.lengthOf(valueLength) + NumberEncoder.lengthOf(keyLength) + keyLength;
 		bb.position(valuePosition);
 		bb.get(b);
 		return schema.getRowValueFactory().newValue(b);
 	}
 
+	private static int getVarInt(ByteBuffer bb, int phyOffset) {
+		return (int) NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset, bb.limit() - phyOffset));
+	}
+	
+	private static long getVarLong(ByteBuffer bb, int phyOffset) {
+		return NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset, bb.limit() - phyOffset));
+	}
+
+	private static short getVarShort(ByteBuffer bb, int phyOffset) {
+		return (short) NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset, bb.limit() - phyOffset));
+	}
+
 	private int getSlotPosition(int slot) {
-		// slot size = payload offset (4) + length (4)
+		// slot size = payload offset (2) + length (2)
 		return PAGE_HEADER_SIZE + slot * SLOT_SIZE;
 	}
 
 	//
 	// page header
 	//
-
-	public int getFlag() {
+	
+	public boolean leaf() {
+		return (bb.getShort(0) & PageType.LEAF) != 0; 
+	}
+	
+	public boolean intKey() {
+		return (bb.getShort(0) & PageType.INTKEY) != 0;
+	}
+	
+	public boolean overflowPage() {
+		return (bb.getShort(0) & PageType.OVERFLOW) != 0;
+	}
+	
+	public short getFlag() {
 		return bb.getShort(0);
 	}
+	
+	public boolean getFlag(short type) {
+		return (bb.getShort(0) & type) != 0;
+	}
 
-	public void setFlag(int flag) {
-		bb.putShort(0, (short) flag);
+	public void setFlag(short type, boolean flag) {
+		if (flag)
+			bb.putShort(0, (short)(getFlag() | type));
+		else
+			bb.putShort(0, (short)(getFlag() & ~type));
+	}
+	
+	public void clearAllFlag() {
+		bb.putShort(0, (short) 0);
+	}
+	
+	public void setFlag(short flag) {
+		bb.putShort(0, flag);
 	}
 
 	public int getRecordCount() {
@@ -305,4 +400,21 @@ public class Page {
 	public String toString() {
 		return "Page " + getNumber();
 	}
+	
+	private int encodeBytes(ByteBuffer bb, int recordPos, byte[] array) {
+		int encodedLen = array.length;
+		ByteBuffer.wrap(bb.array(), recordPos, encodedLen).put(array);
+		return encodedLen;
+	}
+	
+	private int encodeVarNumber(ByteBuffer bb, int recordPos, int valueLength) {
+		int encodedLen = NumberEncoder.lengthOf(valueLength);
+		NumberEncoder.encode(ByteBuffer.wrap(bb.array(), recordPos, encodedLen), valueLength);
+		return encodedLen;
+	}
+	
+	private int getRecordHeaderSize(int keyLength, int valueLength) {
+		return NumberEncoder.lengthOf(keyLength) + NumberEncoder.lengthOf(valueLength);
+	}
+
 }
