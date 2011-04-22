@@ -34,16 +34,16 @@ public class Marshaler {
 
 	private static Map<String, Object> marshal(Sortlist sortlist) {
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("address", sortlist.getAddress().getHostAddress());
-		m.put("netmask", sortlist.getNetmask().getHostAddress());
+		m.put("address", sortlist.getAddress() != null ? sortlist.getAddress().getHostAddress() : null);
+		m.put("netmask", sortlist.getNetmask() != null ? sortlist.getNetmask().getHostAddress() : null);
 		return m;
 	}
 
 	public static Map<String, Object> marshal(RoutingEntry entry) {
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("destination", entry.getDestination().getHostAddress());
-		m.put("gateway", entry.getGateway().getHostAddress());
-		m.put("genmask", entry.getGenmask().getHostAddress());
+		m.put("destination", entry.getDestination() != null ? entry.getDestination().getHostAddress() : null);
+		m.put("gateway", entry.getGateway() != null ? entry.getGateway().getHostAddress() : null);
+		m.put("genmask", entry.getGenmask() != null ? entry.getGenmask().getHostAddress() : null);
 		m.put("flag", entry.getFlags());
 		m.put("metric", entry.getMetric());
 		m.put("ref", entry.getRef());
