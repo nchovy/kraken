@@ -30,21 +30,16 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 		for (String var : params.keySet()) {
 			String value = c.getParameters().get(var);
 
-			if (params.get(var) == null) {
-				if (value == null)
-					return false;
+			if (value == null || value.contains("%00") || value.matches("^/?(\\./|\\.\\./)*(\\.|\\.\\.)?$"))
+				return false;
 
-			} else {
+			if (params.get(var) != null) {
 				String expected = params.get(var);
-				if (value == null)
-					return false;
 
-				if (!expected.matches("(\\.\\./)*" + value))
+				if (!expected.matches("/?((\\.|\\.\\.)/)*" + value + "(/((\\.|\\.\\.)(/(\\.|\\.\\.))*/?)?)?"))
 					return false;
 			}
 
-			if (!value.contains("%00"))
-				return false;
 		}
 
 		return true;
