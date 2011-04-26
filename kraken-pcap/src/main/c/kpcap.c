@@ -42,6 +42,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_krakenapps_pcap_live_PcapDeviceManager_g
 	PIP_INTERFACE_INFO pInfo;
 	u_long lSize = 0;
 	char **devNames;
+	int ret;
 #endif
 #ifdef __linux__
 	struct ifreq ifr;
@@ -58,8 +59,15 @@ JNIEXPORT jobjectArray JNICALL Java_org_krakenapps_pcap_live_PcapDeviceManager_g
 	GetInterfaceInfo(NULL, &lSize);
 	pInfo = (PIP_INTERFACE_INFO)malloc(lSize);
 
-	if(GetInterfaceInfo(pInfo, &lSize) != NO_ERROR) {
-		fprintf(stderr, "Error in GetInterfaceInfo\n");
+	ret = GetInterfaceInfo(pInfo, &lSize);
+	if(ret != NO_ERROR) {
+		if(ret == ERROR_NO_DATA) {
+			devices = (*env)->NewObjectArray(env, 0, clzPcapDeviceMetadata, NULL);
+			return devices;
+		} else if(ret == ERROR_NOT_SUPPORTED)
+			fprintf(stderr, "OS not support GetInterfaceInfo");
+		else
+			fprintf(stderr, "Error in GetInterfaceInfo\n");
 		return NULL;
 	}
 
