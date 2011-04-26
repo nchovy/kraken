@@ -65,7 +65,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_krakenapps_pcap_live_PcapDeviceManager_g
 			devices = (*env)->NewObjectArray(env, 0, clzPcapDeviceMetadata, NULL);
 			return devices;
 		} else if(ret == ERROR_NOT_SUPPORTED)
-			fprintf(stderr, "OS not support GetInterfaceInfo");
+			fprintf(stderr, "OS not support GetInterfaceInfo\n");
 		else
 			fprintf(stderr, "Error in GetInterfaceInfo\n");
 		return NULL;
