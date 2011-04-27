@@ -83,6 +83,9 @@ public class SshShell implements Command, Runnable, QuitHandler {
 		int width = Integer.parseInt(env.getEnv().get(Environment.ENV_COLUMNS));
 		int height = Integer.parseInt(env.getEnv().get(Environment.ENV_LINES));
 		context.setWindowSize(width, height);
+		
+		String username = env.getEnv().get(Environment.ENV_USER);
+		session.setPrincipal(username);
 
 		thread = new Thread(this, "SshShell");
 		thread.start();
@@ -158,7 +161,7 @@ public class SshShell implements Command, Runnable, QuitHandler {
 				String text = String.format(format, args);
 				text = text.replaceAll("\n", "\r\n");
 				byte[] b = text.getBytes("utf-8");
-				
+
 				out.write(b);
 				out.flush();
 			} catch (UnsupportedEncodingException e) {

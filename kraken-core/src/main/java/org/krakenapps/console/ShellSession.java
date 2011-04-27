@@ -1,3 +1,4 @@
+
 package org.krakenapps.console;
 
 import java.io.IOException;
@@ -125,7 +126,7 @@ public class ShellSession {
 
 				AccountManager accountManager = sc.getAccountManager();
 				if (accountManager.verifyPassword(name, input)) {
-					attributes.put("principal", name);
+					setPrincipal(name);
 					sc.turnEchoOn();
 					out.print("\r\n");
 
@@ -166,6 +167,10 @@ public class ShellSession {
 		}
 
 		printPrompt();
+	}
+
+	public void setPrincipal(String name) {
+		attributes.put("principal", name);
 	}
 
 	private byte invert(char c) {
