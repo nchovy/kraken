@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.PatternSyntaxException;
 
 import org.krakenapps.ahocorasick.AhoCorasickSearch;
 import org.krakenapps.ahocorasick.Pair;
@@ -45,6 +46,7 @@ import org.krakenapps.rule.http.LocalFileInclusionRule;
 import org.krakenapps.rule.http.RemoteFileInclusionRule;
 import org.krakenapps.rule.http.URLParser;
 import org.krakenapps.rule.http.VariableRegexRule;
+import org.krakenapps.rule.http.LocalFileInclusionRule.ParameterValue;
 import org.krakenapps.rule.parser.GenericRule;
 import org.krakenapps.rule.parser.GenericRuleOption;
 import org.krakenapps.rule.parser.GenericRuleSyntax;
@@ -93,6 +95,8 @@ public class HttpRuleScript implements Script {
 				if (rule.isEmpty() || rule.startsWith(";"))
 					continue;
 				AhoCorasickSearch acs = compile(rule);
+				if (acs == null)
+					continue;
 
 				for (String url : args) {
 					if (ruleTest(acs, url))
@@ -136,7 +140,7 @@ public class HttpRuleScript implements Script {
 			String var = r.get("var");
 			rule = new RemoteFileInclusionRule(r.getId(), r.getMessage(), path, var);
 		} else if (type.equals("lfi")) {
-			Map<String, String> params = new HashMap<String, String>();
+			Map<String, ParameterValue> params = new HashMap<String, ParameterValue>();
 
 			String name = null;
 			for (GenericRuleOption o : r.getOptions()) {
@@ -146,7 +150,17 @@ public class HttpRuleScript implements Script {
 
 					name = o.getValue();
 				} else if (name != null && o.getName().equals("value")) {
-					params.put(name, o.getValue());
+					params.put(name, new ParameterValue(o.getValue()));
+					name = null;
+				} else if (name != null && o.getName().equals("regex")) {
+					try {
+						java.util.regex.Pattern.compile(o.getValue());
+					} catch (PatternSyntaxException e) {
+						logger.error("kraken http rule: regex parse error - " + ruleString, e);
+						context.println("regex parse error");
+						return null;
+					}
+					params.put(name, new ParameterValue(o.getValue(), true));
 					name = null;
 				}
 			}
