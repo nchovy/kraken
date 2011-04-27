@@ -15,32 +15,71 @@
  */
 package org.krakenapps.rule.http;
 
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class VariableRegexRule extends HttpRequestRule {
-	private Pattern p;
-	private String var;
+	private Map<String, ParameterValue> params;
 
-	public VariableRegexRule(String id, String msg, String path, String var, String regex) {
+	public VariableRegexRule(String id, String msg, String path, Map<String, ParameterValue> params) {
 		super("regex", id, msg, path);
-		this.var = var;
-		this.p = Pattern.compile(regex);
+		this.params = params;
 	}
 
 	@Override
 	public boolean match(HttpRequestContext c) {
-		String value = c.getParameters().get(var);
-		if (value == null)
-			return false;
+		for (String key : params.keySet()) {
+			String value = c.getParameters().get(key);
+			if (value == null)
+				return false;
 
-		Matcher matcher = p.matcher(value);
-		return matcher.find();
+			ParameterValue val = params.get(key);
+			if (val.isRegex()) {
+				Matcher matcher = val.getPattern().matcher(value);
+				if (!matcher.find())
+					return false;
+			} else {
+				if (!value.equals(val.getValue()))
+					return false;
+			}
+		}
+
+		return true;
 	}
 
 	@Override
 	public String toString() {
 		return getId() + " " + getMessage();
+	}
+
+	public static class ParameterValue {
+		private String value;
+		private boolean regex;
+		private Pattern pattern;
+
+		public ParameterValue(String value) {
+			this(value, false);
+		}
+
+		public ParameterValue(String value, boolean isRegex) {
+			this.value = value;
+			this.regex = isRegex;
+			if (isRegex)
+				pattern = Pattern.compile(value);
+		}
+
+		public String getValue() {
+			return value;
+		}
+
+		public boolean isRegex() {
+			return regex;
+		}
+
+		public Pattern getPattern() {
+			return pattern;
+		}
 	}
 
 }

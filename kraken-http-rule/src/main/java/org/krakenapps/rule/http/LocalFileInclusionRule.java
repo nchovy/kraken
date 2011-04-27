@@ -41,6 +41,10 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 			if (params.get(var) != null) {
 				ParameterValue expected = params.get(var);
 
+<<<<<<< .mine
+				if (!value.matches(Pattern.quote(expected) + "(/((\\.|\\.\\.)/)*)?"))
+					return false;
+=======
 				if (expected.isRegex()) {
 					if (!value.matches(expected.getValue()))
 						return false;
@@ -48,6 +52,7 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 					if (!value.matches(Pattern.quote(expected.getValue()) + "(/((\\.|\\.\\.)/)*)?"))
 						return false;
 				}
+>>>>>>> .r2465
 			}
 		}
 

@@ -46,7 +46,11 @@ import org.krakenapps.api.Script;
 import org.krakenapps.rule.Rule;
 import org.krakenapps.rule.RuleDatabase;
 import org.krakenapps.rule.RuleGroup;
+<<<<<<< .mine
+import org.krakenapps.rule.http.VariableRegexRule.ParameterValue;
+=======
 import org.krakenapps.rule.http.LocalFileInclusionRule.ParameterValue;
+>>>>>>> .r2465
 import org.krakenapps.rule.parser.GenericRule;
 import org.krakenapps.rule.parser.GenericRuleOption;
 import org.krakenapps.rule.parser.GenericRuleSyntax;
@@ -211,9 +215,28 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 
 			rule = new LocalFileInclusionRule(r.getId(), r.getMessage(), path, params);
 		} else if (type.equals("regex")) {
-			String var = r.get("var");
-			String regex = r.get("regex");
-			rule = new VariableRegexRule(r.getId(), r.getMessage(), path, var, regex);
+			Map<String, ParameterValue> params = new HashMap<String, VariableRegexRule.ParameterValue>();
+
+			String name = null;
+			for (GenericRuleOption o : r.getOptions()) {
+				if (o.getName().equals("var")) {
+					if (name != null)
+						params.put(name, null);
+
+					name = o.getValue();
+				} else if (name != null && o.getName().equals("value")) {
+					params.put(name, new ParameterValue(o.getValue()));
+					name = null;
+				} else if (name != null && o.getName().equals("regex")) {
+					params.put(name, new ParameterValue(o.getValue(), true));
+					name = null;
+				}
+			}
+
+			if (name != null)
+				params.put(name, null);
+
+			rule = new VariableRegexRule(r.getId(), r.getMessage(), path, params);
 		}
 
 		if (rule != null) {
