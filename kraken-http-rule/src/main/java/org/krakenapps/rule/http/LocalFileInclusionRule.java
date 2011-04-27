@@ -19,9 +19,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class LocalFileInclusionRule extends HttpRequestRule {
-	private Map<String, ParameterValue> params;
+	private Map<String, String> params;
 
-	public LocalFileInclusionRule(String id, String msg, String path, Map<String, ParameterValue> params) {
+	public LocalFileInclusionRule(String id, String msg, String path, Map<String, String> params) {
 		super("lfi", id, msg, path);
 		this.params = params;
 	}
@@ -39,20 +39,10 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 				return true;
 
 			if (params.get(var) != null) {
-				ParameterValue expected = params.get(var);
+				String expected = params.get(var);
 
-<<<<<<< .mine
 				if (!value.matches(Pattern.quote(expected) + "(/((\\.|\\.\\.)/)*)?"))
 					return false;
-=======
-				if (expected.isRegex()) {
-					if (!value.matches(expected.getValue()))
-						return false;
-				} else {
-					if (!value.matches(Pattern.quote(expected.getValue()) + "(/((\\.|\\.\\.)/)*)?"))
-						return false;
-				}
->>>>>>> .r2465
 			}
 		}
 
@@ -62,36 +52,6 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 	@Override
 	public String toString() {
 		return getId() + " " + getMessage();
-	}
-
-	public static class ParameterValue {
-		private String value;
-		private boolean isRegex;
-
-		public ParameterValue(String value) {
-			this(value, false);
-		}
-
-		public ParameterValue(String value, boolean isRegex) {
-			this.value = value;
-			this.isRegex = isRegex;
-		}
-
-		public String getValue() {
-			return value;
-		}
-
-		public void setValue(String value) {
-			this.value = value;
-		}
-
-		public boolean isRegex() {
-			return isRegex;
-		}
-
-		public void setRegex(boolean isRegex) {
-			this.isRegex = isRegex;
-		}
 	}
 
 }

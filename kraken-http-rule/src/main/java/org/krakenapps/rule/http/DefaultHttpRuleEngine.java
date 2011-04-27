@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.PatternSyntaxException;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -46,11 +45,7 @@ import org.krakenapps.api.Script;
 import org.krakenapps.rule.Rule;
 import org.krakenapps.rule.RuleDatabase;
 import org.krakenapps.rule.RuleGroup;
-<<<<<<< .mine
 import org.krakenapps.rule.http.VariableRegexRule.ParameterValue;
-=======
-import org.krakenapps.rule.http.LocalFileInclusionRule.ParameterValue;
->>>>>>> .r2465
 import org.krakenapps.rule.parser.GenericRule;
 import org.krakenapps.rule.parser.GenericRuleOption;
 import org.krakenapps.rule.parser.GenericRuleSyntax;
@@ -186,7 +181,7 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 			String var = r.get("var");
 			rule = new RemoteFileInclusionRule(r.getId(), r.getMessage(), path, var);
 		} else if (type.equals("lfi")) {
-			Map<String, ParameterValue> params = new HashMap<String, ParameterValue>();
+			Map<String, String> params = new HashMap<String, String>();
 
 			String name = null;
 			for (GenericRuleOption o : r.getOptions()) {
@@ -196,16 +191,7 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 
 					name = o.getValue();
 				} else if (name != null && o.getName().equals("value")) {
-					params.put(name, new ParameterValue(o.getValue()));
-					name = null;
-				} else if (name != null && o.getName().equals("regex")) {
-					try {
-						java.util.regex.Pattern.compile(o.getValue());
-					} catch (PatternSyntaxException e) {
-						logger.error("kraken http rule: regex parse error - " + line, e);
-						return;
-					}
-					params.put(name, new ParameterValue(o.getValue(), true));
+					params.put(name, o.getValue());
 					name = null;
 				}
 			}
