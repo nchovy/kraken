@@ -16,6 +16,7 @@
 package org.krakenapps.rule.http;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class LocalFileInclusionRule extends HttpRequestRule {
 	private Map<String, String> params;
@@ -30,19 +31,22 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 		for (String var : params.keySet()) {
 			String value = c.getParameters().get(var);
 
-			if (value == null || value.contains("%00") || value.matches("^/?(\\./|\\.\\./)*(\\.|\\.\\.)?$"))
+			if (value == null)
 				return false;
+			if (value.contains("%00"))
+				return true;
+			if (!value.isEmpty() && value.matches("^/?(\\./|\\.\\./)*$"))
+				return true;
 
 			if (params.get(var) != null) {
 				String expected = params.get(var);
 
-				if (!expected.matches("/?((\\.|\\.\\.)/)*" + value + "(/((\\.|\\.\\.)(/(\\.|\\.\\.))*/?)?)?"))
-					return false;
+				if (value.matches(Pattern.quote(expected) + "(/((\\.|\\.\\.)/)*)?"))
+					return true;
 			}
-
 		}
 
-		return true;
+		return false;
 	}
 
 	@Override

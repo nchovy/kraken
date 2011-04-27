@@ -195,6 +195,9 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 				}
 			}
 
+			if (name != null)
+				params.put(name, null);
+
 			rule = new LocalFileInclusionRule(r.getId(), r.getMessage(), path, params);
 		} else if (type.equals("regex")) {
 			String var = r.get("var");

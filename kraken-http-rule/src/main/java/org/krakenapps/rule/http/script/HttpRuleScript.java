@@ -82,11 +82,6 @@ public class HttpRuleScript implements Script {
 		}
 	}
 
-	public void test(String[] args) {
-		for (String s : args)
-			context.println(s);
-	}
-
 	@ScriptUsage(description = "inspect http uri and test attack detection", arguments = { @ScriptArgument(name = "url", type = "string", description = "path + querystring") })
 	public void ruleTest(String[] args) {
 		context.println("Ctrl-C to quit.");
@@ -155,6 +150,9 @@ public class HttpRuleScript implements Script {
 					name = null;
 				}
 			}
+
+			if (name != null)
+				params.put(name, null);
 
 			rule = new LocalFileInclusionRule(r.getId(), r.getMessage(), path, params);
 		} else if (type.equals("regex")) {
