@@ -66,14 +66,14 @@ public class IpEntry implements Marshalable {
 	@Column(name = "protected", nullable = false)
 	private boolean isProtected;
 
+	@Column(name = "is_block", nullable = false)
+	private boolean isBlock;
+
 	@OneToMany(mappedBy = "ip", cascade = CascadeType.ALL)
 	private List<DetectedMac> detectedMacs = new ArrayList<DetectedMac>();
 
 	@OneToMany(mappedBy = "ip", cascade = CascadeType.ALL)
 	private List<AllowedMac> allowedMacs = new ArrayList<AllowedMac>();
-
-	@OneToMany(mappedBy = "ip", cascade = CascadeType.ALL)
-	private List<DeniedMac> deniedMacs = new ArrayList<DeniedMac>();
 
 	@ManyToMany
 	@JoinTable(name = "ipm_ip_to_hosts", joinColumns = @JoinColumn(name = "ip_id"), inverseJoinColumns = @JoinColumn(name = "host_id"))
@@ -135,6 +135,14 @@ public class IpEntry implements Marshalable {
 		this.isProtected = isProtected;
 	}
 
+	public boolean isBlock() {
+		return isBlock;
+	}
+
+	public void setBlock(boolean isBlock) {
+		this.isBlock = isBlock;
+	}
+
 	public List<DetectedMac> getDetectedMacs() {
 		return detectedMacs;
 	}
@@ -149,14 +157,6 @@ public class IpEntry implements Marshalable {
 
 	public void setAllowedMacs(List<AllowedMac> allowedMacs) {
 		this.allowedMacs = allowedMacs;
-	}
-
-	public List<DeniedMac> getDeniedMacs() {
-		return deniedMacs;
-	}
-
-	public void setDeniedMacs(List<DeniedMac> deniedMacs) {
-		this.deniedMacs = deniedMacs;
 	}
 
 	public Set<HostEntry> getHostEntries() {
@@ -176,6 +176,7 @@ public class IpEntry implements Marshalable {
 		m.put("ip", ip);
 		m.put("mac", currentMac);
 		m.put("is_protected", isProtected);
+		m.put("is_block", isBlock);
 		m.put("first_seen", dateFormat.format(firstSeen));
 		m.put("last_seen", dateFormat.format(lastSeen));
 		return m;

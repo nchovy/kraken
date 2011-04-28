@@ -19,8 +19,8 @@ public class DeniedMac {
 	private int id;
 
 	@ManyToOne
-	@JoinColumn(name = "ip_id", nullable = false)
-	private IpEntry ip;
+	@JoinColumn(name = "agent_id", nullable = false)
+	private Agent agent;
 
 	@Column(length = 20, nullable = false)
 	private String mac;
@@ -42,12 +42,12 @@ public class DeniedMac {
 		this.id = id;
 	}
 
-	public IpEntry getIp() {
-		return ip;
+	public Agent getAgent() {
+		return agent;
 	}
 
-	public void setIp(IpEntry ip) {
-		this.ip = ip;
+	public void setAgent(Agent agent) {
+		this.agent = agent;
 	}
 
 	public String getMac() {

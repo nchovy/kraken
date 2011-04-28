@@ -135,9 +135,11 @@ public class IpManagerService implements IpManager, Runnable {
 					.createQuery("SELECT e FROM IpEntry e INNER JOIN e.agent a WHERE e.id = ? AND a.orgId = ?")
 					.setParameter(1, ipId).setParameter(2, orgId).getSingleResult();
 
-			for (DeniedMac d : ipEntry.getDeniedMacs()) {
-				if (d.getMac().equals(mac))
-					throw new IllegalStateException("conflict with denied mac: " + d.getId());
+			try {
+				DeniedMac d = (DeniedMac) em.createQuery("FROM DeniedMac d WHERE d.mac = ?").setParameter(1, mac)
+						.getSingleResult();
+				throw new IllegalStateException("conflict with denied mac: " + d.getId());
+			} catch (NoResultException e) {
 			}
 
 			boolean isNew = false;
@@ -193,33 +195,25 @@ public class IpManagerService implements IpManager, Runnable {
 
 	@Transactional
 	@Override
-	public int denyMacAddress(int orgId, int ipId, String mac, Date from, Date to) {
+	public int denyMacAddress(int orgId, int agentId, String mac, Date from, Date to) {
 		mac = mac.toUpperCase();
 
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			IpEntry ipEntry = (IpEntry) em
-					.createQuery("SELECT e FROM IpEntry e INNER JOIN e.agent a WHERE e.id = ? AND a.orgId = ?")
-					.setParameter(1, ipId).setParameter(2, orgId).getSingleResult();
-
-			for (AllowedMac a : ipEntry.getAllowedMacs()) {
-				if (a.getMac().equals(mac))
-					throw new IllegalStateException("conflict with allowed mac: " + a.getId());
-			}
+			Agent agent = (Agent) em.createNamedQuery("FROM Agent a WHERE a.id = ? AND a.orgId = ?")
+					.setParameter(1, agentId).setParameter(2, orgId).getSingleResult();
 
 			boolean isNew = false;
 
-			// check if already registered
 			DeniedMac deniedMac = null;
-
-			for (DeniedMac d : ipEntry.getDeniedMacs()) {
-				if (d.getMac().equals(mac))
-					deniedMac = d;
+			for (DeniedMac m : agent.getDeniedMac()) {
+				if (m.getMac().equals(mac))
+					deniedMac = m;
 			}
 
 			if (deniedMac == null) {
 				deniedMac = new DeniedMac();
-				deniedMac.setIp(ipEntry);
+				deniedMac.setAgent(agent);
 				deniedMac.setMac(mac);
 				deniedMac.setCreateDateTime(new Date());
 				isNew = true;
@@ -235,7 +229,7 @@ public class IpManagerService implements IpManager, Runnable {
 
 			return deniedMac.getId();
 		} catch (NoResultException e) {
-			throw new IllegalStateException("ip entry not found: " + ipId);
+			throw new IllegalStateException("agent not found: " + agentId);
 		}
 	}
 
@@ -249,7 +243,7 @@ public class IpManagerService implements IpManager, Runnable {
 			deniedMac = (DeniedMac) em.createQuery("FROM DeniedMac d WHERE d.id = ?").setParameter(1, macId)
 					.getSingleResult();
 
-			if (deniedMac.getIp().getAgent().getOrgId() != orgId)
+			if (deniedMac.getAgent().getOrgId() != orgId)
 				throw new SecurityException("no permission to edit mac: " + macId);
 
 			em.remove(deniedMac);

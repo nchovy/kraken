@@ -15,15 +15,19 @@
  */
 package org.krakenapps.ipmanager.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import org.krakenapps.msgbus.Marshalable;
@@ -67,6 +71,9 @@ public class Agent implements Marshalable {
 
 	@Column(name = "created_at", nullable = false)
 	private Date createDateTime;
+
+	@OneToMany(mappedBy = "agent", cascade = CascadeType.ALL)
+	private List<DeniedMac> deniedMac = new ArrayList<DeniedMac>();
 
 	public int getId() {
 		return id;
@@ -162,6 +169,14 @@ public class Agent implements Marshalable {
 
 	public void setCreateDateTime(Date createDateTime) {
 		this.createDateTime = createDateTime;
+	}
+
+	public List<DeniedMac> getDeniedMac() {
+		return deniedMac;
+	}
+
+	public void setDeniedMac(List<DeniedMac> deniedMac) {
+		this.deniedMac = deniedMac;
 	}
 
 	@Override
