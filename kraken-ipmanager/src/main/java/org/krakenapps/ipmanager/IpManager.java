@@ -34,6 +34,10 @@ public interface IpManager {
 
 	void disallowMacAddress(int orgId, int macId);
 
+	int denyMacAddress(int orgId, int ipId, String mac, Date from, Date to);
+
+	void removeDenyMacAddress(int orgId, int macId);
+
 	void updateIpEntry(IpDetection detection);
 
 	List<IpEventLog> getLogs(LogQueryCondition condition);

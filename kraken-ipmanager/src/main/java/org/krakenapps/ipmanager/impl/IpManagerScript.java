@@ -15,6 +15,8 @@
  */
 package org.krakenapps.ipmanager.impl;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 
@@ -23,7 +25,6 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.ipmanager.ArpScanner;
 import org.krakenapps.ipmanager.IpManager;
-import org.krakenapps.ipmanager.IpMonitor;
 import org.krakenapps.ipmanager.IpQueryCondition;
 import org.krakenapps.ipmanager.LogQueryCondition;
 import org.krakenapps.ipmanager.model.Agent;
@@ -39,11 +40,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IpManagerScript extends DefaultScript {
+	private final String JPA_FACTORY_NAME = "ipm";
+
 	private Logger logger = LoggerFactory.getLogger(IpManagerScript.class);
 	private BundleContext bc;
 	private JpaService jpa;
 	private IpManager ipManager;
-	private IpMonitor ipMonitor;
 	private ArpScanner arpScanner;
 	private MacLookupService macLookup;
 
@@ -67,13 +69,18 @@ public class IpManagerScript extends DefaultScript {
 			props.put("hibernate.connection.username", user);
 			props.put("hibernate.connection.password", password);
 
-			jpa.registerEntityManagerFactory("ipm", props, bc.getBundle().getBundleId());
-
+			jpa.registerEntityManagerFactory(JPA_FACTORY_NAME, props, bc.getBundle().getBundleId());
 			loadService();
+			context.println("ipm loaded");
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("cannot load jpa model", e.getMessage());
 		}
+	}
+
+	public void unload(String[] args) {
+		jpa.unregisterEntityManagerFactory(JPA_FACTORY_NAME);
+		context.println("ipm unloaded");
 	}
 
 	private String readLine(String label, String def, boolean isPassword) throws InterruptedException {
@@ -96,7 +103,6 @@ public class IpManagerScript extends DefaultScript {
 
 	private void loadService() {
 		this.ipManager = getService(IpManager.class);
-		this.ipMonitor = getService(IpMonitor.class);
 		this.arpScanner = getService(ArpScanner.class);
 	}
 
@@ -152,6 +158,18 @@ public class IpManagerScript extends DefaultScript {
 
 		int orgId = Integer.valueOf(args[0]);
 		List<IpEntry> ipEntries = ipManager.getIpEntries(new IpQueryCondition(orgId));
+		Collections.sort(ipEntries, new Comparator<IpEntry>() {
+			@Override
+			public int compare(IpEntry o1, IpEntry o2) {
+				String[] t1 = o1.getIp().split("\\.");
+				String[] t2 = o2.getIp().split("\\.");
+				for (int i = 0; i < 4; i++) {
+					if (!t1[i].equals(t2[i]))
+						return (Integer.parseInt(t1[i]) - Integer.parseInt(t2[i]));
+				}
+				return 0;
+			}
+		});
 
 		context.println("IP Entries");
 		context.println("------------");
@@ -177,7 +195,7 @@ public class IpManagerScript extends DefaultScript {
 			int timeout = arpScanner.getTimeout();
 			context.println(timeout + "msec");
 		} else if (args.length == 1) {
-			int timeout = Integer.valueOf(args[1]);
+			int timeout = Integer.valueOf(args[0]);
 			arpScanner.setTimeout(timeout);
 			context.println("set");
 		}

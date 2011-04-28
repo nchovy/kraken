@@ -21,8 +21,6 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.ipmanager.ArpScanner;
-import org.krakenapps.ipmanager.IpMonitor;
 import org.krakenapps.jpa.JpaService;
 import org.krakenapps.lookup.mac.MacLookupService;
 import org.osgi.framework.BundleContext;

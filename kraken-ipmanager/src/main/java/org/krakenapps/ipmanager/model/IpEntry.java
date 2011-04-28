@@ -72,6 +72,9 @@ public class IpEntry implements Marshalable {
 	@OneToMany(mappedBy = "ip", cascade = CascadeType.ALL)
 	private List<AllowedMac> allowedMacs = new ArrayList<AllowedMac>();
 
+	@OneToMany(mappedBy = "ip", cascade = CascadeType.ALL)
+	private List<DeniedMac> deniedMacs = new ArrayList<DeniedMac>();
+
 	@ManyToMany
 	@JoinTable(name = "ipm_ip_to_hosts", joinColumns = @JoinColumn(name = "ip_id"), inverseJoinColumns = @JoinColumn(name = "host_id"))
 	private Set<HostEntry> hostEntries = new HashSet<HostEntry>();
@@ -146,6 +149,14 @@ public class IpEntry implements Marshalable {
 
 	public void setAllowedMacs(List<AllowedMac> allowedMacs) {
 		this.allowedMacs = allowedMacs;
+	}
+
+	public List<DeniedMac> getDeniedMacs() {
+		return deniedMacs;
+	}
+
+	public void setDeniedMacs(List<DeniedMac> deniedMacs) {
+		this.deniedMacs = deniedMacs;
 	}
 
 	public Set<HostEntry> getHostEntries() {

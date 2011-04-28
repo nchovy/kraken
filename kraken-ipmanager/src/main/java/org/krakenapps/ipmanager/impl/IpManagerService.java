@@ -41,6 +41,7 @@ import org.krakenapps.ipmanager.IpQueryCondition;
 import org.krakenapps.ipmanager.LogQueryCondition;
 import org.krakenapps.ipmanager.model.Agent;
 import org.krakenapps.ipmanager.model.AllowedMac;
+import org.krakenapps.ipmanager.model.DeniedMac;
 import org.krakenapps.ipmanager.model.DetectedMac;
 import org.krakenapps.ipmanager.model.HostEntry;
 import org.krakenapps.ipmanager.model.HostNic;
@@ -134,6 +135,11 @@ public class IpManagerService implements IpManager, Runnable {
 					.createQuery("SELECT e FROM IpEntry e INNER JOIN e.agent a WHERE e.id = ? AND a.orgId = ?")
 					.setParameter(1, ipId).setParameter(2, orgId).getSingleResult();
 
+			for (DeniedMac d : ipEntry.getDeniedMacs()) {
+				if (d.getMac().equals(mac))
+					throw new IllegalStateException("conflict with denied mac: " + d.getId());
+			}
+
 			boolean isNew = false;
 
 			// check if already registered
@@ -180,9 +186,75 @@ public class IpManagerService implements IpManager, Runnable {
 				throw new SecurityException("no permission to edit mac: " + macId);
 
 			em.remove(allowedMac);
-
 		} catch (NoResultException e) {
 			throw new IllegalStateException("allowed mac not found: " + macId);
+		}
+	}
+
+	@Transactional
+	@Override
+	public int denyMacAddress(int orgId, int ipId, String mac, Date from, Date to) {
+		mac = mac.toUpperCase();
+
+		EntityManager em = entityManagerService.getEntityManager();
+		try {
+			IpEntry ipEntry = (IpEntry) em
+					.createQuery("SELECT e FROM IpEntry e INNER JOIN e.agent a WHERE e.id = ? AND a.orgId = ?")
+					.setParameter(1, ipId).setParameter(2, orgId).getSingleResult();
+
+			for (AllowedMac a : ipEntry.getAllowedMacs()) {
+				if (a.getMac().equals(mac))
+					throw new IllegalStateException("conflict with allowed mac: " + a.getId());
+			}
+
+			boolean isNew = false;
+
+			// check if already registered
+			DeniedMac deniedMac = null;
+
+			for (DeniedMac d : ipEntry.getDeniedMacs()) {
+				if (d.getMac().equals(mac))
+					deniedMac = d;
+			}
+
+			if (deniedMac == null) {
+				deniedMac = new DeniedMac();
+				deniedMac.setIp(ipEntry);
+				deniedMac.setMac(mac);
+				deniedMac.setCreateDateTime(new Date());
+				isNew = true;
+			}
+
+			deniedMac.setBeginDateTime(from);
+			deniedMac.setEndDateTime(to);
+
+			if (isNew)
+				em.persist(deniedMac);
+			else
+				em.merge(deniedMac);
+
+			return deniedMac.getId();
+		} catch (NoResultException e) {
+			throw new IllegalStateException("ip entry not found: " + ipId);
+		}
+	}
+
+	@Transactional
+	@Override
+	public void removeDenyMacAddress(int orgId, int macId) {
+		EntityManager em = entityManagerService.getEntityManager();
+
+		DeniedMac deniedMac = null;
+		try {
+			deniedMac = (DeniedMac) em.createQuery("FROM DeniedMac d WHERE d.id = ?").setParameter(1, macId)
+					.getSingleResult();
+
+			if (deniedMac.getIp().getAgent().getOrgId() != orgId)
+				throw new SecurityException("no permission to edit mac: " + macId);
+
+			em.remove(deniedMac);
+		} catch (NoResultException e) {
+			throw new IllegalStateException("denied mac not found: " + macId);
 		}
 	}
 
