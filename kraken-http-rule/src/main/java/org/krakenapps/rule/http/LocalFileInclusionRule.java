@@ -43,9 +43,13 @@ public class LocalFileInclusionRule extends HttpRequestRule {
 
 				if (!value.matches(Pattern.quote(expected) + "(/((\\.|\\.\\.)/)*)?"))
 					return false;
+			} else {
+				if (!value.contains("%00"))
+					return false;
 			}
 		}
 
+		System.out.println("pass");
 		return true;
 	}
 
