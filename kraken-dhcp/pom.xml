@@ -12,8 +12,7 @@
 	<artifactId>kraken-dhcp</artifactId>
 	<version>0.5.0</version>
 	<packaging>bundle</packaging>
-	<name>kraken-dhcp</name>
-
+	<name>Kraken DHCP</name>
 	<build>
 		<plugins>
 			<plugin>
