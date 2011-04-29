@@ -60,7 +60,6 @@ public class HttpServiceManagerImpl implements HttpServiceManager {
 		for (String serverId : serverMap.keySet()) {
 			JettyHttpService server = serverMap.get(serverId);
 			server.close();
-			closeHttpService(serverId);
 		}
 	}
 
