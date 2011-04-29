@@ -17,6 +17,8 @@ package org.krakenapps.ipmanager;
 
 import java.util.Date;
 
+import org.krakenapps.ipmanager.model.IpEventLog;
+
 public class LogQueryCondition {
 	private int orgId;
 	private Integer agentId;
@@ -24,7 +26,9 @@ public class LogQueryCondition {
 	private int pageSize;
 	private Date from;
 	private Date to;
-	private Integer type;
+	private IpEventLog.Type type;
+	private String ip;
+	private String mac;
 
 	public LogQueryCondition(int orgId, int page, int pageSize) {
 		this.orgId = orgId;
@@ -68,12 +72,28 @@ public class LogQueryCondition {
 		this.agentId = agentId;
 	}
 
-	public Integer getType() {
+	public IpEventLog.Type getType() {
 		return type;
 	}
 
-	public void setType(Integer type) {
+	public void setType(IpEventLog.Type type) {
 		this.type = type;
+	}
+
+	public String getIp() {
+		return ip;
+	}
+
+	public void setIp(String ip) {
+		this.ip = ip;
+	}
+
+	public String getMac() {
+		return mac;
+	}
+
+	public void setMac(String mac) {
+		this.mac = mac;
 	}
 
 }

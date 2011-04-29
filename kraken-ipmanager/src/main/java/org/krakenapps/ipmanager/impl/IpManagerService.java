@@ -279,26 +279,45 @@ public class IpManagerService implements IpManager, Runnable {
 		queue.add(detection);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
 	public List<IpEventLog> getLogs(LogQueryCondition condition) {
-		EntityManager em = entityManagerService.getEntityManager();
-
 		int orgId = condition.getOrgId();
 		int page = condition.getPage();
 		if (page < 1)
 			throw new IllegalArgumentException("page number should be natural number");
 
+		String qString = "FROM IpEventLog l WHERE l.orgId = ?1";
+
+		if (condition.getType() != null)
+			qString += " AND l.type = ?2";
+		if (condition.getIp() != null)
+			qString += " AND (l.ip1 = ?3 OR l.ip2 = ?3)";
+		if (condition.getMac() != null)
+			qString += " AND (l.mac1 = ?4 OR l.mac2 = ?4)";
+		if (condition.getFrom() != null)
+			qString += " AND l.date >= ?5";
+		if (condition.getTo() != null)
+			qString += " AND l.date <= ?6";
+
+		EntityManager em = entityManagerService.getEntityManager();
+		Query q = em.createQuery(qString + " ORDER BY l.id DESC").setParameter(1, orgId);
+
+		if (condition.getType() != null)
+			q.setParameter(2, condition.getType().ordinal());
+		if (condition.getIp() != null)
+			q.setParameter(3, condition.getIp());
+		if (condition.getMac() != null)
+			q.setParameter(4, condition.getMac());
+		if (condition.getFrom() != null)
+			q.setParameter(5, condition.getFrom());
+		if (condition.getTo() != null)
+			q.setParameter(6, condition.getTo());
+
 		int pageSize = condition.getPageSize();
 		int offset = (page - 1) * pageSize;
-
-		// TODO: predicate query
-		// Date from = condition.getFrom();
-		// Date to = condition.getTo();
-
-		@SuppressWarnings("unchecked")
-		List<IpEventLog> logs = em.createQuery("FROM IpEventLog l WHERE l.orgId = ? ORDER BY l.id DESC")
-				.setParameter(1, orgId).setFirstResult(offset).setMaxResults(pageSize).getResultList();
+		List<IpEventLog> logs = q.setFirstResult(offset).setMaxResults(pageSize).getResultList();
 
 		return logs;
 	}

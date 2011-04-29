@@ -167,7 +167,7 @@ public class IpEventLog implements Marshalable {
 	@Override
 	public String toString() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		return String.format("id=%d, date=%s, type=%d, ip1=%s, ip2=%s, mac1=%s, mac2=%s", id, dateFormat.format(date),
-				type, ip1, ip2, mac1, mac2);
+		return String.format("id=%d, date=%s, type=%s, ip1=%s, ip2=%s, mac1=%s, mac2=%s", id, dateFormat.format(date),
+				Type.values()[type - 1], ip1, ip2, mac1, mac2);
 	}
 }
