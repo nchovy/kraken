@@ -1,6 +1,9 @@
 package org.krakenapps.ipmanager.model;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -11,9 +14,11 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import org.krakenapps.msgbus.Marshalable;
+
 @Entity
 @Table(name = "ipm_denied_macs")
-public class DeniedMac {
+public class DeniedMac implements Marshalable {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	private int id;
@@ -80,6 +85,19 @@ public class DeniedMac {
 
 	public void setCreateDateTime(Date createDateTime) {
 		this.createDateTime = createDateTime;
+	}
+
+	@Override
+	public Map<String, Object> marshal() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("id", id);
+		m.put("agent_id", agent.getId());
+		m.put("mac", mac);
+		m.put("begin", dateFormat.format(beginDateTime));
+		m.put("end", dateFormat.format(endDateTime));
+		m.put("created", dateFormat.format(createDateTime));
+		return m;
 	}
 
 }

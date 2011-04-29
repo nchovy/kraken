@@ -290,30 +290,34 @@ public class IpManagerService implements IpManager, Runnable {
 
 		String qString = "FROM IpEventLog l WHERE l.orgId = ?1";
 
+		if (condition.getAgentId() != null)
+			qString += " AND l.agent.id = ?2";
 		if (condition.getType() != null)
-			qString += " AND l.type = ?2";
+			qString += " AND l.type = ?3";
 		if (condition.getIp() != null)
-			qString += " AND (l.ip1 = ?3 OR l.ip2 = ?3)";
+			qString += " AND (l.ip1 = ?4 OR l.ip2 = ?4)";
 		if (condition.getMac() != null)
-			qString += " AND (l.mac1 = ?4 OR l.mac2 = ?4)";
+			qString += " AND (l.mac1 = ?5 OR l.mac2 = ?5)";
 		if (condition.getFrom() != null)
-			qString += " AND l.date >= ?5";
+			qString += " AND l.date >= ?6";
 		if (condition.getTo() != null)
-			qString += " AND l.date <= ?6";
+			qString += " AND l.date <= ?7";
 
 		EntityManager em = entityManagerService.getEntityManager();
 		Query q = em.createQuery(qString + " ORDER BY l.id DESC").setParameter(1, orgId);
 
+		if (condition.getAgentId() != null)
+			q.setParameter(2, condition.getAgentId());
 		if (condition.getType() != null)
-			q.setParameter(2, condition.getType().ordinal());
+			q.setParameter(3, condition.getType().getCode());
 		if (condition.getIp() != null)
-			q.setParameter(3, condition.getIp());
+			q.setParameter(4, condition.getIp());
 		if (condition.getMac() != null)
-			q.setParameter(4, condition.getMac());
+			q.setParameter(5, condition.getMac());
 		if (condition.getFrom() != null)
-			q.setParameter(5, condition.getFrom());
+			q.setParameter(6, condition.getFrom());
 		if (condition.getTo() != null)
-			q.setParameter(6, condition.getTo());
+			q.setParameter(7, condition.getTo());
 
 		int pageSize = condition.getPageSize();
 		int offset = (page - 1) * pageSize;
