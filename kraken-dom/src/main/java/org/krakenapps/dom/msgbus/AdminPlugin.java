@@ -19,6 +19,8 @@ import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.AdminApi;
@@ -41,6 +43,12 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 public class AdminPlugin {
 	@Requires
 	private AdminApi adminApi;
+
+	@Requires
+	private OrganizationApi orgApi;
+
+	@Requires
+	private OrganizationUnitApi orgUnitApi;
 
 	@Requires
 	private UserApi userApi;
@@ -69,11 +77,42 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	public void createAdmin(Request req, Response resp) {
+		if (req.getAdminId() == null)
+			throw new SecurityException("not admin");
+
+		User user = new User();
+		user.setOrganization(orgApi.getOrganization(req.getOrgId()));
+		if (req.get("org_unit_id") != null)
+			user.setOrganizationUnit(orgUnitApi.getOrganizationUnit(req.getInteger("org_unit_id")));
+
+		user.setName(req.getString("name"));
+		user.setLoginName(req.getString("login_name"));
+		user.setDescription(req.getString("description"));
+		user.setTitle(req.getString("title"));
+		user.setEmail(req.getString("email"));
+		user.setPhone(req.getString("phone"));
+		userApi.createUser(user);
+
+		Admin admin = toAdmin(req);
+		admin.setUser(user);
+		adminApi.createAdmin(req.getOrgId(), req.getAdminId(), admin);
+		resp.put("id", admin.getId());
+	}
+
+	@MsgbusMethod
 	public void setUserToAdmin(Request req, Response resp) {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
 
 		Admin admin = toAdmin(req);
+
+		int userId = req.getInteger("user_id");
+		User user = userApi.getUser(userId);
+		if (user == null)
+			throw new IllegalArgumentException("user not found");
+		admin.setUser(user);
+
 		adminApi.createAdmin(req.getOrgId(), req.getAdminId(), admin);
 		resp.put("id", admin.getId());
 	}
@@ -85,6 +124,13 @@ public class AdminPlugin {
 
 		Admin admin = toAdmin(req);
 		admin.setId(req.getInteger("id"));
+
+		int userId = req.getInteger("user_id");
+		User user = userApi.getUser(userId);
+		if (user == null)
+			throw new IllegalArgumentException("user not found");
+		admin.setUser(user);
+
 		adminApi.updateAdmin(req.getOrgId(), req.getAdminId(), admin);
 	}
 
@@ -99,12 +145,6 @@ public class AdminPlugin {
 
 	private Admin toAdmin(Request req) throws RoleNotFoundException {
 		Admin admin = new Admin();
-
-		int userId = req.getInteger("user_id");
-		User user = userApi.getUser(userId);
-		if (user == null)
-			throw new IllegalArgumentException("user not found");
-		admin.setUser(user);
 
 		int roleId = req.getInteger("role_id");
 		Role role = roleApi.getRole(roleId);

@@ -44,7 +44,7 @@ public class ProgramApiImpl extends AbstractApi<ProgramProfile> implements Progr
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 	@Requires
-	private AdminApi userApi;
+	private AdminApi adminApi;
 
 	@Transactional
 	@Override
@@ -78,12 +78,12 @@ public class ProgramApiImpl extends AbstractApi<ProgramProfile> implements Progr
 
 	@Transactional
 	@Override
-	public List<Program> getAvailablePrograms(int organizationId, int userId) throws AdminNotFoundException {
-		Admin user = userApi.getAdmin(organizationId, userId);
-		if (user == null)
-			throw new AdminNotFoundException(userId);
+	public List<Program> getAvailablePrograms(int organizationId, int adminId) throws AdminNotFoundException {
+		Admin admin = adminApi.getAdmin(organizationId, adminId);
+		if (admin == null)
+			throw new AdminNotFoundException(adminId);
 
-		Set<Program> programs = user.getProgramProfile().getPrograms();
+		Set<Program> programs = admin.getProgramProfile().getPrograms();
 		programs.size(); // enforce fetch
 		return new ArrayList<Program>(programs);
 	}

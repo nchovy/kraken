@@ -24,7 +24,7 @@ public interface RoleApi {
 	
 	Role getRole(String name);
 
-	List<Role> getGrantableRoles(int organizationId, int userId);
+	List<Role> getGrantableRoles(int organizationId, int adminId);
 
-	boolean checkPermission(int organizationId, int userId, String name);
+	boolean checkPermission(int organizationId, int adminId, String name);
 }

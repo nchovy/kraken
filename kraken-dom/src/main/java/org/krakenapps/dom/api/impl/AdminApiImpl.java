@@ -28,8 +28,6 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.AdminApi;
-import org.krakenapps.dom.api.ProgramApi;
-import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.api.UserExtensionSchema;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
@@ -51,11 +49,11 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
-	@Requires
-	private RoleApi roleApi;
+	// @Requires
+	// private RoleApi roleApi;
 
-	@Requires
-	private ProgramApi programApi;
+	// @Requires
+	// private ProgramApi programApi;
 
 	private static final UserExtensionSchema schema;
 
@@ -112,21 +110,17 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Override
-	public void set(int orgId, int id, Map<String, Object> values) {
-		Admin admin = getAdmin(orgId, id);
+	public void set(int orgId, int adminId, Map<String, Object> values) {
+		Admin admin = getAdmin(orgId, adminId);
 		if (admin == null)
 			return;
 
 		for (String key : values.keySet()) {
 			Object value = values.get(key);
-			if (key.equals("role_id")) {
-				Role role = roleApi.getRole((Integer) value);
-				if (role != null)
-					admin.setRole(role);
-			} else if (key.equals("profile_id")) {
-				ProgramProfile programProfile = programApi.getProgramProfile(orgId, (Integer) value);
-				if (programProfile != null)
-					admin.setProgramProfile(programProfile);
+			if (key.equals("role")) {
+				admin.setRole((Role) value);
+			} else if (key.equals("profile")) {
+				admin.setProgramProfile((ProgramProfile) value);
 			} else if (key.equals("lang")) {
 				admin.setLang((String) value);
 			}

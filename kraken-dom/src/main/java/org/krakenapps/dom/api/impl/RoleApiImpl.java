@@ -38,7 +38,7 @@ import org.krakenapps.jpa.handler.Transactional;
 @JpaConfig(factory = "dom")
 public class RoleApiImpl implements RoleApi, SecurityManager {
 	@Requires
-	private AdminApi userApi;
+	private AdminApi adminApi;
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
@@ -63,29 +63,29 @@ public class RoleApiImpl implements RoleApi, SecurityManager {
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
-	public List<Role> getGrantableRoles(int organizationId, int userId) {
+	public List<Role> getGrantableRoles(int organizationId, int adminId) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Admin user = getUser(organizationId, userId);
-		int level = user.getRole().getLevel();
+		Admin admin = getAdmin(organizationId, adminId);
+		int level = admin.getRole().getLevel();
 		return em.createQuery("FROM Role r WHERE r.level <= ?").setParameter(1, level).getResultList();
 	}
 
-	private Admin getUser(int organizationId, int userId) {
-		Admin user = userApi.getAdmin(organizationId, userId);
-		if (user == null)
-			throw new AdminNotFoundException(userId);
-		return user;
+	private Admin getAdmin(int organizationId, int adminId) {
+		Admin admin = adminApi.getAdmin(organizationId, adminId);
+		if (admin == null)
+			throw new AdminNotFoundException(adminId);
+		return admin;
 	}
 
 	@Transactional
 	@Override
-	public boolean checkPermission(int organizationId, int userId, String permission) {
+	public boolean checkPermission(int organizationId, int adminId, String permission) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Admin user = getUser(organizationId, userId);
+		Admin admin = getAdmin(organizationId, adminId);
 
 		try {
 			em.createQuery("FROM Permission p LEFT JOIN p.roles r WHERE r.id = ? and p.name = ?")
-					.setParameter(1, user.getRole().getId()).setParameter(2, permission).getSingleResult();
+					.setParameter(1, admin.getRole().getId()).setParameter(2, permission).getSingleResult();
 			return true;
 		} catch (NoResultException e) {
 			return false;

@@ -29,7 +29,7 @@ public interface ProgramApi {
 
 	List<ProgramPack> getAvailableProgramPacks(int organizationId);
 
-	List<Program> getAvailablePrograms(int organizationId, int userId) throws AdminNotFoundException;
+	List<Program> getAvailablePrograms(int organizationId, int adminId) throws AdminNotFoundException;
 
 	void createProgramProfile(ProgramProfile profile);
 
