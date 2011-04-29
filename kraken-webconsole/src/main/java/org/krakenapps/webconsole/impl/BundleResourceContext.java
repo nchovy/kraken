@@ -18,13 +18,19 @@ package org.krakenapps.webconsole.impl;
 import java.io.InputStream;
 import java.net.URL;
 
-import org.krakenapps.webconsole.HttpRequest;
-import org.krakenapps.webconsole.StaticResourceContext;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Provides;
+import org.krakenapps.webconsole.ResourceContext;
 import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BundleResourceContext implements StaticResourceContext {
+@Component(name = "bundle-resource-context")
+@Provides
+public class BundleResourceContext extends ResourceContext {
+	private static final long serialVersionUID = 1L;
 	private final Logger logger = LoggerFactory.getLogger(BundleResourceContext.class.getName());
 	private Bundle bundle;
 	private String basePath;
@@ -35,13 +41,13 @@ public class BundleResourceContext implements StaticResourceContext {
 	}
 
 	@Override
-	public InputStream open(HttpRequest req) {
+	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
-			URL url = bundle.getEntry(basePath + "/" + req.getPath());
+			URL url = bundle.getEntry(basePath + "/" + req.getRequestURI());
 			return url.openStream();
 		} catch (Exception e) {
 			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(),
-					req.getPath());
+					req.getRequestURI());
 			return null;
 		}
 	}

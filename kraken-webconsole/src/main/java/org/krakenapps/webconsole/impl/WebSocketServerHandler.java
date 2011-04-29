@@ -15,8 +15,6 @@
  */
 package org.krakenapps.webconsole.impl;
 
-import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.security.MessageDigest;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -36,7 +34,6 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrameDecoder;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrameEncoder;
@@ -147,61 +144,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 			return;
 		}
 
-		WebConsoleHttpRequest webreq = convert(req);
-
-		InputStream is = staticResourceApi.getResource(webreq);
-		if (is != null) {
-			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-			String mimeType = MimeTypes.instance().getByFile(path);
-			if (mimeType == null)
-				mimeType = "text/html";
-
-			if (mimeType.startsWith("text/"))
-				mimeType += "; charset=utf-8";
-
-			ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
-			try {
-				byte[] b = new byte[4096];
-				while (true) {
-					int read = is.read(b);
-					if (read <= 0)
-						break;
-
-					buf.writeBytes(b, 0, read);
-				}
-			} finally {
-				if (is != null)
-					is.close();
-			}
-
-			resp.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeType);
-			resp.setHeader(HttpHeaders.Names.CONTENT_LENGTH, buf.readableBytes());
-			resp.setContent(buf);
-
-			sendHttpResponse(ctx, req, resp);
-			return;
+		try {
+			staticResourceApi.service(ctx, req);
+		} catch (IllegalArgumentException e) {
+			// send an error page otherwise
+			sendHttpResponse(ctx, req, new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
 		}
-
-		// send an error page otherwise
-		sendHttpResponse(ctx, req, new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
-	}
-
-	private WebConsoleHttpRequest convert(HttpRequest req) {
-		WebConsoleHttpRequest w = new WebConsoleHttpRequest();
-
-		for (String name : req.getHeaderNames())
-			w.putHeader(name, req.getHeader(name));
-
-		// TODO: add POST parameter parsing
-		QueryStringDecoder qsd = new QueryStringDecoder(req.getUri(), Charset.forName("utf-8"));
-		String path = qsd.getPath();
-
-		w.setPath(path.equals("/") ? "index.html" : path);
-		for (String name : qsd.getParameters().keySet()) {
-			w.putParameter(name, qsd.getParameters().get(name).get(0));
-		}
-
-		return w;
 	}
 
 	private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {

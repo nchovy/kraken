@@ -11,6 +11,7 @@ import java.util.Enumeration;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
@@ -24,17 +25,19 @@ import org.krakenapps.sleepproxy.ConfigStore;
 import org.krakenapps.sleepproxy.model.Agent;
 import org.krakenapps.sleepproxy.model.AgentGroup;
 import org.krakenapps.sleepproxy.model.SleepPolicy;
-import org.krakenapps.webconsole.HttpRequest;
+import org.krakenapps.webconsole.ResourceContext;
 import org.krakenapps.webconsole.StaticResourceApi;
-import org.krakenapps.webconsole.StaticResourceContext;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "sleep-proxy-policy-provider")
 @JpaConfig(factory = "sleep-proxy")
-public class PolicyProvider implements StaticResourceContext {
-	private final Logger logger = LoggerFactory.getLogger(PolicyProvider.class.getName());
+public class PolicyProvider extends ResourceContext {
+	private static final long serialVersionUID = 1L;
+
+	private final Logger logger = LoggerFactory.getLogger(PolicyProvider.class
+			.getName());
 
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
@@ -61,7 +64,8 @@ public class PolicyProvider implements StaticResourceContext {
 
 	private String getDefaultIp() {
 		try {
-			Enumeration<NetworkInterface> n = NetworkInterface.getNetworkInterfaces();
+			Enumeration<NetworkInterface> n = NetworkInterface
+					.getNetworkInterfaces();
 			while (n.hasMoreElements()) {
 				NetworkInterface ni = n.nextElement();
 				Enumeration<InetAddress> addrs = ni.getInetAddresses();
@@ -82,13 +86,14 @@ public class PolicyProvider implements StaticResourceContext {
 	}
 
 	@Override
-	public InputStream open(HttpRequest req) {
+	protected InputStream getInputStream(HttpServletRequest req) {
 		String guid = req.getParameter("GUID");
 		logger.info("sleep proxy: fetch policy for {}", guid);
 
 		SleepPolicy policy = getPolicy(guid);
 		if (policy == null) {
-			logger.warn("sleep proxy: default policy not found for guid [{}]", guid);
+			logger.warn("sleep proxy: default policy not found for guid [{}]",
+					guid);
 			return null;
 		}
 
@@ -99,11 +104,14 @@ public class PolicyProvider implements StaticResourceContext {
 		String heartbeatInterval = cs.get(ConfigKey.HeartbeatInterval, "60");
 
 		int port = server.getBindings().iterator().next().getPort();
-		String url = cs.get(ConfigKey.PolicyUrl, "http://" + syslogIp + ":" + port + "/ksp/policy");
+		String url = cs.get(ConfigKey.PolicyUrl, "http://" + syslogIp + ":"
+				+ port + "/ksp/policy");
 
-		String content = "[policy]\n" + "url = " + url + "\n" + "interval = " + interval + "\n" + "[power]\n"
-				+ "addr = " + logAddr + "\n" + "heartbeat_interval = " + heartbeatInterval + "\n" + "away = "
-				+ policy.getAwayCriteria() + "\n" + "force_hibernate = " + policy.getForceHibernate() + "\n";
+		String content = "[policy]\n" + "url = " + url + "\n" + "interval = "
+				+ interval + "\n" + "[power]\n" + "addr = " + logAddr + "\n"
+				+ "heartbeat_interval = " + heartbeatInterval + "\n"
+				+ "away = " + policy.getAwayCriteria() + "\n"
+				+ "force_hibernate = " + policy.getForceHibernate() + "\n";
 
 		try {
 			return new ByteArrayInputStream(content.getBytes("utf-8"));
@@ -134,13 +142,16 @@ public class PolicyProvider implements StaticResourceContext {
 	private AgentGroup getAgentGroup(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			Agent agent = (Agent) em.createQuery("FROM Agent a WHERE a.guid = ?").setParameter(1, guid)
-					.getSingleResult();
+			Agent agent = (Agent) em
+					.createQuery("FROM Agent a WHERE a.guid = ?")
+					.setParameter(1, guid).getSingleResult();
 
 			return agent.getAgentGroup();
 		} catch (NoResultException e) {
 			// default reference is root group
-			return (AgentGroup) em.createQuery("FROM AgentGroup g WHERE g.parent IS NULL").getSingleResult();
+			return (AgentGroup) em.createQuery(
+					"FROM AgentGroup g WHERE g.parent IS NULL")
+					.getSingleResult();
 		}
 	}
 

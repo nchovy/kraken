@@ -15,41 +15,47 @@
  */
 package org.krakenapps.webconsole.impl;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServlet;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.krakenapps.util.DirectoryMap;
-import org.krakenapps.webconsole.HttpRequest;
 import org.krakenapps.webconsole.StaticResourceApi;
-import org.krakenapps.webconsole.StaticResourceContext;
 
 @Component(name = "static-resource-api")
 @Provides
 public class StaticResourceApiImpl implements StaticResourceApi {
+	private static final long serialVersionUID = 1L;
 	private static final String CONTEXT_ITEM = "/context";
-	private DirectoryMap<StaticResourceContext> directoryMap;
+	private DirectoryMap<HttpServlet> directoryMap;
 
 	@Validate
 	public void start() {
-		directoryMap = new DirectoryMap<StaticResourceContext>();
+		directoryMap = new DirectoryMap<HttpServlet>();
 	}
 
 	@Override
 	public Collection<String> getPrefixes() {
 		Set<String> prefixes = new HashSet<String>();
-		Set<Entry<String, StaticResourceContext>> entries = directoryMap.entrySet();
-		for (Entry<String, StaticResourceContext> entry : entries) {
+		Set<Entry<String, HttpServlet>> entries = directoryMap.entrySet();
+		for (Entry<String, HttpServlet> entry : entries) {
 			String key = entry.getKey();
 			String prefix = key.substring(0, key.length() - CONTEXT_ITEM.length());
 			if (prefix.length() == 0)
 				prefix = "/";
-			
+
 			prefixes.add(prefix);
 		}
 
@@ -57,7 +63,7 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 	}
 
 	@Override
-	public StaticResourceContext getContext(String prefix) {
+	public HttpServlet getContext(String prefix) {
 		if (prefix.equals("/"))
 			prefix = "";
 
@@ -65,38 +71,62 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 	}
 
 	@Override
-	public InputStream getResource(HttpRequest req) {
-		String path = req.getPath();
+	public void service(ChannelHandlerContext ctx, HttpRequest req) {
+		String path = req.getUri();
 		String[] tokens = split(path);
 
-		StaticResourceContext ctx = null;
-		String selectedDir = null;
+		HttpServlet servlet = null;
+		String selectedPrefix = null;
 		String dir = "/";
 
 		// default
 		{
-			StaticResourceContext c = directoryMap.get("/context");
+			HttpServlet c = directoryMap.get("/context");
 			if (c != null) {
-				ctx = c;
-				selectedDir = dir;
+				servlet = c;
+				selectedPrefix = dir;
 			}
 		}
 
 		// longest match
 		for (int i = 0; i < tokens.length; i++) {
 			dir += tokens[i] + "/";
-			StaticResourceContext c = directoryMap.get(dir + "context");
+			HttpServlet c = directoryMap.get(dir + "context");
 			if (c != null) {
-				ctx = c;
-				selectedDir = dir;
+				servlet = c;
+				selectedPrefix = dir;
 			}
 		}
 
-		if (selectedDir == null)
-			return null;
+		if (selectedPrefix == null)
+			throw new IllegalArgumentException("invalid request path");
 
-		((WebConsoleHttpRequest) req).setPath(path.replaceFirst(selectedDir, ""));
-		return ctx.open(req);
+		String requestPath = path.length() < selectedPrefix.length() ? "" : path.substring(selectedPrefix.length());
+		requestPath = requestPath.isEmpty() ? "index.html" : requestPath;
+		ServletRequest request = new Request(ctx, req, requestPath);
+		ServletResponse response = new Response(ctx, req);
+
+		response.setContentType(getMimeType(req.getUri()));
+
+		try {
+			servlet.service(request, response);
+		} catch (ServletException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private String getMimeType(String path) {
+		String mimeType = MimeTypes.instance().getByFile(path);
+
+		if (mimeType == null)
+			mimeType = "text/html";
+
+		if (mimeType.startsWith("text/"))
+			mimeType += "; charset=utf-8";
+
+		return mimeType;
 	}
 
 	private String[] split(String path) {
@@ -116,11 +146,11 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 	}
 
 	@Override
-	public void register(String prefix, StaticResourceContext ctx) {
+	public void register(String prefix, HttpServlet ctx) {
 		if (prefix.equals("/"))
 			prefix = "";
 
-		StaticResourceContext old = directoryMap.putIfAbsent(prefix + CONTEXT_ITEM, ctx);
+		HttpServlet old = directoryMap.putIfAbsent(prefix + CONTEXT_ITEM, ctx);
 		if (old != null)
 			throw new IllegalStateException(prefix + " already exists");
 	}

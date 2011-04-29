@@ -20,10 +20,16 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
-import org.krakenapps.webconsole.HttpRequest;
-import org.krakenapps.webconsole.StaticResourceContext;
+import javax.servlet.http.HttpServletRequest;
 
-public class FileResourceContext implements StaticResourceContext {
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Provides;
+import org.krakenapps.webconsole.ResourceContext;
+
+@Component(name = "file-resource-context")
+@Provides
+public class FileResourceContext extends ResourceContext {
+	private static final long serialVersionUID = 1L;
 	private File basePath;
 
 	public FileResourceContext(File basePath) {
@@ -31,9 +37,9 @@ public class FileResourceContext implements StaticResourceContext {
 	}
 
 	@Override
-	public InputStream open(HttpRequest req) {
+	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
-			return new FileInputStream(new File(basePath, req.getPath()));
+			return new FileInputStream(new File(basePath, req.getRequestURI()));
 		} catch (FileNotFoundException e) {
 			return null;
 		}

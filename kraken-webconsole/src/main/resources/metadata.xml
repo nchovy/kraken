@@ -12,4 +12,6 @@
 	<instance component="webconsole-thread-monitor-plugin" />
 	<instance component="webconsole-package-plugin" />
 	<instance component="webconsole-bundle-monitor" />
+	<instance component="bundle-resource-context" />
+	<instance component="file-resource-context" />
 </ipojo>

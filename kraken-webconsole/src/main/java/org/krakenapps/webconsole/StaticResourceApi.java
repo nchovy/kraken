@@ -15,17 +15,21 @@
  */
 package org.krakenapps.webconsole;
 
-import java.io.InputStream;
 import java.util.Collection;
+
+import javax.servlet.http.HttpServlet;
+
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
 public interface StaticResourceApi {
 	Collection<String> getPrefixes();
 
-	StaticResourceContext getContext(String prefix);
+	HttpServlet getContext(String prefix);
 
-	InputStream getResource(HttpRequest req);
+	void service(ChannelHandlerContext ctx, HttpRequest req);
 
-	void register(String prefix, StaticResourceContext ctx);
+	void register(String prefix, HttpServlet ctx);
 
 	void unregister(String prefix);
 }

@@ -18,6 +18,8 @@ package org.krakenapps.webconsole.impl;
 import java.io.File;
 import java.net.InetSocketAddress;
 
+import javax.servlet.http.HttpServlet;
+
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -25,7 +27,6 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.webconsole.Program;
 import org.krakenapps.webconsole.ProgramApi;
 import org.krakenapps.webconsole.StaticResourceApi;
-import org.krakenapps.webconsole.StaticResourceContext;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,8 +91,8 @@ public class WebConsoleScript implements Script {
 
 	public void prefixes(String[] args) {
 		for (String prefix : staticResourceApi.getPrefixes()) {
-			StaticResourceContext ctx = staticResourceApi.getContext(prefix);
-			context.println(prefix + ": [" + ctx + "]");
+			HttpServlet servlet = staticResourceApi.getContext(prefix);
+			context.println(prefix + ": [" + servlet + "]");
 		}
 	}
 

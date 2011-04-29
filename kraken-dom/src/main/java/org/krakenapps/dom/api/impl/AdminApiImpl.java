@@ -49,12 +49,6 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
-	// @Requires
-	// private RoleApi roleApi;
-
-	// @Requires
-	// private ProgramApi programApi;
-
 	private static final UserExtensionSchema schema;
 
 	static {
