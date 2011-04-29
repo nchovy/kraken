@@ -126,6 +126,18 @@ public class IpManagerService implements IpManager, Runnable {
 
 	@Transactional
 	@Override
+	public List<AllowedMac> getAllowMacAddresses(int orgId, int ipId) {
+		EntityManager em = entityManagerService.getEntityManager();
+		IpEntry entry = (IpEntry) em.createQuery("FROM IpEntry i WHERE i.id = ?").setParameter(1, ipId)
+				.getSingleResult();
+
+		if (entry.getAgent().getId() != orgId)
+			return null;
+		return entry.getAllowedMacs();
+	}
+
+	@Transactional
+	@Override
 	public int allowMacAddress(int orgId, int ipId, String mac, Date from, Date to) {
 		mac = mac.toUpperCase();
 
@@ -195,12 +207,22 @@ public class IpManagerService implements IpManager, Runnable {
 
 	@Transactional
 	@Override
+	public List<DeniedMac> getDenyMacAddresses(int orgId, int agentId) {
+		EntityManager em = entityManagerService.getEntityManager();
+		Agent agent = (Agent) em.createQuery("FROM Agent a WHERE a.id = ?").setParameter(1, agentId).getSingleResult();
+		if (agent.getOrgId() != orgId)
+			return null;
+		return agent.getDeniedMac();
+	}
+
+	@Transactional
+	@Override
 	public int denyMacAddress(int orgId, int agentId, String mac, Date from, Date to) {
 		mac = mac.toUpperCase();
 
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			Agent agent = (Agent) em.createNamedQuery("FROM Agent a WHERE a.id = ? AND a.orgId = ?")
+			Agent agent = (Agent) em.createQuery("FROM Agent a WHERE a.id = ? AND a.orgId = ?")
 					.setParameter(1, agentId).setParameter(2, orgId).getSingleResult();
 
 			boolean isNew = false;

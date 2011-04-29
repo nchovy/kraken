@@ -16,6 +16,8 @@
 package org.krakenapps.ipmanager.msgbus;
 
 import java.net.InetAddress;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +33,8 @@ import org.krakenapps.ipmanager.IpManager;
 import org.krakenapps.ipmanager.IpQueryCondition;
 import org.krakenapps.ipmanager.LogQueryCondition;
 import org.krakenapps.ipmanager.model.Agent;
+import org.krakenapps.ipmanager.model.AllowedMac;
+import org.krakenapps.ipmanager.model.DeniedMac;
 import org.krakenapps.ipmanager.model.IpEntry;
 import org.krakenapps.ipmanager.model.IpEventLog;
 import org.krakenapps.ipmanager.model.IpEventLog.Type;
@@ -143,6 +147,26 @@ public class IpManagerPlugin implements IpEventListener {
 	}
 
 	@MsgbusMethod
+	public void getAllowMacAddresses(Request req, Response resp) {
+		int orgId = req.getOrgId();
+		int ipId = req.getInteger("ip_id");
+		List<AllowedMac> allowed = ipManager.getAllowMacAddresses(orgId, ipId);
+		List<Object> ret = new ArrayList<Object>();
+
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		for (AllowedMac mac : allowed) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("id", mac.getId());
+			m.put("mac", mac.getMac());
+			m.put("from", dateFormat.format(mac.getBeginDateTime()));
+			m.put("to", dateFormat.format(mac.getEndDateTime()));
+			m.put("created_at", dateFormat.format(mac.getCreateDateTime()));
+			ret.add(m);
+		}
+		resp.put("allowed", ret);
+	}
+
+	@MsgbusMethod
 	public void allowMacAddress(Request req, Response resp) {
 		int orgId = req.getOrgId();
 		int ipId = req.getInteger("ip_id");
@@ -154,12 +178,54 @@ public class IpManagerPlugin implements IpEventListener {
 		resp.put("mac_id", macId);
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void disallowMacAddress(Request req, Response resp) {
 		int orgId = req.getOrgId();
-		int macId = req.getInteger("mac_id");
+		List<Integer> macIds = (List<Integer>) req.get("mac_id");
 
-		ipManager.disallowMacAddress(orgId, macId);
+		for (Integer macId : macIds)
+			ipManager.disallowMacAddress(orgId, macId);
+	}
+
+	@MsgbusMethod
+	public void deniedMacAddresses(Request req, Response resp) {
+		int orgId = req.getOrgId();
+		int agentId = req.getInteger("agnet_id");
+		List<DeniedMac> denied = ipManager.getDenyMacAddresses(orgId, agentId);
+		List<Object> ret = new ArrayList<Object>();
+
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		for (DeniedMac mac : denied) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("id", mac.getId());
+			m.put("mac", mac.getMac());
+			m.put("from", dateFormat.format(mac.getBeginDateTime()));
+			m.put("to", dateFormat.format(mac.getEndDateTime()));
+			m.put("created_at", dateFormat.format(mac.getCreateDateTime()));
+			ret.add(m);
+		}
+		resp.put("denied", ret);
+	}
+
+	@MsgbusMethod
+	public void denyMacAddress(Request req, Response resp) {
+		int orgId = req.getOrgId();
+		int agentId = req.getInteger("agent_id");
+		String mac = req.getString("mac");
+		Date from = req.getDate("from");
+		Date to = req.getDate("to");
+		ipManager.denyMacAddress(orgId, agentId, mac, from, to);
+	}
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void removeDenyMacAddress(Request req, Response resp) {
+		int orgId = req.getOrgId();
+		List<Integer> macIds = (List<Integer>) req.get("mac_id");
+
+		for (Integer macId : macIds)
+			ipManager.removeDenyMacAddress(orgId, macId);
 	}
 
 	@MsgbusMethod

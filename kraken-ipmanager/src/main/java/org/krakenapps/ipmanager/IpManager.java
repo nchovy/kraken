@@ -19,6 +19,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.krakenapps.ipmanager.model.Agent;
+import org.krakenapps.ipmanager.model.AllowedMac;
+import org.krakenapps.ipmanager.model.DeniedMac;
 import org.krakenapps.ipmanager.model.HostEntry;
 import org.krakenapps.ipmanager.model.IpEntry;
 import org.krakenapps.ipmanager.model.IpEventLog;
@@ -30,9 +32,13 @@ public interface IpManager {
 
 	List<IpEntry> getIpEntries(IpQueryCondition condition);
 
+	List<AllowedMac> getAllowMacAddresses(int orgId, int ipId);
+
 	int allowMacAddress(int orgId, int ipId, String mac, Date from, Date to);
 
 	void disallowMacAddress(int orgId, int macId);
+
+	List<DeniedMac> getDenyMacAddresses(int orgId, int agentId);
 
 	int denyMacAddress(int orgId, int agentId, String mac, Date from, Date to);
 
