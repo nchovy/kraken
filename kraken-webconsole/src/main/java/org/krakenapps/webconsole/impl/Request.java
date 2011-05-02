@@ -22,13 +22,17 @@ public class Request implements HttpServletRequest {
 	private ChannelHandlerContext ctx;
 	private HttpRequest req;
 	private String uri;
+	private String queryString;
+	private Map<String, Object> attributes = new HashMap<String, Object>();
 	private Map<String, String> parameters = new HashMap<String, String>();
 
 	public Request(ChannelHandlerContext ctx, HttpRequest req, String uri) {
 		this.ctx = ctx;
 		this.req = req;
 		this.uri = uri;
+		this.queryString = "";
 		if (uri.contains("?")) {
+			this.queryString = uri.substring(uri.indexOf("?") + 1);
 			this.uri = uri.substring(0, uri.indexOf("?"));
 			String params = uri.substring(uri.indexOf("?") + 1);
 			for (String param : params.split("&")) {
@@ -37,18 +41,17 @@ public class Request implements HttpServletRequest {
 				parameters.put(name, value);
 			}
 		}
+		System.out.println(req.getHeaders());
 	}
 
 	@Override
-	public Object getAttribute(String arg0) {
-		// TODO Auto-generated method stub
-		return null;
+	public Object getAttribute(String name) {
+		return attributes.get(name);
 	}
 
 	@Override
 	public Enumeration getAttributeNames() {
-		// TODO Auto-generated method stub
-		return null;
+		return Collections.enumeration(attributes.keySet());
 	}
 
 	@Override
@@ -75,8 +78,8 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public String getParameter(String key) {
-		return parameters.get(key);
+	public String getParameter(String name) {
+		return parameters.get(name);
 	}
 
 	@Override
@@ -85,9 +88,8 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public String[] getParameterValues(String arg0) {
-		// TODO Auto-generated method stub
-		return null;
+	public String[] getParameterValues(String name) {
+		return (String[]) parameters.values().toArray();
 	}
 
 	@Override
@@ -101,9 +103,9 @@ public class Request implements HttpServletRequest {
 		return null;
 	}
 
+	@Deprecated
 	@Override
-	public String getRealPath(String arg0) {
-		// TODO Auto-generated method stub
+	public String getRealPath(String path) {
 		return null;
 	}
 
@@ -124,19 +126,27 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getServerName() {
-		// TODO Auto-generated method stub
-		return null;
+		String host = req.getHeader("Host");
+		if (host == null)
+			return null;
+
+		if (host.contains(":"))
+			return host.substring(0, host.indexOf(":"));
+		else
+			return host;
 	}
 
 	@Override
 	public int getServerPort() {
-		// TODO Auto-generated method stub
-		return 0;
+		String host = req.getHeader("Host");
+		if (host == null || !host.contains(":"))
+			return 80;
+		return Integer.parseInt(host.substring(host.indexOf(":") + 1));
 	}
 
 	@Override
-	public void setAttribute(String arg0, Object arg1) {
-		// TODO Auto-generated method stub
+	public void setAttribute(String name, Object o) {
+		attributes.put(name, o);
 	}
 
 	@Override
@@ -152,14 +162,14 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public long getDateHeader(String arg0) {
+	public long getDateHeader(String name) {
 		// TODO Auto-generated method stub
-		return 0;
+		return -1;
 	}
 
 	@Override
-	public String getHeader(String arg0) {
-		return req.getHeader(arg0);
+	public String getHeader(String name) {
+		return req.getHeader(name);
 	}
 
 	@Override
@@ -168,14 +178,14 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public int getIntHeader(String arg0) {
+	public int getIntHeader(String name) {
 		// TODO Auto-generated method stub
-		return 0;
+		return -1;
 	}
 
 	@Override
 	public String getMethod() {
-		return "POST";
+		return req.getMethod().getName();
 	}
 
 	@Override
@@ -191,8 +201,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getQueryString() {
-		// TODO Auto-generated method stub
-		return null;
+		return queryString;
 	}
 
 	@Override
@@ -225,7 +234,7 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public HttpSession getSession(boolean arg0) {
+	public HttpSession getSession(boolean create) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -242,10 +251,10 @@ public class Request implements HttpServletRequest {
 		return false;
 	}
 
+	@Deprecated
 	@Override
 	public boolean isRequestedSessionIdFromUrl() {
-		// TODO Auto-generated method stub
-		return false;
+		return isRequestedSessionIdFromURL();
 	}
 
 	@Override

@@ -14,7 +14,7 @@ public abstract class ResourceContext extends HttpServlet {
 	protected abstract InputStream getInputStream(HttpServletRequest req);
 
 	@Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		InputStream is = getInputStream(req);
 		if (is != null) {
 			byte[] b = new byte[4096];

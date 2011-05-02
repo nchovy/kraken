@@ -33,11 +33,14 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.krakenapps.util.DirectoryMap;
 import org.krakenapps.webconsole.StaticResourceApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "static-resource-api")
 @Provides
 public class StaticResourceApiImpl implements StaticResourceApi {
 	private static final long serialVersionUID = 1L;
+	private Logger logger = LoggerFactory.getLogger(StaticResourceApiImpl.class);
 	private static final String CONTEXT_ITEM = "/context";
 	private DirectoryMap<HttpServlet> directoryMap;
 
@@ -111,9 +114,9 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 		try {
 			servlet.service(request, response);
 		} catch (ServletException e) {
-			e.printStackTrace();
+			logger.error("kraken webconsole: servlet service error.", e);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("kraken webconsole: servlet service error.", e);
 		}
 	}
 
