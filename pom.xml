@@ -102,6 +102,7 @@
     <module>kraken-ipmanager</module>
 	<module>kraken-ice</module>
     <module>kraken-dhcp</module>
+    <module>kraken-captive-portal</module>
   </modules>
   <url>http://krakenapps.org</url>
   <inceptionYear>2008</inceptionYear>
