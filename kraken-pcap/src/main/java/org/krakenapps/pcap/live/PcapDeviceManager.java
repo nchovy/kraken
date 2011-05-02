@@ -38,14 +38,14 @@ public class PcapDeviceManager {
 	public static PcapDeviceMetadata getDeviceMetadata(InetAddress target) {
 		if (target == null)
 			throw new IllegalArgumentException("target should be not null");
-		
+
 		RoutingEntry entry = RoutingTable.findRoute(target);
 		if (entry == null)
 			throw new IllegalStateException("route not found for " + target.getHostAddress());
-		
+
 		return PcapDeviceManager.getDeviceMetadata(entry.getInterfaceName());
 	}
-	
+
 	public static PcapDevice openFor(String target, int timeout) throws IOException {
 		return openFor(InetAddress.getByName(target), timeout);
 	}
@@ -53,7 +53,7 @@ public class PcapDeviceManager {
 	public static PcapDevice openFor(InetAddress target, int timeout) throws IOException {
 		return openFor(target, Promiscuous.Off, timeout);
 	}
-	
+
 	public static PcapDevice openFor(InetAddress target, Promiscuous promisc, int timeout) throws IOException {
 		RoutingEntry entry = RoutingTable.findRoute(target);
 		PcapDeviceMetadata metadata = PcapDeviceManager.getDeviceMetadata(entry.getInterfaceName());
@@ -86,6 +86,9 @@ public class PcapDeviceManager {
 	}
 
 	public static PcapDevice open(String name, Promiscuous promisc, int milliseconds, int snaplen) throws IOException {
+		if (name == null)
+			throw new IllegalArgumentException("device name should not be null");
+
 		int handle = -1;
 		for (int i = 0; i < MAX_NUMBER_OF_INSTANCE; i++) {
 			if (!allocatedHandles[i]) {
@@ -99,6 +102,8 @@ public class PcapDeviceManager {
 			throw new IOException("Unable to open a device: " + MAX_NUMBER_OF_INSTANCE + " devices are already opened.");
 
 		PcapDeviceMetadata info = getDeviceMetadata(name);
+		if (info == null)
+			throw new IOException("device not found: " + name);
 
 		PcapDevice device = new PcapDevice(info, handle, name, snaplen, promisc == Promiscuous.On, milliseconds);
 		device.addListener(new PcapDeviceEventListener() {
