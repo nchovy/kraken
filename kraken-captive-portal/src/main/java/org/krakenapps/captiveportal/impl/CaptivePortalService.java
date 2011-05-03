@@ -17,12 +17,12 @@ package org.krakenapps.captiveportal.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,10 +63,13 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 	private int poisonInterval;
 	private boolean mirroringMode;
 	private InetAddress gatewayAddress;
+	private MacAddress gatewayMac;
 	private Set<InetAddress> quarantinedHosts;
 
+	private FakeRouter fakeRouter;
+
 	// arp poisoner
-	private Thread t;
+	private Thread poisonThread;
 	private volatile boolean doStop;
 
 	// ip-mac mappings
@@ -76,14 +79,14 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 	private PreferencesService prefsvc;
 
 	@Validate
-	public void start() throws BackingStoreException, UnknownHostException {
+	public void start() throws BackingStoreException, IOException {
 		quarantinedHosts = Collections.newSetFromMap(new ConcurrentHashMap<InetAddress, Boolean>());
 		arpCache = new ConcurrentHashMap<InetAddress, IpMapping>();
 
 		// loading
 		Preferences root = prefsvc.getSystemPreferences();
 		this.deviceName = root.get(PCAP_DEVICE_KEY, null);
-		this.poisonInterval = root.getInt(POISON_INTERVAL_KEY, 30000);
+		this.poisonInterval = root.getInt(POISON_INTERVAL_KEY, 10000);
 		this.mirroringMode = root.getBoolean(MIRRORING_KEY, false);
 		this.gatewayAddress = InetAddress.getByName(root.get(GATEWAY_KEY, null));
 
@@ -92,22 +95,64 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 			quarantinedHosts.add(InetAddress.getByName(ip));
 		}
 
+		// fake router
+		if (deviceName != null) {
+			fakeRouter = new FakeRouter(deviceName, this);
+			fakeRouter.start();
+		}
+
 		// thread start
-		doStop = false;
-		t = new Thread(this);
-		t.start();
+		startPoisoner();
+
+		logger.info("kraken captive portal: poisoning thread started");
 	}
 
 	@Invalidate
 	public void stop() {
 		quarantinedHosts.clear();
+
+		stopPoisoner();
+		fakeRouter.stop();
+	}
+
+	private void startPoisoner() {
+		doStop = false;
+		poisonThread = new Thread(this, "Captive Portal ARP Poisoner");
+		poisonThread.start();
+	}
+
+	private void stopPoisoner() {
+		doStop = true;
+		poisonThread.interrupt();
+	}
+
+	@Override
+	public Map<InetAddress, MacAddress> getArpCache() {
+		Map<InetAddress, MacAddress> m = new HashMap<InetAddress, MacAddress>();
+		for (InetAddress ip : arpCache.keySet()) {
+			IpMapping mapping = arpCache.get(ip);
+			m.put(ip, mapping.mac);
+		}
+
+		return m;
+	}
+
+	@Override
+	public MacAddress getQuarantinedMac(InetAddress ip) {
+		IpMapping mapping = arpCache.get(ip);
+		if (mapping == null)
+			return null;
+
+		return mapping.mac;
 	}
 
 	@Override
 	public void run() {
 		try {
-			while (doStop) {
-				spoofAll();
+			while (!doStop) {
+				if (deviceName != null)
+					spoof();
+
 				Thread.sleep(poisonInterval);
 			}
 		} catch (InterruptedException e) {
@@ -119,7 +164,8 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 		}
 	}
 
-	private void spoofAll() throws IOException {
+	@Override
+	public void spoof() throws IOException {
 		// ensure gateway mac address
 		MacAddress mac = Arping.query(gatewayAddress, ARP_TIMEOUT);
 		arpCache.put(gatewayAddress, new IpMapping(mac));
@@ -136,8 +182,8 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 
 	private void spoof(InetAddress targetIp) throws IOException {
 		// get gateway mac address
-		MacAddress gatewayMac = arpCache.get(gatewayAddress).mac;
-		
+		gatewayMac = arpCache.get(gatewayAddress).mac;
+
 		// get target host mac address
 		IpMapping mapping = arpCache.get(targetIp);
 		if (mapping == null || isTimeout(mapping.updated)) {
@@ -146,16 +192,17 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 				logger.trace("kraken captive portal: host not found for {}", targetIp);
 				return;
 			} else {
-				arpCache.put(targetIp, new IpMapping(mac));
+				mapping = new IpMapping(mac);
+				arpCache.put(targetIp, mapping);
 			}
 		}
-		
+
 		MacAddress targetMac = mapping.mac;
 		PcapDevice device = PcapDeviceManager.open(deviceName, ARP_TIMEOUT);
 
 		// spoof host (as gateway)
 		sendArpRequest(device, device.getMetadata().getMacAddress(), gatewayAddress, targetMac, targetIp);
-		
+
 		// spoof gateway (as host)
 		sendArpRequest(device, device.getMetadata().getMacAddress(), targetIp, gatewayMac, gatewayAddress);
 	}
@@ -197,8 +244,21 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 			root.sync();
 
 			this.deviceName = name;
+
+			// restart fake router
+			fakeRouter.stop();
+			fakeRouter = new FakeRouter(name, this);
+			logger.info("kraken captive portal: fake router restarted");
+
+			// restart poisoner
+			stopPoisoner();
+			startPoisoner();
+			logger.info("kraken captive portal: arp poisoner restarted");
 		} catch (BackingStoreException e) {
 			logger.error("kraken captive portal: cannot set pcap device name", e);
+			throw new RuntimeException(e);
+		} catch (IOException e) {
+			logger.error("kraken captive portal: fake router setting error", e);
 			throw new RuntimeException(e);
 		}
 	}
@@ -220,6 +280,11 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 		} catch (BackingStoreException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	public MacAddress getGatewayMacAddress() {
+		return gatewayMac;
 	}
 
 	@Override

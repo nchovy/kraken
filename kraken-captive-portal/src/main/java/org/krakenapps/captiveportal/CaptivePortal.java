@@ -15,17 +15,27 @@
  */
 package org.krakenapps.captiveportal;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Collection;
+import java.util.Map;
+
+import org.krakenapps.pcap.decoder.ethernet.MacAddress;
 
 public interface CaptivePortal {
+	Map<InetAddress, MacAddress> getArpCache();
+
+	MacAddress getQuarantinedMac(InetAddress ip);
+
 	String getPcapDeviceName();
-	
+
 	void setPcapDeviceName(String name);
-	
+
 	int getPoisonInterval();
 
 	void setPoisonInterval(int milliseconds);
+
+	MacAddress getGatewayMacAddress();
 
 	InetAddress getGatewayAddress();
 
@@ -40,4 +50,6 @@ public interface CaptivePortal {
 	void quarantineHost(InetAddress address);
 
 	void unquarantineHost(InetAddress address);
+
+	void spoof() throws IOException;
 }

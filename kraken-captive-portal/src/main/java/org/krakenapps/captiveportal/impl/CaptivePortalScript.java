@@ -15,14 +15,17 @@
  */
 package org.krakenapps.captiveportal.impl;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.captiveportal.CaptivePortal;
+import org.krakenapps.pcap.decoder.ethernet.MacAddress;
 import org.krakenapps.pcap.live.PcapDeviceManager;
 import org.krakenapps.pcap.live.PcapDeviceMetadata;
 import org.slf4j.Logger;
@@ -41,6 +44,16 @@ public class CaptivePortalScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void arpcache(String[] args) {
+		context.println("ARP Cache");
+		context.println("-------------");
+
+		Map<InetAddress, MacAddress> m = portal.getArpCache();
+		for (InetAddress ip : m.keySet()) {
+			context.println("ip=" + ip.getHostAddress() + ", mac=" + m.get(ip));
+		}
 	}
 
 	@ScriptUsage(description = "set poison interval", arguments = { @ScriptArgument(name = "interval", type = "int", description = "poision interval in milliseconds") })
@@ -77,12 +90,13 @@ public class CaptivePortalScript implements Script {
 	@ScriptUsage(description = "set pcap device name")
 	public void setdevice(String[] args) {
 		try {
+			int i = 1;
 			List<PcapDeviceMetadata> metadatas = PcapDeviceManager.getDeviceMetadataList();
 			for (PcapDeviceMetadata metadata : metadatas) {
-				context.println(metadata);
+				context.println("[" + (i++) + "] " + metadata);
 			}
 
-			context.println("select? ");
+			context.print("select? ");
 			String line = context.readLine();
 			int num = Integer.valueOf(line);
 
@@ -138,6 +152,7 @@ public class CaptivePortalScript implements Script {
 		try {
 			InetAddress address = InetAddress.getByName(args[0]);
 			portal.quarantineHost(address);
+			context.println("set");
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("kraken captive portal: cannot quarantine host " + args[0], e);
@@ -149,9 +164,18 @@ public class CaptivePortalScript implements Script {
 		try {
 			InetAddress address = InetAddress.getByName(args[0]);
 			portal.unquarantineHost(address);
+			context.println("unset");
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("kraken captive portal: cannot unquarantine host " + args[0], e);
+		}
+	}
+
+	public void spoof(String[] args) {
+		try {
+			portal.spoof();
+		} catch (IOException e) {
+			context.println(e.getMessage());
 		}
 	}
 }
