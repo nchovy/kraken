@@ -106,7 +106,7 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 
 		String requestPath = path.length() < selectedPrefix.length() ? "" : path.substring(selectedPrefix.length());
 		requestPath = requestPath.isEmpty() ? "index.html" : requestPath;
-		ServletRequest request = new Request(ctx, req, requestPath);
+		ServletRequest request = new Request(ctx, req, selectedPrefix, requestPath);
 		ServletResponse response = new Response(ctx, req);
 
 		response.setContentType(getMimeType(req.getUri()));

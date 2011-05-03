@@ -1,11 +1,15 @@
 package org.krakenapps.webconsole.impl;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletInputStream;
@@ -21,14 +25,18 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 public class Request implements HttpServletRequest {
 	private ChannelHandlerContext ctx;
 	private HttpRequest req;
+	private String servletPath;
 	private String uri;
 	private String queryString;
+	private ServletInputStream is;
 	private Map<String, Object> attributes = new HashMap<String, Object>();
 	private Map<String, String> parameters = new HashMap<String, String>();
+	private Cookie[] cookies;
 
-	public Request(ChannelHandlerContext ctx, HttpRequest req, String uri) {
+	public Request(ChannelHandlerContext ctx, HttpRequest req, String servletPath, String uri) {
 		this.ctx = ctx;
 		this.req = req;
+		this.servletPath = servletPath;
 		this.uri = uri;
 		this.queryString = "";
 		if (uri.contains("?")) {
@@ -41,7 +49,35 @@ public class Request implements HttpServletRequest {
 				parameters.put(name, value);
 			}
 		}
-		System.out.println(req.getHeaders());
+		this.is = new RequestInputStream(new ByteArrayInputStream(req.getContent().array()));
+		List<String> cs = req.getHeaders(HttpHeaders.Names.COOKIE);
+		this.cookies = new Cookie[cs.size()];
+		for (int i = 0; i < cs.size(); i++) {
+			String s = cs.get(i);
+			String name = null;
+			String value = null;
+			if (s.contains("=")) {
+				String[] split = s.split("=", 2);
+				name = split[0].trim();
+				value = split[1].trim();
+			} else {
+				name = s.trim();
+			}
+			this.cookies[i] = new Cookie(name, value);
+		}
+	}
+
+	private class RequestInputStream extends ServletInputStream {
+		private InputStream is;
+
+		public RequestInputStream(InputStream is) {
+			this.is = is;
+		}
+
+		@Override
+		public int read() throws IOException {
+			return is.read();
+		}
 	}
 
 	@Override
@@ -67,14 +103,12 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getContentType() {
-		// TODO Auto-generated method stub
-		return null;
+		return req.getHeader(HttpHeaders.Names.CONTENT_TYPE);
 	}
 
 	@Override
 	public ServletInputStream getInputStream() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		return is;
 	}
 
 	@Override
@@ -99,8 +133,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public BufferedReader getReader() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		return new BufferedReader(new InputStreamReader(is));
 	}
 
 	@Deprecated
@@ -157,14 +190,17 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public Cookie[] getCookies() {
-		// TODO Auto-generated method stub
-		return null;
+		return cookies;
 	}
 
 	@Override
 	public long getDateHeader(String name) {
-		// TODO Auto-generated method stub
-		return -1;
+		try {
+			long value = Long.parseLong(req.getHeader(name));
+			return value;
+		} catch (NumberFormatException e) {
+			return -1;
+		}
 	}
 
 	@Override
@@ -179,8 +215,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public int getIntHeader(String name) {
-		// TODO Auto-generated method stub
-		return -1;
+		return HttpHeaders.getIntHeader(req, name);
 	}
 
 	@Override
@@ -223,8 +258,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getServletPath() {
-		// TODO Auto-generated method stub
-		return null;
+		return servletPath;
 	}
 
 	@Override
