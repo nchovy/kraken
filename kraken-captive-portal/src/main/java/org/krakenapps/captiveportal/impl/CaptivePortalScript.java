@@ -17,8 +17,6 @@ package org.krakenapps.captiveportal.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +26,6 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.captiveportal.CaptivePortal;
 import org.krakenapps.pcap.decoder.ethernet.MacAddress;
-import org.krakenapps.pcap.live.PcapDevice;
 import org.krakenapps.pcap.live.PcapDeviceManager;
 import org.krakenapps.pcap.live.PcapDeviceMetadata;
 import org.slf4j.Logger;
@@ -199,19 +196,5 @@ public class CaptivePortalScript implements Script {
 		} catch (IOException e) {
 			context.println(e.getMessage());
 		}
-	}
-
-	public void senddns(String[] args) throws UnknownHostException, IOException {
-		String domain = "test.com";
-		String ip = "12.12.12.12";
-		String targetMac = "f8:1e:df:ab:a3:1b";
-		InetSocketAddress targetHost = new InetSocketAddress("192.168.1.101", 61473);
-		InetSocketAddress dnsServer = new InetSocketAddress("111.222.3.4", 53);
-
-		FakeDnsResponse r = new FakeDnsResponse(new MacAddress(targetMac), targetHost, dnsServer, (short) 0x0102,
-				domain, InetAddress.getByName(ip));
-		PcapDevice device = PcapDeviceManager.openFor(targetHost.getAddress(), 1000);
-		device.write(r.getPacket());
-		context.println("sent");
 	}
 }
