@@ -75,7 +75,13 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public String getCharacterEncoding() {
-		// TODO Auto-generated method stub
+		String contentType = (String) header.get(HttpHeaders.Names.CONTENT_TYPE);
+		if (contentType == null || !contentType.contains("charset"))
+			return null;
+		for (String t : contentType.split(";")) {
+			if (t.trim().startsWith("charset"))
+				return t.split("=")[1].trim();
+		}
 		return null;
 	}
 

@@ -92,7 +92,13 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getCharacterEncoding() {
-		// TODO Auto-generated method stub
+		String contentType = getContentType();
+		if (contentType == null || !contentType.contains("charset"))
+			return null;
+		for (String t : contentType.split(";")) {
+			if (t.trim().startsWith("charset"))
+				return t.split("=")[1].trim();
+		}
 		return null;
 	}
 
@@ -184,8 +190,10 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getAuthType() {
-		// TODO Auto-generated method stub
-		return null;
+		String auth = req.getHeader(HttpHeaders.Names.AUTHORIZATION);
+		if (auth == null)
+			return null;
+		return auth.substring(0, auth.indexOf(" "));
 	}
 
 	@Override
