@@ -16,10 +16,11 @@
 
 package org.krakenapps.pcap.decoder.ethernet;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.pcap.packet.PcapPacket;
 import org.krakenapps.pcap.util.Buffer;
@@ -28,29 +29,34 @@ import org.krakenapps.pcap.util.Buffer;
  * @author mindori
  */
 public class EthernetDecoder {
-	private EthernetCallback callback;
-	private final Map<Integer, Set<EthernetProcessor>> callbacks;
+	private Set<EthernetProcessor> callbacks;
+	private final Map<Integer, Set<EthernetProcessor>> typeCallbacks;
 
 	public EthernetDecoder() {
-		callbacks = new HashMap<Integer, Set<EthernetProcessor>>();
+		callbacks = new CopyOnWriteArraySet<EthernetProcessor>();
+		typeCallbacks = new ConcurrentHashMap<Integer, Set<EthernetProcessor>>();
 	}
-	
-	public void registerEthernetCallback(EthernetCallback callback) { 
-		this.callback = callback;
+
+	public void register(EthernetProcessor processor) {
+		this.callbacks.add(processor);
 	}
-	
+
 	public void register(int type, EthernetProcessor processor) {
-		Set<EthernetProcessor> processors = callbacks.get(type);
+		Set<EthernetProcessor> processors = typeCallbacks.get(type);
 		if (processors == null) {
 			processors = new HashSet<EthernetProcessor>();
-			callbacks.put(type, processors);
+			typeCallbacks.put(type, processors);
 		}
 
 		processors.add(processor);
 	}
 
+	public void unregister(EthernetProcessor processor) {
+		this.callbacks.remove(processor);
+	}
+
 	public void unregister(int type, EthernetProcessor processor) {
-		Set<EthernetProcessor> processors = callbacks.get(type);
+		Set<EthernetProcessor> processors = typeCallbacks.get(type);
 		if (processors == null)
 			return;
 
@@ -80,16 +86,14 @@ public class EthernetDecoder {
 	}
 
 	private void dispatch(EthernetFrame frame) {
-		//callback.onReceived(frame);
-		
-		Set<EthernetProcessor> processors = callbacks.get(frame.getType());
+		for (EthernetProcessor processor : callbacks)
+			processor.process(frame);
+
+		Set<EthernetProcessor> processors = typeCallbacks.get(frame.getType());
 		if (processors == null)
 			return;
 
-		for (EthernetProcessor processor : processors) {
+		for (EthernetProcessor processor : processors)
 			processor.process(frame.dup());
-		}
-
-		frame = null;
 	}
 }

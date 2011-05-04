@@ -500,6 +500,11 @@ public class TcpPacket implements TcpSegment, Injectable {
 			this.data = data;
 			return this;
 		}
+		
+		public Builder data(PacketBuilder builder) {
+			this.nextBuilder = builder;
+			return this;
+		}
 
 		@Override
 		public Object getDefault(String name) {

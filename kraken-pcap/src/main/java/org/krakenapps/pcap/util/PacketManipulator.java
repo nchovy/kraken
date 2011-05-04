@@ -8,6 +8,7 @@ import org.krakenapps.pcap.Injectable;
 import org.krakenapps.pcap.decoder.ethernet.EthernetFrame;
 import org.krakenapps.pcap.decoder.ip.Ipv4Packet;
 import org.krakenapps.pcap.decoder.tcp.TcpPacket;
+import org.krakenapps.pcap.decoder.udp.UdpPacket;
 import org.krakenapps.pcap.live.PcapDevice;
 import org.krakenapps.pcap.live.PcapDeviceManager;
 import org.krakenapps.pcap.live.PcapDeviceMetadata;
@@ -65,5 +66,9 @@ public class PacketManipulator {
 
 	public static TcpPacket.Builder TCP() {
 		return new TcpPacket.Builder();
+	}
+	
+	public static UdpPacket.Builder UDP() {
+		return new UdpPacket.Builder();
 	}
 }
