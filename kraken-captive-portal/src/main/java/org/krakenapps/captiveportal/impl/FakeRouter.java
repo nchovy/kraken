@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.captiveportal.impl;
 
 import java.io.IOException;
@@ -71,11 +86,15 @@ public class FakeRouter implements Runnable, EthernetProcessor {
 	@Override
 	public void process(EthernetFrame frame) {
 		Buffer buf = frame.getData();
-		buf.skip(12);
+		buf.skip(9);
+		int protocol = buf.get();
+		buf.skip(2);
 
 		InetAddress src = IpConverter.toInetAddress(buf.getInt());
 		InetAddress dst = IpConverter.toInetAddress(buf.getInt());
-		
+		int srcPort = buf.getUnsignedShort();
+		int dstPort = buf.getUnsignedShort();
+
 		if (dst.isMulticastAddress())
 			return;
 
@@ -92,12 +111,17 @@ public class FakeRouter implements Runnable, EthernetProcessor {
 		MacAddress gwmac = portal.getGatewayMacAddress();
 		if (gwmac == null)
 			return;
-		
+
 		if (srcmac.equals(localmac))
 			return;
-		
+
 		// packet from target host
 		if (qsrcmac != null && !srcmac.equals(gwmac)) {
+			if (FakeDns.isDnsPacket(protocol, dstPort)) {
+				FakeDns.forgeResponse(portal.getRedirectAddress(), device, frame, src, srcPort, dst, dstPort, buf);
+				return;
+			}
+
 			// replace src mac -> local mac, dst mac -> real gateway mac, and
 			// forward it
 			byte[] d = gwmac.getBytes();
@@ -114,9 +138,13 @@ public class FakeRouter implements Runnable, EthernetProcessor {
 
 		// packet to target host
 		if (qdstmac != null && !dstmac.equals(gwmac)) {
+			if (FakeDns.isDnsPacket(protocol, dstPort)) {
+				FakeDns.forgeResponse(portal.getRedirectAddress(), device, frame, src, srcPort, dst, dstPort, buf);
+				return;
+			}
+
 			// replace src mac -> local mac, dst mac -> real host mac, and
 			// forward it
-
 			byte[] d = qdstmac.getBytes();
 			for (int i = 0; i < 6; i++)
 				b[i] = d[i];

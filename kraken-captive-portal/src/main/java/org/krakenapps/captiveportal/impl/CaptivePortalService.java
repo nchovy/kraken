@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 @Component(name = "captive-portal")
 @Provides
 public class CaptivePortalService implements CaptivePortal, Runnable {
+	private static final String REDIRECT_IP_KEY = "redirect_ip";
 	private static final String PCAP_DEVICE_KEY = "pcap_device";
 	private static final int ARP_TIMEOUT = 3000;
 	private static final String POISON_INTERVAL_KEY = "poison_interval";
@@ -62,6 +63,7 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 	private String deviceName;
 	private int poisonInterval;
 	private boolean mirroringMode;
+	private InetAddress redirectAddress;
 	private InetAddress gatewayAddress;
 	private MacAddress gatewayMac;
 	private Set<InetAddress> quarantinedHosts;
@@ -85,6 +87,10 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 
 		// loading
 		Preferences root = prefsvc.getSystemPreferences();
+		String redirectIp = root.get(REDIRECT_IP_KEY, null);
+		if (redirectIp != null)
+			this.redirectAddress = InetAddress.getByName(redirectIp);
+		
 		this.deviceName = root.get(PCAP_DEVICE_KEY, null);
 		this.poisonInterval = root.getInt(POISON_INTERVAL_KEY, 10000);
 		this.mirroringMode = root.getBoolean(MIRRORING_KEY, false);
@@ -124,6 +130,24 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 	private void stopPoisoner() {
 		doStop = true;
 		poisonThread.interrupt();
+	}
+
+	@Override
+	public InetAddress getRedirectAddress() {
+		return redirectAddress;
+	}
+
+	@Override
+	public void setRedirectAddress(InetAddress ip) {
+		try {
+			Preferences root = prefsvc.getSystemPreferences();
+			root.put(REDIRECT_IP_KEY, ip.getHostAddress());
+			root.flush();
+			root.sync();
+		} catch (BackingStoreException e) {
+			logger.error("kraken captive portal: cannot set redirect ip", e);
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override

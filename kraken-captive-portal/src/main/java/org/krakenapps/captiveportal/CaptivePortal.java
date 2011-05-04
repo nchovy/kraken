@@ -23,6 +23,10 @@ import java.util.Map;
 import org.krakenapps.pcap.decoder.ethernet.MacAddress;
 
 public interface CaptivePortal {
+	InetAddress getRedirectAddress();
+	
+	void setRedirectAddress(InetAddress ip);
+	
 	Map<InetAddress, MacAddress> getArpCache();
 
 	MacAddress getQuarantinedMac(InetAddress ip);
