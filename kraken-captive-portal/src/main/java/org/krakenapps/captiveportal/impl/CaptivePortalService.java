@@ -90,7 +90,7 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 		String redirectIp = root.get(REDIRECT_IP_KEY, null);
 		if (redirectIp != null)
 			this.redirectAddress = InetAddress.getByName(redirectIp);
-		
+
 		this.deviceName = root.get(PCAP_DEVICE_KEY, null);
 		this.poisonInterval = root.getInt(POISON_INTERVAL_KEY, 10000);
 		this.mirroringMode = root.getBoolean(MIRRORING_KEY, false);
@@ -174,10 +174,14 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 	public void run() {
 		try {
 			while (!doStop) {
-				if (deviceName != null)
-					spoof();
+				try {
+					if (deviceName != null)
+						spoof();
 
-				Thread.sleep(poisonInterval);
+					Thread.sleep(poisonInterval);
+				} catch (IOException e) {
+					logger.error("kraken captive portal: io error", e);
+				}
 			}
 		} catch (InterruptedException e) {
 			logger.error("kraken captive portal: poisoning thread interrupted");
@@ -209,17 +213,9 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 		gatewayMac = arpCache.get(gatewayAddress).mac;
 
 		// get target host mac address
-		IpMapping mapping = arpCache.get(targetIp);
-		if (mapping == null || isTimeout(mapping.updated)) {
-			MacAddress mac = Arping.query(targetIp, ARP_TIMEOUT);
-			if (mac == null) {
-				logger.trace("kraken captive portal: host not found for {}", targetIp);
-				return;
-			} else {
-				mapping = new IpMapping(mac);
-				arpCache.put(targetIp, mapping);
-			}
-		}
+		IpMapping mapping = getTargetMac(targetIp);
+		if (mapping == null)
+			return;
 
 		MacAddress targetMac = mapping.mac;
 		PcapDevice device = PcapDeviceManager.open(deviceName, ARP_TIMEOUT);
@@ -231,14 +227,52 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 		sendArpRequest(device, device.getMetadata().getMacAddress(), targetIp, gatewayMac, gatewayAddress);
 	}
 
+	private void unspoof(InetAddress targetIp) throws IOException {
+		// get gateway mac address
+		gatewayMac = arpCache.get(gatewayAddress).mac;
+
+		// get target host mac address
+		IpMapping mapping = getTargetMac(targetIp);
+		if (mapping == null)
+			return;
+
+		MacAddress targetMac = mapping.mac;
+
+		// remove from arp cache
+		arpCache.remove(targetIp);
+
+		// recover host arp cache
+		PcapDevice device = PcapDeviceManager.open(deviceName, ARP_TIMEOUT);
+		sendArpRequest(device, gatewayMac, gatewayAddress, targetMac, targetIp);
+		sendArpRequest(device, targetMac, targetIp, gatewayMac, gatewayAddress);
+	}
+
+	private IpMapping getTargetMac(InetAddress targetIp) throws IOException {
+		IpMapping mapping = arpCache.get(targetIp);
+		if (mapping == null || isTimeout(mapping.updated)) {
+			MacAddress mac = Arping.query(targetIp, ARP_TIMEOUT);
+			if (mac == null) {
+				logger.trace("kraken captive portal: host not found for {}", targetIp);
+				return null;
+			} else {
+				mapping = new IpMapping(mac);
+				arpCache.put(targetIp, mapping);
+			}
+		}
+
+		return mapping;
+	}
+
 	private void sendArpRequest(PcapDevice device, MacAddress senderMac, InetAddress senderIp, MacAddress targetMac,
 			InetAddress targetIp) {
-		ArpPacket p = ArpPacket.createRequest(senderMac, senderIp, targetMac, targetIp);
-		EthernetHeader ethernetHeader = new EthernetHeader(senderMac, targetMac, EthernetType.ARP);
+		MacAddress deviceMac = device.getMetadata().getMacAddress();
+		ArpPacket p = ArpPacket.createRequest(senderMac, senderIp, new MacAddress("00:00:00:00:00:00"), targetIp);
+		EthernetHeader ethernetHeader = new EthernetHeader(deviceMac, targetMac, EthernetType.ARP);
 		EthernetFrame frame = new EthernetFrame(ethernetHeader, p.getBuffer());
 
 		try {
-			logger.debug("kraken captive portal: send arp req ==> " + p);
+			logger.debug("kraken captive portal: send arp, sender [mac: {}, ip: {}], target [mac: {}, ip: {}]",
+					new Object[] { senderMac, senderIp, targetMac, targetIp });
 			device.write(frame.getBuffer());
 		} catch (IOException e) {
 			logger.error("kraken captive portal: arp request error", e);
@@ -356,7 +390,7 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 	}
 
 	@Override
-	public void quarantineHost(InetAddress address) {
+	public void quarantineHost(InetAddress address) throws IOException {
 		try {
 			Preferences root = prefsvc.getSystemPreferences();
 			Preferences p = root.node(QUARANTINED_KEY);
@@ -367,6 +401,8 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 			root.sync();
 
 			quarantinedHosts.add(address);
+
+			spoof(address);
 		} catch (BackingStoreException e) {
 			logger.error("kraken captive portal: cannot quarantine host " + address.getHostAddress(), e);
 			throw new RuntimeException(e);
@@ -384,8 +420,13 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 			root.sync();
 
 			quarantinedHosts.remove(address);
+
+			unspoof(address);
 		} catch (BackingStoreException e) {
 			logger.error("kraken captive portal: cannot unquarantine host " + address.getHostAddress(), e);
+			throw new RuntimeException(e);
+		} catch (IOException e) {
+			logger.error("kraken captive portal: cannot recover arp cache for " + address.getHostAddress(), e);
 			throw new RuntimeException(e);
 		}
 	}

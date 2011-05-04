@@ -51,7 +51,7 @@ public interface CaptivePortal {
 
 	Collection<InetAddress> getQuarantinedHosts();
 
-	void quarantineHost(InetAddress address);
+	void quarantineHost(InetAddress address) throws IOException;
 
 	void unquarantineHost(InetAddress address);
 
