@@ -68,8 +68,14 @@ public class IpEventLog implements Marshalable {
 	@Column(length = 60)
 	private String ip1;
 
+	@Column
+	private long ip1long;
+
 	@Column(length = 60)
 	private String ip2;
+
+	@Column
+	private long ip2long;
 
 	@Column(length = 20)
 	private String mac1;
@@ -123,6 +129,10 @@ public class IpEventLog implements Marshalable {
 
 	public void setIp1(String ip1) {
 		this.ip1 = ip1;
+		this.ip1long = 0;
+		String[] t = ip1.split("\\.");
+		for (String s : t)
+			ip1long = (ip1long << 8) + Integer.parseInt(s);
 	}
 
 	public String getIp2() {
@@ -131,6 +141,10 @@ public class IpEventLog implements Marshalable {
 
 	public void setIp2(String ip2) {
 		this.ip2 = ip2;
+		this.ip2long = 0;
+		String[] t = ip2.split("\\.");
+		for (String s : t)
+			ip2long = (ip2long << 8) + Integer.parseInt(s);
 	}
 
 	public String getMac1() {

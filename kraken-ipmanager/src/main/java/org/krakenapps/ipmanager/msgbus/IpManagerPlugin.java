@@ -139,8 +139,8 @@ public class IpManagerPlugin implements IpEventListener {
 		condition.setAgentId(agentId);
 		if (req.has("type"))
 			condition.setType(Type.valueOf(req.getString("type")));
-		if (req.has("ip"))
-			condition.setIp(req.getString("ip"));
+		if (req.has("ip_from") && req.has("ip_to"))
+			condition.setIpRange(req.getString("ip_from"), req.getString("ip_to"));
 		if (req.has("mac"))
 			condition.setMac(req.getString("mac"));
 		if (req.has("from"))

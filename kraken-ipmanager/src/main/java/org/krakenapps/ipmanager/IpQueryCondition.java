@@ -15,7 +15,11 @@
  */
 package org.krakenapps.ipmanager;
 
-public class IpQueryCondition {
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+public class IpQueryCondition extends QueryCondition {
 	private int orgId;
 	private Integer agentId;
 
@@ -33,6 +37,16 @@ public class IpQueryCondition {
 
 	public void setAgentId(Integer agentId) {
 		this.agentId = agentId;
+	}
+
+	@Override
+	public Predicate getPredicate(CriteriaBuilder cb, Root<?> root) {
+		Predicate p = cb.equal(root.join("agent").get("orgId"), orgId);
+
+		if (agentId != null)
+			p = cb.and(p, cb.equal(root.join("agent").get("id"), agentId));
+
+		return p;
 	}
 
 }
