@@ -103,6 +103,7 @@
 	<module>kraken-ice</module>
     <module>kraken-dhcp</module>
     <module>kraken-captive-portal</module>
+    <module>kraken-radius</module>
   </modules>
   <url>http://krakenapps.org</url>
   <inceptionYear>2008</inceptionYear>
