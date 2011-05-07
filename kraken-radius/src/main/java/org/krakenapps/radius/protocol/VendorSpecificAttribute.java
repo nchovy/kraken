@@ -15,14 +15,48 @@
  */
 package org.krakenapps.radius.protocol;
 
+import java.nio.ByteBuffer;
+
 public class VendorSpecificAttribute extends RadiusAttribute {
 
-	
-	
-	@Override
-	public byte[] getBytes() {
-		// TODO Auto-generated method stub
-		return null;
+	private int vendorId;
+	private byte[] data;
+
+	public VendorSpecificAttribute(int vendorId, byte[] data) {
+		this.vendorId = vendorId;
+		this.data = data;
 	}
 
+	public VendorSpecificAttribute(byte[] encoded, int offset, int length) {
+		if (encoded[offset] != 26)
+			throw new IllegalArgumentException("binary is not vendor specific attribute");
+
+		ByteBuffer bb = ByteBuffer.wrap(encoded);
+		bb.position(offset + 1);
+		int len = bb.get();
+		this.vendorId = bb.getInt();
+
+		byte[] b = new byte[len - 6];
+		bb.get(b);
+		this.data = b;
+	}
+	
+	public int getVendorId() {
+		return vendorId;
+	}
+	
+	public byte[] getData() {
+		return data;
+	}
+
+	@Override
+	public byte[] getBytes() {
+		int len = 6 + data.length;
+		ByteBuffer bb = ByteBuffer.allocate(len);
+		bb.put((byte) 26);
+		bb.put((byte) len);
+		bb.putInt(vendorId);
+		bb.put(data);
+		return bb.array();
+	}
 }
