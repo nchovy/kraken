@@ -4,9 +4,28 @@ Bundle.PackageInstall = function(config) {
 	
 	var sm = new Ext.grid.CheckboxSelectionModel();
 	
+	var PackageStore = new Ext.data.JsonStore({
+		fields: [ 'name', 'version' ]
+	});
+	
+	var initPackage = [
+		{
+			name: 'kraken-rss',
+			version: '1.0.0'
+		},
+		{
+			name: 'kraken-geoip',
+			version: '1.2.0'
+		}
+	];
+	PackageStore.loadData(initPackage);
+	
 	var form = new Ext.form.FormPanel({
 		labelAlign: 'right',
 		layout: 'absolute',
+		style: 'padding: 15px',
+		bodyStyle: 'background: none',
+		border: false,
 		items: [
 			{
 				xtype: 'label',
@@ -31,26 +50,38 @@ Bundle.PackageInstall = function(config) {
 			that.grid = new Ext.grid.GridPanel({
 				x: 0,
 				y: 60,
-				store: ['asd', 'asd'],
+				store: PackageStore,
 				sm: sm,
+				viewConfig: { forceFit: true },
 				columns: [
 					sm,
 					{
-						header: 'Name'
+						header: 'Name',
+						dataIndex: 'name'
 					},
 					{
-						header: 'Version'
+						header: 'Version',
+						dataIndex: 'version'
 					}
 				],
 				height: 200
 			})
 		],
 		region: 'center',
-		height: 60
+		height: 60,
+		buttons: [
+			{
+				xtype: 'button',
+				text: 'Install'
+			},
+			{
+				xtype: 'button',
+				text: 'Cancel'
+			}
+		]
 	});
 	
 	var panel = new Ext.Panel({
-		style: 'padding: 20px',
 		items: form,
 		border: false,
 		layout: 'border'
@@ -58,8 +89,8 @@ Bundle.PackageInstall = function(config) {
 	
 	var windowInstallPkg = windowManager.createChildWindow({
 		title: 'Install New Package',
-		width: 450,
-		height: 200,
+		width: 500,
+		height: 450,
 		items: panel,
 		parent: that.parent,
 		modal: true,

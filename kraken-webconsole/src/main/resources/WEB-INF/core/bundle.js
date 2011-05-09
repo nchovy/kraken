@@ -386,6 +386,34 @@
 						},
 						columns: [
 							{
+								xtype: 'actioncolumn',
+								width: 50,
+								items: [
+									{
+										getClass: function(v, meta, rec) {
+											if(rec.data.status == 'ACTIVE') {
+												this.items[0].tooltip = 'Stop';
+												return 'ico-ac-stop';
+											}
+											else {
+												this.items[0].tooltip = 'Start';
+												return 'ico-ac-start';
+											}
+										},
+										handler: function(grid, rowIndex, colIndex) {
+											var rec = StoreBundle.getAt(rowIndex);
+											if(rec.data.status == 'ACTIVE') {
+												stopBundle(rec.data);
+											}
+											else {
+												startBundle(rec.data);
+											}
+										}
+										
+									}
+								]
+							},
+							{
 								xtype: 'gridcolumn',
 								dataIndex: 'id',
 								header: 'ID',
@@ -415,34 +443,6 @@
 								sortable: true,
 								width: 100,
 								dataIndex: 'status'
-							},
-							{
-								xtype: 'actioncolumn',
-								width: 50,
-								items: [
-									{
-										getClass: function(v, meta, rec) {
-											if(rec.data.status == 'ACTIVE') {
-												this.items[0].tooltip = 'Stop';
-												return 'ico-ac-stop';
-											}
-											else {
-												this.items[0].tooltip = 'Start';
-												return 'ico-ac-start';
-											}
-										},
-										handler: function(grid, rowIndex, colIndex) {
-											var rec = StoreBundle.getAt(rowIndex);
-											if(rec.data.status == 'ACTIVE') {
-												stopBundle(rec.data);
-											}
-											else {
-												startBundle(rec.data);
-											}
-										}
-										
-									}
-								]
 							}
 						]
 					})

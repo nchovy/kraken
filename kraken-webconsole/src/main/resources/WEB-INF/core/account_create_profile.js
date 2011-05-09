@@ -27,6 +27,7 @@ Account.CreateProfile = function(config) {
 			that.createBtnPrev.disable();
 		}, 10);
 		that.lblConnecting.setText('<img src="img/ajax-loader.gif" style="margin-bottom: -2px"> Connecting...', false);
+		that.lblConnectionInfo.setText('', false);
 		
 		var btn = that.createBtnNext;
 		btn.disable();
@@ -254,8 +255,8 @@ Account.CreateProfile = function(config) {
 				items: [step_connect, step_verify, step_saveprofile, step_creating]
 			})
 		],
-		bbar: [
-			'->',
+		buttons: [
+			//'->',
 			that.createBtnPrev = new Ext.Button({
 				text: '&nbsp;&laquo; Previous&nbsp;',
 				disabled: true,

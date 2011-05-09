@@ -21,7 +21,8 @@ function getCreateLoggerWizard(LoggerFactoryStore, LoggerStore, SelectedLogger) 
 			function(resp) {
 				SelectedLogger.setValue('local\\' + that.txtName.getValue());
 			
-				var btnNext = step_creating.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+				//var btnNext = step_creating.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+				var btnNext = step_creating.ownerCt.ownerCt.buttons[1];
 				btnNext.fireEvent('click', btnNext);
 			},
 			Ext.ErrorFn
@@ -55,7 +56,8 @@ function getCreateLoggerWizard(LoggerFactoryStore, LoggerStore, SelectedLogger) 
 				fieldLabel: 'Name',
 				listeners: {
 					change: function(t, n, o) {
-						var btnNext = step_create.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+						//var btnNext = step_create.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+						var btnNext = step_create.ownerCt.ownerCt.buttons[1];
 						if(n != '' && that.comboFactory.getValue() != '') {
 							btnNext.enable();
 						}
@@ -88,9 +90,10 @@ function getCreateLoggerWizard(LoggerFactoryStore, LoggerStore, SelectedLogger) 
 		],
 		listeners: {
 			activate: function() { 
-				var toolbar = step_create.ownerCt.ownerCt.getBottomToolbar();
-				var btnPrev = toolbar.items.items[1];
-				var btnNext = toolbar.items.items[2];
+				//var toolbar = step_create.ownerCt.ownerCt.getBottomToolbar();
+				var toolbar = step_create.ownerCt.ownerCt.buttons;
+				var btnPrev = toolbar[0];
+				var btnNext = toolbar[1];
 				
 				if(LoggerStore.getCount() == 0) {
 					btnPrev.disable();
@@ -146,7 +149,8 @@ function getSelectParserWizard(SelectedLogger, ParserFactoryStore) {
 		);
 		*/
 		
-		var btnFinish = step_final.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+		//var btnFinish = step_final.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+		var btnFinish = step_final.ownerCt.ownerCt.buttons[1];
 		setTimeout(function() {
 			btnFinish.enable();
 		}, 1000);
@@ -286,7 +290,8 @@ function getFactoryOptions(val, panelCreateOptions, txtName) {
 			panelCreateOptions.doLayout(true, true);
 			
 			if(txtName.getValue() != '') {
-				var btnNext = panelCreateOptions.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+				//var btnNext = panelCreateOptions.ownerCt.ownerCt.getBottomToolbar().items.items[2];
+				var btnNext = panelCreateOptions.ownerCt.ownerCt.buttons[1];
 				btnNext.enable();
 			}
 		}
@@ -378,8 +383,8 @@ function openCreateManagedLoggerWizard(parent, LoggerFactoryStore, LoggerStore, 
 				]
 			}
 		],
-		bbar: [
-			'->',
+		buttons: [
+			//'->',
 			{
 				text: '&laquo; Previous',
 				disabled: true
@@ -413,8 +418,8 @@ function openCreateManagedLoggerWizard(parent, LoggerFactoryStore, LoggerStore, 
 				items: getCreateLoggerWizard(LoggerFactoryStore, LoggerStore, SelectedLogger)
 			})
 		],
-		bbar: [
-			'->',
+		buttons: [
+			//'->',
 			that.createBtnPrev = new Ext.Button({
 				text: '&laquo; Previous',
 				handler: function() {
@@ -468,8 +473,8 @@ function openCreateManagedLoggerWizard(parent, LoggerFactoryStore, LoggerStore, 
 				items: getSelectParserWizard(SelectedLogger, ParserFactoryStore)
 			})
 		],
-		bbar: [
-			'->',
+		buttons: [
+			//'->',
 			that.parserBtnPrev = new Ext.Button({
 				text: '&laquo; Previous',
 				handler: function() {
