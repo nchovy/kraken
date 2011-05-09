@@ -18,12 +18,6 @@ public class TcpPortScanner {
 	private TcpPortScanner() {
 	}
 
-	public static void main(String[] args) throws IOException {
-		System.loadLibrary("kpcap");
-		InetSocketAddress target = new InetSocketAddress("192.168.0.2", 8080);
-		System.out.println(synScan(target, 2000));
-	}
-
 	public static TcpSegment finScan(InetSocketAddress target, int timeout) throws IOException {
 		return sendAndReceive(IP().data(TCP().fin().dst(target)), timeout);
 	}
@@ -54,8 +48,8 @@ public class TcpPortScanner {
 		return null;
 	}
 
-	private static TcpSegment receive(PcapDevice device, InetSocketAddress target, int timeout)
-			throws IOException, TimeoutException {
+	private static TcpSegment receive(PcapDevice device, InetSocketAddress target, int timeout) throws IOException,
+			TimeoutException {
 		LastPacketCallback callback = new LastPacketCallback();
 
 		PcapLiveRunner runner = new PcapLiveRunner(device);

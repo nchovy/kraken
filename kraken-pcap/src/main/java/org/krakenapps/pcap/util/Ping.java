@@ -38,16 +38,16 @@ import org.krakenapps.pcap.routing.RoutingTable;
  * @author xeraph
  */
 public class Ping {
-	public static IcmpPacket ping(InetAddress targetIp, int timeout) throws IOException, TimeoutException {
+	public static PingResponse ping(InetAddress targetIp, int timeout) throws IOException, TimeoutException {
 		return ping(targetIp, 1, timeout);
 	}
 
-	public static IcmpPacket ping(InetAddress targetIp, int seq, int timeout) throws IOException, TimeoutException {
+	public static PingResponse ping(InetAddress targetIp, int seq, int timeout) throws IOException, TimeoutException {
 		MacAddress dstMac = Arping.query(targetIp, timeout);
 		return ping(dstMac, targetIp, seq, timeout);
 	}
 
-	public static IcmpPacket ping(MacAddress dstMac, InetAddress targetIp, int seq, int timeout) throws IOException,
+	public static PingResponse ping(MacAddress dstMac, InetAddress targetIp, int seq, int timeout) throws IOException,
 			TimeoutException {
 		if (dstMac == null)
 			throw new IllegalArgumentException("destination mac should be not null");
@@ -61,14 +61,14 @@ public class Ping {
 		return ping(metadata, entry, dstMac, targetIp, seq, timeout);
 	}
 
-	private static IcmpPacket ping(PcapDeviceMetadata metadata, RoutingEntry entry, MacAddress dstMac,
+	private static PingResponse ping(PcapDeviceMetadata metadata, RoutingEntry entry, MacAddress dstMac,
 			InetAddress targetIp, int seq, int timeout) throws IOException, TimeoutException {
 		InetAddress sourceIp = metadata.getInet4Address();
 		MacAddress srcMac = metadata.getMacAddress();
 
 		Buffer buf = buildFrame(entry, srcMac, dstMac, sourceIp, targetIp, seq);
 		PcapDevice device = PcapDeviceManager.open(metadata.getName(), timeout);
-		
+
 		try {
 			device.setFilter("icmp");
 
@@ -83,7 +83,14 @@ public class Ping {
 
 			IcmpPacket last = null;
 			while (true) {
-				runner.runOnce();
+				try {
+					runner.runOnce();
+				} catch (IOException e) {
+					if (e.getMessage().equals("Timeout"))
+						throw new TimeoutException("ping timeout for " + targetIp.getHostAddress());
+					else
+						throw e;
+				}
 				last = callback.getLast();
 
 				if (last.getType() == 0 && last.getCode() == 0 && last.getId() == 1 && last.getSeq() == seq)
@@ -97,16 +104,16 @@ public class Ping {
 			if (last == null)
 				throw new TimeoutException("ping timeout for " + targetIp.getHostAddress());
 
-			return last;
+			return new PingResponse(last, (int) (System.currentTimeMillis() - begin));
 		} finally {
 			device.close();
 		}
 	}
 
 	private static Buffer buildFrame(RoutingEntry entry, MacAddress srcMac, MacAddress dstMac, InetAddress sourceIp,
-			InetAddress targetIp, int seq) throws IOException {
-		IcmpPacket.Builder icmp = new IcmpPacket.Builder().data(new ChainBuffer(
-				"abcdefghijklmnopqrstuvwabcdefghi".getBytes()));
+			InetAddress targetIp, int seq) {
+		IcmpPacket.Builder icmp = new IcmpPacket.Builder().seq(seq).data(
+				new ChainBuffer("abcdefghijklmnopqrstuvwabcdefghi".getBytes()));
 
 		Ipv4Packet ipPacket = new Ipv4Packet.Builder().dst(targetIp).proto(InternetProtocol.ICMP).data(icmp).build();
 
@@ -126,6 +133,30 @@ public class Ping {
 
 		public IcmpPacket getLast() {
 			return last;
+		}
+	}
+
+	public static class PingResponse {
+		private IcmpPacket packet;
+		private int bytes;
+		private int time;
+
+		public PingResponse(IcmpPacket packet, int time) {
+			this.packet = packet;
+			this.time = (time + 50) / 100;
+			this.bytes = packet.getBuffer().readableBytes() - 8;
+		}
+
+		public IcmpPacket getPacket() {
+			return packet;
+		}
+
+		public int getBytes() {
+			return bytes;
+		}
+
+		public int getTime() {
+			return time;
 		}
 	}
 

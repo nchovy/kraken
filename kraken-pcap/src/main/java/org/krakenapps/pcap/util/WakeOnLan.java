@@ -9,11 +9,6 @@ import org.krakenapps.pcap.PacketBuilder;
 import org.krakenapps.pcap.decoder.ethernet.MacAddress;
 
 public class WakeOnLan {
-	public static void main(String[] args) throws IOException {
-		System.loadLibrary("kpcap");
-		wake(new MacAddress("00:24:21:b3:43:c1"));
-	}
-	
 	public static void wake(MacAddress target) throws IOException {
 		broadcast(ETH().dst(target).type(0x0842).data(new WakeOnLanBuilder(target)));
 	}

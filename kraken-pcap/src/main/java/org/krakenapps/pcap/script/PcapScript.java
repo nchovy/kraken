@@ -16,18 +16,25 @@
 package org.krakenapps.pcap.script;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.concurrent.TimeoutException;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.pcap.decoder.ethernet.MacAddress;
 import org.krakenapps.pcap.live.PcapDevice;
 import org.krakenapps.pcap.live.PcapDeviceManager;
 import org.krakenapps.pcap.live.PcapDeviceMetadata;
 import org.krakenapps.pcap.live.PcapStreamManager;
 import org.krakenapps.pcap.live.PcapStat;
 import org.krakenapps.pcap.live.Promiscuous;
+import org.krakenapps.pcap.util.Arping;
 import org.krakenapps.pcap.util.PcapLiveRunner;
+import org.krakenapps.pcap.util.Ping;
+import org.krakenapps.pcap.util.Ping.PingResponse;
 
 /**
  * @author xeraph
@@ -45,7 +52,49 @@ public class PcapScript implements Script {
 		this.context = context;
 	}
 
+	@ScriptUsage(description = "", arguments = {
+			@ScriptArgument(name = "host address", type = "string", description = "host address"),
+			@ScriptArgument(name = "timeout", type = "integer", description = "timeout to millisecond", optional = true),
+			@ScriptArgument(name = "ping count", type = "integer", description = "ping count", optional = true) })
 	public void ping(String[] args) {
+		int timeout = 5000;
+		if (args.length > 1)
+			timeout = Integer.parseInt(args[1]);
+
+		int seq = 4;
+		if (args.length > 2) {
+			seq = Integer.parseInt(args[2]);
+			if (seq <= 0)
+				seq = 4;
+		}
+
+		try {
+			InetAddress target = InetAddress.getByName(args[0]);
+			MacAddress dstMac = Arping.query(target, timeout);
+			if (dstMac == null) {
+				context.println("cannot find destination mac address.");
+				return;
+			}
+
+			for (int i = 1; i <= seq; i++) {
+				try {
+					PingResponse resp = Ping.ping(dstMac, target, i % 65536, timeout);
+					context.println(String.format("ping #%d: Reply from %s, bytes=%d, time%c%.1fs", i, resp.getPacket()
+							.getSource().getHostAddress(), resp.getBytes(), (resp.getTime() == 1) ? '<' : '=',
+							(double) (resp.getTime()) / 10));
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+					}
+				} catch (TimeoutException e) {
+					context.println("timeout");
+				}
+			}
+		} catch (UnknownHostException e) {
+			context.println("unknown host: " + args[0]);
+		} catch (IOException e) {
+			context.println("io error: " + e.getMessage());
+		}
 	}
 
 	public void streams(String[] args) {
