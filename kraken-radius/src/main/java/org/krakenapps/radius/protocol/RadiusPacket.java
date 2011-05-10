@@ -15,8 +15,10 @@
  */
 package org.krakenapps.radius.protocol;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public abstract class RadiusPacket {
 	private int code; // 1byte
@@ -25,6 +27,14 @@ public abstract class RadiusPacket {
 	private byte[] authenticator; // 16byte
 	private List<RadiusAttribute> attrs = new ArrayList<RadiusAttribute>();
 
+	public static byte[] newRequestAuthenticator() {
+		UUID uuid = UUID.randomUUID();
+		ByteBuffer bb = ByteBuffer.allocate(16);
+		bb.putLong(uuid.getMostSignificantBits());
+		bb.putLong(uuid.getLeastSignificantBits());
+		return bb.array();
+	}
+	
 	public int getCode() {
 		return code;
 	}
@@ -63,5 +73,24 @@ public abstract class RadiusPacket {
 
 	public void setAttributes(List<RadiusAttribute> attrs) {
 		this.attrs = attrs;
+	}
+	
+	public byte[] getBytes() {
+		int len = 20;
+		
+		List<RadiusAttribute> attrs = getAttributes();
+		for (RadiusAttribute attr : attrs)
+			len += attr.getBytes().length;
+		
+		ByteBuffer bb = ByteBuffer.allocate(len);
+		bb.put((byte) code);
+		bb.put((byte) identifier);
+		bb.putShort((short) len);
+		bb.put(getAuthenticator());
+		
+		for (RadiusAttribute attr : attrs)
+			bb.put(attr.getBytes());
+		
+		return bb.array();
 	}
 }

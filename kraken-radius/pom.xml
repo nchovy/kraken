@@ -24,7 +24,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.radius</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.radius,
+							org.krakenapps.radius.client,
+							org.krakenapps.radius.client.auth,
 							org.krakenapps.radius.protocol
 						</Export-Package>
 						<Import-Package>*</Import-Package>

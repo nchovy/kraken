@@ -15,14 +15,25 @@
  */
 package org.krakenapps.radius.protocol;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class AccessRequest extends RadiusPacket {
+	private byte[] authenticator;
 	private UserNameAttribute userName;
 	private UserPasswordAttribute userPassword;
+	private NasIpAddressAttribute nasIpAddress;
+	private NasIdentifierAttribute nasIdentifier;
 	private NasPortAttribute nasPort;
 	private NasPortTypeAttribute nasPortType;
 
 	public AccessRequest() {
 		setCode(1);
+		authenticator = newRequestAuthenticator();
+	}
+
+	public byte[] getRequestAuthenticator() {
+		return authenticator;
 	}
 
 	public UserNameAttribute getUserName() {
@@ -41,6 +52,22 @@ public class AccessRequest extends RadiusPacket {
 		this.userPassword = userPassword;
 	}
 
+	public NasIpAddressAttribute getNasIpAddress() {
+		return nasIpAddress;
+	}
+
+	public void setNasIpAddress(NasIpAddressAttribute nasIpAddress) {
+		this.nasIpAddress = nasIpAddress;
+	}
+
+	public NasIdentifierAttribute getNasIdentifier() {
+		return nasIdentifier;
+	}
+
+	public void setNasIdentifier(NasIdentifierAttribute nasIdentifier) {
+		this.nasIdentifier = nasIdentifier;
+	}
+
 	public NasPortAttribute getNasPort() {
 		return nasPort;
 	}
@@ -56,4 +83,31 @@ public class AccessRequest extends RadiusPacket {
 	public void setNasPortType(NasPortTypeAttribute nasPortType) {
 		this.nasPortType = nasPortType;
 	}
+
+	@Override
+	public List<RadiusAttribute> getAttributes() {
+		List<RadiusAttribute> attrs = new ArrayList<RadiusAttribute>(super.getAttributes());
+		attrs.add(userName);
+
+		// User-Password or CHAP
+		if (userPassword != null)
+			attrs.add(userPassword);
+		
+		// NAS-IP-Address or NAS-Identifier
+		if (nasIpAddress != null)
+			attrs.add(nasIpAddress);
+		
+		if (nasIdentifier != null)
+			attrs.add(nasIdentifier);
+		
+		// NAS-Port or NAS-Port-Type
+		if (nasPort != null)
+			attrs.add(nasPort);
+		
+		if (nasPortType != null)
+			attrs.add(nasPortType);
+		
+		return attrs;
+	}
+
 }
