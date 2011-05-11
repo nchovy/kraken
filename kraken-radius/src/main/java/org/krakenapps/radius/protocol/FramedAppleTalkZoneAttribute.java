@@ -24,10 +24,15 @@ public class FramedAppleTalkZoneAttribute extends RadiusAttribute {
 	}
 
 	public FramedAppleTalkZoneAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 39)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed apple talk zone attribute");
 
 		this.defaultZone = decodeText(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 39;
 	}
 
 	public String getDefaultZone() {
@@ -36,6 +41,6 @@ public class FramedAppleTalkZoneAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(39, defaultZone);
+		return encodeText(getType(), defaultZone);
 	}
 }

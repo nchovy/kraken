@@ -17,14 +17,29 @@ package org.krakenapps.radius.protocol;
 
 public class UserNameAttribute extends RadiusAttribute {
 
+	private String name;
+
 	public UserNameAttribute(String name) {
 		if (name == null || name.length() == 0)
 			throw new IllegalArgumentException("name should not be null or empty");
+
+		this.name = name;
+	}
+
+	public UserNameAttribute(byte[] encoded, int offset, int length) {
+		if (encoded[offset] != getType())
+			throw new IllegalArgumentException("binary is not user name attribute");
+
+		this.name = decodeText(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 1;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return null;
+		return encodeText(getType(), name);
 	}
-
 }

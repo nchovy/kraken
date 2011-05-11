@@ -17,25 +17,30 @@ package org.krakenapps.radius.protocol;
 
 public class CallbackNumberAttribute extends RadiusAttribute {
 	private String callbackNumber;
-	
+
 	public CallbackNumberAttribute(String callbackNumber) {
 		this.callbackNumber = callbackNumber;
 	}
-	
+
 	public CallbackNumberAttribute(byte[] encoded, int offset, int length) {
 		// original type: string
-		if (encoded[offset] != 19)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not callback number attribute");
-		
+
 		this.callbackNumber = decodeText(encoded, offset, length);
 	}
-	
+
+	@Override
+	public int getType() {
+		return 19;
+	}
+
 	public String getCallbackNumber() {
 		return callbackNumber;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(19, callbackNumber);
+		return encodeText(getType(), callbackNumber);
 	}
 }

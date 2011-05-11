@@ -44,15 +44,23 @@ public class FramedCompressionAttribute extends RadiusAttribute {
 	}
 	
 	public FramedCompressionAttribute(byte[] encoded, int offset, int length) {
+		if (encoded[offset] != getType())
+			throw new IllegalArgumentException("binary is not framed compression attribute");
+		
 		this.code = decodeInt(encoded, offset, length);
 	}
 	
-	public Type getType() {
+	@Override
+	public int getType() {
+		return 13;
+	}
+
+	public Type getCompressionType() {
 		return Type.parse(code);
 	}
 	
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(13, code);
+		return encodeInt(getType(), code);
 	}
 }

@@ -18,21 +18,29 @@ package org.krakenapps.radius.protocol;
 public class ProxyStateAttribute extends RadiusAttribute {
 
 	private byte[] state;
-	
+
 	public ProxyStateAttribute(byte[] state) {
 		this.state = state;
 	}
-	
+
 	public ProxyStateAttribute(byte[] encoded, int offset, int length) {
+		if (encoded[offset] != getType())
+			throw new IllegalArgumentException("binary is not proxy state attribute");
+
 		this.state = decodeString(encoded, offset, length);
 	}
-	
+
+	@Override
+	public int getType() {
+		return 33;
+	}
+
 	public byte[] getState() {
 		return state;
 	}
-	
+
 	@Override
 	public byte[] getBytes() {
-		return encodeString(33, state);
+		return encodeString(getType(), state);
 	}
 }

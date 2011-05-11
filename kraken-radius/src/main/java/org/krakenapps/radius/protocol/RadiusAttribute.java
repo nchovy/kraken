@@ -22,6 +22,8 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
 public abstract class RadiusAttribute {
+	public abstract int getType();
+	
 	public abstract byte[] getBytes();
 
 	/**
@@ -113,6 +115,98 @@ public abstract class RadiusAttribute {
 		} catch (UnsupportedEncodingException e) {
 			// not reachable
 			return null;
+		}
+	}
+
+	public static RadiusAttribute parse(byte[] authenticator, String sharedSecret, byte[] b, int offset, int length)
+			throws UnknownHostException {
+		int type = b[offset];
+
+		switch (type) {
+		case 1:
+			return new UserNameAttribute(b, offset, length);
+		case 2:
+			return new UserPasswordAttribute(authenticator, sharedSecret, b, offset, length);
+		case 3:
+			return new ChapPasswordAttribute(b, offset, length);
+		case 4:
+			return new NasIpAddressAttribute(b, offset, length);
+		case 5:
+			return new NasPortAttribute(b, offset, length);
+		case 6:
+			return new ServiceTypeAttribute(b, offset, length);
+		case 7:
+			return new FramedProtocolAttribute(b, offset, length);
+		case 8:
+			return new FramedIpAddressAttribute(b, offset, length);
+		case 9:
+			return new FramedIpNetmaskAttribute(b, offset, length);
+		case 10:
+			return new FramedRoutingAttribute(b, offset, length);
+		case 11:
+			return new FilterIdAttribute(b, offset, length);
+		case 12:
+			return new FramedMtuAttribute(b, offset, length);
+		case 13:
+			return new FramedCompressionAttribute(b, offset, length);
+		case 14:
+			return new LoginIpHostAttribute(b, offset, length);
+		case 15:
+			return new LoginServiceAttribute(b, offset, length);
+		case 16:
+			return new LoginTcpPortAttribute(b, offset, length);
+		case 18:
+			return new ReplyMessageAttribute(b, offset, length);
+		case 19:
+			return new CallbackNumberAttribute(b, offset, length);
+		case 20:
+			return new CallbackIdAttribute(b, offset, length);
+		case 22:
+			return new FramedRouteAttribute(b, offset, length);
+		case 23:
+			return new FramedIpxNetworkAttribute(b, offset, length);
+		case 24:
+			return new StateAttribute(b, offset, length);
+		case 25:
+			return new ClassAttribute(b, offset, length);
+		case 26:
+			return new VendorSpecificAttribute(b, offset, length);
+		case 27:
+			return new SessionTimeoutAttribute(b, offset, length);
+		case 28:
+			return new IdleTimeoutAttribute(b, offset, length);
+		case 29:
+			return new TerminationActionAttribute(b, offset, length);
+		case 30:
+			return new CalledStationIdAttribute(b, offset, length);
+		case 31:
+			return new CallingStationIdAttribute(b, offset, length);
+		case 32:
+			return new NasIdentifierAttribute(b, offset, length);
+		case 33:
+			return new ProxyStateAttribute(b, offset, length);
+		case 34:
+			return new LoginLatServiceAttribute(b, offset, length);
+		case 35:
+			return new LoginLatNodeAttribute(b, offset, length);
+		case 36:
+			return new LoginLatGroupAttribute(b, offset, length);
+		case 37:
+			return new FramedAppleTalkLinkAttribute(b, offset, length);
+		case 38:
+			return new FramedAppleTalkNetworkAttribute(b, offset, length);
+		case 39:
+			return new FramedAppleTalkZoneAttribute(b, offset, length);
+		case 60:
+			return new ChapChallengeAttribute(b, offset, length);
+		case 61:
+			return new NasPortTypeAttribute(b, offset, length);
+		case 62:
+			return new PortLimitAttribute(b, offset, length);
+		case 63:
+			return new LoginLatPortAttribute(b, offset, length);
+		default:
+			throw new UnsupportedOperationException();
 		}
 	}
 }

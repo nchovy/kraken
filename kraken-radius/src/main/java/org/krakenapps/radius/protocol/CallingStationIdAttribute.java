@@ -18,24 +18,29 @@ package org.krakenapps.radius.protocol;
 public class CallingStationIdAttribute extends RadiusAttribute {
 
 	private String phoneNumber;
-	
+
 	public CallingStationIdAttribute(String phoneNumber) {
 		this.phoneNumber = phoneNumber;
 	}
-	
+
 	public CallingStationIdAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 31)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not calling station id attribute");
-		
+
 		this.phoneNumber = decodeText(encoded, offset, length);
 	}
-	
+
+	@Override
+	public int getType() {
+		return 31;
+	}
+
 	public String getPhoneNumber() {
 		return phoneNumber;
 	}
-	
+
 	@Override
 	public byte[] getBytes() {
-		return encodeText(31, phoneNumber);
+		return encodeText(getType(), phoneNumber);
 	}
 }

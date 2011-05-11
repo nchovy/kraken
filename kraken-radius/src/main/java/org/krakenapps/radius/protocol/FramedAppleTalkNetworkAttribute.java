@@ -24,18 +24,23 @@ public class FramedAppleTalkNetworkAttribute extends RadiusAttribute {
 	}
 	
 	public FramedAppleTalkNetworkAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 38)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed apple talk network attribute");
 		
 		this.address = decodeInt(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 38;
+	}
+
 	public int getAddress() {
 		return address;
 	}
 	
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(38, address);
+		return encodeInt(getType(), address);
 	}
 }

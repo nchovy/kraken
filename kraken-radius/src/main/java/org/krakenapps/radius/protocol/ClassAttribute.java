@@ -24,18 +24,23 @@ public class ClassAttribute extends RadiusAttribute {
 	}
 	
 	public ClassAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 25)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not class attribute");
 		
 		this.data = decodeString(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 25;
+	}
+
 	public byte[] getData() {
 		return data;
 	}
 	
 	@Override
 	public byte[] getBytes() {
-		return encodeString(25, data);
+		return encodeString(getType(), data);
 	}
 }

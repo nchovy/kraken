@@ -27,16 +27,23 @@ public class FramedIpAddressAttribute extends RadiusAttribute {
 	}
 	
 	public FramedIpAddressAttribute(byte[] encoded, int offset, int length) throws UnknownHostException {
+		if (encoded[offset] != getType())
+			throw new IllegalArgumentException("binary is not framed ip address attribute");
+		
 		this.ip = decodeIp(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 8;
+	}
+
 	public InetAddress getIp() {
 		return ip;
 	}
 	
 	@Override
 	public byte[] getBytes() {
-		return encodeIp(8, ip);
+		return encodeIp(getType(), ip);
 	}
-
 }

@@ -23,18 +23,23 @@ public class FramedIpNetmaskAttribute extends RadiusAttribute {
 	private InetAddress ip;
 
 	public FramedIpNetmaskAttribute(byte[] encoded, int offset, int length) throws UnknownHostException {
-		if (encoded[offset] != 9)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed ip netmask attribute");
 
 		this.ip = decodeIp(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 9;
+	}
+
 	public InetAddress getIp() {
 		return ip;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeIp(9, ip);
+		return encodeIp(getType(), ip);
 	}
 }

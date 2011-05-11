@@ -27,10 +27,15 @@ public class TerminationActionAttribute extends RadiusAttribute {
 	}
 	
 	public TerminationActionAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 29)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not termination action attribute");
 		
 		this.action = decodeInt(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 29;
 	}
 
 	/**
@@ -42,7 +47,6 @@ public class TerminationActionAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(29, action);
+		return encodeInt(getType(), action);
 	}
-
 }

@@ -18,24 +18,29 @@ package org.krakenapps.radius.protocol;
 public class FramedMtuAttribute extends RadiusAttribute {
 
 	private int mtu;
-	
+
 	public FramedMtuAttribute(int mtu) {
 		this.mtu = mtu;
 	}
-	
+
 	public FramedMtuAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 12)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed mtu attribute");
-		
+
 		this.mtu = decodeInt(encoded, offset, length);
 	}
-	
+
+	@Override
+	public int getType() {
+		return 12;
+	}
+
 	public int getMtu() {
 		return mtu;
 	}
-	
+
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(12, mtu);
+		return encodeInt(getType(), mtu);
 	}
 }

@@ -22,7 +22,7 @@ public class NasIpAddressAttribute extends RadiusAttribute {
 	private InetAddress address;
 
 	public NasIpAddressAttribute(byte[] encoded, int offset, int length) throws UnknownHostException {
-		if (encoded[offset] != 4)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not nas ip address attribute");
 
 		this.address = decodeIp(encoded, offset, length);
@@ -32,12 +32,17 @@ public class NasIpAddressAttribute extends RadiusAttribute {
 		this.address = ip;
 	}
 
+	@Override
+	public int getType() {
+		return 4;
+	}
+
 	public InetAddress getAddress() {
 		return address;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeIp(4, address);
+		return encodeIp(getType(), address);
 	}
 }

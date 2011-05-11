@@ -41,10 +41,15 @@ public class LoginServiceAttribute extends RadiusAttribute {
 	}
 
 	public LoginServiceAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 15)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not login service attribute");
 
 		this.code = decodeInt(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 15;
 	}
 
 	public LoginService getLoginService() {
@@ -53,6 +58,6 @@ public class LoginServiceAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(15, code);
+		return encodeInt(getType(), code);
 	}
 }

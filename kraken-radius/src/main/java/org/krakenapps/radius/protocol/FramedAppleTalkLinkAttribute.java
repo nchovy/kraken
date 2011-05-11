@@ -24,12 +24,17 @@ public class FramedAppleTalkLinkAttribute extends RadiusAttribute {
 	}
 
 	public FramedAppleTalkLinkAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 37)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed appletalk link attribute");
 		
 		setSerialLink(decodeInt(encoded, offset, length));
 	}
 	
+	@Override
+	public int getType() {
+		return 37;
+	}
+
 	private void setSerialLink(int serialLink) {
 		if (serialLink < 0 || serialLink > 65535)
 			throw new IllegalArgumentException("serial link value should be integer between 0 and 65535");
@@ -43,6 +48,6 @@ public class FramedAppleTalkLinkAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(37, serialLink);
+		return encodeInt(getType(), serialLink);
 	}
 }

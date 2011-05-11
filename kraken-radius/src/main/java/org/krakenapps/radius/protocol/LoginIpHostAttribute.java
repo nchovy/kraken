@@ -27,10 +27,15 @@ public class LoginIpHostAttribute extends RadiusAttribute {
 	}
 
 	public LoginIpHostAttribute(byte[] encoded, int offset, int length) throws UnknownHostException {
-		if (encoded[offset] != 14)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not login ip host attribute");
 
 		this.ip = decodeIp(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 14;
 	}
 
 	public InetAddress getIp() {
@@ -39,6 +44,6 @@ public class LoginIpHostAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeIp(14, ip);
+		return encodeIp(getType(), ip);
 	}
 }

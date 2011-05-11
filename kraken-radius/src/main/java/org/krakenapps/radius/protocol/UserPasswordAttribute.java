@@ -25,7 +25,7 @@ public class UserPasswordAttribute extends RadiusAttribute {
 	private String password;
 
 	public UserPasswordAttribute(byte[] authenticator, String sharedSecret, byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 2)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not user password attribute");
 
 		this.authenticator = authenticator;
@@ -47,6 +47,11 @@ public class UserPasswordAttribute extends RadiusAttribute {
 		this.password = password;
 	}
 
+	@Override
+	public int getType() {
+		return 2;
+	}
+
 	public byte[] getAuthenticator() {
 		return authenticator;
 	}
@@ -62,7 +67,7 @@ public class UserPasswordAttribute extends RadiusAttribute {
 	@Override
 	public byte[] getBytes() {
 		byte[] encoded = encodePassword();
-		return encodeString(2, encoded);
+		return encodeString(getType(), encoded);
 	}
 
 	private String decodePassword(byte[] encoded) {

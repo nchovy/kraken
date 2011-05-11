@@ -24,10 +24,15 @@ public class FramedRouteAttribute extends RadiusAttribute {
 	}
 
 	public FramedRouteAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 22)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed route attribute");
 
 		this.routingInfo = decodeText(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 22;
 	}
 
 	public String getRoutingInfo() {
@@ -36,6 +41,6 @@ public class FramedRouteAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(22, routingInfo);
+		return encodeText(getType(), routingInfo);
 	}
 }

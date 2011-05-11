@@ -24,19 +24,23 @@ public class CallbackIdAttribute extends RadiusAttribute {
 	}
 
 	public CallbackIdAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 20)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not callback id attribute");
 
 		this.id = decodeText(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 20;
+	}
+
 	public String getCallbackId() {
 		return id;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(20, id);
+		return encodeText(getType(), id);
 	}
-
 }

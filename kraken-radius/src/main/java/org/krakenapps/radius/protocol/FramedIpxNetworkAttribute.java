@@ -24,10 +24,15 @@ public class FramedIpxNetworkAttribute extends RadiusAttribute {
 	}
 
 	public FramedIpxNetworkAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 23)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed ipx network attribute");
 
 		this.ipxNetworkNumber = decodeInt(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 23;
 	}
 
 	public int getIpxNetworkNumber() {
@@ -36,6 +41,6 @@ public class FramedIpxNetworkAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(23, ipxNetworkNumber);
+		return encodeInt(getType(), ipxNetworkNumber);
 	}
 }

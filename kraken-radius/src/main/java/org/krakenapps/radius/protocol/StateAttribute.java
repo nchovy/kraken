@@ -24,10 +24,15 @@ public class StateAttribute extends RadiusAttribute {
 	}
 
 	public StateAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 24)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not state attribute");
 
 		this.state = decodeString(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 24;
 	}
 
 	public byte[] getState() {
@@ -36,7 +41,6 @@ public class StateAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeString(24, state);
+		return encodeString(getType(), state);
 	}
-
 }

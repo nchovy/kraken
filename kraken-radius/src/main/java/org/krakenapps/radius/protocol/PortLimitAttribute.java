@@ -15,33 +15,31 @@
  */
 package org.krakenapps.radius.protocol;
 
-public class NasIdentifierAttribute extends RadiusAttribute {
+public class PortLimitAttribute extends RadiusAttribute {
+	private int portLimit;
 
-	private String identifier;
-	
-	public NasIdentifierAttribute(String identifier) {
-		this.identifier = identifier;
+	public PortLimitAttribute(int port) {
+		this.portLimit = port;
 	}
-	
-	public NasIdentifierAttribute(byte[] encoded, int offset, int length) {
+
+	public PortLimitAttribute(byte[] encoded, int offset, int length) {
 		if (encoded[offset] != getType())
-			throw new IllegalArgumentException("binary is not nas identifier attribute");
-		
-		// original type is string (binary)
-		this.identifier = decodeText(encoded, offset, length);
+			throw new IllegalArgumentException("binary is not port limit attribute");
+
+		this.portLimit = decodeInt(encoded, offset, length);
 	}
 	
 	@Override
 	public int getType() {
-		return 32;
+		return 62;
 	}
 
-	public String getIdentifier() {
-		return identifier;
+	public int getPortLimit() {
+		return portLimit;
 	}
-	
+
 	@Override
 	public byte[] getBytes() {
-		return encodeText(getType(), identifier);
+		return encodeInt(getType(), portLimit);
 	}
 }

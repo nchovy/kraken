@@ -15,6 +15,8 @@
  */
 package org.krakenapps.radius.protocol;
 
+import java.net.UnknownHostException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +36,69 @@ public abstract class RadiusPacket {
 		bb.putLong(uuid.getLeastSignificantBits());
 		return bb.array();
 	}
-	
+
+	public static RadiusPacket parse(String sharedSecret, byte[] buf) {
+		return parse(sharedSecret, buf, 0, buf.length);
+	}
+
+	public static RadiusPacket parse(String sharedSecret, byte[] buf, int offset, int length) {
+		ByteBuffer bb = ByteBuffer.wrap(buf);
+		bb.position(offset);
+		int code = bb.get();
+
+		RadiusPacket p = null;
+		switch (code) {
+		case 1:
+			p = new AccessRequest();
+			break;
+		case 2:
+			p = new AccessAccept();
+			break;
+		case 3:
+			p = new AccessReject();
+			break;
+		case 4:
+			p = new AccountingRequest();
+			break;
+		case 5:
+			p = new AccountingResponse();
+			break;
+		case 11:
+			p = new AccessChallenge();
+			break;
+		}
+
+		p.setIdentifier(bb.get());
+		p.setLength(bb.getShort() & 0xffff);
+
+		if (p.getLength() > length)
+			throw new BufferUnderflowException();
+
+		byte[] authenticator = new byte[16];
+		bb.get(authenticator);
+		p.setAuthenticator(authenticator);
+
+		int attrLength = p.getLength() - 20;
+		for (int i = 0; i < attrLength;) {
+			bb.mark();
+			bb.get();
+			int len = bb.get();
+			bb.reset();
+
+			try {
+				RadiusAttribute attr = RadiusAttribute.parse(authenticator, sharedSecret, bb.array(), bb.position(),
+						bb.remaining());
+				if (attr != null)
+					p.getAttributes().add(attr);
+			} catch (UnknownHostException e) {
+			}
+
+			i += len;
+		}
+
+		return p;
+	}
+
 	public int getCode() {
 		return code;
 	}
@@ -75,22 +139,29 @@ public abstract class RadiusPacket {
 		this.attrs = attrs;
 	}
 	
+	public RadiusAttribute findAttribute(int type) {
+		for (RadiusAttribute attr : attrs) 
+			if (attr.getType() == type)
+				return attr;
+		return null;
+	}
+
 	public byte[] getBytes() {
 		int len = 20;
-		
+
 		List<RadiusAttribute> attrs = getAttributes();
 		for (RadiusAttribute attr : attrs)
 			len += attr.getBytes().length;
-		
+
 		ByteBuffer bb = ByteBuffer.allocate(len);
 		bb.put((byte) code);
 		bb.put((byte) identifier);
 		bb.putShort((short) len);
 		bb.put(getAuthenticator());
-		
+
 		for (RadiusAttribute attr : attrs)
 			bb.put(attr.getBytes());
-		
+
 		return bb.array();
 	}
 }

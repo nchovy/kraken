@@ -19,4 +19,13 @@ public class AccessAccept extends RadiusPacket {
 	public AccessAccept() {
 		setCode(2);
 	}
+
+	@Override
+	public String toString() {
+		RadiusAttribute replyMessage = findAttribute(18);
+		if (replyMessage != null)
+			return "Access-Accept: " + replyMessage;
+		
+		return "Access-Accept";
+	}
 }

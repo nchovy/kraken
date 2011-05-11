@@ -19,17 +19,8 @@ public class ServiceTypeAttribute extends RadiusAttribute {
 	private int code;
 
 	public enum Type {
-		Login(1), 
-		Framed(2), 
-		CallbackLogin(3), 
-		CallbackFramed(4), 
-		Outbound(5), 
-		Administrative(6), 
-		NasPrompt(7), 
-		AuthenticateOnly(8), 
-		CallbackNasPrompt(9), 
-		CallCheck(10), 
-		CallbackAdministrative(11);
+		Login(1), Framed(2), CallbackLogin(3), CallbackFramed(4), Outbound(5), Administrative(6), NasPrompt(7), AuthenticateOnly(
+				8), CallbackNasPrompt(9), CallCheck(10), CallbackAdministrative(11);
 
 		Type(int code) {
 			this.code = code;
@@ -41,28 +32,33 @@ public class ServiceTypeAttribute extends RadiusAttribute {
 			for (Type t : values())
 				if (t.code == code)
 					return t;
-		
+
 			return null;
 		}
 	}
-	
+
 	public ServiceTypeAttribute(Type t) {
 		this.code = t.code;
 	}
 
 	public ServiceTypeAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 6)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not service type attribute");
-		
+
 		this.code = decodeInt(encoded, offset, length);
 	}
-	
+
+	@Override
+	public int getType() {
+		return 6;
+	}
+
 	public Type getServiceType() {
 		return Type.parse(code);
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(6, code);
+		return encodeInt(getType(), code);
 	}
 }

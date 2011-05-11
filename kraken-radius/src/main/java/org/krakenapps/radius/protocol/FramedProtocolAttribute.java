@@ -18,43 +18,47 @@ package org.krakenapps.radius.protocol;
 public class FramedProtocolAttribute extends RadiusAttribute {
 
 	public enum Protocol {
-		PPP(1),
-		SLIP(2),
-		ARAP(3),
-		Gandalf(4),
-		Xylogics(5),
-		X75(6);
-		
+		PPP(1), SLIP(2), ARAP(3), Gandalf(4), Xylogics(5), X75(6);
+
 		Protocol(int code) {
 			this.code = code;
 		}
-		
+
 		private int code;
-		
+
 		public static Protocol parse(int code) {
 			for (Protocol p : values())
 				if (p.code == code)
 					return p;
-			
+
 			return null;
 		}
 	}
-	
+
 	private int code;
-	
+
 	public FramedProtocolAttribute(Protocol p) {
 		this.code = p.code;
 	}
-	
+
 	public FramedProtocolAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 7)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not framed protocol attribute");
-		
+
 		this.code = decodeInt(encoded, offset, length);
 	}
+
+	@Override
+	public int getType() {
+		return 7;
+	}
 	
+	public Protocol getProtocol() {
+		return Protocol.parse(code);
+	}
+
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(7, code);
+		return encodeInt(getType(), code);
 	}
 }

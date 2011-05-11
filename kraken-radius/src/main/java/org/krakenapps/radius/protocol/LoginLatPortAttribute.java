@@ -15,33 +15,33 @@
  */
 package org.krakenapps.radius.protocol;
 
-public class NasIdentifierAttribute extends RadiusAttribute {
+public class LoginLatPortAttribute extends RadiusAttribute {
+	// iso latin-1 string
+	private String latPort;
 
-	private String identifier;
-	
-	public NasIdentifierAttribute(String identifier) {
-		this.identifier = identifier;
+	public LoginLatPortAttribute(String latPort) {
+		this.latPort = latPort;
 	}
-	
-	public NasIdentifierAttribute(byte[] encoded, int offset, int length) {
+
+	public LoginLatPortAttribute(byte[] encoded, int offset, int length) {
 		if (encoded[offset] != getType())
-			throw new IllegalArgumentException("binary is not nas identifier attribute");
-		
-		// original type is string (binary)
-		this.identifier = decodeText(encoded, offset, length);
+			throw new IllegalArgumentException("binary is not login lat port attribute");
+
+		this.latPort = decodeText(encoded, offset, length);
 	}
-	
+
 	@Override
 	public int getType() {
-		return 32;
+		return 63;
 	}
 
-	public String getIdentifier() {
-		return identifier;
+	public String getLatPort() {
+		return latPort;
 	}
-	
+
 	@Override
 	public byte[] getBytes() {
-		return encodeText(getType(), identifier);
+		return encodeText(getType(), latPort);
 	}
+
 }

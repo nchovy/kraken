@@ -19,4 +19,13 @@ public class AccessReject extends RadiusPacket {
 	public AccessReject() {
 		setCode(3);
 	}
+
+	@Override
+	public String toString() {
+		RadiusAttribute replyMessage = findAttribute(18);
+		if (replyMessage != null)
+			return "Access-Reject: " + replyMessage;
+
+		return "Access-Reject";
+	}
 }

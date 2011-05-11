@@ -28,7 +28,7 @@ public class VendorSpecificAttribute extends RadiusAttribute {
 	}
 
 	public VendorSpecificAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 26)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not vendor specific attribute");
 
 		ByteBuffer bb = ByteBuffer.wrap(encoded);
@@ -40,11 +40,16 @@ public class VendorSpecificAttribute extends RadiusAttribute {
 		bb.get(b);
 		this.data = b;
 	}
-	
+
+	@Override
+	public int getType() {
+		return 26;
+	}
+
 	public int getVendorId() {
 		return vendorId;
 	}
-	
+
 	public byte[] getData() {
 		return data;
 	}
@@ -53,7 +58,7 @@ public class VendorSpecificAttribute extends RadiusAttribute {
 	public byte[] getBytes() {
 		int len = 6 + data.length;
 		ByteBuffer bb = ByteBuffer.allocate(len);
-		bb.put((byte) 26);
+		bb.put((byte) getType());
 		bb.put((byte) len);
 		bb.putInt(vendorId);
 		bb.put(data);

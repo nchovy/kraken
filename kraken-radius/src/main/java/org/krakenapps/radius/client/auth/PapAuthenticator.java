@@ -30,19 +30,18 @@ public class PapAuthenticator implements Authenticator {
 		req.setNasIpAddress(new NasIpAddressAttribute(InetAddress.getByName("127.0.0.1")));
 		req.setNasPort(new NasPortAttribute(0));
 
+		DatagramSocket socket = new DatagramSocket();
+		socket.connect(addr, port);
+		
 		byte[] payload = req.getBytes();
-		DatagramSocket socket = new DatagramSocket(port, addr);
 		DatagramPacket packet = new DatagramPacket(payload, payload.length);
-		socket.bind(null);
 		socket.setSoTimeout(5000);
 		socket.send(packet);
 
 		byte[] buf = new byte[65535];
 		DatagramPacket response = new DatagramPacket(buf, buf.length);
 		socket.receive(response);
-		
-		// TODO: not completed yet
-		return null;
-	}
 
+		return RadiusPacket.parse(sharedSecret, buf);
+	}
 }

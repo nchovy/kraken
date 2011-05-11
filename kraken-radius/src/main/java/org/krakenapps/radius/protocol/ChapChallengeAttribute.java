@@ -24,18 +24,23 @@ public class ChapChallengeAttribute extends RadiusAttribute {
 	}
 
 	public ChapChallengeAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 60)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not chap challenge attribute");
 
 		this.challenge = decodeString(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 60;
+	}
+
 	public byte[] getChallenge() {
 		return challenge;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeString(60, challenge);
+		return encodeString(getType(), challenge);
 	}
 }

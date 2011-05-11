@@ -29,18 +29,23 @@ public class LoginLatGroupAttribute extends RadiusAttribute {
 	}
 	
 	public LoginLatGroupAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 36)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not login lat group attribute");
 		
 		this.groupCode = decodeString(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 36;
+	}
+
 	public byte[] getGroupCode() {
 		return groupCode;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeString(36, groupCode);
+		return encodeString(getType(), groupCode);
 	}
 }

@@ -18,25 +18,30 @@ package org.krakenapps.radius.protocol;
 public class FilterIdAttribute extends RadiusAttribute {
 
 	private String name;
-	
+
 	public FilterIdAttribute(String name) {
 		this.name = name;
 	}
-	
+
 	public FilterIdAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 11)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not filter id attribute");
-		
+
 		this.name = decodeText(encoded, offset, length);
 	}
-	
+
+	@Override
+	public int getType() {
+		return 11;
+	}
+
 	public String getName() {
 		return name;
 	}
-	
+
 	@Override
 	public byte[] getBytes() {
-		return encodeText(11, name);
+		return encodeText(getType(), name);
 	}
 
 }

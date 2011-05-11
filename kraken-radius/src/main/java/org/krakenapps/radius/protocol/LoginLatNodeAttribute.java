@@ -26,18 +26,23 @@ public class LoginLatNodeAttribute extends RadiusAttribute {
 	}
 	
 	public LoginLatNodeAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 35)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not login lat node attribute");
 		
 		this.nodeName = decodeText(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 35;
+	}
+
 	public String getNodeName() {
 		return nodeName;
 	}
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(35, nodeName);
+		return encodeText(getType(), nodeName);
 	}
 }

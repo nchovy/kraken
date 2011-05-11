@@ -24,18 +24,23 @@ public class CalledStationIdAttribute extends RadiusAttribute {
 	}
 	
 	public CalledStationIdAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 30)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not called station id attribute");
 		
 		this.phoneNumber = decodeText(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 30;
+	}
+
 	public String getPhoneNumber() {
 		return phoneNumber;
 	}
 	
 	@Override
 	public byte[] getBytes() {
-		return encodeText(30, phoneNumber);
+		return encodeText(getType(), phoneNumber);
 	}
 }

@@ -23,10 +23,15 @@ public class NasPortAttribute extends RadiusAttribute {
 	}
 
 	public NasPortAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 5)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not nas port attribute");
 
 		this.port = decodeInt(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 5;
 	}
 
 	public int getPort() {
@@ -35,6 +40,6 @@ public class NasPortAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(5, port);
+		return encodeInt(getType(), port);
 	}
 }

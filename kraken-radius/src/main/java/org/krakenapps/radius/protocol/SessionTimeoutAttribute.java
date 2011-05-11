@@ -24,19 +24,23 @@ public class SessionTimeoutAttribute extends RadiusAttribute {
 	}
 	
 	public SessionTimeoutAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 27)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not session timeout attribute");
 		
 		this.timeout = decodeInt(encoded, offset, length);
 	}
 	
+	@Override
+	public int getType() {
+		return 27;
+	}
+
 	public int getTimeout() {
 		return timeout;
 	}
 	
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(27, timeout);
+		return encodeInt(getType(), timeout);
 	}
-
 }

@@ -24,12 +24,16 @@ public class LoginLatServiceAttribute extends RadiusAttribute {
 	}
 
 	public LoginLatServiceAttribute(byte[] encoded, int offset, int length) {
-
-		if (encoded[offset] != 34)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not login lat service attribute");
 
 		// iso latin-1, case insensitive
 		this.latService = decodeText(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 34;
 	}
 
 	public String getLatService() {
@@ -38,6 +42,6 @@ public class LoginLatServiceAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(34, latService);
+		return encodeText(getType(), latService);
 	}
 }

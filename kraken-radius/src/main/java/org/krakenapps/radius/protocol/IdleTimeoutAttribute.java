@@ -24,10 +24,15 @@ public class IdleTimeoutAttribute extends RadiusAttribute {
 	}
 	
 	public IdleTimeoutAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 28)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not idle timeout attribute");
 		
 		this.timeout = decodeInt(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 28;
 	}
 
 	public int getTimeout() {
@@ -36,7 +41,6 @@ public class IdleTimeoutAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeInt(28, timeout);
+		return encodeInt(getType(), timeout);
 	}
-
 }

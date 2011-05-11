@@ -23,10 +23,15 @@ public class ReplyMessageAttribute extends RadiusAttribute {
 	}
 
 	public ReplyMessageAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != 18)
+		if (encoded[offset] != getType())
 			throw new IllegalArgumentException("binary is not reply message attribute");
 
 		this.message = decodeText(encoded, offset, length);
+	}
+
+	@Override
+	public int getType() {
+		return 18;
 	}
 
 	public String getMessage() {
@@ -35,6 +40,11 @@ public class ReplyMessageAttribute extends RadiusAttribute {
 
 	@Override
 	public byte[] getBytes() {
-		return encodeText(18, message);
+		return encodeText(getType(), message);
+	}
+
+	@Override
+	public String toString() {
+		return "Reply-Message: " + message;
 	}
 }

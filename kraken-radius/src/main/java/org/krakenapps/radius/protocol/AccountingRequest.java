@@ -15,32 +15,8 @@
  */
 package org.krakenapps.radius.protocol;
 
-public class LoginTcpPortAttribute extends RadiusAttribute {
-
-	private int port;
-
-	public LoginTcpPortAttribute(int port) {
-		this.port = port;
-	}
-
-	public LoginTcpPortAttribute(byte[] encoded, int offset, int length) {
-		if (encoded[offset] != getType())
-			throw new IllegalArgumentException("binary is not login tcp port attribute");
-
-		this.port = decodeInt(encoded, offset, length);
-	}
-
-	@Override
-	public int getType() {
-		return 16;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	@Override
-	public byte[] getBytes() {
-		return encodeInt(getType(), port);
+public class AccountingRequest extends RadiusPacket {
+	public AccountingRequest() {
+		setCode(4);
 	}
 }
