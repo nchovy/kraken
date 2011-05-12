@@ -72,8 +72,8 @@ public class PackageScript implements Script {
 		for (PackageRepository repo : packageManager.getRepositories()) {
 			String alias = repo.getAlias();
 			if (repo.isHttps()) {
-				context.printf("[%s] %s, trust=%s, key=%s\n", alias, repo.getUrl().toString(), repo
-						.getTrustStoreAlias(), repo.getKeyStoreAlias());
+				context.printf("[%s] %s, trust=%s, key=%s\n", alias, repo.getUrl().toString(),
+						repo.getTrustStoreAlias(), repo.getKeyStoreAlias());
 			} else {
 				if (repo.isAuthRequired())
 					alias += " (http-auth)";
@@ -176,6 +176,29 @@ public class PackageScript implements Script {
 		}
 	}
 
+	public void installables(String[] args) {
+		String keyword = (args.length > 0) ? args[0].toLowerCase() : null;
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+		for (PackageList list : packageManager.getPackageList()) {
+			context.println(String.format("[%s] %s (%s)", list.getRepository().getAlias(), list.getDescription(),
+					dateFormat.format(list.getCreated())));
+			for (PackageMetadata metadata : list.getPackages()) {
+				if (keyword == null || metadata.getName().toLowerCase().contains(keyword)) {
+					if (metadata != null) {
+						context.println(String.format("\t%s (%s)", metadata.getName(), metadata.getDescription()));
+						for (PackageVersionHistory ver : metadata.getVersions())
+							context.println(String.format("\t\t%s (%s)", ver.getVersion(),
+									dateFormat.format(ver.getLastUpdated())));
+					} else {
+						context.println("\t" + metadata);
+					}
+				}
+			}
+			context.println("");
+		}
+	}
+
 	public void search(String[] args) {
 		// not yet implemented.
 	}
@@ -213,7 +236,7 @@ public class PackageScript implements Script {
 			if (e.getCause() instanceof BundleException) {
 				context.println("Bundle exception: " + e.getMessage());
 				logger.error("kraken core: bundle error", e);
-			} else if (e.getCause() instanceof BundleException) {
+			} else if (e.getCause() instanceof BackingStoreException) {
 				context.println("database failure");
 				logger.error("kraken core: database error", e);
 			}
@@ -291,8 +314,8 @@ public class PackageScript implements Script {
 			throws PackageNotFoundException, InterruptedException, MavenResolveException, BundleException,
 			UnrecoverableKeyException, KeyManagementException, KeyStoreException {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		context.printf("Latest version found -> version: %s, last updated at: %s\n", history.getVersion(), dateFormat
-				.format(history.getLastUpdated()));
+		context.printf("Latest version found -> version: %s, last updated at: %s\n", history.getVersion(),
+				dateFormat.format(history.getLastUpdated()));
 		context.println("Resolving Dependencies");
 
 		// print summary
@@ -370,8 +393,8 @@ public class PackageScript implements Script {
 			List<BundleDescriptor> remainingBundles = new ArrayList<BundleDescriptor>();
 
 			// categorize
-			List<BundleDescriptor> relatedBundles = new ArrayList<BundleDescriptor>(packageManager
-					.findRelatedBundles(pkg));
+			List<BundleDescriptor> relatedBundles = new ArrayList<BundleDescriptor>(
+					packageManager.findRelatedBundles(pkg));
 			Collections.sort(relatedBundles, new BundleOrder());
 
 			for (BundleDescriptor bundle : relatedBundles) {
@@ -396,8 +419,8 @@ public class PackageScript implements Script {
 				for (BundleDescriptor bundle : remainingBundles) {
 					List<PackageDescriptor> packages = dependMap.get(bundle.getSymbolicName());
 
-					context.printf("[%3d] %-49s %s\n", bundle.getBundleId(), bundle.getSymbolicName(), bundle
-							.getVersion());
+					context.printf("[%3d] %-49s %s\n", bundle.getBundleId(), bundle.getSymbolicName(),
+							bundle.getVersion());
 					context.printf("\tused by [%s]\n", toPackageString(packages));
 					context.println("");
 				}

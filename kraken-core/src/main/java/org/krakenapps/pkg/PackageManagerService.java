@@ -160,6 +160,23 @@ public class PackageManagerService implements PackageManager {
 		}
 	}
 
+	public List<PackageList> getPackageList() {
+		List<PackageList> list = new ArrayList<PackageList>();
+		for (PackageRepository repo : db.getPackageRepositories()) {
+			try {
+				URL url = new URL(normalize(repo.getUrl()) + "kraken-package.index");
+				byte[] body = download(repo, url);
+				list.add(PackageListParser.parse(repo, body));
+			} catch (IOException e) {
+			} catch (UnrecoverableKeyException e) {
+			} catch (KeyManagementException e) {
+			} catch (KeyStoreException e) {
+			} catch (ClassNotFoundException e) {
+			}
+		}
+		return list;
+	}
+
 	private PackageVersionHistory selectVersion(String version, PackageMetadata metadata) {
 		if (version == null)
 			return metadata.getVersions().get(0);
@@ -193,8 +210,8 @@ public class PackageManagerService implements PackageManager {
 					bundle.start();
 					monitor.writeln(String.format("  -> [OK] %s %s", bundle.getSymbolicName(), bundle.getVersion()));
 				} catch (BundleException e) {
-					monitor.writeln(String.format("  -> [FAIL] %s %s: %s", bundle.getSymbolicName(), bundle
-							.getVersion(), e.getMessage()));
+					monitor.writeln(String.format("  -> [FAIL] %s %s: %s", bundle.getSymbolicName(),
+							bundle.getVersion(), e.getMessage()));
 				}
 			}
 		}
@@ -327,7 +344,8 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
-	public Map<String, List<PackageDescriptor>> checkUninstallDependency(String packageName) throws PackageNotFoundException {
+	public Map<String, List<PackageDescriptor>> checkUninstallDependency(String packageName)
+			throws PackageNotFoundException {
 		PackageDescriptor pkg = getInstalledPackage(packageName);
 
 		Set<BundleDescriptor> relatedBundles = findRelatedBundles(pkg);
@@ -392,8 +410,8 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
-	public PackageUpdatePlan getUpdatePlan(String packageName, Version version)
-			throws PackageNotFoundException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+	public PackageUpdatePlan getUpdatePlan(String packageName, Version version) throws PackageNotFoundException,
+			KeyStoreException, UnrecoverableKeyException, KeyManagementException {
 		PackageUpdatePlan dep = new PackageUpdatePlan();
 
 		PackageMetadata metadata = downloadMetadata(packageName);
@@ -527,7 +545,7 @@ public class PackageManagerService implements PackageManager {
 
 		try {
 			URL url = new URL(normalize(repository.getUrl()) + pacakgeName + "/" + version + "/kraken.package");
-			String body = download(repository, url);
+			String body = downloadString(repository, url);
 			return PackageDescParser.parse(metadata, history, body);
 		} catch (HttpException e) {
 			logger.error("package manager: http exception", e);
@@ -556,7 +574,7 @@ public class PackageManagerService implements PackageManager {
 			throws KeyStoreException, UnrecoverableKeyException, KeyManagementException {
 		try {
 			URL url = new URL(normalize(repository.getUrl()) + packageName + "/kraken.package");
-			String body = download(repository, url);
+			String body = downloadString(repository, url);
 			PackageMetadata metadata = PackageMetadataParser.parse(body);
 			metadata.setName(packageName);
 			metadata.setRepository(repository);
@@ -566,7 +584,38 @@ public class PackageManagerService implements PackageManager {
 		}
 	}
 
-	private String download(PackageRepository repo, URL url) throws IOException, KeyStoreException,
+	private byte[] download(PackageRepository repo, URL url) throws IOException, KeyStoreException,
+			UnrecoverableKeyException, KeyManagementException {
+		if (repo.isLocalFilesystem()) {
+			try {
+				File file = new File(url.toURI());
+				long length = file.length();
+				FileInputStream stream = new FileInputStream(file);
+				byte[] b = new byte[(int) length];
+				stream.read(b);
+				return b;
+			} catch (URISyntaxException e) {
+				e.printStackTrace();
+				return new byte[0];
+			}
+		} else if (repo.isHttps()) {
+			ServiceReference ref = bc.getServiceReference(KeyStoreManager.class.getName());
+			KeyStoreManager keyman = (KeyStoreManager) bc.getService(ref);
+			try {
+				TrustManagerFactory tmf = keyman.getTrustManagerFactory(repo.getTrustStoreAlias(), "SunX509");
+				KeyManagerFactory kmf = keyman.getKeyManagerFactory(repo.getKeyStoreAlias(), "SunX509");
+				HttpWagon.download(url, tmf, kmf);
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}
+
+			return HttpWagon.download(url);
+		} else if (repo.isAuthRequired())
+			return HttpWagon.download(url, true, repo.getAccount(), repo.getPassword());
+		return HttpWagon.download(url);
+	}
+
+	private String downloadString(PackageRepository repo, URL url) throws IOException, KeyStoreException,
 			UnrecoverableKeyException, KeyManagementException {
 		if (repo.isLocalFilesystem()) {
 			try {
@@ -607,8 +656,8 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
-	public PackageVersionHistory getLatestVersion(String packageName) throws PackageNotFoundException, KeyStoreException,
-			UnrecoverableKeyException, KeyManagementException {
+	public PackageVersionHistory getLatestVersion(String packageName) throws PackageNotFoundException,
+			KeyStoreException, UnrecoverableKeyException, KeyManagementException {
 		PackageMetadata metadata = downloadMetadata(packageName);
 		if (metadata == null)
 			throw new PackageNotFoundException(packageName);
