@@ -126,26 +126,38 @@ body {
 }
 
 
-.ico-start, .ico-ac-start {
+.ico-start {
     background-image:url(../img/circle-green-16-ns.png) !important;
 	width: 16px;
 	height: 16px;
 }
 
-.ico-stop, .ico-ac-stop {
+.ico-stop {
     background-image:url(../img/circle-red-16-ns.png) !important;
 	width: 16px;
 	height: 16px;
 }
 
+.ico-ac-start {
+	background-image:url(../img/control_play.png) !important;
+	width: 16px;
+	height: 16px;
+}
+
+.ico-ac-stop {
+	background-image:url(../img/control_stop.png) !important;
+	width: 16px;
+	height: 16px;
+}
+
 .ico-ac-start:hover {
-    background-image:url(../img/badge-circle-check-16-ns.png) !important;
+    background-image:url(../img/control_play_blue.png) !important;
 	width: 16px;
 	height: 16px;
 }
 
 .ico-ac-stop:hover {
-    background-image:url(../img/badge-circle-cross-16-ns.png) !important;
+    background-image:url(../img/control_stop_blue.png) !important;
 	width: 16px;
 	height: 16px;
 }

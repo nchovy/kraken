@@ -82,7 +82,7 @@
 
 .bdleicon {
 	float: left;
-	width: 300px;
+	width: 350px;
 	height: 60px;
 	margin: 5px;
 	font-size: 10pt;
@@ -97,7 +97,7 @@
 	white-space: nowrap;
 	overflow:hidden;
 	text-overflow: ellipsis;
-	width: 200px;
+	width: 250px;
 }
 
 .bdleicon span {
@@ -130,7 +130,7 @@
 	display: block;
 	margin-top: 10px;
 	white-space: nowrap;
-	width: 170px;
+	width: 220px;
 	overflow:hidden;
 	text-overflow: clip;
 	overflow-x: -webkit-marquee;

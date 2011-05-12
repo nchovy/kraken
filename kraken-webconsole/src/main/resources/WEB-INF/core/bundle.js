@@ -270,9 +270,18 @@
 		
 		function renderStatus(val) {
 			if (val == 'ACTIVE') {
-				return '<span style="color:green;">' + val + '</span>';
+				return '<span style="font-weight:bold; color:rgb(10,108,173);">' + val + '</span>';
 			} else {
-				return '<span style="color:red;">' + val + '</span>';
+				return '<span style="color:gray;">' + val + '</span>';
+			}
+			return val;
+		}
+		
+		function renderStatus2(val, o, d) {
+			if (d.data.status == 'ACTIVE') {
+				return val;
+			} else {
+				return '<span style="color:gray;">' + val + '</span>';
 			}
 			return val;
 		}
@@ -387,7 +396,8 @@
 						columns: [
 							{
 								xtype: 'actioncolumn',
-								width: 50,
+								width: 30,
+								align: 'center',
 								items: [
 									{
 										getClass: function(v, meta, rec) {
@@ -415,34 +425,37 @@
 							},
 							{
 								xtype: 'gridcolumn',
+								header: 'Status',
+								renderer: renderStatus,
+								sortable: true,
+								width: 80,
+								dataIndex: 'status'
+							},
+							{
+								xtype: 'gridcolumn',
 								dataIndex: 'id',
 								header: 'ID',
 								sortable: true,
 								resizable: true,
 								width: 50,
-								align: 'right'
+								align: 'right',
+								renderer: renderStatus2
 							},
 							{
 								xtype: 'gridcolumn',
 								dataIndex: 'name',
 								header: 'Symbolic Name',
 								sortable: true,
-								width: 250
+								width: 250,
+								renderer: renderStatus2
 							},
 							{
 								xtype: 'gridcolumn',
 								header: 'Version',
 								sortable: true,
 								width: 100,
-								dataIndex: 'version'
-							},
-							{
-								xtype: 'gridcolumn',
-								header: 'Status',
-								renderer: renderStatus,
-								sortable: true,
-								width: 100,
-								dataIndex: 'status'
+								dataIndex: 'version',
+								renderer: renderStatus2
 							}
 						]
 					})
@@ -451,7 +464,7 @@
             })]
         });
 
-        var window = windowManager.createWindow(pid, this.name, 720, 350, MainUI);
+        var window = windowManager.createWindow(pid, this.name, 790, 350, MainUI);
 	}
 
     this.onstop = function () {
