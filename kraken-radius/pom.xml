@@ -26,10 +26,14 @@
 						<Export-Package>
 							org.krakenapps.radius.client,
 							org.krakenapps.radius.client.auth,
+							org.krakenapps.radius.server,
 							org.krakenapps.radius.protocol,
 							org.krakenapps.radius.script
 						</Export-Package>
 						<Import-Package>*</Import-Package>
+						<Private-Package>
+							org.krakenapps.radius.server.impl
+						</Private-Package>
 					</instructions>
 				</configuration>
 			</plugin>
