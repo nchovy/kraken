@@ -142,6 +142,11 @@ public class ScriptContextImpl implements ScriptContext {
 	}
 
 	@Override
+	public void println() {
+		println("");
+	}
+
+	@Override
 	public void println(String value) {
 		if (value == null)
 			return;

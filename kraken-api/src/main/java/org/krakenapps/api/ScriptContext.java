@@ -48,6 +48,8 @@ public interface ScriptContext {
 
 	String readPassword() throws InterruptedException;
 
+	void println();
+
 	void println(String value);
 
 	void println(Object value);
