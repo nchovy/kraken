@@ -40,8 +40,7 @@ public class TcpStateTransitMachine {
 	private Map<TcpSessionKey, TcpSession> tcpSessionMap;
 	private TcpProtocolMapper mapper;
 
-	public TcpStateTransitMachine(TcpProtocolMapper mapper,
-			Map<TcpSessionKey, TcpSession> tcpSessionMap) {
+	public TcpStateTransitMachine(TcpProtocolMapper mapper, Map<TcpSessionKey, TcpSession> tcpSessionMap) {
 		this.tcpTransitionMap = new TcpTransitionMapper();
 		this.mapper = mapper;
 		this.tcpSessionMap = tcpSessionMap;
@@ -105,8 +104,7 @@ public class TcpStateTransitMachine {
 				/* enqueue segment */
 				session.getTxWaitQueue().enqueue(segment);
 				/* retrieve packet */
-				TcpPacket element = session.getTxBuffer().retrieveNextPacket(tcp, session,
-						session.getTxWaitQueue());
+				TcpPacket element = session.getTxBuffer().retrieveNextPacket(tcp, session, session.getTxWaitQueue());
 				/* update state */
 				if (element != null) {
 					setNextState(element, session, tcpSessionMap);
@@ -115,8 +113,7 @@ public class TcpStateTransitMachine {
 
 			else {
 				session.getRxWaitQueue().enqueue(segment);
-				TcpPacket element = session.getRxBuffer().retrieveNextPacket(tcp, session,
-						session.getRxWaitQueue());
+				TcpPacket element = session.getRxBuffer().retrieveNextPacket(tcp, session, session.getRxWaitQueue());
 				if (element != null) {
 					setNextState(element, session, tcpSessionMap);
 				}
@@ -209,8 +206,7 @@ public class TcpStateTransitMachine {
 		return false;
 	}
 
-	private void setNextState(TcpPacket segment, TcpSessionImpl session,
-			Map<TcpSessionKey, TcpSession> tcpStreamMap) {
+	private void setNextState(TcpPacket segment, TcpSessionImpl session, Map<TcpSessionKey, TcpSession> tcpStreamMap) {
 		TcpState clientState = session.getClientState();
 		TcpState serverState = session.getServerState();
 
@@ -238,8 +234,7 @@ public class TcpStateTransitMachine {
 
 					else {
 						clientState = tcpTransitionMap.map(segment, clientState, Action.RECV_FIN);
-						serverState = tcpTransitionMap.map(segment, serverState,
-								Action.RECV_FINACKED);
+						serverState = tcpTransitionMap.map(segment, serverState, Action.RECV_FINACKED);
 						clientState = tcpTransitionMap.map(segment, clientState, Action.SEND_FIN);
 
 					}
@@ -251,8 +246,7 @@ public class TcpStateTransitMachine {
 						serverState = tcpTransitionMap.map(segment, serverState, Action.SEND_FIN);
 					} else {
 						serverState = tcpTransitionMap.map(segment, serverState, Action.RECV_FIN);
-						clientState = tcpTransitionMap.map(segment, clientState,
-								Action.RECV_FINACKED);
+						clientState = tcpTransitionMap.map(segment, clientState, Action.RECV_FINACKED);
 						serverState = tcpTransitionMap.map(segment, serverState, Action.SEND_FIN);
 					}
 				}
@@ -302,8 +296,7 @@ public class TcpStateTransitMachine {
 			else if (session.getPacketCountAfterFin() == 3) {
 				if (segment.getDirection() == TcpDirection.ToServer) {
 					if (serverState == TcpState.LAST_ACK)
-						serverState = tcpTransitionMap.map(segment, serverState,
-								Action.RECV_FINACKED);
+						serverState = tcpTransitionMap.map(segment, serverState, Action.RECV_FINACKED);
 					else
 						// simultaneous close.
 						clientState = tcpTransitionMap.map(segment, clientState, Action.RECV_FIN);
@@ -311,8 +304,7 @@ public class TcpStateTransitMachine {
 
 				else {
 					if (clientState == TcpState.LAST_ACK)
-						clientState = tcpTransitionMap.map(segment, clientState,
-								Action.RECV_FINACKED);
+						clientState = tcpTransitionMap.map(segment, clientState, Action.RECV_FINACKED);
 					else
 						// simultaneous close.
 						serverState = tcpTransitionMap.map(segment, serverState, Action.RECV_FIN);
@@ -370,8 +362,7 @@ public class TcpStateTransitMachine {
 				session.getRxBuffer().store(session, session.getRxWaitQueue(), segment, flushBit);
 		}
 
-		else if (clientState.compareTo(TcpState.ESTABLISHED) > 0
-				|| serverState.compareTo(TcpState.ESTABLISHED) > 0) {
+		else if (clientState.compareTo(TcpState.ESTABLISHED) > 0 || serverState.compareTo(TcpState.ESTABLISHED) > 0) {
 			if (clientState == TcpState.CLOSED || serverState == TcpState.CLOSED) {
 				endSession(segment, session);
 
@@ -381,8 +372,7 @@ public class TcpStateTransitMachine {
 			}
 
 			int controlBits = segment.getFlags();
-			if (controlBits == FIN || controlBits == FIN_ACK || controlBits == FIN_PSH_ACK
-					|| controlBits == PSH_ACK) {
+			if (controlBits == FIN || controlBits == FIN_ACK || controlBits == FIN_PSH_ACK || controlBits == PSH_ACK) {
 				if (segment.getDirection() == TcpDirection.ToServer)
 					session.getTxBuffer().store(session, session.getTxWaitQueue(), segment, true);
 				else
@@ -396,16 +386,14 @@ public class TcpStateTransitMachine {
 						session.setRecentSrc(segment.getRelativeSeq(), segment.getRelativeAck(),
 								segment.getDataLength(), 16);
 					} else
-						session.setRecentSrc(segment.getRelativeSeq(), segment.getRelativeAck(), 0,
-								16);
+						session.setRecentSrc(segment.getRelativeSeq(), segment.getRelativeAck(), 0, 16);
 				} else {
 					session.setDestLastAck(segment.getRelativeAck());
 					if (segment.getData() != null) {
 						session.setRecentDest(segment.getRelativeSeq(), segment.getRelativeAck(),
 								segment.getDataLength(), 16);
 					} else
-						session.setRecentDest(segment.getRelativeSeq(), segment.getRelativeAck(),
-								0, 16);
+						session.setRecentDest(segment.getRelativeSeq(), segment.getRelativeAck(), 0, 16);
 				}
 			}
 
@@ -419,8 +407,8 @@ public class TcpStateTransitMachine {
 	}
 
 	private boolean isResponseSynAck(TcpPacket segment) {
-		if (segment.getFlags() == ACK && segment.getRelativeSeq() == 1
-				&& segment.getRelativeAck() == 1 && segment.getData() == null) {
+		if (segment.getFlags() == ACK && segment.getRelativeSeq() == 1 && segment.getRelativeAck() == 1
+				&& segment.getData() == null) {
 			return true;
 		}
 		return false;
@@ -429,8 +417,7 @@ public class TcpStateTransitMachine {
 	private boolean isReceiveData(TcpSessionImpl session, TcpPacket segment) {
 		int flags = segment.getFlags();
 		if (flags == ACK || flags == PSH_ACK) {
-			if (segment.getRelativeSeq() == 1 && segment.getRelativeAck() == 1
-					&& segment.getData() != null) {
+			if (segment.getRelativeSeq() == 1 && segment.getRelativeAck() == 1 && segment.getData() != null) {
 				session.setReceiveData(true);
 				return true;
 			}
@@ -460,14 +447,14 @@ public class TcpStateTransitMachine {
 		Protocol protocol = session.getProtocol();
 		Collection<TcpProcessor> processors = mapper.getTcpProcessors(protocol);
 
+		terminateSession(session);
+
 		if (processors == null)
 			return;
 
 		for (TcpProcessor p : processors) {
 			p.onFinish(segment.getSessionKey());
 		}
-
-		terminateSession(session);
 	}
 
 	private void terminateSession(TcpSessionImpl session) {

@@ -21,15 +21,17 @@ import org.krakenapps.pcap.Protocol;
  * @author mindori
  */
 public interface TcpSession {
+	int getId();
+
 	TcpState getClientState();
 
 	TcpState getServerState();
 
 	TcpSessionKey getKey();
-	
+
 	void registerProtocol(Protocol protocol);
-	
+
 	void unregisterProtocol(Protocol protocol);
-	
+
 	Protocol getProtocol();
 }

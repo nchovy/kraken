@@ -18,6 +18,7 @@ package org.krakenapps.pcap.decoder.tcp;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.pcap.Protocol;
 import org.slf4j.Logger;
@@ -29,6 +30,9 @@ import org.slf4j.LoggerFactory;
 public class TcpSessionImpl implements TcpSession {
 	// tx : Server side, rx : Client side
 	private final Logger logger = LoggerFactory.getLogger(TcpSessionImpl.class.getName());
+
+	private static AtomicInteger LAST_ID = new AtomicInteger(1);
+	private int id;
 
 	private TcpStreamOption srcStreamOption;
 	private TcpStreamOption destStreamOption;
@@ -74,11 +78,8 @@ public class TcpSessionImpl implements TcpSession {
 
 	private Protocol protocol;
 
-	public FinPacketKey getFinPacketKey() {
-		return finPacketKey;
-	}
-
 	public TcpSessionImpl(TcpProtocolMapper mapper) {
+		id = LAST_ID.getAndIncrement();
 		srcStreamOption = TcpStreamOption.NORMAL;
 		destStreamOption = TcpStreamOption.NORMAL;
 		key = null;
@@ -92,6 +93,11 @@ public class TcpSessionImpl implements TcpSession {
 		txBuffer = new SegmentBuffer(mapper);
 		rxBuffer = new SegmentBuffer(mapper);
 		finPacketKey = new FinPacketKey();
+	}
+
+	@Override
+	public int getId() {
+		return id;
 	}
 
 	public boolean isEstablished() {
@@ -296,6 +302,10 @@ public class TcpSessionImpl implements TcpSession {
 		return rxBuffer;
 	}
 
+	public FinPacketKey getFinPacketKey() {
+		return finPacketKey;
+	}
+
 	public void deallocateTxBuffer() {
 		txBuffer = null;
 	}
@@ -325,8 +335,8 @@ public class TcpSessionImpl implements TcpSession {
 		InetSocketAddress clientAddress = new InetSocketAddress(key.getClientIp(), key.getClientPort());
 		InetSocketAddress serverAddress = new InetSocketAddress(key.getServerIp(), key.getServerPort());
 
-		return String.format("[%s (%s) => %s (%s)] rx=%d (%d), tx=%d (%d)", clientAddress, clientState,
-				serverAddress, serverState, recentDestSeq, recentDestAck, recentSrcSeq, recentSrcAck);
+		return String.format("[%s (%s) => %s (%s)] rx=%d (%d), tx=%d (%d)", clientAddress, clientState, serverAddress,
+				serverState, recentDestSeq, recentDestAck, recentSrcSeq, recentSrcAck);
 	}
 
 	public void printState() {
