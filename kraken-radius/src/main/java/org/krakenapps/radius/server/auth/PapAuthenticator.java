@@ -13,24 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.radius.server;
+package org.krakenapps.radius.server.auth;
 
 import java.util.List;
-import java.util.Set;
 
 import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.RadiusPacket;
+import org.krakenapps.radius.server.ConfigurableAuthenticator;
+import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
+import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusUserDatabase;
 
-public interface RadiusAuthenticator {
-	String getName();
-	
-	RadiusAuthenticatorFactory getFactory();
-	
-	RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases);
+public class PapAuthenticator extends ConfigurableAuthenticator {
 
-	Set<String> getConfigNames();
-	
-	void setConfig(String name, Object value);
+	public PapAuthenticator(String name, RadiusAuthenticatorFactory factory, RadiusConfigurator config) {
+		super(name, factory, config);
+	}
 
-	Object getConfig(String name);
+	@Override
+	public RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases) {
+		return null;
+	}
+
 }

@@ -15,6 +15,13 @@
  */
 package org.krakenapps.radius.server;
 
-public enum RadiusPortType {
-	Authentication, Accounting
+public enum RadiusAuthType {
+	PAP,
+	CHAP,
+	MSCHAP1,
+	MSCHAP2,
+	EAP_TTLS,
+	EAP_GTC,
+	EAP_MD5,
+	EAP_PEAP
 }

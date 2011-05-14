@@ -2,4 +2,5 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 	<instance component="radius-script-factory" />
+	<instance component="radius-ldap-udf" />
 </ipojo>

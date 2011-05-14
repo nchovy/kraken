@@ -15,12 +15,13 @@
  */
 package org.krakenapps.radius.server;
 
-import java.util.Set;
+import java.util.List;
 
 public class RadiusProfile {
 	private String name;
 	private String sharedSecret;
-	private Set<String> authenticators;
+	private List<String> authenticators;
+	private List<String> userDatabases;
 
 	public String getName() {
 		return name;
@@ -38,11 +39,19 @@ public class RadiusProfile {
 		this.sharedSecret = sharedSecret;
 	}
 
-	public Set<String> getAuthenticators() {
+	public List<String> getAuthenticators() {
 		return authenticators;
 	}
 
-	public void setAuthenticators(Set<String> authenticators) {
+	public void setAuthenticators(List<String> authenticators) {
 		this.authenticators = authenticators;
+	}
+
+	public List<String> getUserDatabases() {
+		return userDatabases;
+	}
+
+	public void setUserDatabases(List<String> userDatabases) {
+		this.userDatabases = userDatabases;
 	}
 }

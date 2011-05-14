@@ -15,6 +15,18 @@
  */
 package org.krakenapps.radius.server;
 
-public enum RadiusPortType {
-	Authentication, Accounting
+import java.util.Set;
+
+public interface RadiusUserDatabase {
+	String getName();
+
+	RadiusUserDatabaseFactory getFactory();
+
+	boolean authenticate(String userName, String password);
+
+	Set<String> getConfigNames();
+
+	void setConfig(String name, Object value);
+
+	Object getConfig(String name);
 }

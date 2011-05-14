@@ -15,40 +15,42 @@
  */
 package org.krakenapps.radius.server;
 
-public class RadiusConfigMetadata {
-	public enum Type {
-		String, Integer, Boolean
-	}
+import java.util.Set;
 
-	private Type type;
+public abstract class ConfigurableAuthenticator implements RadiusAuthenticator {
+
 	private String name;
-	private boolean isRequired;
-	private Object defaultValue;
+	private RadiusAuthenticatorFactory factory;
+	private RadiusConfigurator config;
 
-	public RadiusConfigMetadata(Type type, String name, boolean isRequired) {
-		this(type, name, isRequired, null);
-	}
-
-	public RadiusConfigMetadata(Type type, String name, boolean isRequired, Object defaultValue) {
-		this.type = type;
+	public ConfigurableAuthenticator(String name, RadiusAuthenticatorFactory factory, RadiusConfigurator config) {
 		this.name = name;
-		this.isRequired = isRequired;
-		this.defaultValue = defaultValue;
+		this.factory = factory;
+		this.config = config;
 	}
 
-	public Type getType() {
-		return type;
-	}
-
+	@Override
 	public String getName() {
 		return name;
 	}
 
-	public boolean isRequired() {
-		return isRequired;
+	@Override
+	public RadiusAuthenticatorFactory getFactory() {
+		return factory;
 	}
 
-	public Object getDefaultValue() {
-		return defaultValue;
+	@Override
+	public Set<String> getConfigNames() {
+		return config.keySet();
+	}
+
+	@Override
+	public void setConfig(String name, Object value) {
+		config.put(name, value);
+	}
+
+	@Override
+	public Object getConfig(String name) {
+		return config.get(name);
 	}
 }
