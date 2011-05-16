@@ -15,6 +15,7 @@
  */
 package org.krakenapps.radius.server;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
@@ -22,6 +23,10 @@ public interface RadiusVirtualServer {
 	String getName();
 
 	boolean isOpened();
+
+	void open() throws IOException;
+
+	void close() throws IOException;
 
 	InetSocketAddress getBindAddress();
 

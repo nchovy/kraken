@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Set;
 
 public interface RadiusAuthenticatorFactory {
+	String getName();
+	
 	Set<RadiusAuthType> getSupportedAuthTypes();
 
 	List<RadiusConfigMetadata> getConfigMetadatas();

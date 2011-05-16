@@ -22,5 +22,13 @@ public interface RadiusConfigurator {
 	
 	Object get(String key);
 	
+	String getString(String key);
+	
+	Integer getInteger(String key);
+	
+	Boolean getBoolean(String key);
+	
 	void put(String key, Object value);
+	
+	void purge();
 }

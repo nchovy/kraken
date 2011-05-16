@@ -24,6 +24,10 @@ import org.krakenapps.radius.protocol.RadiusPacket;
 public interface RadiusAuthenticator {
 	String getName();
 	
+	void start();
+	
+	void stop();
+	
 	RadiusAuthenticatorFactory getFactory();
 	
 	RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases);

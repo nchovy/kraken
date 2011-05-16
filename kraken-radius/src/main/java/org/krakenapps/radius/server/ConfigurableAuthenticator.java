@@ -15,7 +15,11 @@
  */
 package org.krakenapps.radius.server;
 
+import java.util.List;
 import java.util.Set;
+
+import org.krakenapps.radius.protocol.AccessRequest;
+import org.krakenapps.radius.protocol.RadiusPacket;
 
 public abstract class ConfigurableAuthenticator implements RadiusAuthenticator {
 
@@ -32,6 +36,20 @@ public abstract class ConfigurableAuthenticator implements RadiusAuthenticator {
 	@Override
 	public String getName() {
 		return name;
+	}
+
+	@Override
+	public void start() {
+	}
+
+	@Override
+	public void stop() {
+	}
+
+	@Override
+	public RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override

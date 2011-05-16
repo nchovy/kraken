@@ -15,6 +15,7 @@
  */
 package org.krakenapps.radius.server.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,16 +33,29 @@ public class PreferencesConfigurator implements RadiusConfigurator {
 	private String category;
 	private String section;
 	private Map<String, RadiusConfigMetadata> configMetadataMap;
-	
+
+	public PreferencesConfigurator(PreferencesService prefsvc, String category, String section) {
+		this(prefsvc, category, section, new ArrayList<RadiusConfigMetadata>());
+	}
+
 	public PreferencesConfigurator(PreferencesService prefsvc, String category, String section,
 			Collection<RadiusConfigMetadata> configMetadatas) {
 		this.prefsvc = prefsvc;
 		this.category = category;
 		this.section = section;
 		this.configMetadataMap = new ConcurrentHashMap<String, RadiusConfigMetadata>();
-		
+
 		for (RadiusConfigMetadata m : configMetadatas)
 			configMetadataMap.put(m.getName(), m);
+
+		try {
+			Preferences root = prefsvc.getSystemPreferences();
+			root.node(category).node(section);
+			root.flush();
+			root.sync();
+		} catch (BackingStoreException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
@@ -64,14 +78,74 @@ public class PreferencesConfigurator implements RadiusConfigurator {
 	public Object get(String key) {
 		Preferences root = prefsvc.getSystemPreferences();
 		Preferences p = root.node(category).node(section);
-		// TODO: type recovery
 
-		return p.get(key, null);
+		String value = p.get(key, null);
+
+		// type recovery
+		RadiusConfigMetadata metadata = configMetadataMap.get(key);
+
+		if (value == null) {
+			if (metadata != null)
+				return metadata.getDefaultValue();
+			else
+				return null;
+		}
+
+		if (metadata != null) {
+			switch (metadata.getType()) {
+			case String:
+				return value;
+			case Integer:
+				return Integer.valueOf(value);
+			case Boolean:
+				return Boolean.valueOf(value);
+			default:
+				throw new UnsupportedOperationException("unsupported config type");
+			}
+		}
+
+		return value;
+	}
+
+	@Override
+	public String getString(String key) {
+		return (String) get(key);
+	}
+
+	@Override
+	public Integer getInteger(String key) {
+		return (Integer) get(key);
+	}
+
+	@Override
+	public Boolean getBoolean(String key) {
+		return (Boolean) get(key);
 	}
 
 	@Override
 	public void put(String key, Object value) {
-		// TODO Auto-generated method stub
+		try {
+			Preferences root = prefsvc.getSystemPreferences();
+			Preferences p = root.node(category).node(section);
 
+			p.put(key, value.toString());
+
+			p.flush();
+			p.sync();
+		} catch (BackingStoreException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public void purge() {
+		try {
+			Preferences root = prefsvc.getSystemPreferences();
+			root.node(category).removeNode();
+			root.flush();
+			root.sync();
+		} catch (BackingStoreException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

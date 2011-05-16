@@ -39,6 +39,11 @@ public class LdapUserDatabaseFactory implements RadiusUserDatabaseFactory {
 	
 	private List<RadiusConfigMetadata> configMetadatas;
 
+	@Override
+	public String getName() {
+		return "ldap";
+	}
+
 	@SuppressWarnings("unchecked")
 	public LdapUserDatabaseFactory() {
 		configMetadatas = new ArrayList<RadiusConfigMetadata>();

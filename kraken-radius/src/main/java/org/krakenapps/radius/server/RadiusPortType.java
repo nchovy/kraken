@@ -16,5 +16,14 @@
 package org.krakenapps.radius.server;
 
 public enum RadiusPortType {
-	Authentication, Accounting
+	Authentication, Accounting;
+	
+	public static RadiusPortType parse(String s) {
+		if (s.equals("auth"))
+			return RadiusPortType.Authentication;
+		else if (s.equals("acct"))
+			return RadiusPortType.Accounting;
+		else
+			return null;
+	}
 }

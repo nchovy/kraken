@@ -30,6 +30,11 @@ import org.krakenapps.radius.server.RadiusConfigurator;
 public class PapAuthenticatorFactory implements RadiusAuthenticatorFactory {
 
 	@Override
+	public String getName() {
+		return "pap";
+	}
+
+	@Override
 	public Set<RadiusAuthType> getSupportedAuthTypes() {
 		return new TreeSet<RadiusAuthType>(Arrays.asList(RadiusAuthType.PAP));
 	}

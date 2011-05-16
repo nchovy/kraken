@@ -19,6 +19,10 @@ import java.util.Set;
 
 public interface RadiusUserDatabase {
 	String getName();
+	
+	void start();
+	
+	void stop();
 
 	RadiusUserDatabaseFactory getFactory();
 

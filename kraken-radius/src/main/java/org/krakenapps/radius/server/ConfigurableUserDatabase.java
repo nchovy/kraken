@@ -34,6 +34,14 @@ public abstract class ConfigurableUserDatabase implements RadiusUserDatabase {
 	}
 
 	@Override
+	public void start() {
+	}
+
+	@Override
+	public void stop() {
+	}
+
+	@Override
 	public RadiusUserDatabaseFactory getFactory() {
 		return factory;
 	}

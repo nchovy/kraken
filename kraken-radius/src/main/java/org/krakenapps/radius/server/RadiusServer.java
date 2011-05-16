@@ -23,12 +23,13 @@ public interface RadiusServer {
 	//
 	// Virtual server management
 	//
-	
+
 	List<RadiusVirtualServer> getVirtualServers();
-	
+
 	RadiusVirtualServer getVirtualServer(String name);
 
-	void createVirtualServer(String name, InetSocketAddress bindAddress, RadiusPortType portType, String profileName);
+	RadiusVirtualServer createVirtualServer(String name, InetSocketAddress bindAddress, RadiusPortType portType,
+			String profileName);
 
 	void removeVirtualServer(String name);
 
@@ -54,7 +55,7 @@ public interface RadiusServer {
 
 	List<RadiusAuthenticator> getAuthenticators();
 
-	void createAuthenticator(String instanceName, String factoryName, Map<String, Object> configs);
+	RadiusAuthenticator createAuthenticator(String instanceName, String factoryName, Map<String, Object> configs);
 
 	void removeAuthenticator(String instanceName);
 
@@ -66,7 +67,7 @@ public interface RadiusServer {
 
 	RadiusUserDatabase getUserDatabase(String name);
 
-	void createUserDatabase(String instanceName, String factoryName, Map<String, Object> configs);
+	RadiusUserDatabase createUserDatabase(String instanceName, String factoryName, Map<String, Object> configs);
 
 	void removeUserDatabase(String instanceName);
 
