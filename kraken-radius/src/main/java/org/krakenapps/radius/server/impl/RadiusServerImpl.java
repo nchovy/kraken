@@ -160,14 +160,27 @@ public class RadiusServerImpl implements RadiusServer {
 	}
 
 	@Override
-	public RadiusVirtualServer createVirtualServer(String name, InetSocketAddress bindAddress, RadiusPortType portType,
-			String profileName) {
+	public RadiusVirtualServer createVirtualServer(String name, RadiusPortType portType, String profileName) {
+		return createVirtualServer(name, portType, profileName, null);
+	}
+
+	@Override
+	public RadiusVirtualServer createVirtualServer(String name, RadiusPortType portType, String profileName,
+			InetSocketAddress bindAddress) {
+		verifyNotNull("name", name);
+		verifyNotNull("profile name", profileName);
+
+		if (!profiles.containsKey(profileName))
+			throw new IllegalArgumentException("profile not found: " + profileName);
+
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, VIRTUAL_SERVER_ROOT_KEY, name);
 		return new RadiusVirtualServerImpl(this, profileName, portType, conf, bindAddress);
 	}
 
 	@Override
 	public void removeVirtualServer(String name) {
+		verifyNotNull("name", name);
+
 		RadiusVirtualServer vs = virtualServers.remove(name);
 		if (vs == null)
 			return;
@@ -186,21 +199,25 @@ public class RadiusServerImpl implements RadiusServer {
 
 	@Override
 	public RadiusProfile getProfile(String name) {
+		verifyNotNull("name", name);
 		return profiles.get(name);
 	}
 
 	@Override
 	public void createProfile(RadiusProfile profile) {
+		verifyNotNull("profile", profile);
 		ProfileConfigHelper.createProfile(prefsvc, profile);
 	}
 
 	@Override
 	public void updateProfile(RadiusProfile profile) {
+		verifyNotNull("profile", profile);
 		ProfileConfigHelper.updateProfile(prefsvc, profile);
 	}
 
 	@Override
 	public void removeProfile(String name) {
+		verifyNotNull("name", name);
 		ProfileConfigHelper.removeProfile(prefsvc, name);
 	}
 
@@ -235,6 +252,11 @@ public class RadiusServerImpl implements RadiusServer {
 		RadiusAuthenticator auth = authenticators.get(instanceName);
 		if (auth != null)
 			auth.stop();
+	}
+
+	@Override
+	public List<RadiusUserDatabaseFactory> getUserDatabaseFactories() {
+		return new ArrayList<RadiusUserDatabaseFactory>(userDatabaseFactories.values());
 	}
 
 	@Override
@@ -296,5 +318,10 @@ public class RadiusServerImpl implements RadiusServer {
 			RadiusUserDatabaseFactory udf = (RadiusUserDatabaseFactory) service;
 			userDatabaseFactories.remove(udf.getName());
 		}
+	}
+
+	private void verifyNotNull(String name, Object value) {
+		if (value == null)
+			throw new IllegalArgumentException(name + " should be not null");
 	}
 }

@@ -28,8 +28,10 @@ public interface RadiusServer {
 
 	RadiusVirtualServer getVirtualServer(String name);
 
-	RadiusVirtualServer createVirtualServer(String name, InetSocketAddress bindAddress, RadiusPortType portType,
-			String profileName);
+	RadiusVirtualServer createVirtualServer(String name, RadiusPortType portType, String profileName);
+
+	RadiusVirtualServer createVirtualServer(String name, RadiusPortType portType, String profileName,
+			InetSocketAddress bindAddress);
 
 	void removeVirtualServer(String name);
 
@@ -62,6 +64,8 @@ public interface RadiusServer {
 	//
 	// User database management
 	//
+	
+	List<RadiusUserDatabaseFactory> getUserDatabaseFactories();
 
 	List<RadiusUserDatabase> getUserDatabases();
 

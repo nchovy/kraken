@@ -54,4 +54,24 @@ public class RadiusProfile {
 	public void setUserDatabases(List<String> userDatabases) {
 		this.userDatabases = userDatabases;
 	}
+
+	@Override
+	public String toString() {
+		return String.format("name=%s, shared secret=%s, auth=%s, userdb=%s", name, sharedSecret,
+				generateCsv(authenticators), generateCsv(userDatabases));
+	}
+
+	private String generateCsv(List<String> l) {
+		StringBuilder sb = new StringBuilder();
+		int i = 0;
+		for (String s : l) {
+			if (i != 0)
+				sb.append(", ");
+
+			sb.append(s);
+			i++;
+		}
+
+		return sb.toString();
+	}
 }

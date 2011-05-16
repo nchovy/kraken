@@ -17,9 +17,11 @@ package org.krakenapps.radius.script;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.radius.server.RadiusServer;
 
 @Component(name = "radius-script-factory")
 @Provides
@@ -27,10 +29,12 @@ public class RadiusScriptFactory implements ScriptFactory {
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "alias", value = "radius")
 	private String alias;
+	
+	@Requires
+	private RadiusServer server;
 
 	@Override
 	public Script createScript() {
-		return new RadiusScript();
+		return new RadiusScript(server);
 	}
-
 }
