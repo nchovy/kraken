@@ -72,6 +72,7 @@ public class EthernetDecoder {
 		buffer.discardReadBytes();
 
 		EthernetFrame frame = new EthernetFrame(source, destination, type, buffer);
+		frame.setPcapPacket(packet);
 		dispatch(frame);
 	}
 

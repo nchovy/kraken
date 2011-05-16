@@ -22,6 +22,7 @@ import org.krakenapps.pcap.Injectable;
 import org.krakenapps.pcap.PacketBuilder;
 import org.krakenapps.pcap.live.PcapDeviceManager;
 import org.krakenapps.pcap.live.PcapDeviceMetadata;
+import org.krakenapps.pcap.packet.PcapPacket;
 import org.krakenapps.pcap.util.Arping;
 import org.krakenapps.pcap.util.Buffer;
 import org.krakenapps.pcap.util.ChainBuffer;
@@ -34,6 +35,7 @@ import org.krakenapps.pcap.util.ChainBuffer;
 public class EthernetFrame implements Injectable {
 	private final EthernetHeader header;
 	private final Buffer payload;
+	private PcapPacket pcapPacket;
 
 	public EthernetFrame(MacAddress source, MacAddress destination, int type, Buffer payload) {
 		this.header = new EthernetHeader(source, destination, type);
@@ -48,6 +50,14 @@ public class EthernetFrame implements Injectable {
 	public EthernetFrame(EthernetFrame other) { // copy constructor
 		this.header = other.header;
 		this.payload = other.payload;
+	}
+
+	public PcapPacket getPcapPacket() {
+		return pcapPacket;
+	}
+
+	public void setPcapPacket(PcapPacket pcapPacket) {
+		this.pcapPacket = pcapPacket;
 	}
 
 	public MacAddress getDestination() {
@@ -69,7 +79,9 @@ public class EthernetFrame implements Injectable {
 	public EthernetFrame dup() {
 		ChainBuffer buf = new ChainBuffer();
 		buf.addLast(payload);
-		return new EthernetFrame(this.getSource(), this.getDestination(), this.getType(), buf);
+		EthernetFrame f = new EthernetFrame(this.getSource(), this.getDestination(), this.getType(), buf);
+		f.setPcapPacket(pcapPacket);
+		return f;
 	}
 
 	@Override
@@ -149,7 +161,7 @@ public class EthernetFrame implements Injectable {
 			Buffer buffer = data;
 			if (buffer == null)
 				buffer = nextBuilder.build().getBuffer();
-			
+
 			return new EthernetFrame(srcMac, dstMac, type, buffer);
 		}
 

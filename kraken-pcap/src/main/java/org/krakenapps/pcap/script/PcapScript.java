@@ -148,7 +148,9 @@ public class PcapScript implements Script {
 		context.println(stat.toString());
 	}
 
-	@ScriptUsage(description = "print pcap device tcp sessions", arguments = { @ScriptArgument(name = "alias", type = "string", description = "the alias of the pcap device") })
+	@ScriptUsage(description = "print pcap device tcp sessions", arguments = {
+			@ScriptArgument(name = "alias", type = "string", description = "the alias of the pcap device"),
+			@ScriptArgument(name = "ip filter", type = "string", description = "ip filter", optional = true) })
 	public void sessions(String[] args) {
 		PcapLiveRunner runner = streamManager.get(args[0]);
 		if (runner == null) {
@@ -164,8 +166,14 @@ public class PcapScript implements Script {
 			}
 		});
 
-		for (TcpSession session : sessions)
-			context.println("[" + session.getId() + "] " + session.toString());
+		String filter = null;
+		if (args.length > 1)
+			filter = args[1];
+		for (TcpSession session : sessions) {
+			if (filter == null || session.getKey().getServerIp().getHostAddress().equals(filter)
+					|| session.getKey().getClientIp().getHostAddress().equals(filter))
+				context.println("[" + session.getId() + "] " + session.toString());
+		}
 	}
 
 	@ScriptUsage(description = "send tcp reset packet", arguments = {

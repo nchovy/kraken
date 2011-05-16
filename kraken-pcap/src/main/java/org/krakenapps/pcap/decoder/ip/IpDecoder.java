@@ -67,13 +67,13 @@ public class IpDecoder implements EthernetProcessor {
 		if ((packet.getFlags() & 0x02) == 2 || ((packet.getFlags() & 0x07) == 0 && packet.getFragmentOffset() == 0)) {
 			// After, packet -> TCP
 			dispatch(packet);
-		} else { 
+		} else {
 			Ipv4Packet reassembled = reassembler.tryReassemble(packet);
 			if (reassembled != null) {
 				dispatch(reassembled);
 			}
-				
 		}
+		reassembler.drop();
 	}
 
 	private void dispatch(Ipv4Packet packet) {
@@ -85,8 +85,8 @@ public class IpDecoder implements EthernetProcessor {
 	}
 
 	private void dispatchProtocol(int protocol, Ipv4Packet packet) {
-		//callback.onReceived(packet);
-		
+		// callback.onReceived(packet);
+
 		Set<IpProcessor> processors = callbacks.get(protocol);
 		if (processors != null)
 			for (IpProcessor processor : processors)
