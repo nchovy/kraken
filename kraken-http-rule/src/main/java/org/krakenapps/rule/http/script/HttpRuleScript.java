@@ -20,40 +20,19 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-import org.krakenapps.ahocorasick.AhoCorasickSearch;
-import org.krakenapps.ahocorasick.Pair;
-import org.krakenapps.ahocorasick.Pattern;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.rule.Rule;
 import org.krakenapps.rule.http.HttpRequestContext;
 import org.krakenapps.rule.http.HttpRequestRule;
 import org.krakenapps.rule.http.HttpRuleEngine;
-import org.krakenapps.rule.http.LocalFileInclusionRule;
-import org.krakenapps.rule.http.RemoteFileInclusionRule;
 import org.krakenapps.rule.http.URLParser;
-import org.krakenapps.rule.http.VariableRegexRule;
-import org.krakenapps.rule.http.VariableRegexRule.ParameterValue;
-import org.krakenapps.rule.parser.GenericRule;
-import org.krakenapps.rule.parser.GenericRuleOption;
-import org.krakenapps.rule.parser.GenericRuleSyntax;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class HttpRuleScript implements Script {
-	private Logger logger = LoggerFactory.getLogger(HttpRuleScript.class);
 	private HttpRuleEngine engine;
 	private ScriptContext context;
 
@@ -80,155 +59,6 @@ public class HttpRuleScript implements Script {
 			context.println(match.toString());
 		} else {
 			context.println("no attack found");
-		}
-	}
-
-	@ScriptUsage(description = "inspect http uri and test attack detection", arguments = { @ScriptArgument(name = "url", type = "string", description = "path + querystring") })
-	public void ruleTest(String[] args) {
-		context.println("Ctrl-C to quit.");
-		try {
-			while (true) {
-				context.print("rule: ");
-				String rule = context.readLine();
-				rule = rule.trim();
-				if (rule.isEmpty() || rule.startsWith(";"))
-					continue;
-				AhoCorasickSearch acs = compile(rule);
-				if (acs == null)
-					continue;
-
-				for (String url : args) {
-					if (ruleTest(acs, url))
-						context.println("catch : " + url);
-					else
-						context.println("no attack found : " + url);
-				}
-			}
-		} catch (InterruptedException e) {
-			context.println("interrupted.");
-		} catch (Exception e) {
-			context.println(e);
-			logger.error("kraken-http-rule: rule test error.", e);
-		}
-	}
-
-	private boolean ruleTest(AhoCorasickSearch acs, String url) throws Exception {
-		HttpRequestContext c = URLParser.parse("GET", url);
-		byte[] b = c.getPath().getBytes("utf-8");
-		List<Pair> pairs = acs.search(b);
-
-		for (Pair p : pairs) {
-			Rule rule = ((RulePattern) p.getPattern()).getRule();
-			HttpRequestRule httpRule = (HttpRequestRule) rule;
-			if (httpRule.match(c))
-				return true;
-		}
-
-		return false;
-	}
-
-	private AhoCorasickSearch compile(String ruleString) throws Exception {
-		AhoCorasickSearch acs = new AhoCorasickSearch();
-		GenericRule r = new GenericRuleSyntax().eval(ruleString);
-		Rule rule = null;
-
-		String type = r.get("type");
-		String path = r.get("path");
-
-		if (type.equals("rfi")) {
-			String var = r.get("var");
-			rule = new RemoteFileInclusionRule(r.getId(), r.getMessage(), path, var);
-		} else if (type.equals("lfi")) {
-			Map<String, String> params = new HashMap<String, String>();
-
-			String name = null;
-			for (GenericRuleOption o : r.getOptions()) {
-				if (o.getName().equals("var")) {
-					if (name != null)
-						params.put(name, null);
-
-					name = o.getValue();
-				} else if (name != null && o.getName().equals("value")) {
-					params.put(name, o.getValue());
-					name = null;
-				}
-			}
-
-			if (name != null)
-				params.put(name, null);
-
-			rule = new LocalFileInclusionRule(r.getId(), r.getMessage(), path, params);
-		} else if (type.equals("regex")) {
-			Map<String, ParameterValue> params = new HashMap<String, VariableRegexRule.ParameterValue>();
-
-			String name = null;
-			for (GenericRuleOption o : r.getOptions()) {
-				if (o.getName().equals("var")) {
-					if (name != null)
-						params.put(name, null);
-
-					name = o.getValue();
-				} else if (name != null && o.getName().equals("value")) {
-					params.put(name, new ParameterValue(o.getValue()));
-					name = null;
-				} else if (name != null && o.getName().equals("regex")) {
-					params.put(name, new ParameterValue(o.getValue(), true));
-					name = null;
-				}
-			}
-
-			if (name != null)
-				params.put(name, null);
-
-			rule = new VariableRegexRule(r.getId(), r.getMessage(), path, params);
-		}
-		if (rule != null) {
-			rule.getReferences().addAll(convert(r.getAll("reference")));
-			rule.getCveNames().addAll(r.getAll("cve"));
-
-			acs.addKeyword(new RulePattern(path, rule));
-		}
-		acs.compile();
-
-		return acs;
-	}
-
-	private Collection<URL> convert(Collection<String> references) {
-		List<URL> urls = new ArrayList<URL>();
-		for (String reference : references) {
-			try {
-				urls.add(new URL(reference));
-			} catch (MalformedURLException e) {
-			}
-		}
-		return urls;
-	}
-
-	private static class RulePattern implements Pattern {
-		private String s;
-		private Rule r;
-
-		public RulePattern(String s, Rule r) {
-			this.s = s;
-			this.r = r;
-		}
-
-		public Rule getRule() {
-			return r;
-		}
-
-		@Override
-		public byte[] getKeyword() {
-			try {
-				return s.getBytes("utf-8");
-			} catch (UnsupportedEncodingException e) {
-				return null;
-			}
-		}
-
-		@Override
-		public String toString() {
-			return r.toString();
 		}
 	}
 

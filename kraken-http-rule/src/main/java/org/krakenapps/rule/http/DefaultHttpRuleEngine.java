@@ -41,6 +41,7 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.ahocorasick.AhoCorasickSearch;
 import org.krakenapps.ahocorasick.Pair;
 import org.krakenapps.ahocorasick.Pattern;
+import org.krakenapps.ahocorasick.SearchContext;
 import org.krakenapps.api.Script;
 import org.krakenapps.rule.Rule;
 import org.krakenapps.rule.RuleDatabase;
@@ -225,16 +226,19 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 			rule = new VariableRegexRule(r.getId(), r.getMessage(), path, params);
 		}
 
-		if (rule != null) {
-			rule.getReferences().addAll(convert(r.getAll("reference")));
-			rule.getCveNames().addAll(r.getAll("cve"));
+		try {
+			if (rule != null) {
+				rule.getReferences().addAll(convert(r.getAll("reference")));
+				rule.getCveNames().addAll(r.getAll("cve"));
 
-			fsm.addKeyword(new RulePattern(path, rule));
+				fsm.addKeyword(new RulePattern(path, rule));
 
-			if (!reqs.containsKey(rule.getId()))
-				reqs.put(rule.getId(), new ArrayList<HttpRequestRule>());
+				if (!reqs.containsKey(rule.getId()))
+					reqs.put(rule.getId(), new ArrayList<HttpRequestRule>());
 
-			reqs.get(rule.getId()).add((HttpRequestRule) rule);
+				reqs.get(rule.getId()).add((HttpRequestRule) rule);
+			}
+		} catch (UnsupportedEncodingException e) {
 		}
 	}
 
@@ -281,7 +285,9 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 	public Collection<HttpRequestRule> matchAll(HttpRequestContext context) {
 		Set<HttpRequestRule> matches = new HashSet<HttpRequestRule>();
 		byte[] bytes = getPathBytes(context.getPath());
-		List<Pair> pairs = acm.search(bytes);
+		SearchContext sctx = new SearchContext();
+		sctx.setIncludeFailurePatterns(true);
+		List<Pair> pairs = acm.search(bytes, sctx);
 
 		for (Pair p : pairs) {
 			Rule rule = ((RulePattern) p.getPattern()).getRule();
@@ -296,7 +302,9 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 	@Override
 	public HttpRequestRule match(HttpRequestContext context) {
 		byte[] bytes = getPathBytes(context.getPath());
-		List<Pair> pairs = acm.search(bytes);
+		SearchContext sctx = new SearchContext();
+		sctx.setIncludeFailurePatterns(true);
+		List<Pair> pairs = acm.search(bytes, sctx);
 
 		for (Pair p : pairs) {
 			Rule rule = ((RulePattern) p.getPattern()).getRule();
@@ -335,30 +343,26 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 	}
 
 	private static class RulePattern implements Pattern {
-		private String s;
-		private Rule r;
+		private byte[] b;
+		private Rule rule;
 
-		public RulePattern(String s, Rule r) {
-			this.s = s;
-			this.r = r;
+		public RulePattern(String path, Rule rule) throws UnsupportedEncodingException {
+			this.b = path.getBytes("utf-8");
+			this.rule = rule;
 		}
 
 		public Rule getRule() {
-			return r;
+			return rule;
 		}
 
 		@Override
 		public byte[] getKeyword() {
-			try {
-				return s.getBytes("utf-8");
-			} catch (UnsupportedEncodingException e) {
-				return null;
-			}
+			return b;
 		}
 
 		@Override
 		public String toString() {
-			return r.toString();
+			return rule.toString();
 		}
 	}
 }
