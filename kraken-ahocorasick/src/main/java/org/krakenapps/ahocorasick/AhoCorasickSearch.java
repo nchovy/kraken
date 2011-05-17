@@ -15,6 +15,7 @@
  */
 package org.krakenapps.ahocorasick;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -22,29 +23,31 @@ import java.util.Queue;
 
 public class AhoCorasickSearch {
 	private TrieNode root;
-	private List<TrieNode> id;
+	private List<TrieNode> nodes;
 
 	public AhoCorasickSearch() {
-		root = new TrieNode(0, null, null);
-		root.setFailure(root);
-		id = new ArrayList<TrieNode>();
-		id.add(root);
+		this.root = new TrieNode(0, null, null);
+		this.root.setFailure(root);
+		this.nodes = new ArrayList<TrieNode>();
+		this.nodes.add(root);
 	}
 
-	public AhoCorasickSearch addKeyword(Pattern keyword) {
-		byte[] byteWord = keyword.getKeyword();
-		TrieNode node = root;
+	public AhoCorasickSearch addKeyword(Pattern pattern) {
+		byte[] keyword = pattern.getKeyword();
+		TrieNode currentNode = root;
 
-		for (int i = 0; i < byteWord.length; i++) {
-			if (node.hasNext(byteWord[i]))
-				node = node.getNext(byteWord[i]);
-			else {
-				node.addNext(id.size(), byteWord[i]);
-				node = node.getNext(byteWord[i]);
-				id.add(node);
+		for (int i = 0; i < keyword.length; i++) {
+			byte b = keyword[i];
+			if (!currentNode.hasNext(b)) {
+				try {
+					TrieNode node = currentNode.addNext(nodes.size(), b);
+					nodes.add(node);
+				} catch (IOException e) {
+				}
 			}
+			currentNode = currentNode.getNext(b);
 		}
-		node.addPattern(keyword);
+		currentNode.addPattern(pattern);
 
 		return this;
 	}
@@ -76,11 +79,24 @@ public class AhoCorasickSearch {
 		return root;
 	}
 
+	public List<Pair> search(byte[] buf) {
+		return search(buf, 0, buf.length);
+	}
+
+	public List<Pair> search(byte[] buf, int offset, int limit) {
+		return search(buf, offset, limit, new SearchContext());
+	}
+
+	public List<Pair> search(byte[] buf, SearchContext ctx) {
+		return search(buf, 0, buf.length, ctx);
+	}
+
 	public List<Pair> search(byte[] buf, int offset, int limit, SearchContext ctx) {
 		List<Pair> result = new ArrayList<Pair>();
-		TrieNode node = id.get(ctx.getLastNodeId());
+		TrieNode node = nodes.get(ctx.getLastNodeId());
 		int length = ctx.getLength();
 		int needResultCount = ctx.getNeedResultCount();
+		boolean includeFailureSet = ctx.isIncludeFailurePatterns();
 
 		if (needResultCount == 0)
 			return result;
@@ -99,32 +115,21 @@ public class AhoCorasickSearch {
 			if (nextNode != null) {
 				node = nextNode;
 
-				for (Pattern pattern : node.getPatterns()) {
-					int position = length + i - offset - pattern.getKeyword().length + 1;
-					result.add(new Pair(position, pattern));
+				for (Pattern p : node.getPatterns(includeFailureSet)) {
+					int pos = length - offset + i - p.getKeyword().length + 1;
+					result.add(new Pair(pos, p));
 					needResultCount--;
 					if (needResultCount == 0)
 						break;
 				}
-			} else
+			} else {
 				node = root;
+			}
 		}
-		ctx.setLastNodeId(node.id);
+		ctx.setLastNodeId(node.getId());
 		ctx.addLength(limit);
 		ctx.addResultCount(result.size());
 
 		return result;
-	}
-
-	public List<Pair> search(byte[] buf, int offset, int limit) {
-		return search(buf, offset, limit, new SearchContext());
-	}
-
-	public List<Pair> search(byte[] buf, SearchContext ctx) {
-		return search(buf, 0, buf.length, ctx);
-	}
-
-	public List<Pair> search(byte[] buf) {
-		return search(buf, 0, buf.length, new SearchContext());
 	}
 }

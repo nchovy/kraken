@@ -15,6 +15,7 @@
  */
 package org.krakenapps.ahocorasick;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -22,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 public class TrieNode {
-	public final int id;
+	private final int id;
 	private Byte body;
 	private TrieNode previous;
 	private TrieNode[] next;
@@ -35,6 +36,10 @@ public class TrieNode {
 		this.previous = previous;
 		this.next = new TrieNode[256];
 		this.patterns = new HashSet<Pattern>();
+	}
+
+	public int getId() {
+		return id;
 	}
 
 	public Byte getBody() {
@@ -56,7 +61,8 @@ public class TrieNode {
 	}
 
 	public boolean hasNext(byte nextBody) {
-		return next[(int) nextBody + 128] != null ? true : false;
+		TrieNode n = next[(int) nextBody + 128];
+		return (n != null);
 	}
 
 	public TrieNode getNext(byte nextBody) {
@@ -71,8 +77,13 @@ public class TrieNode {
 		return node.next[(int) nextBody + 128];
 	}
 
-	public void addNext(int id, byte nextBody) {
-		next[(int) nextBody + 128] = new TrieNode(id, nextBody, this);
+	public TrieNode addNext(int id, byte nextBody) throws IOException {
+		if (hasNext(nextBody))
+			throw new IOException("already added");
+
+		TrieNode node = new TrieNode(id, nextBody, this);
+		next[(int) nextBody + 128] = node;
+		return node;
 	}
 
 	public TrieNode getFailure() {
@@ -84,17 +95,38 @@ public class TrieNode {
 	}
 
 	public Set<Pattern> getPatterns() {
-		return patterns;
+		return getPatterns(false);
+	}
+
+	public Set<Pattern> getPatterns(boolean includeFailureSet) {
+		Set<Pattern> p = null;
+
+		if (includeFailureSet) {
+			p = new HashSet<Pattern>();
+			if (id != 0) {
+				p.addAll(patterns);
+				p.addAll(failure.getPatterns(true));
+			}
+		} else
+			p = patterns;
+
+		return p;
 	}
 
 	public void addPattern(Pattern pattern) {
 		this.patterns.add(pattern);
 	}
 
-	public String getWord() {
-		if (previous == null)
-			return "";
-		else
-			return previous.getWord() + (char) body.byteValue();
+	public byte[] getKeyword() {
+		return getKeywordInternal(0);
+	}
+
+	private byte[] getKeywordInternal(int depth) {
+		if (id == 0)
+			return new byte[depth];
+
+		byte[] b = failure.getKeywordInternal(depth + 1);
+		b[depth] = body;
+		return b;
 	}
 }

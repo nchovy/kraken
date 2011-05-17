@@ -20,16 +20,18 @@ public class SearchContext {
 	private int lastNodeId;
 	private int nowResultCount;
 	private int maxResultCount;
+	private boolean includeFailurePatterns;
 
 	public SearchContext() {
 		this(0);
 	}
 
 	public SearchContext(int maxResultCount) {
-		length = 0;
-		lastNodeId = 0;
-		nowResultCount = 0;
+		this.length = 0;
+		this.lastNodeId = 0;
+		this.nowResultCount = 0;
 		this.maxResultCount = maxResultCount;
+		this.includeFailurePatterns = false;
 	}
 
 	public int getLength() {
@@ -42,6 +44,14 @@ public class SearchContext {
 
 	public void setLastNodeId(int lastNodeId) {
 		this.lastNodeId = lastNodeId;
+	}
+
+	public boolean isIncludeFailurePatterns() {
+		return includeFailurePatterns;
+	}
+
+	public void setIncludeFailurePatterns(boolean includeFailurePatterns) {
+		this.includeFailurePatterns = includeFailurePatterns;
 	}
 
 	public int getNeedResultCount() {
