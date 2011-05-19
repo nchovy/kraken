@@ -15,6 +15,7 @@
  */
 package org.krakenapps.radius.server;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RadiusProfile {
@@ -22,6 +23,11 @@ public class RadiusProfile {
 	private String sharedSecret;
 	private List<String> authenticators;
 	private List<String> userDatabases;
+	
+	public RadiusProfile() {
+		this.authenticators = new ArrayList<String>();
+		this.userDatabases = new ArrayList<String>();
+	}
 
 	public String getName() {
 		return name;

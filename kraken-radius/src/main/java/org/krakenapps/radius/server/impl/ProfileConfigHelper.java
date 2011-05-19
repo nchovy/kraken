@@ -15,6 +15,10 @@
  */
 package org.krakenapps.radius.server.impl;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.krakenapps.radius.server.RadiusProfile;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
@@ -28,6 +32,45 @@ public class ProfileConfigHelper {
 	private static final String PROFILE_ROOT_KEY = "profiles";
 
 	private ProfileConfigHelper() {
+	}
+
+	public static List<RadiusProfile> loadProfiles(PreferencesService prefsvc) {
+		List<RadiusProfile> profiles = new ArrayList<RadiusProfile>();
+
+		try {
+			Preferences root = prefsvc.getSystemPreferences().node(PROFILE_ROOT_KEY);
+			for (String name : root.childrenNames()) {
+				profiles.add(loadProfile(prefsvc, name));
+			}
+		} catch (BackingStoreException e) {
+			Logger logger = LoggerFactory.getLogger(ProfileConfigHelper.class.getName());
+			logger.error("kraken radius: cannot load profiles", e);
+		}
+
+		return profiles;
+	}
+
+	public static RadiusProfile loadProfile(PreferencesService prefsvc, String name) {
+		try {
+			RadiusProfile profile = new RadiusProfile();
+			Preferences p = prefsvc.getSystemPreferences().node(PROFILE_ROOT_KEY).node(name);
+			Preferences authNode = p.node(AUTHENTICATOR_ROOT_KEY);
+			Preferences udbNode = p.node(USER_DATABASE_ROOT_KEY);
+
+			// load authenticator names
+			List<String> authNames = Arrays.asList(authNode.childrenNames());
+			List<String> udbNames = Arrays.asList(udbNode.childrenNames());
+
+			profile.setName(name);
+			profile.setSharedSecret(p.get("shared_secret", null));
+			profile.setAuthenticators(authNames);
+			profile.setUserDatabases(udbNames);
+			return profile;
+		} catch (BackingStoreException e) {
+			Logger logger = LoggerFactory.getLogger(ProfileConfigHelper.class.getName());
+			logger.error("kraken radius: cannot load profiles", e);
+			throw new RuntimeException(e);
+		}
 	}
 
 	public static void createProfile(PreferencesService prefsvc, RadiusProfile profile) {
@@ -55,13 +98,13 @@ public class ProfileConfigHelper {
 		try {
 			Preferences root = prefsvc.getSystemPreferences().node(PROFILE_ROOT_KEY);
 			Preferences p = root.node(profile.getName());
-			
+
 			p.put("shared_secret", profile.getSharedSecret());
 			p.node(AUTHENTICATOR_ROOT_KEY).removeNode();
 			p.node(USER_DATABASE_ROOT_KEY).removeNode();
-			
+
 			createSubNodes(profile, p);
-			
+
 			root.flush();
 			root.sync();
 		} catch (BackingStoreException e) {

@@ -17,9 +17,9 @@ package org.krakenapps.radius.server;
 
 import java.util.List;
 
-public interface RadiusUserDatabaseFactory {
+public interface RadiusUserDatabaseFactory extends RadiusFactory<RadiusUserDatabase> {
 	String getName();
-	
+
 	List<RadiusConfigMetadata> getConfigMetadatas();
 
 	RadiusUserDatabase newInstance(String name, RadiusConfigurator config);

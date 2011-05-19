@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
@@ -31,11 +33,14 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusFactory;
+import org.krakenapps.radius.server.RadiusInstance;
+import org.krakenapps.radius.server.RadiusModule;
+import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
 import org.krakenapps.radius.server.RadiusServerEventListener;
-import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.krakenapps.radius.server.RadiusVirtualServer;
 import org.osgi.framework.BundleContext;
@@ -49,8 +54,6 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class RadiusServerImpl implements RadiusServer {
 	private static final String VIRTUAL_SERVER_ROOT_KEY = "virtual_servers";
-	private static final String AUTHENTICATOR_ROOT_KEY = "authenticators";
-	private static final String USERDB_ROOT_KEY = "user_databases";
 
 	private final Logger logger = LoggerFactory.getLogger(RadiusServerImpl.class.getName());
 
@@ -61,15 +64,14 @@ public class RadiusServerImpl implements RadiusServer {
 
 	private Map<String, RadiusVirtualServer> virtualServers;
 	private Map<String, RadiusProfile> profiles;
-	private Map<String, RadiusAuthenticatorFactory> authenticatorFactories;
-	private Map<String, RadiusUserDatabaseFactory> userDatabaseFactories;
-	private Map<String, RadiusAuthenticator> authenticators;
-	private Map<String, RadiusUserDatabase> userDatabases;
+	private Map<RadiusModuleType, RadiusModule<? extends RadiusFactory<? extends RadiusInstance>, ? extends RadiusInstance>> modules;
 
 	private CopyOnWriteArraySet<RadiusServerEventListener> callbacks;
 
 	private RadiusServiceTracker authTracker;
 	private RadiusServiceTracker userdbTracker;
+
+	private ExecutorService executor;
 
 	public RadiusServerImpl(BundleContext bc) {
 		this.bc = bc;
@@ -83,17 +85,19 @@ public class RadiusServerImpl implements RadiusServer {
 		profiles = new ConcurrentHashMap<String, RadiusProfile>();
 		authTracker = new RadiusServiceTracker(this, bc, RadiusAuthenticatorFactory.class.getName());
 		userdbTracker = new RadiusServiceTracker(this, bc, RadiusUserDatabaseFactory.class.getName());
-		authenticators = new ConcurrentHashMap<String, RadiusAuthenticator>();
-		userDatabases = new ConcurrentHashMap<String, RadiusUserDatabase>();
+		modules = new ConcurrentHashMap<RadiusModuleType, RadiusModule<? extends RadiusFactory<? extends RadiusInstance>, ? extends RadiusInstance>>();
 
 		try {
 			loadVirtualServers();
-
+			loadModules();
+			loadProfiles();
 			authTracker.open();
 			userdbTracker.open();
 		} catch (BackingStoreException e) {
 			throw new RuntimeException(e);
 		}
+
+		this.executor = Executors.newCachedThreadPool();
 	}
 
 	private void loadVirtualServers() throws BackingStoreException {
@@ -111,13 +115,49 @@ public class RadiusServerImpl implements RadiusServer {
 				else
 					bindAddress = new InetSocketAddress(port);
 
-				RadiusVirtualServerImpl vs = new RadiusVirtualServerImpl(this, name, portType, conf, bindAddress);
+				RadiusVirtualServerImpl vs = new RadiusVirtualServerImpl(this, name, portType, conf, executor,
+						bindAddress);
 				vs.open();
 
 				virtualServers.put(name, vs);
 			} catch (IOException e) {
 				logger.error("kraken radius: cannot load virtual server - " + name, e);
 			}
+		}
+	}
+
+	private void loadModules() throws BackingStoreException {
+		for (RadiusModuleType t : RadiusModuleType.values()) {
+			RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator> module = 
+				new RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator>(prefsvc, t.getConfigNamespace());
+			
+			modules.put(t, module);
+			
+			Preferences root = prefsvc.getSystemPreferences().node(t.getConfigNamespace());
+			for (String instanceName : root.childrenNames()) {
+				loadModuleInstance(module, instanceName, t.getConfigNamespace());
+			}
+		}
+	}
+
+	private void loadModuleInstance(RadiusModule module, String instanceName, String configNamespace) {
+		/*
+		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
+		String factoryName = conf.getString("factory_name");
+		RadiusFactory factory = module.getFactory(factoryName);
+		if (factory == null)
+			return;
+
+		if (module.containsInstance(instanceName))
+			return;
+
+		module.createInstance(instanceName, factoryName, conf);
+		*/
+	}
+
+	private void loadProfiles() {
+		for (RadiusProfile profile : ProfileConfigHelper.loadProfiles(prefsvc)) {
+			profiles.put(profile.getName(), profile);
 		}
 	}
 
@@ -174,7 +214,7 @@ public class RadiusServerImpl implements RadiusServer {
 			throw new IllegalArgumentException("profile not found: " + profileName);
 
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, VIRTUAL_SERVER_ROOT_KEY, name);
-		return new RadiusVirtualServerImpl(this, profileName, portType, conf, bindAddress);
+		return new RadiusVirtualServerImpl(this, profileName, portType, conf, executor, bindAddress);
 	}
 
 	@Override
@@ -207,87 +247,31 @@ public class RadiusServerImpl implements RadiusServer {
 	public void createProfile(RadiusProfile profile) {
 		verifyNotNull("profile", profile);
 		ProfileConfigHelper.createProfile(prefsvc, profile);
+		profiles.put(profile.getName(), profile);
 	}
 
 	@Override
 	public void updateProfile(RadiusProfile profile) {
 		verifyNotNull("profile", profile);
 		ProfileConfigHelper.updateProfile(prefsvc, profile);
+		profiles.put(profile.getName(), profile);
 	}
 
 	@Override
 	public void removeProfile(String name) {
 		verifyNotNull("name", name);
 		ProfileConfigHelper.removeProfile(prefsvc, name);
+		profiles.remove(name);
 	}
 
 	@Override
-	public List<RadiusAuthenticatorFactory> getAuthenticatorFactories() {
-		return new ArrayList<RadiusAuthenticatorFactory>(authenticatorFactories.values());
+	public List<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>> getModules() {
+		return new ArrayList<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>>(modules.values());
 	}
 
 	@Override
-	public List<RadiusAuthenticator> getAuthenticators() {
-		return new ArrayList<RadiusAuthenticator>(authenticators.values());
-	}
-
-	@Override
-	public RadiusAuthenticator createAuthenticator(String instanceName, String factoryName, Map<String, Object> configs) {
-		RadiusAuthenticatorFactory factory = authenticatorFactories.get(factoryName);
-		if (factory == null)
-			throw new IllegalArgumentException("factory not found: " + factoryName);
-
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, AUTHENTICATOR_ROOT_KEY, instanceName,
-				factory.getConfigMetadatas());
-		RadiusAuthenticator auth = factory.newInstance(instanceName, conf);
-
-		return auth;
-	}
-
-	@Override
-	public void removeAuthenticator(String instanceName) {
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, AUTHENTICATOR_ROOT_KEY, instanceName);
-		conf.purge();
-
-		RadiusAuthenticator auth = authenticators.get(instanceName);
-		if (auth != null)
-			auth.stop();
-	}
-
-	@Override
-	public List<RadiusUserDatabaseFactory> getUserDatabaseFactories() {
-		return new ArrayList<RadiusUserDatabaseFactory>(userDatabaseFactories.values());
-	}
-
-	@Override
-	public List<RadiusUserDatabase> getUserDatabases() {
-		return new ArrayList<RadiusUserDatabase>(userDatabases.values());
-	}
-
-	@Override
-	public RadiusUserDatabase getUserDatabase(String name) {
-		return userDatabases.get(name);
-	}
-
-	@Override
-	public RadiusUserDatabase createUserDatabase(String instanceName, String factoryName, Map<String, Object> configs) {
-		RadiusUserDatabaseFactory factory = userDatabaseFactories.get(factoryName);
-		if (factory == null)
-			throw new IllegalArgumentException("user database factory not found: " + factoryName);
-
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, USERDB_ROOT_KEY, instanceName);
-		RadiusUserDatabase udb = factory.newInstance(instanceName, conf);
-		return udb;
-	}
-
-	@Override
-	public void removeUserDatabase(String instanceName) {
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, USERDB_ROOT_KEY, instanceName);
-		conf.purge();
-
-		RadiusUserDatabase udb = userDatabases.remove(instanceName);
-		if (udb != null)
-			udb.stop();
+	public RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> getModule(RadiusModuleType type) {
+		return modules.get(type);
 	}
 
 	@Override
@@ -301,22 +285,24 @@ public class RadiusServerImpl implements RadiusServer {
 	}
 
 	public void addingService(Object service) {
-		if (service instanceof RadiusAuthenticatorFactory) {
-			RadiusAuthenticatorFactory af = (RadiusAuthenticatorFactory) service;
-			authenticatorFactories.put(af.getName(), af);
-		} else if (service instanceof RadiusUserDatabaseFactory) {
-			RadiusUserDatabaseFactory udf = (RadiusUserDatabaseFactory) service;
-			userDatabaseFactories.put(udf.getName(), udf);
+		for (RadiusModuleType t : RadiusModuleType.values()) {
+			if (t.getFactoryClass().isAssignableFrom(service.getClass())) {
+				RadiusModule<?, ?> module = getModule(t);
+				RadiusFactory<?> factory = (RadiusFactory<?>) service;
+				module.addFactory(factory);
+				return;
+			}
 		}
 	}
 
 	public void removedService(Object service) {
-		if (service instanceof RadiusAuthenticatorFactory) {
-			RadiusAuthenticatorFactory af = (RadiusAuthenticatorFactory) service;
-			authenticatorFactories.remove(af.getName());
-		} else if (service instanceof RadiusUserDatabaseFactory) {
-			RadiusUserDatabaseFactory udf = (RadiusUserDatabaseFactory) service;
-			userDatabaseFactories.remove(udf.getName());
+		for (RadiusModuleType t : RadiusModuleType.values()) {
+			if (t.getFactoryClass().isAssignableFrom(service.getClass())) {
+				RadiusFactory<?> factory = (RadiusFactory<?>) service;
+				RadiusModule<?, ?> module = getModule(t);
+				module.removeFactory(factory.getName());
+				return;
+			}
 		}
 	}
 

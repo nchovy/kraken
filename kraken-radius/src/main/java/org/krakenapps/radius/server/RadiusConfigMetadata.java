@@ -17,7 +17,19 @@ package org.krakenapps.radius.server;
 
 public class RadiusConfigMetadata {
 	public enum Type {
-		String, Integer, Boolean
+		String, Integer, Boolean;
+		
+		public Object parse(String s) {
+			if (this == String)
+				return s;
+			else if (this == Integer)
+				return java.lang.Integer.valueOf(s);
+			else if (this == Boolean)
+				return java.lang.Boolean.valueOf(s);
+			else
+				throw new UnsupportedOperationException();
+		}
+		
 	}
 
 	private Type type;

@@ -16,6 +16,7 @@
 package org.krakenapps.radius.server.impl;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -23,18 +24,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
 
+import org.krakenapps.radius.protocol.AccessRequest;
+import org.krakenapps.radius.protocol.RadiusPacket;
+import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusClientAddress;
 import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
+import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.krakenapps.radius.server.RadiusVirtualServer;
 import org.krakenapps.radius.server.RadiusVirtualServerEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RadiusVirtualServerImpl implements RadiusVirtualServer {
+public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	private final Logger logger = LoggerFactory.getLogger(RadiusVirtualServerImpl.class.getName());
 
 	public static final String PROFILE_KEY = "profile";
@@ -56,20 +62,70 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer {
 	private Map<RadiusClientAddress, String> clientOverrides;
 	private CopyOnWriteArraySet<RadiusVirtualServerEventListener> callbacks;
 	private RadiusConfigurator conf;
+	private ExecutorService executor;
+	private Thread listenerThread;
 
-	public RadiusVirtualServerImpl(RadiusServer server, String name, RadiusPortType portType, RadiusConfigurator conf) {
-		this(server, name, portType, conf, null);
+	public RadiusVirtualServerImpl(RadiusServer server, String name, RadiusPortType portType, RadiusConfigurator conf,
+			ExecutorService executor) {
+		this(server, name, portType, conf, executor, null);
 	}
 
 	public RadiusVirtualServerImpl(RadiusServer server, String name, RadiusPortType portType, RadiusConfigurator conf,
+			ExecutorService executor,
 			InetSocketAddress bindAddress) {
 		this.server = server;
 		this.conf = conf;
 		this.isOpened = false;
 		this.name = name;
+		this.executor = executor;
 		this.bindAddress = bindAddress;
 		this.clientOverrides = new ConcurrentHashMap<RadiusClientAddress, String>();
 		this.callbacks = new CopyOnWriteArraySet<RadiusVirtualServerEventListener>();
+	}
+
+	@Override
+	public void run() {
+		try {
+			logger.info("kraken radius: virtual server [bind={}] started", bindAddress);
+			while (true) {
+				runonce();
+			}
+		} catch (IOException e) {
+			logger.info("kraken radius: io error", e);
+		} finally {
+			logger.info("kraken radius: virtual server [bind={}] stopped", bindAddress);
+		}
+	}
+
+	private void runonce() throws IOException {
+		byte[] buf = new byte[4096];
+		DatagramPacket packet = new DatagramPacket(buf, buf.length);
+		socket.receive(packet);
+
+		if (profile == null) {
+			logger.debug("kraken radius: profile not set for virtual server [{}]", bindAddress);
+			return;
+		}
+
+		RadiusPacket req = RadiusPacket.parse(profile.getSharedSecret(), buf);
+		if (req instanceof AccessRequest) {
+			AccessRequest accessRequest = (AccessRequest) req;
+			List<RadiusUserDatabase> userDatabases = getUserDatabases(profile);
+
+			for (String name : profile.getAuthenticators()) {
+				//TODO:
+//				RadiusAuthenticator auth = server.getAuthenticator(name);
+//				executor.execute(new AuthTask(accessRequest, auth, userDatabases));
+			}
+		}
+	}
+
+	private List<RadiusUserDatabase> getUserDatabases(RadiusProfile profile) {
+		// TODO: cache using update profile event
+		List<RadiusUserDatabase> udbs = new ArrayList<RadiusUserDatabase>();
+//		for (String name : profile.getUserDatabases())
+//			udbs.add(server.getUserDatabase(name));
+		return udbs;
 	}
 
 	@Override
@@ -89,6 +145,9 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer {
 		else
 			socket = new DatagramSocket(DEFAULT_AUTH_PORT);
 
+		listenerThread = new Thread(this, "Radius Virtual Server");
+		listenerThread.start();
+
 		this.isOpened = true;
 	}
 
@@ -96,6 +155,7 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer {
 	public void close() throws IOException {
 		try {
 			socket.close();
+			listenerThread.interrupt();
 		} finally {
 			// fire callbacks
 			for (RadiusVirtualServerEventListener callback : callbacks) {
@@ -131,10 +191,10 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer {
 		this.profile = server.getProfile(profileName);
 		if (profile == null)
 			throw new IllegalStateException("profile not found: " + profileName);
-		
+
 		// make persistent
 		conf.put(PROFILE_KEY, profileName);
-		
+
 		// fire callbacks
 		for (RadiusVirtualServerEventListener callback : callbacks) {
 			try {
@@ -197,5 +257,23 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer {
 	@Override
 	public void removeEventListener(RadiusVirtualServerEventListener listener) {
 		callbacks.remove(listener);
+	}
+
+	private static class AuthTask implements Runnable {
+		private AccessRequest accessRequest;
+		private RadiusAuthenticator authenticator;
+		private List<RadiusUserDatabase> userDatabases;
+
+		public AuthTask(AccessRequest accessRequest, RadiusAuthenticator authenticator,
+				List<RadiusUserDatabase> userDatabases) {
+			this.accessRequest = accessRequest;
+			this.authenticator = authenticator;
+			this.userDatabases = userDatabases;
+		}
+
+		@Override
+		public void run() {
+			authenticator.authenticate(accessRequest, userDatabases);
+		}
 	}
 }

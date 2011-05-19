@@ -16,6 +16,7 @@
 package org.krakenapps.radius.server.userdatabase;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -24,19 +25,16 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
-import org.krakenapps.radius.server.RadiusUserDatabase;
-import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
+import org.krakenapps.radius.server.RadiusFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata.Type;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 @Component(name = "radius-ldap-udf")
 @Provides
-public class LdapUserDatabaseFactory implements RadiusUserDatabaseFactory {
+public class LdapUserDatabaseFactory implements RadiusFactory<LdapUserDatabase> {
 
 	@Requires
 	private LdapService ldap;
-	
+
 	private List<RadiusConfigMetadata> configMetadatas;
 
 	@Override
@@ -44,7 +42,6 @@ public class LdapUserDatabaseFactory implements RadiusUserDatabaseFactory {
 		return "ldap";
 	}
 
-	@SuppressWarnings("unchecked")
 	public LdapUserDatabaseFactory() {
 		configMetadatas = new ArrayList<RadiusConfigMetadata>();
 		RadiusConfigMetadata profileName = new RadiusConfigMetadata(Type.String, "profile_name", true);
@@ -58,8 +55,13 @@ public class LdapUserDatabaseFactory implements RadiusUserDatabaseFactory {
 	}
 
 	@Override
-	public RadiusUserDatabase newInstance(String name, RadiusConfigurator config) {
+	public LdapUserDatabase newInstance(String name, RadiusConfigurator config) {
+		config.verify(configMetadatas);
 		return new LdapUserDatabase(name, this, config, ldap);
 	}
 
+	@Override
+	public String toString() {
+		return "LDAP user database";
+	}
 }

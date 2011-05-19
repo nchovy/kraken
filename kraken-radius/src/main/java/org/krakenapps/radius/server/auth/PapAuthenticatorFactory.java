@@ -21,12 +21,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.radius.server.RadiusAuthType;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
 
+@Component(name = "radius-papauth-factory")
+@Provides
 public class PapAuthenticatorFactory implements RadiusAuthenticatorFactory {
 
 	@Override
@@ -49,4 +53,8 @@ public class PapAuthenticatorFactory implements RadiusAuthenticatorFactory {
 		return new PapAuthenticator(name, this, config);
 	}
 
+	@Override
+	public String toString() {
+		return "PAP authenticatior factory";
+	}
 }

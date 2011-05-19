@@ -16,7 +16,9 @@
 package org.krakenapps.radius.script;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.api.Script;
@@ -28,6 +30,7 @@ import org.krakenapps.radius.client.auth.PapAuthenticator;
 import org.krakenapps.radius.protocol.RadiusPacket;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
+import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
@@ -79,7 +82,7 @@ public class RadiusScript implements Script {
 			context.println(profile);
 		}
 	}
-
+	/*
 	@ScriptUsage(description = "create virtual server", arguments = {
 			@ScriptArgument(name = "name", type = "string", description = "name of the virtual server"),
 			@ScriptArgument(name = "port type", type = "string", description = "type 'auth' for authentication, or 'acct' for accounting"),
@@ -117,7 +120,21 @@ public class RadiusScript implements Script {
 		profile.setName(args[0]);
 		profile.setSharedSecret(args[1]);
 
-		// TODO: select authenticators and user databases
+		List<String> authNames = getAuthenticatorNames();
+		List<String> udbNames = getUserDatabaseNames();
+
+		context.println("---------------------------");
+		context.println("Select Authenticators");
+		context.println("---------------------------");
+		List<String> selectedAuths = select(authNames);
+
+		context.println("---------------------------");
+		context.println("Select User Databases");
+		context.println("---------------------------");
+		List<String> selectedUdbs = select(udbNames);
+
+		profile.setAuthenticators(selectedAuths);
+		profile.setUserDatabases(selectedUdbs);
 
 		server.createProfile(profile);
 		context.println("created");
@@ -134,7 +151,7 @@ public class RadiusScript implements Script {
 		context.println("-------------------------");
 
 		for (RadiusAuthenticatorFactory af : server.getAuthenticatorFactories()) {
-			context.println(af.getName() + ": " + af.toString());
+			context.println("[" + af.getName() + "] " + af.toString());
 		}
 	}
 
@@ -143,7 +160,7 @@ public class RadiusScript implements Script {
 		context.println("-------------------");
 
 		for (RadiusAuthenticator auth : server.getAuthenticators()) {
-			context.println(auth.getName() + ": " + auth);
+			context.println("[" + auth.getName() + "] " + auth);
 		}
 	}
 
@@ -157,6 +174,7 @@ public class RadiusScript implements Script {
 			Map<String, Object> configs = new HashMap<String, Object>();
 
 			// TODO: input required parameters
+			config(spec)
 
 			server.createAuthenticator(instanceName, factoryName, configs);
 			context.println("created");
@@ -178,7 +196,7 @@ public class RadiusScript implements Script {
 		context.println("--------------------------");
 
 		for (RadiusUserDatabaseFactory udf : server.getUserDatabaseFactories()) {
-			context.println(udf.getName() + ": " + udf.toString());
+			context.println("[" + udf.getName() + "] " + udf.toString());
 		}
 	}
 
@@ -187,7 +205,7 @@ public class RadiusScript implements Script {
 		context.println("-------------------");
 
 		for (RadiusUserDatabase udb : server.getUserDatabases()) {
-			context.println(udb.getName() + ": " + udb);
+			context.println("[" + udb.getName() + "] " + udb);
 		}
 	}
 
@@ -211,4 +229,76 @@ public class RadiusScript implements Script {
 		server.removeUserDatabase(instanceName);
 		context.println("removed");
 	}
+
+	private List<String> getAuthenticatorNames() {
+		List<String> names = new ArrayList<String>();
+		for (RadiusAuthenticator auth : server.getAuthenticators())
+			names.add(auth.getName());
+		return names;
+	}
+
+	private List<String> getUserDatabaseNames() {
+		List<String> names = new ArrayList<String>();
+		for (RadiusUserDatabase udb : server.getUserDatabases())
+			names.add(udb.getName());
+		return names;
+	}
+
+	private Map<String, Object> config(List<RadiusConfigMetadata> spec) throws InterruptedException {
+		Map<String, Object> configs = new HashMap<String, Object>();
+		for (RadiusConfigMetadata metadata : spec) {
+			String type = metadata.getType().toString().toLowerCase();
+			String def = "";
+			if (metadata.getDefaultValue() != null)
+				def = "(" + metadata.getDefaultValue() + ") ";
+
+			context.print(metadata.getName() + " in " + type + " type " + def + "? ");
+			String line = context.readLine();
+			Object value = metadata.getType().parse(line);
+			
+			configs.put(metadata.getName(), value);
+		}
+		
+		return configs;
+	}
+
+	private List<String> select(List<String> names) {
+		List<String> selected = new ArrayList<String>();
+
+		int i = 1;
+		for (String name : names) {
+			context.println("[" + (i++) + "] " + name);
+		}
+		context.println("---------------------------");
+
+		while (true) {
+			try {
+				context.print("select index (0 for end): ");
+				int index = Integer.valueOf(context.readLine());
+				if (index == 0)
+					break;
+
+				if (index < 0 || index > names.size()) {
+					context.println("no item corresponds to selected index");
+					continue;
+				}
+
+				String name = names.get(index - 1);
+				if (!selected.contains(name)) {
+					selected.add(name);
+					context.println(name + " added");
+				}
+
+			} catch (InterruptedException e) {
+				context.println("");
+				throw new RuntimeException("interrupted");
+			} catch (NumberFormatException e) {
+				context.println("");
+				throw new RuntimeException("invalid number format");
+			}
+		}
+
+		return selected;
+	}
+	*/
 }

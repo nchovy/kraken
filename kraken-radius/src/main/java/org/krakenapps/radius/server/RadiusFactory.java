@@ -16,24 +16,11 @@
 package org.krakenapps.radius.server;
 
 import java.util.List;
-import java.util.Set;
 
-public interface RadiusConfigurator {
-	Set<String> keySet();
-	
-	boolean contains(String key);
-	
-	Object get(String key);
-	
-	String getString(String key);
-	
-	Integer getInteger(String key);
-	
-	Boolean getBoolean(String key);
-	
-	void put(String key, Object value);
-	
-	void verify(List<RadiusConfigMetadata> spec);
-	
-	void purge();
+public interface RadiusFactory<Instance extends RadiusInstance> {
+	String getName();
+
+	Instance newInstance(String name, RadiusConfigurator conf);
+
+	List<RadiusConfigMetadata> getConfigMetadatas();
 }

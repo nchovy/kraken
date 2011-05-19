@@ -17,7 +17,6 @@ package org.krakenapps.radius.server;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 
 public interface RadiusServer {
 	//
@@ -49,31 +48,9 @@ public interface RadiusServer {
 
 	void removeProfile(String name);
 
-	//
-	// Authenticator management
-	//
+	List<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>> getModules();
 
-	List<RadiusAuthenticatorFactory> getAuthenticatorFactories();
-
-	List<RadiusAuthenticator> getAuthenticators();
-
-	RadiusAuthenticator createAuthenticator(String instanceName, String factoryName, Map<String, Object> configs);
-
-	void removeAuthenticator(String instanceName);
-
-	//
-	// User database management
-	//
-	
-	List<RadiusUserDatabaseFactory> getUserDatabaseFactories();
-
-	List<RadiusUserDatabase> getUserDatabases();
-
-	RadiusUserDatabase getUserDatabase(String name);
-
-	RadiusUserDatabase createUserDatabase(String instanceName, String factoryName, Map<String, Object> configs);
-
-	void removeUserDatabase(String instanceName);
+	RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> getModule(RadiusModuleType type);
 
 	//
 	// Event callbacks

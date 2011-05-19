@@ -15,15 +15,8 @@
  */
 package org.krakenapps.radius.server;
 
-import java.util.List;
 import java.util.Set;
 
-public interface RadiusAuthenticatorFactory {
-	String getName();
-	
+public interface RadiusAuthenticatorFactory extends RadiusFactory<RadiusAuthenticator> {
 	Set<RadiusAuthType> getSupportedAuthTypes();
-
-	List<RadiusConfigMetadata> getConfigMetadatas();
-
-	RadiusAuthenticator newInstance(String name, RadiusConfigurator config);
 }

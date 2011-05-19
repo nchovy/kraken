@@ -17,30 +17,45 @@ package org.krakenapps.radius.server.userdatabase;
 
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
-import org.krakenapps.radius.server.ConfigurableUserDatabase;
 import org.krakenapps.radius.server.RadiusConfigurator;
-import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
+import org.krakenapps.radius.server.RadiusFactory;
+import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LdapUserDatabase extends ConfigurableUserDatabase {
+public class LdapUserDatabase extends RadiusUserDatabase {
 	private final Logger logger = LoggerFactory.getLogger(LdapUserDatabase.class.getName());
 	private LdapService ldap;
 
-	public LdapUserDatabase(String name, RadiusUserDatabaseFactory factory, RadiusConfigurator config, LdapService ldap) {
+	public LdapUserDatabase(String name, RadiusFactory<LdapUserDatabase> factory, RadiusConfigurator config,
+			LdapService ldap) {
 		super(name, factory, config);
 		this.ldap = ldap;
 	}
 
 	@Override
-	public boolean authenticate(String userName, String password) {
-		String profileName = (String) getConfig("profile_name");
+	public boolean verifyPassword(String userName, String password) {
+		String profileName = getProfileName();
 		LdapProfile profile = ldap.getProfile(profileName);
 		if (profile == null) {
 			logger.error("kraken radius: ldap profile not found - {}", profileName);
 			return false;
 		}
-		
+
 		return ldap.verifyPassword(profile, userName, password);
+	}
+
+	private String getProfileName() {
+		return (String) getConfig("profile_name");
+	}
+
+	@Override
+	public String toString() {
+		String profileName = getProfileName();
+		LdapProfile profile = null;
+		if (profileName != null)
+			profile = ldap.getProfile(profileName);
+
+		return "LDAP connector [profile=" + (profile != null ? profile : profileName) + "]";
 	}
 }

@@ -15,60 +15,42 @@
  */
 package org.krakenapps.radius.server;
 
-import java.util.List;
 import java.util.Set;
 
-import org.krakenapps.radius.protocol.AccessRequest;
-import org.krakenapps.radius.protocol.RadiusPacket;
-
-public abstract class ConfigurableAuthenticator implements RadiusAuthenticator {
-
+public abstract class RadiusInstance {
 	private String name;
-	private RadiusAuthenticatorFactory factory;
-	private RadiusConfigurator config;
+	private RadiusFactory<?> factory;
+	private RadiusConfigurator conf;
 
-	public ConfigurableAuthenticator(String name, RadiusAuthenticatorFactory factory, RadiusConfigurator config) {
+	public RadiusInstance(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
 		this.name = name;
 		this.factory = factory;
-		this.config = config;
+		this.conf = conf;
 	}
 
-	@Override
 	public String getName() {
 		return name;
 	}
 
-	@Override
 	public void start() {
 	}
 
-	@Override
 	public void stop() {
 	}
 
-	@Override
-	public RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public RadiusAuthenticatorFactory getFactory() {
+	public RadiusFactory<?> getFactory() {
 		return factory;
 	}
 
-	@Override
 	public Set<String> getConfigNames() {
-		return config.keySet();
+		return conf.keySet();
 	}
 
-	@Override
 	public void setConfig(String name, Object value) {
-		config.put(name, value);
+		conf.put(name, value);
 	}
 
-	@Override
 	public Object getConfig(String name) {
-		return config.get(name);
+		return conf.get(name);
 	}
 }

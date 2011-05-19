@@ -15,24 +15,42 @@
  */
 package org.krakenapps.radius.server.auth;
 
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.RadiusPacket;
-import org.krakenapps.radius.server.ConfigurableAuthenticator;
+import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusUserDatabase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class PapAuthenticator extends ConfigurableAuthenticator {
+public class PapAuthenticator extends RadiusAuthenticator {
+	private final Logger logger = LoggerFactory.getLogger(PapAuthenticator.class.getName());
+
+	private Date lastAuth;
+	private AtomicInteger counter;
 
 	public PapAuthenticator(String name, RadiusAuthenticatorFactory factory, RadiusConfigurator config) {
 		super(name, factory, config);
+
+		this.lastAuth = null;
+		this.counter = new AtomicInteger();
 	}
 
 	@Override
 	public RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases) {
+		// TODO: password will be moved to debug logging
+		logger.info("kraken radius: pap auth for user [{}], password [{}]", req.getUserName(), req.getUserPassword());
 		return null;
+	}
+
+	@Override
+	public String toString() {
+		return "PAP: last auth [" + lastAuth + "], auth count [" + counter.get() + "]";
 	}
 
 }

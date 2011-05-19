@@ -16,14 +16,17 @@
 package org.krakenapps.radius.server.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusConfigMetadata.Type;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
 import org.osgi.service.prefs.PreferencesService;
@@ -63,15 +66,15 @@ public class PreferencesConfigurator implements RadiusConfigurator {
 		try {
 			Preferences root = prefsvc.getSystemPreferences();
 			Preferences p = root.node(category).node(section);
-			Set<String> keySet = new HashSet<String>();
-
-			for (String s : p.childrenNames())
-				keySet.add(s);
-
-			return keySet;
+			return new HashSet<String>(Arrays.asList(p.keys()));
 		} catch (BackingStoreException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	public boolean contains(String key) {
+		return keySet().contains(key);
 	}
 
 	@Override
@@ -134,6 +137,29 @@ public class PreferencesConfigurator implements RadiusConfigurator {
 			p.sync();
 		} catch (BackingStoreException e) {
 			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public void verify(List<RadiusConfigMetadata> spec) {
+		for (RadiusConfigMetadata metadata : spec) {
+			if (!metadata.isRequired())
+				continue;
+
+			String key = metadata.getName();
+			if (!contains(key))
+				throw new IllegalStateException("[" + key + "] config not found");
+
+			Object value = get(key);
+			if (value == null)
+				continue;
+
+			if (metadata.getType() == Type.String && !(value instanceof String))
+				throw new IllegalStateException("[" + key + "] config should be string type");
+			else if (metadata.getType() == Type.Integer && !(value instanceof Integer))
+				throw new IllegalStateException("[" + key + "] config should be integer type");
+			else if (metadata.getType() == Type.Boolean && !(value instanceof Boolean))
+				throw new IllegalStateException("[" + key + "] config should be boolean type");
 		}
 	}
 

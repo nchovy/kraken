@@ -16,25 +16,14 @@
 package org.krakenapps.radius.server;
 
 import java.util.List;
-import java.util.Set;
 
 import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.RadiusPacket;
 
-public interface RadiusAuthenticator {
-	String getName();
+public abstract class RadiusAuthenticator extends RadiusInstance {
+	public RadiusAuthenticator(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
+		super(name, factory, conf);
+	}
 	
-	void start();
-	
-	void stop();
-	
-	RadiusAuthenticatorFactory getFactory();
-	
-	RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases);
-
-	Set<String> getConfigNames();
-	
-	void setConfig(String name, Object value);
-
-	Object getConfig(String name);
+	public abstract RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases);
 }

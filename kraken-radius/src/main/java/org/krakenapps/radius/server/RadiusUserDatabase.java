@@ -15,22 +15,10 @@
  */
 package org.krakenapps.radius.server;
 
-import java.util.Set;
+public abstract class RadiusUserDatabase extends RadiusInstance {
+	public RadiusUserDatabase(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
+		super(name, factory, conf);
+	}
 
-public interface RadiusUserDatabase {
-	String getName();
-	
-	void start();
-	
-	void stop();
-
-	RadiusUserDatabaseFactory getFactory();
-
-	boolean authenticate(String userName, String password);
-
-	Set<String> getConfigNames();
-
-	void setConfig(String name, Object value);
-
-	Object getConfig(String name);
+	public abstract boolean verifyPassword(String userName, String password);
 }
