@@ -28,14 +28,14 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.radius.client.RadiusClient;
 import org.krakenapps.radius.client.auth.PapAuthenticator;
 import org.krakenapps.radius.protocol.RadiusPacket;
-import org.krakenapps.radius.server.RadiusAuthenticator;
-import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
+import org.krakenapps.radius.server.RadiusFactory;
+import org.krakenapps.radius.server.RadiusInstance;
+import org.krakenapps.radius.server.RadiusModule;
+import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
-import org.krakenapps.radius.server.RadiusUserDatabase;
-import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +82,7 @@ public class RadiusScript implements Script {
 			context.println(profile);
 		}
 	}
-	/*
+
 	@ScriptUsage(description = "create virtual server", arguments = {
 			@ScriptArgument(name = "name", type = "string", description = "name of the virtual server"),
 			@ScriptArgument(name = "port type", type = "string", description = "type 'auth' for authentication, or 'acct' for accounting"),
@@ -120,18 +120,15 @@ public class RadiusScript implements Script {
 		profile.setName(args[0]);
 		profile.setSharedSecret(args[1]);
 
-		List<String> authNames = getAuthenticatorNames();
-		List<String> udbNames = getUserDatabaseNames();
-
 		context.println("---------------------------");
 		context.println("Select Authenticators");
 		context.println("---------------------------");
-		List<String> selectedAuths = select(authNames);
+		List<String> selectedAuths = select(RadiusModuleType.Authenticator);
 
 		context.println("---------------------------");
 		context.println("Select User Databases");
 		context.println("---------------------------");
-		List<String> selectedUdbs = select(udbNames);
+		List<String> selectedUdbs = select(RadiusModuleType.UserDatabase);
 
 		profile.setAuthenticators(selectedAuths);
 		profile.setUserDatabases(selectedUdbs);
@@ -145,103 +142,102 @@ public class RadiusScript implements Script {
 		server.removeProfile(args[0]);
 		context.println("removed");
 	}
+	
+	public void modules(String[] args) {
+		context.println("Module Types");
+		context.println("--------------");
+		for (RadiusModuleType type : RadiusModuleType.values())
+			context.println("[" + type.getAlias() + "] " + type.getInstanceClass().getName());
+	}
 
-	public void authenticatorFactories(String[] args) {
-		context.println("Authenticator Factories");
-		context.println("-------------------------");
+	@ScriptUsage(description = "list all module factories", arguments = { @ScriptArgument(name = "module type", type = "string", description = "module type ") })
+	public void factories(String[] args) {
+		context.println("Factories");
+		context.println("------------");
 
-		for (RadiusAuthenticatorFactory af : server.getAuthenticatorFactories()) {
-			context.println("[" + af.getName() + "] " + af.toString());
+		RadiusModuleType type = RadiusModuleType.parse(args[0]);
+		if (type == null) {
+			context.println("unknown module type");
+			return;
+		}
+
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+
+		for (RadiusFactory<?> factory : module.getFactories()) {
+			context.println(factory);
 		}
 	}
 
-	public void authenticators(String[] args) {
-		context.println("Authenticators");
-		context.println("-------------------");
+	@ScriptUsage(description = "list all module instances", arguments = { @ScriptArgument(name = "module type", type = "string", description = "module type ") })
+	public void instances(String[] args) {
+		context.println("Instances");
+		context.println("------------");
 
-		for (RadiusAuthenticator auth : server.getAuthenticators()) {
-			context.println("[" + auth.getName() + "] " + auth);
+		RadiusModuleType type = RadiusModuleType.parse(args[0]);
+		if (type == null) {
+			context.println("unknown module type");
+			return;
+		}
+
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+
+		for (RadiusInstance instance : module.getInstances()) {
+			context.println(instance);
 		}
 	}
 
-	@ScriptUsage(description = "create authenticator", arguments = {
-			@ScriptArgument(name = "instance name", type = "string", description = "instance name"),
-			@ScriptArgument(name = "factory name", type = "string", description = "factory name") })
-	public void createAuthenticator(String[] args) {
+	@ScriptUsage(description = "create a module instance", arguments = {
+			@ScriptArgument(name = "module type", type = "string", description = "module type "),
+			@ScriptArgument(name = "factory name", type = "string", description = "factory name"),
+			@ScriptArgument(name = "instance name", type = "string", description = "instance name") })
+	public void createInstance(String[] args) {
+		RadiusModuleType type = RadiusModuleType.parse(args[0]);
+		if (type == null) {
+			context.println("unknown module type");
+			return;
+		}
+
+		String factoryName = args[1];
+		String instanceName = args[2];
+
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+		RadiusFactory<?> factory = module.getFactory(factoryName);
+		if (factory == null) {
+			context.println("factory not found");
+			return;
+		}
+
 		try {
-			String instanceName = args[0];
-			String factoryName = args[1];
-			Map<String, Object> configs = new HashMap<String, Object>();
-
-			// TODO: input required parameters
-			config(spec)
-
-			server.createAuthenticator(instanceName, factoryName, configs);
-			context.println("created");
+			Map<String, Object> configs = config(factory.getConfigMetadatas());
+			RadiusInstance instance = module.createInstance(instanceName, factoryName, configs);
+			context.println("created " + instance);
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("interrupted");
 		} catch (Exception e) {
 			context.println(e.getMessage());
-			logger.error("kraken radius: cannot create authenticator", e);
 		}
 	}
 
-	@ScriptUsage(description = "remove authenticator", arguments = { @ScriptArgument(name = "instance name", type = "string", description = "name of the instance") })
-	public void removeAuthenticator(String[] args) {
-		String instanceName = args[0];
-		server.removeAuthenticator(instanceName);
-		context.println("removed");
-	}
-
-	public void userDatabaseFactories(String[] args) {
-		context.println("User Database Factories");
-		context.println("--------------------------");
-
-		for (RadiusUserDatabaseFactory udf : server.getUserDatabaseFactories()) {
-			context.println("[" + udf.getName() + "] " + udf.toString());
+	@ScriptUsage(description = "remove module instance", arguments = {
+			@ScriptArgument(name = "module type", type = "string", description = "module type"),
+			@ScriptArgument(name = "instance name", type = "string", description = "instance name") })
+	public void removeInstance(String[] args) {
+		RadiusModuleType type = RadiusModuleType.parse(args[0]);
+		if (type == null) {
+			context.println("unknown module type");
+			return;
 		}
-	}
 
-	public void userDatabases(String[] args) {
-		context.println("User Databases");
-		context.println("-------------------");
+		String instanceName = args[1];
 
-		for (RadiusUserDatabase udb : server.getUserDatabases()) {
-			context.println("[" + udb.getName() + "] " + udb);
+		try {
+			RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+			module.removeInstance(instanceName);
+			context.println("removed");
+		} catch (Exception e) {
+			context.println(e.getMessage());
 		}
-	}
-
-	@ScriptUsage(description = "create user database", arguments = {
-			@ScriptArgument(name = "instance name", type = "string", description = "instance name"),
-			@ScriptArgument(name = "factory name", type = "string", description = "factory name") })
-	public void createUserDatabase(String[] args) {
-		String instanceName = args[0];
-		String factoryName = args[1];
-		Map<String, Object> configs = new HashMap<String, Object>();
-
-		// TODO: input required parameters
-
-		server.createUserDatabase(instanceName, factoryName, configs);
-		context.println("created");
-	}
-
-	@ScriptUsage(description = "remove user database", arguments = { @ScriptArgument(name = "instance name", type = "string", description = "name of the instance") })
-	public void removeUserDatabase(String[] args) {
-		String instanceName = args[0];
-		server.removeUserDatabase(instanceName);
-		context.println("removed");
-	}
-
-	private List<String> getAuthenticatorNames() {
-		List<String> names = new ArrayList<String>();
-		for (RadiusAuthenticator auth : server.getAuthenticators())
-			names.add(auth.getName());
-		return names;
-	}
-
-	private List<String> getUserDatabaseNames() {
-		List<String> names = new ArrayList<String>();
-		for (RadiusUserDatabase udb : server.getUserDatabases())
-			names.add(udb.getName());
-		return names;
 	}
 
 	private Map<String, Object> config(List<RadiusConfigMetadata> spec) throws InterruptedException {
@@ -255,14 +251,22 @@ public class RadiusScript implements Script {
 			context.print(metadata.getName() + " in " + type + " type " + def + "? ");
 			String line = context.readLine();
 			Object value = metadata.getType().parse(line);
-			
+
 			configs.put(metadata.getName(), value);
 		}
-		
+
 		return configs;
 	}
 
-	private List<String> select(List<String> names) {
+	private List<String> select(RadiusModuleType type) {
+		// get instance names
+		List<String> names = new ArrayList<String>();
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+		for (RadiusInstance instance : module.getInstances()) {
+			names.add(instance.getName());
+		}
+
+		// print instance list
 		List<String> selected = new ArrayList<String>();
 
 		int i = 1;
@@ -283,6 +287,7 @@ public class RadiusScript implements Script {
 					continue;
 				}
 
+				// add to select bucket
 				String name = names.get(index - 1);
 				if (!selected.contains(name)) {
 					selected.add(name);
@@ -300,5 +305,4 @@ public class RadiusScript implements Script {
 
 		return selected;
 	}
-	*/
 }

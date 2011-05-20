@@ -17,6 +17,7 @@ package org.krakenapps.radius.server;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 
 public interface RadiusServer {
 	//
@@ -51,6 +52,12 @@ public interface RadiusServer {
 	List<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>> getModules();
 
 	RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> getModule(RadiusModuleType type);
+	
+	RadiusInstance getModuleInstance(RadiusModuleType type, String instanceName);
+	
+	RadiusInstance createModuleInstance(RadiusModuleType type, String instanceName, String factoryName, Map<String, Object> configs);
+	
+	void removeModuleInstance(RadiusModuleType type, String instanceName);
 
 	//
 	// Event callbacks

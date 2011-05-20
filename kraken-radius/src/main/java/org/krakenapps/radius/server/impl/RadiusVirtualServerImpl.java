@@ -31,6 +31,10 @@ import org.krakenapps.radius.protocol.RadiusPacket;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusClientAddress;
 import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusFactory;
+import org.krakenapps.radius.server.RadiusInstance;
+import org.krakenapps.radius.server.RadiusModule;
+import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
@@ -71,8 +75,7 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	}
 
 	public RadiusVirtualServerImpl(RadiusServer server, String name, RadiusPortType portType, RadiusConfigurator conf,
-			ExecutorService executor,
-			InetSocketAddress bindAddress) {
+			ExecutorService executor, InetSocketAddress bindAddress) {
 		this.server = server;
 		this.conf = conf;
 		this.isOpened = false;
@@ -113,9 +116,8 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 			List<RadiusUserDatabase> userDatabases = getUserDatabases(profile);
 
 			for (String name : profile.getAuthenticators()) {
-				//TODO:
-//				RadiusAuthenticator auth = server.getAuthenticator(name);
-//				executor.execute(new AuthTask(accessRequest, auth, userDatabases));
+				RadiusAuthenticator auth = getAuthenticator(name);
+				executor.execute(new AuthTask(accessRequest, auth, userDatabases));
 			}
 		}
 	}
@@ -123,9 +125,21 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	private List<RadiusUserDatabase> getUserDatabases(RadiusProfile profile) {
 		// TODO: cache using update profile event
 		List<RadiusUserDatabase> udbs = new ArrayList<RadiusUserDatabase>();
-//		for (String name : profile.getUserDatabases())
-//			udbs.add(server.getUserDatabase(name));
+		for (String name : profile.getUserDatabases())
+			udbs.add(getUserDatabase(name));
 		return udbs;
+	}
+
+	private RadiusAuthenticator getAuthenticator(String name) {
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server
+				.getModule(RadiusModuleType.Authenticator);
+		return (RadiusAuthenticator) module.getInstance(name);
+	}
+
+	private RadiusUserDatabase getUserDatabase(String name) {
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server
+				.getModule(RadiusModuleType.UserDatabase);
+		return (RadiusUserDatabase) module.getInstance(name);
 	}
 
 	@Override

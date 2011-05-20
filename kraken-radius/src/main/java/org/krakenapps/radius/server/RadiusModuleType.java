@@ -16,13 +16,18 @@
 package org.krakenapps.radius.server;
 
 public enum RadiusModuleType {
-	Authenticator(RadiusAuthenticatorFactory.class, RadiusAuthenticator.class, "authenticators"),
-	UserDatabase(RadiusUserDatabaseFactory.class, RadiusUserDatabase.class, "user_databases");
+	Authenticator("auth", RadiusAuthenticatorFactory.class, RadiusAuthenticator.class, "authenticators"),
+	UserDatabase("userdb", RadiusUserDatabaseFactory.class, RadiusUserDatabase.class, "user_databases");
 
-	RadiusModuleType(Class<?> factoryClass, Class<?> instanceClass, String configNamespace) {
+	RadiusModuleType(String alias, Class<?> factoryClass, Class<?> instanceClass, String configNamespace) {
+		this.alias = alias;
 		this.factoryClass = factoryClass;
 		this.instanceClass = instanceClass;
 		this.configNamespace = configNamespace;
+	}
+	
+	public String getAlias() {
+		return alias;
 	}
 
 	public Class<?> getFactoryClass() {
@@ -36,7 +41,15 @@ public enum RadiusModuleType {
 	public String getConfigNamespace() {
 		return configNamespace;
 	}
+	
+	public static RadiusModuleType parse(String s) {
+		for (RadiusModuleType t : values()) 
+			if (t.getAlias().equalsIgnoreCase(s))
+				return t;
+		return null;
+	}
 
+	private String alias;
 	private Class<?> factoryClass;
 	private Class<?> instanceClass;
 	private String configNamespace;

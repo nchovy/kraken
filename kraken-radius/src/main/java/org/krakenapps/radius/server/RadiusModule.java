@@ -73,8 +73,24 @@ public class RadiusModule<Factory extends RadiusFactory<Instance>, Instance exte
 
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
 		conf.put("factory_name", factory.getName());
+		return loadInstance(instanceName);
+	}
+
+	public Instance loadInstance(String instanceName) {
+		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
+		String factoryName = conf.getString("factory_name");
+
+		// return already loaded instance
+		if (instances.containsKey(instanceName))
+			return instances.get(instanceName);
+
+		// factory not loaded yet, try later
+		Factory factory = factories.get(factoryName);
+		if (factory == null)
+			return null;
+
 		Instance instance = factory.newInstance(instanceName, conf);
-		instances.put(instance.getName(), instance);
+		instances.put(instanceName, instance);
 		logger.trace("kraken radius: loaded radius instance [{}]", instanceName);
 		return instance;
 	}

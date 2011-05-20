@@ -18,8 +18,8 @@ package org.krakenapps.radius.server.userdatabase;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.radius.server.RadiusConfigurator;
-import org.krakenapps.radius.server.RadiusFactory;
 import org.krakenapps.radius.server.RadiusUserDatabase;
+import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ public class LdapUserDatabase extends RadiusUserDatabase {
 	private final Logger logger = LoggerFactory.getLogger(LdapUserDatabase.class.getName());
 	private LdapService ldap;
 
-	public LdapUserDatabase(String name, RadiusFactory<LdapUserDatabase> factory, RadiusConfigurator config,
+	public LdapUserDatabase(String name, RadiusUserDatabaseFactory factory, RadiusConfigurator config,
 			LdapService ldap) {
 		super(name, factory, config);
 		this.ldap = ldap;

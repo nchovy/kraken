@@ -128,31 +128,16 @@ public class RadiusServerImpl implements RadiusServer {
 
 	private void loadModules() throws BackingStoreException {
 		for (RadiusModuleType t : RadiusModuleType.values()) {
-			RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator> module = 
-				new RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator>(prefsvc, t.getConfigNamespace());
-			
+			RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator> module = new RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator>(
+					prefsvc, t.getConfigNamespace());
+
 			modules.put(t, module);
-			
+
 			Preferences root = prefsvc.getSystemPreferences().node(t.getConfigNamespace());
 			for (String instanceName : root.childrenNames()) {
-				loadModuleInstance(module, instanceName, t.getConfigNamespace());
+				module.loadInstance(instanceName);
 			}
 		}
-	}
-
-	private void loadModuleInstance(RadiusModule module, String instanceName, String configNamespace) {
-		/*
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
-		String factoryName = conf.getString("factory_name");
-		RadiusFactory factory = module.getFactory(factoryName);
-		if (factory == null)
-			return;
-
-		if (module.containsInstance(instanceName))
-			return;
-
-		module.createInstance(instanceName, factoryName, conf);
-		*/
 	}
 
 	private void loadProfiles() {
@@ -272,6 +257,38 @@ public class RadiusServerImpl implements RadiusServer {
 	@Override
 	public RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> getModule(RadiusModuleType type) {
 		return modules.get(type);
+	}
+
+	@Override
+	public RadiusInstance getModuleInstance(RadiusModuleType type, String instanceName) {
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = getModule(type);
+		if (module == null)
+			return null;
+
+		return module.getInstance(instanceName);
+	}
+
+	@Override
+	public RadiusInstance createModuleInstance(RadiusModuleType type, String instanceName, String factoryName,
+			Map<String, Object> configs) {
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = getModule(type);
+		if (module == null)
+			throw new IllegalStateException("module not found: " + type);
+
+		RadiusFactory<?> factory = module.getFactory(factoryName);
+		if (factory == null)
+			throw new IllegalStateException("factory not found: " + factoryName);
+
+		return module.createInstance(instanceName, factoryName, configs);
+	}
+
+	@Override
+	public void removeModuleInstance(RadiusModuleType type, String instanceName) {
+		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = getModule(type);
+		if (module == null)
+			throw new IllegalStateException("module not found: " + type);
+
+		module.removeInstance(instanceName);
 	}
 
 	@Override

@@ -25,12 +25,13 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
-import org.krakenapps.radius.server.RadiusFactory;
+import org.krakenapps.radius.server.RadiusUserDatabase;
+import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata.Type;
 
 @Component(name = "radius-ldap-udf")
 @Provides
-public class LdapUserDatabaseFactory implements RadiusFactory<LdapUserDatabase> {
+public class LdapUserDatabaseFactory implements RadiusUserDatabaseFactory {
 
 	@Requires
 	private LdapService ldap;
@@ -55,7 +56,7 @@ public class LdapUserDatabaseFactory implements RadiusFactory<LdapUserDatabase> 
 	}
 
 	@Override
-	public LdapUserDatabase newInstance(String name, RadiusConfigurator config) {
+	public RadiusUserDatabase newInstance(String name, RadiusConfigurator config) {
 		config.verify(configMetadatas);
 		return new LdapUserDatabase(name, this, config, ldap);
 	}
