@@ -49,14 +49,15 @@ public interface RadiusServer {
 
 	void removeProfile(String name);
 
-	List<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>> getModules();
+	List<RadiusModule> getModules();
 
-	RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> getModule(RadiusModuleType type);
-	
+	RadiusModule getModule(RadiusModuleType type);
+
 	RadiusInstance getModuleInstance(RadiusModuleType type, String instanceName);
-	
-	RadiusInstance createModuleInstance(RadiusModuleType type, String instanceName, String factoryName, Map<String, Object> configs);
-	
+
+	RadiusInstance createModuleInstance(RadiusModuleType type, String instanceName, String factoryName,
+			Map<String, Object> configs);
+
 	void removeModuleInstance(RadiusModuleType type, String instanceName);
 
 	//

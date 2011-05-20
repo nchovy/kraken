@@ -15,29 +15,30 @@
  */
 package org.krakenapps.radius.server.impl;
 
+import org.krakenapps.radius.server.RadiusFactoryEventListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
 
-public class RadiusServiceTracker extends ServiceTracker {
+public class RadiusFactoryServiceTracker extends ServiceTracker {
 
-	private RadiusServerImpl server;
+	private RadiusFactoryEventListener listener;
 
-	public RadiusServiceTracker(RadiusServerImpl server, BundleContext bc, String classNameFilter) {
+	public RadiusFactoryServiceTracker(RadiusFactoryEventListener listener, BundleContext bc, String classNameFilter) {
 		super(bc, classNameFilter, null);
-		this.server = server;
+		this.listener = listener;
 	}
 
 	@Override
 	public Object addingService(ServiceReference reference) {
 		Object service = super.addingService(reference);
-		server.addingService(service);
+		listener.addingService(service);
 		return service;
 	}
 
 	@Override
 	public void removedService(ServiceReference reference, Object service) {
-		server.removedService(service);
+		listener.removedService(service);
 		super.removedService(reference, service);
 	}
 }

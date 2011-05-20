@@ -31,8 +31,6 @@ import org.krakenapps.radius.protocol.RadiusPacket;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusClientAddress;
 import org.krakenapps.radius.server.RadiusConfigurator;
-import org.krakenapps.radius.server.RadiusFactory;
-import org.krakenapps.radius.server.RadiusInstance;
 import org.krakenapps.radius.server.RadiusModule;
 import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusPortType;
@@ -131,14 +129,12 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	}
 
 	private RadiusAuthenticator getAuthenticator(String name) {
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server
-				.getModule(RadiusModuleType.Authenticator);
+		RadiusModule module = server.getModule(RadiusModuleType.Authenticator);
 		return (RadiusAuthenticator) module.getInstance(name);
 	}
 
 	private RadiusUserDatabase getUserDatabase(String name) {
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server
-				.getModule(RadiusModuleType.UserDatabase);
+		RadiusModule module = server.getModule(RadiusModuleType.UserDatabase);
 		return (RadiusUserDatabase) module.getInstance(name);
 	}
 

@@ -142,7 +142,7 @@ public class RadiusScript implements Script {
 		server.removeProfile(args[0]);
 		context.println("removed");
 	}
-	
+
 	public void modules(String[] args) {
 		context.println("Module Types");
 		context.println("--------------");
@@ -161,7 +161,7 @@ public class RadiusScript implements Script {
 			return;
 		}
 
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+		RadiusModule module = server.getModule(type);
 
 		for (RadiusFactory<?> factory : module.getFactories()) {
 			context.println(factory);
@@ -179,7 +179,7 @@ public class RadiusScript implements Script {
 			return;
 		}
 
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+		RadiusModule module = server.getModule(type);
 
 		for (RadiusInstance instance : module.getInstances()) {
 			context.println(instance);
@@ -200,7 +200,7 @@ public class RadiusScript implements Script {
 		String factoryName = args[1];
 		String instanceName = args[2];
 
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+		RadiusModule module = server.getModule(type);
 		RadiusFactory<?> factory = module.getFactory(factoryName);
 		if (factory == null) {
 			context.println("factory not found");
@@ -232,7 +232,7 @@ public class RadiusScript implements Script {
 		String instanceName = args[1];
 
 		try {
-			RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+			RadiusModule module = server.getModule(type);
 			module.removeInstance(instanceName);
 			context.println("removed");
 		} catch (Exception e) {
@@ -261,7 +261,7 @@ public class RadiusScript implements Script {
 	private List<String> select(RadiusModuleType type) {
 		// get instance names
 		List<String> names = new ArrayList<String>();
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = server.getModule(type);
+		RadiusModule module = server.getModule(type);
 		for (RadiusInstance instance : module.getInstances()) {
 			names.add(instance.getName());
 		}

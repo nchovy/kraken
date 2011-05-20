@@ -21,53 +21,62 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.krakenapps.radius.server.impl.PreferencesConfigurator;
+import org.krakenapps.radius.server.impl.RadiusFactoryServiceTracker;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RadiusModule<Factory extends RadiusFactory<Instance>, Instance extends RadiusInstance> {
+public class RadiusModule {
 	private final Logger logger = LoggerFactory.getLogger(RadiusModule.class.getName());
 
 	private PreferencesService prefsvc;
 	private String configNamespace;
-	private Map<String, Factory> factories;
-	private Map<String, Instance> instances;
+	private Map<String, RadiusFactory<?>> factories;
+	private Map<String, RadiusInstance> instances;
+	private RadiusFactoryServiceTracker tracker;
 
-	public RadiusModule(PreferencesService prefsvc, String categoryKey) {
+	public RadiusModule(BundleContext bc, RadiusFactoryEventListener listener, RadiusModuleType type, PreferencesService prefsvc) {
 		this.prefsvc = prefsvc;
-		this.configNamespace = categoryKey;
-		this.factories = new ConcurrentHashMap<String, Factory>();
-		this.instances = new ConcurrentHashMap<String, Instance>();
+		this.configNamespace = type.getConfigNamespace();
+		this.factories = new ConcurrentHashMap<String, RadiusFactory<?>>();
+		this.instances = new ConcurrentHashMap<String, RadiusInstance>();
+		this.tracker = new RadiusFactoryServiceTracker(listener, bc, type.getFactoryClass().getName());
+	}
+	public void start() {
+		tracker.open();
+	}
+	
+	public void stop() {
+		tracker.close();
 	}
 
-	public List<Factory> getFactories() {
-		return new ArrayList<Factory>(factories.values());
+	public List<RadiusFactory<?>> getFactories() {
+		return new ArrayList<RadiusFactory<?>>(factories.values());
 	}
 
-	public Factory getFactory(String name) {
+	public RadiusFactory<?> getFactory(String name) {
 		return factories.get(name);
 	}
 
-	@SuppressWarnings("unchecked")
-	public void addFactory(Object factory) {
-		Factory f = (Factory) factory;
-		factories.put(f.getName(), f);
+	public void addFactory(RadiusFactory<?> factory) {
+		factories.put(factory.getName(), factory);
 	}
 
 	public void removeFactory(String name) {
 		factories.remove(name);
 	}
 
-	public List<Instance> getInstances() {
-		return new ArrayList<Instance>(instances.values());
+	public List<RadiusInstance> getInstances() {
+		return new ArrayList<RadiusInstance>(instances.values());
 	}
 
-	public Instance getInstance(String name) {
+	public RadiusInstance getInstance(String name) {
 		return instances.get(name);
 	}
 
-	public Instance createInstance(String instanceName, String factoryName, Map<String, Object> configs) {
-		Factory factory = factories.get(factoryName);
+	public RadiusInstance createInstance(String instanceName, String factoryName, Map<String, Object> configs) {
+		RadiusFactory<?> factory = factories.get(factoryName);
 		if (factory == null)
 			throw new IllegalArgumentException("factory not found: " + factoryName);
 
@@ -76,7 +85,7 @@ public class RadiusModule<Factory extends RadiusFactory<Instance>, Instance exte
 		return loadInstance(instanceName);
 	}
 
-	public Instance loadInstance(String instanceName) {
+	public RadiusInstance loadInstance(String instanceName) {
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
 		String factoryName = conf.getString("factory_name");
 
@@ -85,11 +94,11 @@ public class RadiusModule<Factory extends RadiusFactory<Instance>, Instance exte
 			return instances.get(instanceName);
 
 		// factory not loaded yet, try later
-		Factory factory = factories.get(factoryName);
+		RadiusFactory<?> factory = factories.get(factoryName);
 		if (factory == null)
 			return null;
 
-		Instance instance = factory.newInstance(instanceName, conf);
+		RadiusInstance instance = factory.newInstance(instanceName, conf);
 		instances.put(instanceName, instance);
 		logger.trace("kraken radius: loaded radius instance [{}]", instanceName);
 		return instance;
@@ -99,7 +108,7 @@ public class RadiusModule<Factory extends RadiusFactory<Instance>, Instance exte
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
 		conf.purge();
 
-		Instance instance = instances.remove(instanceName);
+		RadiusInstance instance = instances.remove(instanceName);
 		if (instance == null)
 			return;
 

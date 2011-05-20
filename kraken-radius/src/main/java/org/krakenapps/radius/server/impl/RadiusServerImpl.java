@@ -30,10 +30,9 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.radius.server.RadiusAuthenticator;
-import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusFactory;
+import org.krakenapps.radius.server.RadiusFactoryEventListener;
 import org.krakenapps.radius.server.RadiusInstance;
 import org.krakenapps.radius.server.RadiusModule;
 import org.krakenapps.radius.server.RadiusModuleType;
@@ -41,7 +40,6 @@ import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
 import org.krakenapps.radius.server.RadiusServerEventListener;
-import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.krakenapps.radius.server.RadiusVirtualServer;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
@@ -51,8 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "radius-server")
-@Provides
-public class RadiusServerImpl implements RadiusServer {
+@Provides(specifications = { RadiusServer.class })
+public class RadiusServerImpl implements RadiusServer, RadiusFactoryEventListener {
 	private static final String VIRTUAL_SERVER_ROOT_KEY = "virtual_servers";
 
 	private final Logger logger = LoggerFactory.getLogger(RadiusServerImpl.class.getName());
@@ -64,13 +62,9 @@ public class RadiusServerImpl implements RadiusServer {
 
 	private Map<String, RadiusVirtualServer> virtualServers;
 	private Map<String, RadiusProfile> profiles;
-	private Map<RadiusModuleType, RadiusModule<? extends RadiusFactory<? extends RadiusInstance>, ? extends RadiusInstance>> modules;
+	private Map<RadiusModuleType, RadiusModule> modules;
 
 	private CopyOnWriteArraySet<RadiusServerEventListener> callbacks;
-
-	private RadiusServiceTracker authTracker;
-	private RadiusServiceTracker userdbTracker;
-
 	private ExecutorService executor;
 
 	public RadiusServerImpl(BundleContext bc) {
@@ -83,16 +77,12 @@ public class RadiusServerImpl implements RadiusServer {
 
 		virtualServers = new ConcurrentHashMap<String, RadiusVirtualServer>();
 		profiles = new ConcurrentHashMap<String, RadiusProfile>();
-		authTracker = new RadiusServiceTracker(this, bc, RadiusAuthenticatorFactory.class.getName());
-		userdbTracker = new RadiusServiceTracker(this, bc, RadiusUserDatabaseFactory.class.getName());
-		modules = new ConcurrentHashMap<RadiusModuleType, RadiusModule<? extends RadiusFactory<? extends RadiusInstance>, ? extends RadiusInstance>>();
+		modules = new ConcurrentHashMap<RadiusModuleType, RadiusModule>();
 
 		try {
 			loadVirtualServers();
 			loadModules();
 			loadProfiles();
-			authTracker.open();
-			userdbTracker.open();
 		} catch (BackingStoreException e) {
 			throw new RuntimeException(e);
 		}
@@ -128,16 +118,32 @@ public class RadiusServerImpl implements RadiusServer {
 
 	private void loadModules() throws BackingStoreException {
 		for (RadiusModuleType t : RadiusModuleType.values()) {
-			RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator> module = new RadiusModule<RadiusAuthenticatorFactory, RadiusAuthenticator>(
-					prefsvc, t.getConfigNamespace());
-
+			RadiusModule module = new RadiusModule(bc, this, t, prefsvc);
 			modules.put(t, module);
 
 			Preferences root = prefsvc.getSystemPreferences().node(t.getConfigNamespace());
 			for (String instanceName : root.childrenNames()) {
 				module.loadInstance(instanceName);
 			}
+
+			module.start();
 		}
+	}
+
+	private void unloadModules() throws BackingStoreException {
+		for (RadiusModuleType t : RadiusModuleType.values()) {
+			RadiusModule module = modules.get(t);
+			if (module == null)
+				continue;
+
+			try {
+				module.stop();
+			} catch (Exception e) {
+				logger.warn("kraken radius: module callback should not throw any exception", e);
+			}
+		}
+
+		modules.clear();
 	}
 
 	private void loadProfiles() {
@@ -158,10 +164,12 @@ public class RadiusServerImpl implements RadiusServer {
 	}
 
 	@Invalidate
-	public void stop() {
-		authTracker.close();
-		userdbTracker.close();
+	public void stop() throws BackingStoreException {
+		stopVirtualServers();
+		unloadModules();
+	}
 
+	private void stopVirtualServers() {
 		for (RadiusVirtualServer vs : virtualServers.values()) {
 			try {
 				logger.info("kraken radius: stopping virtual server [{}] - {}", vs.getName(), vs.getBindAddress());
@@ -250,18 +258,18 @@ public class RadiusServerImpl implements RadiusServer {
 	}
 
 	@Override
-	public List<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>> getModules() {
-		return new ArrayList<RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance>>(modules.values());
+	public List<RadiusModule> getModules() {
+		return new ArrayList<RadiusModule>(modules.values());
 	}
 
 	@Override
-	public RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> getModule(RadiusModuleType type) {
+	public RadiusModule getModule(RadiusModuleType type) {
 		return modules.get(type);
 	}
 
 	@Override
 	public RadiusInstance getModuleInstance(RadiusModuleType type, String instanceName) {
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = getModule(type);
+		RadiusModule module = getModule(type);
 		if (module == null)
 			return null;
 
@@ -271,7 +279,7 @@ public class RadiusServerImpl implements RadiusServer {
 	@Override
 	public RadiusInstance createModuleInstance(RadiusModuleType type, String instanceName, String factoryName,
 			Map<String, Object> configs) {
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = getModule(type);
+		RadiusModule module = getModule(type);
 		if (module == null)
 			throw new IllegalStateException("module not found: " + type);
 
@@ -284,7 +292,7 @@ public class RadiusServerImpl implements RadiusServer {
 
 	@Override
 	public void removeModuleInstance(RadiusModuleType type, String instanceName) {
-		RadiusModule<? extends RadiusFactory<?>, ? extends RadiusInstance> module = getModule(type);
+		RadiusModule module = getModule(type);
 		if (module == null)
 			throw new IllegalStateException("module not found: " + type);
 
@@ -301,10 +309,11 @@ public class RadiusServerImpl implements RadiusServer {
 		callbacks.remove(listener);
 	}
 
+	@Override
 	public void addingService(Object service) {
 		for (RadiusModuleType t : RadiusModuleType.values()) {
 			if (t.getFactoryClass().isAssignableFrom(service.getClass())) {
-				RadiusModule<?, ?> module = getModule(t);
+				RadiusModule module = getModule(t);
 				RadiusFactory<?> factory = (RadiusFactory<?>) service;
 				module.addFactory(factory);
 				return;
@@ -312,11 +321,12 @@ public class RadiusServerImpl implements RadiusServer {
 		}
 	}
 
+	@Override
 	public void removedService(Object service) {
 		for (RadiusModuleType t : RadiusModuleType.values()) {
 			if (t.getFactoryClass().isAssignableFrom(service.getClass())) {
 				RadiusFactory<?> factory = (RadiusFactory<?>) service;
-				RadiusModule<?, ?> module = getModule(t);
+				RadiusModule module = getModule(t);
 				module.removeFactory(factory.getName());
 				return;
 			}
