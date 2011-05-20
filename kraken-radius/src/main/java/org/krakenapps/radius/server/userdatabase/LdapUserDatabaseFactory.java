@@ -25,6 +25,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata.Type;
@@ -41,6 +42,11 @@ public class LdapUserDatabaseFactory implements RadiusUserDatabaseFactory {
 	@Override
 	public String getName() {
 		return "ldap";
+	}
+
+	@Override
+	public RadiusModuleType getModuleType() {
+		return RadiusModuleType.UserDatabase;
 	}
 
 	public LdapUserDatabaseFactory() {

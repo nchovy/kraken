@@ -32,7 +32,7 @@ public interface RadiusServer {
 
 	RadiusVirtualServer createVirtualServer(String name, RadiusPortType portType, String profileName,
 			InetSocketAddress bindAddress);
-
+	
 	void removeVirtualServer(String name);
 
 	//

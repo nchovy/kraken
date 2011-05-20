@@ -16,14 +16,26 @@
 package org.krakenapps.radius.server;
 
 public enum RadiusPortType {
-	Authentication, Accounting;
-	
-	public static RadiusPortType parse(String s) {
-		if (s.equals("auth"))
-			return RadiusPortType.Authentication;
-		else if (s.equals("acct"))
-			return RadiusPortType.Accounting;
-		else
-			return null;
+	Authentication("auth"), Accounting("acct");
+
+	RadiusPortType(String alias) {
+		this.alias = alias;
 	}
+
+	public String getAlias() {
+		return alias;
+	}
+
+	public static RadiusPortType parse(String s) {
+		if (s == null)
+			return null;
+		
+		for (RadiusPortType t : values())
+			if (t.getAlias().equals(s))
+				return t;
+		
+		return null;
+	}
+
+	private String alias;
 }

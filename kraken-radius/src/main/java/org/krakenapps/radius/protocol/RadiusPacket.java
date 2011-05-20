@@ -94,6 +94,7 @@ public abstract class RadiusPacket {
 			}
 
 			i += len;
+			bb.position(bb.position() + len);
 		}
 
 		return p;

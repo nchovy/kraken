@@ -36,17 +36,19 @@ public class RadiusModule {
 	private Map<String, RadiusInstance> instances;
 	private RadiusFactoryServiceTracker tracker;
 
-	public RadiusModule(BundleContext bc, RadiusFactoryEventListener listener, RadiusModuleType type, PreferencesService prefsvc) {
+	public RadiusModule(BundleContext bc, RadiusFactoryEventListener listener, RadiusModuleType type,
+			PreferencesService prefsvc) {
 		this.prefsvc = prefsvc;
 		this.configNamespace = type.getConfigNamespace();
 		this.factories = new ConcurrentHashMap<String, RadiusFactory<?>>();
 		this.instances = new ConcurrentHashMap<String, RadiusInstance>();
 		this.tracker = new RadiusFactoryServiceTracker(listener, bc, type.getFactoryClass().getName());
 	}
+
 	public void start() {
 		tracker.open();
 	}
-	
+
 	public void stop() {
 		tracker.close();
 	}
@@ -82,6 +84,11 @@ public class RadiusModule {
 
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
 		conf.put("factory_name", factory.getName());
+
+		// copy configs
+		for (String key : configs.keySet())
+			conf.put(key, configs.get(key));
+
 		return loadInstance(instanceName);
 	}
 
@@ -100,7 +107,8 @@ public class RadiusModule {
 
 		RadiusInstance instance = factory.newInstance(instanceName, conf);
 		instances.put(instanceName, instance);
-		logger.trace("kraken radius: loaded radius instance [{}]", instanceName);
+		logger.info("kraken radius: loaded radius instance [{}]", instanceName);
+
 		return instance;
 	}
 

@@ -18,6 +18,8 @@ package org.krakenapps.radius.server;
 import java.util.List;
 
 public interface RadiusFactory<Instance extends RadiusInstance> {
+	RadiusModuleType getModuleType();
+	
 	String getName();
 
 	Instance newInstance(String name, RadiusConfigurator conf);

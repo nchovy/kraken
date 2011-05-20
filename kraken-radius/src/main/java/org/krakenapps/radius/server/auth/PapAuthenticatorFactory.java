@@ -28,6 +28,7 @@ import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusModuleType;
 
 @Component(name = "radius-papauth-factory")
 @Provides
@@ -36,6 +37,11 @@ public class PapAuthenticatorFactory implements RadiusAuthenticatorFactory {
 	@Override
 	public String getName() {
 		return "pap";
+	}
+
+	@Override
+	public RadiusModuleType getModuleType() {
+		return RadiusModuleType.Authenticator;
 	}
 
 	@Override

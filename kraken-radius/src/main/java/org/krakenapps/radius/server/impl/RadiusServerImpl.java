@@ -30,6 +30,7 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.radius.server.RadiusConfigMetadata;
 import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusFactory;
 import org.krakenapps.radius.server.RadiusFactoryEventListener;
@@ -41,6 +42,7 @@ import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
 import org.krakenapps.radius.server.RadiusServerEventListener;
 import org.krakenapps.radius.server.RadiusVirtualServer;
+import org.krakenapps.radius.server.RadiusConfigMetadata.Type;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
@@ -73,30 +75,35 @@ public class RadiusServerImpl implements RadiusServer, RadiusFactoryEventListene
 
 	@Validate
 	public void start() {
-		callbacks = new CopyOnWriteArraySet<RadiusServerEventListener>();
-
-		virtualServers = new ConcurrentHashMap<String, RadiusVirtualServer>();
-		profiles = new ConcurrentHashMap<String, RadiusProfile>();
-		modules = new ConcurrentHashMap<RadiusModuleType, RadiusModule>();
+		this.callbacks = new CopyOnWriteArraySet<RadiusServerEventListener>();
+		this.virtualServers = new ConcurrentHashMap<String, RadiusVirtualServer>();
+		this.profiles = new ConcurrentHashMap<String, RadiusProfile>();
+		this.modules = new ConcurrentHashMap<RadiusModuleType, RadiusModule>();
+		this.executor = Executors.newCachedThreadPool();
 
 		try {
-			loadVirtualServers();
-			loadModules();
 			loadProfiles();
+			loadModules();
+			loadVirtualServers();
 		} catch (BackingStoreException e) {
 			throw new RuntimeException(e);
 		}
-
-		this.executor = Executors.newCachedThreadPool();
 	}
 
 	private void loadVirtualServers() throws BackingStoreException {
 		Preferences root = prefsvc.getSystemPreferences().node(VIRTUAL_SERVER_ROOT_KEY);
 		for (String name : root.childrenNames()) {
 			try {
-				RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, VIRTUAL_SERVER_ROOT_KEY, name);
+				RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, VIRTUAL_SERVER_ROOT_KEY, name,
+						getVirtualServerConfigList());
+
 				String hostname = conf.getString(RadiusVirtualServerImpl.HOSTNAME_KEY);
 				RadiusPortType portType = RadiusPortType.parse(conf.getString(RadiusVirtualServerImpl.PORT_TYPE_KEY));
+				if (portType == null) {
+					System.out.println("### warn port type null");
+					continue;
+				}
+
 				Integer port = determinePort(conf, portType);
 
 				InetSocketAddress bindAddress = null;
@@ -116,18 +123,30 @@ public class RadiusServerImpl implements RadiusServer, RadiusFactoryEventListene
 		}
 	}
 
+	private List<RadiusConfigMetadata> getVirtualServerConfigList() {
+		List<RadiusConfigMetadata> l = new ArrayList<RadiusConfigMetadata>();
+		l.add(new RadiusConfigMetadata(Type.String, RadiusVirtualServerImpl.PORT_TYPE_KEY, true));
+		l.add(new RadiusConfigMetadata(Type.String, RadiusVirtualServerImpl.HOSTNAME_KEY, false));
+		l.add(new RadiusConfigMetadata(Type.String, RadiusVirtualServerImpl.PROFILE_KEY, true));
+		l.add(new RadiusConfigMetadata(Type.Integer, RadiusVirtualServerImpl.PORT_KEY, true));
+		return l;
+	}
+
 	private void loadModules() throws BackingStoreException {
 		for (RadiusModuleType t : RadiusModuleType.values()) {
 			RadiusModule module = new RadiusModule(bc, this, t, prefsvc);
 			modules.put(t, module);
-
-			Preferences root = prefsvc.getSystemPreferences().node(t.getConfigNamespace());
-			for (String instanceName : root.childrenNames()) {
-				module.loadInstance(instanceName);
-			}
-
+			loadModuleInstances(t);
 			module.start();
 		}
+	}
+
+	private void loadModuleInstances(RadiusModuleType t) throws BackingStoreException {
+		RadiusModule module = modules.get(t);
+
+		Preferences root = prefsvc.getSystemPreferences().node(t.getConfigNamespace());
+		for (String instanceName : root.childrenNames())
+			module.loadInstance(instanceName);
 	}
 
 	private void unloadModules() throws BackingStoreException {
@@ -201,13 +220,19 @@ public class RadiusServerImpl implements RadiusServer, RadiusFactoryEventListene
 	public RadiusVirtualServer createVirtualServer(String name, RadiusPortType portType, String profileName,
 			InetSocketAddress bindAddress) {
 		verifyNotNull("name", name);
+		verifyNotNull("port type", portType);
 		verifyNotNull("profile name", profileName);
 
 		if (!profiles.containsKey(profileName))
 			throw new IllegalArgumentException("profile not found: " + profileName);
 
 		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, VIRTUAL_SERVER_ROOT_KEY, name);
-		return new RadiusVirtualServerImpl(this, profileName, portType, conf, executor, bindAddress);
+		conf.put("profile", profileName);
+		RadiusVirtualServerImpl vs = new RadiusVirtualServerImpl(this, profileName, portType, conf, executor,
+				bindAddress);
+
+		virtualServers.put(vs.getName(), vs);
+		return vs;
 	}
 
 	@Override
@@ -316,6 +341,13 @@ public class RadiusServerImpl implements RadiusServer, RadiusFactoryEventListene
 				RadiusModule module = getModule(t);
 				RadiusFactory<?> factory = (RadiusFactory<?>) service;
 				module.addFactory(factory);
+
+				try {
+					loadModuleInstances(t);
+				} catch (BackingStoreException e) {
+					logger.error("kraken radius: cannot load module instances for " + t);
+				}
+
 				return;
 			}
 		}

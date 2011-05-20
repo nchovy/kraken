@@ -37,6 +37,10 @@ public class UserNameAttribute extends RadiusAttribute {
 	public int getType() {
 		return 1;
 	}
+	
+	public String getName() {
+		return name;
+	}
 
 	@Override
 	public byte[] getBytes() {

@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 public abstract class RadiusAttribute {
 	public abstract int getType();
-	
+
 	public abstract byte[] getBytes();
 
 	/**
@@ -111,7 +111,7 @@ public abstract class RadiusAttribute {
 			throw new BufferUnderflowException();
 
 		try {
-			return new String(b, offset + 2, length - 2, "utf-8");
+			return new String(b, offset + 2, len - 2, "utf-8");
 		} catch (UnsupportedEncodingException e) {
 			// not reachable
 			return null;
@@ -208,5 +208,10 @@ public abstract class RadiusAttribute {
 		default:
 			throw new UnsupportedOperationException();
 		}
+	}
+
+	@Override
+	public String toString() {
+		return "type=" + getType() + ", len=" + getBytes().length;
 	}
 }

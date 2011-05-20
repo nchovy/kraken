@@ -19,6 +19,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.krakenapps.radius.protocol.AccessAccept;
+import org.krakenapps.radius.protocol.AccessReject;
 import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.RadiusPacket;
 import org.krakenapps.radius.server.RadiusAuthenticator;
@@ -43,9 +45,27 @@ public class PapAuthenticator extends RadiusAuthenticator {
 
 	@Override
 	public RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases) {
+		// for statistics
+		lastAuth = new Date();
+		counter.incrementAndGet();
+
+		// authentication
+		String name = req.getUserName().getName();
+		String password = req.getUserPassword().getPassword();
+
 		// TODO: password will be moved to debug logging
-		logger.info("kraken radius: pap auth for user [{}], password [{}]", req.getUserName(), req.getUserPassword());
-		return null;
+		logger.info("kraken radius: pap auth for user [{}], password [{}]", name, password);
+
+		boolean passed = false;
+		for (RadiusUserDatabase userdb : userDatabases) {
+			if (userdb.verifyPassword(name, password))
+				passed = true;
+		}
+
+		if (passed)
+			return new AccessAccept();
+		else
+			return new AccessReject();
 	}
 
 	@Override

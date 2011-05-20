@@ -15,17 +15,7 @@
  */
 package org.krakenapps.radius.protocol;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class AccessRequest extends RadiusPacket {
-	private UserNameAttribute userName;
-	private UserPasswordAttribute userPassword;
-	private NasIpAddressAttribute nasIpAddress;
-	private NasIdentifierAttribute nasIdentifier;
-	private NasPortAttribute nasPort;
-	private NasPortTypeAttribute nasPortType;
-
 	public AccessRequest() {
 		setCode(1);
 		setAuthenticator(newRequestAuthenticator());
@@ -36,80 +26,67 @@ public class AccessRequest extends RadiusPacket {
 	}
 
 	public UserNameAttribute getUserName() {
-		return userName;
+		return (UserNameAttribute) findAttribute(1);
 	}
 
 	public void setUserName(UserNameAttribute userName) {
-		this.userName = userName;
+		getAttributes().add(userName);
 	}
 
 	public UserPasswordAttribute getUserPassword() {
-		return userPassword;
+		return (UserPasswordAttribute) findAttribute(2);
 	}
 
 	public void setUserPassword(UserPasswordAttribute userPassword) {
-		this.userPassword = userPassword;
+		getAttributes().add(userPassword);
 	}
 
 	public NasIpAddressAttribute getNasIpAddress() {
-		return nasIpAddress;
+		return (NasIpAddressAttribute) findAttribute(4);
 	}
 
 	public void setNasIpAddress(NasIpAddressAttribute nasIpAddress) {
-		this.nasIpAddress = nasIpAddress;
+		getAttributes().add(nasIpAddress);
 	}
 
 	public NasIdentifierAttribute getNasIdentifier() {
-		return nasIdentifier;
+		return (NasIdentifierAttribute) findAttribute(32);
 	}
 
 	public void setNasIdentifier(NasIdentifierAttribute nasIdentifier) {
-		this.nasIdentifier = nasIdentifier;
+		getAttributes().add(nasIdentifier);
 	}
 
 	public NasPortAttribute getNasPort() {
-		return nasPort;
+		return (NasPortAttribute) findAttribute(5);
 	}
 
 	public void setNasPort(NasPortAttribute nasPort) {
-		this.nasPort = nasPort;
+		getAttributes().add(nasPort);
 	}
 
 	public NasPortTypeAttribute getNasPortType() {
-		return nasPortType;
+		return (NasPortTypeAttribute) findAttribute(61);
 	}
 
 	public void setNasPortType(NasPortTypeAttribute nasPortType) {
-		this.nasPortType = nasPortType;
+		getAttributes().add(nasPortType);
 	}
 
 	@Override
-	public List<RadiusAttribute> getAttributes() {
-		List<RadiusAttribute> attrs = new ArrayList<RadiusAttribute>(super.getAttributes());
-		if (userName == null)
-			throw new IllegalStateException("user name not set");
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("AccessRequest: ");
 
-		attrs.add(userName);
+		int i = 0;
+		for (RadiusAttribute attr : getAttributes()) {
+			if (i++ != 0)
+				sb.append(", ");
+			sb.append("(");
+			sb.append(attr);
+			sb.append(")");
+		}
 
-		// User-Password or CHAP
-		if (userPassword != null)
-			attrs.add(userPassword);
-
-		// NAS-IP-Address or NAS-Identifier
-		if (nasIpAddress != null)
-			attrs.add(nasIpAddress);
-
-		if (nasIdentifier != null)
-			attrs.add(nasIdentifier);
-
-		// NAS-Port or NAS-Port-Type
-		if (nasPort != null)
-			attrs.add(nasPort);
-
-		if (nasPortType != null)
-			attrs.add(nasPortType);
-
-		return attrs;
+		return sb.toString();
 	}
-
 }

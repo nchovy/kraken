@@ -36,6 +36,7 @@ import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
+import org.krakenapps.radius.server.RadiusVirtualServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,18 +84,30 @@ public class RadiusScript implements Script {
 		}
 	}
 
+	public void virtualServers(String[] args) {
+		context.println("Virtual Servers");
+		context.println("-----------------");
+		for (RadiusVirtualServer vs : server.getVirtualServers()) {
+			context.println(vs);
+		}
+	}
+
 	@ScriptUsage(description = "create virtual server", arguments = {
 			@ScriptArgument(name = "name", type = "string", description = "name of the virtual server"),
-			@ScriptArgument(name = "port type", type = "string", description = "type 'auth' for authentication, or 'acct' for accounting"),
-			@ScriptArgument(name = "profile name", type = "string", description = "profile name") })
+			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
+			@ScriptArgument(name = "port type", type = "string", description = "type 'auth' for authentication, or 'acct' for accounting", optional = true) })
 	public void createVirtualServer(String[] args) {
 		try {
 			String name = args[0];
-			RadiusPortType portType = RadiusPortType.parse(args[1]);
 			String profileName = args[1];
+			RadiusPortType portType = RadiusPortType.Authentication;
+			if (args.length >= 3)
+				portType = RadiusPortType.parse(args[2]);
 
-			server.createVirtualServer(name, portType, profileName);
-			context.println("created");
+			RadiusVirtualServer vs = server.createVirtualServer(name, portType, profileName);
+			vs.open();
+
+			context.println("opened " + vs.getBindAddress());
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("kraken radius: cannot create virtual server", e);
@@ -106,6 +119,7 @@ public class RadiusScript implements Script {
 		try {
 			String name = args[0];
 			server.removeVirtualServer(name);
+			context.println("removed");
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("kraken radius: cannot remove virtual server", e);
@@ -116,25 +130,32 @@ public class RadiusScript implements Script {
 			@ScriptArgument(name = "name", type = "string", description = "name of the profile"),
 			@ScriptArgument(name = "secret", type = "string", description = "shared secret") })
 	public void createProfile(String[] args) {
-		RadiusProfile profile = new RadiusProfile();
-		profile.setName(args[0]);
-		profile.setSharedSecret(args[1]);
+		try {
+			RadiusProfile profile = new RadiusProfile();
+			profile.setName(args[0]);
+			profile.setSharedSecret(args[1]);
 
-		context.println("---------------------------");
-		context.println("Select Authenticators");
-		context.println("---------------------------");
-		List<String> selectedAuths = select(RadiusModuleType.Authenticator);
+			context.println("---------------------------");
+			context.println("Select Authenticators");
+			context.println("---------------------------");
+			List<String> selectedAuths = select(RadiusModuleType.Authenticator);
 
-		context.println("---------------------------");
-		context.println("Select User Databases");
-		context.println("---------------------------");
-		List<String> selectedUdbs = select(RadiusModuleType.UserDatabase);
+			context.println("---------------------------");
+			context.println("Select User Databases");
+			context.println("---------------------------");
+			List<String> selectedUdbs = select(RadiusModuleType.UserDatabase);
 
-		profile.setAuthenticators(selectedAuths);
-		profile.setUserDatabases(selectedUdbs);
+			profile.setAuthenticators(selectedAuths);
+			profile.setUserDatabases(selectedUdbs);
 
-		server.createProfile(profile);
-		context.println("created");
+			server.createProfile(profile);
+			context.println("created");
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("interrupted");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+		}
 	}
 
 	@ScriptUsage(description = "remove profile", arguments = { @ScriptArgument(name = "name", type = "string", description = "name of the profile") })
@@ -164,7 +185,7 @@ public class RadiusScript implements Script {
 		RadiusModule module = server.getModule(type);
 
 		for (RadiusFactory<?> factory : module.getFactories()) {
-			context.println(factory);
+			context.println("[" + factory.getName() + "] " + factory);
 		}
 	}
 
@@ -182,7 +203,7 @@ public class RadiusScript implements Script {
 		RadiusModule module = server.getModule(type);
 
 		for (RadiusInstance instance : module.getInstances()) {
-			context.println(instance);
+			context.println("[" + instance.getName() + "] " + instance);
 		}
 	}
 
@@ -258,7 +279,7 @@ public class RadiusScript implements Script {
 		return configs;
 	}
 
-	private List<String> select(RadiusModuleType type) {
+	private List<String> select(RadiusModuleType type) throws InterruptedException {
 		// get instance names
 		List<String> names = new ArrayList<String>();
 		RadiusModule module = server.getModule(type);
@@ -294,9 +315,6 @@ public class RadiusScript implements Script {
 					context.println(name + " added");
 				}
 
-			} catch (InterruptedException e) {
-				context.println("");
-				throw new RuntimeException("interrupted");
 			} catch (NumberFormatException e) {
 				context.println("");
 				throw new RuntimeException("invalid number format");

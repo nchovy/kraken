@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +83,22 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 		this.bindAddress = bindAddress;
 		this.clientOverrides = new ConcurrentHashMap<RadiusClientAddress, String>();
 		this.callbacks = new CopyOnWriteArraySet<RadiusVirtualServerEventListener>();
+		this.profile = server.getProfile(conf.getString(PROFILE_KEY));
+		this.portType = portType;
+
+		verifyNotNull("name", name);
+		verifyNotNull("port type", portType);
+		verifyNotNull("executor", executor);
+
+		// set config
+		conf.put(PORT_TYPE_KEY, portType.getAlias());
+
+		if (bindAddress != null) {
+			conf.put(PORT_KEY, bindAddress.getPort());
+			conf.put(HOSTNAME_KEY, bindAddress.getAddress().getHostAddress());
+		} else {
+			conf.put(PORT_KEY, DEFAULT_AUTH_PORT);
+		}
 	}
 
 	@Override
@@ -89,7 +106,13 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 		try {
 			logger.info("kraken radius: virtual server [bind={}] started", bindAddress);
 			while (true) {
-				runonce();
+				try {
+					runonce();
+				} catch (IOException e) {
+					throw e;
+				} catch (Exception e) {
+					logger.warn("kraken radius: cannot respond", e);
+				}
 			}
 		} catch (IOException e) {
 			logger.info("kraken radius: io error", e);
@@ -100,22 +123,27 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 
 	private void runonce() throws IOException {
 		byte[] buf = new byte[4096];
-		DatagramPacket packet = new DatagramPacket(buf, buf.length);
-		socket.receive(packet);
+		DatagramPacket p = new DatagramPacket(buf, buf.length);
+		socket.receive(p);
+
+		logger.info("kraken radius: received datagram from " + p.getSocketAddress());
 
 		if (profile == null) {
 			logger.debug("kraken radius: profile not set for virtual server [{}]", bindAddress);
 			return;
 		}
 
-		RadiusPacket req = RadiusPacket.parse(profile.getSharedSecret(), buf);
-		if (req instanceof AccessRequest) {
-			AccessRequest accessRequest = (AccessRequest) req;
+		RadiusPacket packet = RadiusPacket.parse(profile.getSharedSecret(), buf);
+		logger.debug("kraken radius: received radius packet [{}]", packet);
+
+		if (packet instanceof AccessRequest) {
+			AccessRequest accessRequest = (AccessRequest) packet;
 			List<RadiusUserDatabase> userDatabases = getUserDatabases(profile);
 
 			for (String name : profile.getAuthenticators()) {
 				RadiusAuthenticator auth = getAuthenticator(name);
-				executor.execute(new AuthTask(accessRequest, auth, userDatabases));
+				executor.execute(new AuthTask((InetSocketAddress) p.getSocketAddress(), accessRequest, auth,
+						userDatabases));
 			}
 		}
 	}
@@ -152,13 +180,16 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	public void open() throws IOException {
 		if (bindAddress != null)
 			socket = new DatagramSocket(bindAddress.getPort(), bindAddress.getAddress());
-		else
+		else {
 			socket = new DatagramSocket(DEFAULT_AUTH_PORT);
+			bindAddress = (InetSocketAddress) socket.getLocalSocketAddress();
+		}
 
 		listenerThread = new Thread(this, "Radius Virtual Server");
 		listenerThread.start();
 
 		this.isOpened = true;
+		logger.info("kraken radius: opened virtual server [{}]", bindAddress);
 	}
 
 	@Override
@@ -166,6 +197,7 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 		try {
 			socket.close();
 			listenerThread.interrupt();
+			logger.info("kraken radius: closed virtual server [{}]", bindAddress);
 		} finally {
 			// fire callbacks
 			for (RadiusVirtualServerEventListener callback : callbacks) {
@@ -269,13 +301,20 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 		callbacks.remove(listener);
 	}
 
-	private static class AuthTask implements Runnable {
+	private void verifyNotNull(String name, Object value) {
+		if (value == null)
+			throw new IllegalArgumentException(name + " should be not null");
+	}
+
+	private class AuthTask implements Runnable {
+		private InetSocketAddress remoteAddr;
 		private AccessRequest accessRequest;
 		private RadiusAuthenticator authenticator;
 		private List<RadiusUserDatabase> userDatabases;
 
-		public AuthTask(AccessRequest accessRequest, RadiusAuthenticator authenticator,
+		public AuthTask(InetSocketAddress remoteAddr, AccessRequest accessRequest, RadiusAuthenticator authenticator,
 				List<RadiusUserDatabase> userDatabases) {
+			this.remoteAddr = remoteAddr;
 			this.accessRequest = accessRequest;
 			this.authenticator = authenticator;
 			this.userDatabases = userDatabases;
@@ -283,7 +322,31 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 
 		@Override
 		public void run() {
-			authenticator.authenticate(accessRequest, userDatabases);
+			RadiusPacket response = authenticator.authenticate(accessRequest, userDatabases);
+			byte[] buf = response.getBytes();
+
+			DatagramSocket s = null;
+			try {
+				DatagramPacket p = new DatagramPacket(buf, buf.length);
+				s = new DatagramSocket();
+				s.connect(remoteAddr);
+				s.send(p);
+			} catch (Exception e) {
+				logger.error("kraken radius: cannot respond to " + remoteAddr, e);
+			} finally {
+				try {
+					if (s != null)
+						s.close();
+				} catch (Exception e) {
+					logger.error("kraken radius: cannot close send socket", e);
+				}
+			}
 		}
+	}
+
+	@Override
+	public String toString() {
+		return "[" + name + "] type=" + portType.getAlias() + ", profile=" + profile.getName() + ", bind="
+				+ bindAddress;
 	}
 }
