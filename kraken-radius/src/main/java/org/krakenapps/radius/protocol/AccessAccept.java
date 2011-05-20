@@ -15,8 +15,13 @@
  */
 package org.krakenapps.radius.protocol;
 
-public class AccessAccept extends RadiusPacket {
+public class AccessAccept extends RadiusResponse {
 	public AccessAccept() {
+		setCode(2);
+	}
+	
+	public AccessAccept(RadiusPacket req, String sharedSecret) {
+		super(req, sharedSecret);
 		setCode(2);
 	}
 

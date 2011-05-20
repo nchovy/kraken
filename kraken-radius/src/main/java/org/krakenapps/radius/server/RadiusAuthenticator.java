@@ -18,12 +18,13 @@ package org.krakenapps.radius.server;
 import java.util.List;
 
 import org.krakenapps.radius.protocol.AccessRequest;
-import org.krakenapps.radius.protocol.RadiusPacket;
+import org.krakenapps.radius.protocol.RadiusResponse;
 
 public abstract class RadiusAuthenticator extends RadiusInstance {
 	public RadiusAuthenticator(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
 		super(name, factory, conf);
 	}
-	
-	public abstract RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases);
+
+	public abstract RadiusResponse authenticate(RadiusProfile profile, AccessRequest req,
+			List<RadiusUserDatabase> userDatabases);
 }

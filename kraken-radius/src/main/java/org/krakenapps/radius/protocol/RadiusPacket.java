@@ -28,6 +28,7 @@ public abstract class RadiusPacket {
 	private int length; // 2byte
 	private byte[] authenticator; // 16byte
 	private List<RadiusAttribute> attrs = new ArrayList<RadiusAttribute>();
+	protected boolean finalized = false;
 
 	public static byte[] newRequestAuthenticator() {
 		UUID uuid = UUID.randomUUID();
@@ -105,6 +106,7 @@ public abstract class RadiusPacket {
 	}
 
 	public void setCode(int code) {
+		guard();
 		this.code = code;
 	}
 
@@ -113,6 +115,7 @@ public abstract class RadiusPacket {
 	}
 
 	public void setIdentifier(int identifier) {
+		guard();
 		this.identifier = identifier;
 	}
 
@@ -121,6 +124,7 @@ public abstract class RadiusPacket {
 	}
 
 	public void setLength(int length) {
+		guard();
 		this.length = length;
 	}
 
@@ -129,6 +133,7 @@ public abstract class RadiusPacket {
 	}
 
 	public void setAuthenticator(byte[] authenticator) {
+		guard();
 		this.authenticator = authenticator;
 	}
 
@@ -137,32 +142,53 @@ public abstract class RadiusPacket {
 	}
 
 	public void setAttributes(List<RadiusAttribute> attrs) {
+		guard();
 		this.attrs = attrs;
 	}
-	
+
 	public RadiusAttribute findAttribute(int type) {
-		for (RadiusAttribute attr : attrs) 
+		for (RadiusAttribute attr : attrs)
 			if (attr.getType() == type)
 				return attr;
 		return null;
 	}
 
 	public byte[] getBytes() {
-		int len = 20;
+		if (!finalized)
+			throw new IllegalStateException("invoke finalize() before byte serialization");
 
-		List<RadiusAttribute> attrs = getAttributes();
-		for (RadiusAttribute attr : attrs)
-			len += attr.getBytes().length;
-
-		ByteBuffer bb = ByteBuffer.allocate(len);
+		ByteBuffer bb = ByteBuffer.allocate(length);
 		bb.put((byte) code);
 		bb.put((byte) identifier);
-		bb.putShort((short) len);
+		bb.putShort((short) length);
 		bb.put(getAuthenticator());
 
 		for (RadiusAttribute attr : attrs)
 			bb.put(attr.getBytes());
 
 		return bb.array();
+	}
+
+	private void guard() {
+		if (finalized)
+			throw new IllegalStateException("already finalized packet");
+	}
+
+	public boolean isFinalized() {
+		return finalized;
+	}
+
+	public void finalize() {
+		if (finalized)
+			return;
+		
+		int len = 20;
+
+		List<RadiusAttribute> attrs = getAttributes();
+		for (RadiusAttribute attr : attrs)
+			len += attr.getBytes().length;
+
+		this.length = len;
+		finalized = true;
 	}
 }

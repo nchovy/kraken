@@ -22,10 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.krakenapps.radius.protocol.AccessAccept;
 import org.krakenapps.radius.protocol.AccessReject;
 import org.krakenapps.radius.protocol.AccessRequest;
-import org.krakenapps.radius.protocol.RadiusPacket;
+import org.krakenapps.radius.protocol.RadiusResponse;
+import org.krakenapps.radius.protocol.ReplyMessageAttribute;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +46,7 @@ public class PapAuthenticator extends RadiusAuthenticator {
 	}
 
 	@Override
-	public RadiusPacket authenticate(AccessRequest req, List<RadiusUserDatabase> userDatabases) {
+	public RadiusResponse authenticate(RadiusProfile profile, AccessRequest req, List<RadiusUserDatabase> userDatabases) {
 		// for statistics
 		lastAuth = new Date();
 		counter.incrementAndGet();
@@ -62,10 +64,15 @@ public class PapAuthenticator extends RadiusAuthenticator {
 				passed = true;
 		}
 
-		if (passed)
-			return new AccessAccept();
-		else
-			return new AccessReject();
+		if (passed) {
+			AccessAccept response = new AccessAccept(req, profile.getSharedSecret());
+			response.getAttributes().add(new ReplyMessageAttribute("Welcome to kraken-radius"));
+			return response;
+		} else {
+			AccessReject response = new AccessReject(req, profile.getSharedSecret());
+			response.getAttributes().add(new ReplyMessageAttribute("Go away!"));
+			return response;
+		}
 	}
 
 	@Override

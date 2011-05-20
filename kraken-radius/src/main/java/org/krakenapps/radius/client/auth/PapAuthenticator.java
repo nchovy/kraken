@@ -24,6 +24,7 @@ import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.NasIpAddressAttribute;
 import org.krakenapps.radius.protocol.NasPortAttribute;
 import org.krakenapps.radius.protocol.RadiusPacket;
+import org.krakenapps.radius.protocol.RadiusResponse;
 import org.krakenapps.radius.protocol.UserNameAttribute;
 import org.krakenapps.radius.protocol.UserPasswordAttribute;
 
@@ -38,12 +39,13 @@ public class PapAuthenticator implements Authenticator {
 	}
 
 	@Override
-	public RadiusPacket authenticate(InetAddress addr, int port, String sharedSecret) throws IOException {
+	public RadiusResponse authenticate(InetAddress addr, int port, String sharedSecret) throws IOException {
 		AccessRequest req = new AccessRequest();
 		req.setUserName(new UserNameAttribute(userName));
 		req.setUserPassword(new UserPasswordAttribute(req.getAuthenticator(), sharedSecret, password));
 		req.setNasIpAddress(new NasIpAddressAttribute(InetAddress.getByName("127.0.0.1")));
 		req.setNasPort(new NasPortAttribute(0));
+		req.finalize();
 
 		DatagramSocket socket = new DatagramSocket();
 		socket.connect(addr, port);
@@ -57,6 +59,6 @@ public class PapAuthenticator implements Authenticator {
 		DatagramPacket response = new DatagramPacket(buf, buf.length);
 		socket.receive(response);
 
-		return RadiusPacket.parse(sharedSecret, buf);
+		return (RadiusResponse) RadiusPacket.parse(sharedSecret, buf);
 	}
 }

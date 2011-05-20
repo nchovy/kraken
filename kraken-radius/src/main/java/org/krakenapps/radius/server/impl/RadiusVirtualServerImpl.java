@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -142,8 +141,8 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 
 			for (String name : profile.getAuthenticators()) {
 				RadiusAuthenticator auth = getAuthenticator(name);
-				executor.execute(new AuthTask((InetSocketAddress) p.getSocketAddress(), accessRequest, auth,
-						userDatabases));
+				InetSocketAddress remoteAddr = (InetSocketAddress) p.getSocketAddress();
+				executor.execute(new AuthTask(remoteAddr, profile, accessRequest, auth, userDatabases));
 			}
 		}
 	}
@@ -308,13 +307,15 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 
 	private class AuthTask implements Runnable {
 		private InetSocketAddress remoteAddr;
+		private RadiusProfile profile;
 		private AccessRequest accessRequest;
 		private RadiusAuthenticator authenticator;
 		private List<RadiusUserDatabase> userDatabases;
 
-		public AuthTask(InetSocketAddress remoteAddr, AccessRequest accessRequest, RadiusAuthenticator authenticator,
-				List<RadiusUserDatabase> userDatabases) {
+		public AuthTask(InetSocketAddress remoteAddr, RadiusProfile profile, AccessRequest accessRequest,
+				RadiusAuthenticator authenticator, List<RadiusUserDatabase> userDatabases) {
 			this.remoteAddr = remoteAddr;
+			this.profile = profile;
 			this.accessRequest = accessRequest;
 			this.authenticator = authenticator;
 			this.userDatabases = userDatabases;
@@ -322,24 +323,17 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 
 		@Override
 		public void run() {
-			RadiusPacket response = authenticator.authenticate(accessRequest, userDatabases);
+			RadiusPacket response = authenticator.authenticate(profile, accessRequest, userDatabases);
+			response.finalize();
+
 			byte[] buf = response.getBytes();
 
-			DatagramSocket s = null;
 			try {
-				DatagramPacket p = new DatagramPacket(buf, buf.length);
-				s = new DatagramSocket();
-				s.connect(remoteAddr);
-				s.send(p);
+				DatagramPacket p = new DatagramPacket(buf, buf.length, remoteAddr);
+				socket.send(p);
+				logger.info("kraken radius: sent response [{}] to [{}]", response, remoteAddr);
 			} catch (Exception e) {
 				logger.error("kraken radius: cannot respond to " + remoteAddr, e);
-			} finally {
-				try {
-					if (s != null)
-						s.close();
-				} catch (Exception e) {
-					logger.error("kraken radius: cannot close send socket", e);
-				}
 			}
 		}
 	}

@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 
 import org.krakenapps.radius.client.auth.Authenticator;
-import org.krakenapps.radius.protocol.RadiusPacket;
+import org.krakenapps.radius.protocol.RadiusResponse;
 
 public class RadiusClient {
 	private InetAddress addr;
@@ -36,7 +36,7 @@ public class RadiusClient {
 		this.sharedSecret = sharedSecret;
 	}
 
-	public RadiusPacket authenticate(Authenticator authenticator) throws IOException {
+	public RadiusResponse authenticate(Authenticator authenticator) throws IOException {
 		return authenticator.authenticate(addr, port, sharedSecret);
 	}
 }
