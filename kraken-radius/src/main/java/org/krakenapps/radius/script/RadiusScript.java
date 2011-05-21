@@ -68,7 +68,8 @@ public class RadiusScript implements Script {
 			String password = args[3];
 
 			RadiusClient client = new RadiusClient(addr, sharedSecret);
-			RadiusPacket response = client.authenticate(new PapAuthenticator(userName, password));
+			PapAuthenticator pap = new PapAuthenticator(client, userName, password);
+			RadiusPacket response = client.authenticate(pap);
 			context.println(response);
 		} catch (Exception e) {
 			context.println(e.getMessage());

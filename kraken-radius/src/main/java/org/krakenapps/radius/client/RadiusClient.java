@@ -17,6 +17,8 @@ package org.krakenapps.radius.client;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.radius.client.auth.Authenticator;
 import org.krakenapps.radius.protocol.RadiusResponse;
@@ -25,6 +27,7 @@ public class RadiusClient {
 	private InetAddress addr;
 	private int port;
 	private String sharedSecret;
+	private AtomicInteger id;
 
 	public RadiusClient(InetAddress addr, String sharedSecret) {
 		this(addr, 1812, sharedSecret);
@@ -34,9 +37,26 @@ public class RadiusClient {
 		this.addr = addr;
 		this.port = port;
 		this.sharedSecret = sharedSecret;
+		this.id = new AtomicInteger(new Random().nextInt(255));
+	}
+
+	public InetAddress getIpAddress() {
+		return addr;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public String getSharedSecret() {
+		return sharedSecret;
 	}
 
 	public RadiusResponse authenticate(Authenticator authenticator) throws IOException {
-		return authenticator.authenticate(addr, port, sharedSecret);
+		return authenticator.authenticate();
+	}
+	
+	public int getNextId() {
+		return 1 + id.incrementAndGet() % 254;
 	}
 }

@@ -20,6 +20,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
+import org.krakenapps.radius.client.RadiusClient;
 import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.NasIpAddressAttribute;
 import org.krakenapps.radius.protocol.NasPortAttribute;
@@ -29,26 +30,28 @@ import org.krakenapps.radius.protocol.UserNameAttribute;
 import org.krakenapps.radius.protocol.UserPasswordAttribute;
 
 public class PapAuthenticator implements Authenticator {
-
+	private RadiusClient client;
 	private String userName;
 	private String password;
 
-	public PapAuthenticator(String userName, String password) {
+	public PapAuthenticator(RadiusClient client, String userName, String password) {
+		this.client = client;
 		this.userName = userName;
 		this.password = password;
 	}
 
 	@Override
-	public RadiusResponse authenticate(InetAddress addr, int port, String sharedSecret) throws IOException {
+	public RadiusResponse authenticate() throws IOException {
 		AccessRequest req = new AccessRequest();
+		req.setIdentifier(client.getNextId());
 		req.setUserName(new UserNameAttribute(userName));
-		req.setUserPassword(new UserPasswordAttribute(req.getAuthenticator(), sharedSecret, password));
+		req.setUserPassword(new UserPasswordAttribute(req.getAuthenticator(), client.getSharedSecret(), password));
 		req.setNasIpAddress(new NasIpAddressAttribute(InetAddress.getByName("127.0.0.1")));
 		req.setNasPort(new NasPortAttribute(0));
 		req.finalize();
 
 		DatagramSocket socket = new DatagramSocket();
-		socket.connect(addr, port);
+		socket.connect(client.getIpAddress(), client.getPort());
 		
 		byte[] payload = req.getBytes();
 		DatagramPacket packet = new DatagramPacket(payload, payload.length);
@@ -59,6 +62,6 @@ public class PapAuthenticator implements Authenticator {
 		DatagramPacket response = new DatagramPacket(buf, buf.length);
 		socket.receive(response);
 
-		return (RadiusResponse) RadiusPacket.parse(sharedSecret, buf);
+		return (RadiusResponse) RadiusPacket.parse(client.getSharedSecret(), buf);
 	}
 }
