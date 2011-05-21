@@ -216,11 +216,21 @@ public class JLdapService implements LdapService {
 
 		return ous;
 	}
+	
+	
 
 	@Override
 	public boolean verifyPassword(LdapProfile profile, String account, String password) {
+		return verifyPassword(profile, account, password, 0);
+	}
+
+	@Override
+	public boolean verifyPassword(LdapProfile profile, String account, String password, int timeout) {
 		LDAPConnection lc = new LDAPConnection();
 		try {
+			if (timeout > 0)
+				lc.setSocketTimeOut(timeout);
+			
 			lc.connect(profile.getDc(), LDAPConnection.DEFAULT_PORT);
 
 			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
