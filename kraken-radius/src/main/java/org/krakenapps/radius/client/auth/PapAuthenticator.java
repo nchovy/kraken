@@ -19,7 +19,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.Arrays;
 
+import org.krakenapps.radius.client.MalformedResponseException;
 import org.krakenapps.radius.client.RadiusClient;
 import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.NasIpAddressAttribute;
@@ -42,17 +44,19 @@ public class PapAuthenticator implements Authenticator {
 
 	@Override
 	public RadiusResponse authenticate() throws IOException {
+		String sharedSecret = client.getSharedSecret();
+
 		AccessRequest req = new AccessRequest();
 		req.setIdentifier(client.getNextId());
 		req.setUserName(new UserNameAttribute(userName));
-		req.setUserPassword(new UserPasswordAttribute(req.getAuthenticator(), client.getSharedSecret(), password));
+		req.setUserPassword(new UserPasswordAttribute(req.getAuthenticator(), sharedSecret, password));
 		req.setNasIpAddress(new NasIpAddressAttribute(InetAddress.getByName("127.0.0.1")));
 		req.setNasPort(new NasPortAttribute(0));
 		req.finalize();
 
 		DatagramSocket socket = new DatagramSocket();
 		socket.connect(client.getIpAddress(), client.getPort());
-		
+
 		byte[] payload = req.getBytes();
 		DatagramPacket packet = new DatagramPacket(payload, payload.length);
 		socket.setSoTimeout(5000);
@@ -62,6 +66,13 @@ public class PapAuthenticator implements Authenticator {
 		DatagramPacket response = new DatagramPacket(buf, buf.length);
 		socket.receive(response);
 
-		return (RadiusResponse) RadiusPacket.parse(client.getSharedSecret(), buf);
+		RadiusResponse resp = (RadiusResponse) RadiusPacket.parse(sharedSecret, buf);
+
+		byte[] expectedAuthenticator = RadiusResponse.calculateResponseAuthenticator(resp, sharedSecret, req
+				.getAuthenticator());
+		if (!Arrays.equals(expectedAuthenticator, resp.getAuthenticator()))
+			throw new MalformedResponseException(req, resp);
+
+		return resp;
 	}
 }

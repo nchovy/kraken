@@ -22,7 +22,7 @@ import java.security.NoSuchAlgorithmException;
 public class RadiusResponse extends RadiusPacket {
 	private RadiusPacket request;
 	private String sharedSecret;
-	
+
 	public RadiusResponse() {
 	}
 
@@ -53,19 +53,20 @@ public class RadiusResponse extends RadiusPacket {
 		super.finalize();
 		finalized = false;
 
-		setAuthenticator(buildResponseAuthenticator());
+		setAuthenticator(calculateResponseAuthenticator(this, sharedSecret, request.getAuthenticator()));
 		finalized = true;
 	}
 
-	private byte[] buildResponseAuthenticator() {
+	public static byte[] calculateResponseAuthenticator(RadiusResponse p, String sharedSecret,
+			byte[] requestAuthenticator) {
 		try {
-			ByteBuffer bb = ByteBuffer.allocate(getLength() + sharedSecret.getBytes().length);
-			bb.put((byte) getCode());
-			bb.put((byte) request.getIdentifier());
-			bb.putShort((short) getLength());
-			bb.put(request.getAuthenticator());
+			ByteBuffer bb = ByteBuffer.allocate(p.getLength() + sharedSecret.getBytes().length);
+			bb.put((byte) p.getCode());
+			bb.put((byte) p.getIdentifier());
+			bb.putShort((short) p.getLength());
+			bb.put(requestAuthenticator);
 
-			for (RadiusAttribute attr : getAttributes())
+			for (RadiusAttribute attr : p.getAttributes())
 				bb.put(attr.getBytes());
 
 			bb.put(sharedSecret.getBytes());
