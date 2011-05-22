@@ -24,14 +24,14 @@ radius_attr_t* radius_attr_new_string( int type, int len, char *data )
 	return radius_attr_new( type, len, data, RADIUS_ATTR_STRING );
 }
 
-radius_attr_t* radius_attr_new_int( int type, int len, char *data )
+radius_attr_t* radius_attr_new_int( int type, int len, int data )
 {
-	return radius_attr_new( type, len, data, RADIUS_ATTR_INTEGER );
+	return radius_attr_new( type, len, (char*)data, RADIUS_ATTR_INTEGER );
 }
 
-radius_attr_t* radius_attr_new_ip( int type, int len, char *data )
+radius_attr_t* radius_attr_new_ip( int type, int len, int data )
 {
-	return radius_attr_new( type, len, data, RADIUS_ATTR_IP );
+	return radius_attr_new( type, len, (char*)data, RADIUS_ATTR_IP );
 }
 
 radius_attr_t* radius_attr_new_text( int type, int len, char *data )

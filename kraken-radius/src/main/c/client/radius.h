@@ -12,19 +12,6 @@
 #define ERR_NO_SHARED_SECRET	0x10000002
 #define ERR_INVALID_PORT_RANGE	0x10000003
 
-/* type definitions */
-typedef char byte_t;
-typedef unsigned short word_t;
-
-#ifdef WIN32
-
-#include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
-
-typedef SOCKET socket_t;
-
-#endif // WIN32
-
 /* object structures */
 
 #define RADIUS_ATTR_BINARY	1
@@ -32,6 +19,8 @@ typedef SOCKET socket_t;
 #define RADIUS_ATTR_INTEGER	3
 #define RADIUS_ATTR_IP		4
 #define RADIUS_ATTR_TEXT	5
+
+#include "types.h"
 
 typedef struct _radius_attr {
 	byte_t type;
@@ -78,8 +67,8 @@ radius_attr_t*	radius_attrs_pop( radius_attrs_t **attrs );
 
 radius_attr_t*	radius_attr_new( int type, int len, char *data, int data_type );
 radius_attr_t*	radius_attr_new_string( int type, int len, char *data );
-radius_attr_t*	radius_attr_new_int( int type, int len, char *data );
-radius_attr_t*	radius_attr_new_ip( int type, int len, char *data );
+radius_attr_t*	radius_attr_new_int( int type, int len, int data );
+radius_attr_t*	radius_attr_new_ip( int type, int len, int data );
 radius_attr_t*	radius_attr_new_text( int type, int len, char *data );
 void			radius_attr_free( radius_attr_t *attr );
 void			radius_attr_print( radius_attr_t *attr );
