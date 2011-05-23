@@ -114,12 +114,17 @@ void radius_attrs_push_front( radius_attrs_t **attrs, radius_attr_t *attr )
 
 radius_attr_t* radius_attrs_pop( radius_attrs_t **attrs )
 {
+	radius_attrs_t *it;
 	radius_attr_t *attr;
 
 	if ( *attrs == NULL )
 		return NULL;
 
-	attr = (*attrs)->attr;
-	(*attrs) = (*attrs)->next;
+	it = *attrs;
+	attr = it->attr;
+	*attrs = it->next;
+
+	free( it );
+
 	return attr;
 }
