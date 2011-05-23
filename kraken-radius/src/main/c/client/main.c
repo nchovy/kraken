@@ -31,7 +31,11 @@ int main(int argc, char *argv[])
 	
 	ret = radius_client_new( "172.20.2.2", RADIUS_AUTH_PORT, "10testing", &client );
 	ret = radius_client_papauth( client, "xeraph", "qooguevara", &response );
-	printf( "result: %x, code: %d \n", ret, response->code );
+
+	if ( ret == ERR_TIMEOUT )
+		printf( "request timeout\n" );
+	else
+		printf( "result: %x, code: %d \n", ret, response->code );
 
 	radius_packet_free( response );
 	radius_client_free( client );

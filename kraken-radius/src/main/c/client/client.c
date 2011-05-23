@@ -123,8 +123,13 @@ int recv_pap_auth_result( radius_client_t *client, socket_t sock, OUT radius_pac
 
 	addr_len = sizeof( remote_addr );
 
-	// TODO: tx id check + timeout
+	// TODO: tx id check
 	read_bytes = recvfrom( sock, buf, sizeof( buf ), 0, (struct sockaddr *) &remote_addr, &addr_len );
+
+	// timeout
+	if ( read_bytes < 0 )
+		return ERR_TIMEOUT;
+
 	radius_packet_parse( buf, read_bytes, response );
 	return 0;
 }
@@ -134,16 +139,32 @@ int radius_client_papauth( radius_client_t *client, char *username, char *passwo
 	int ret = 0;
 	socket_t sock;
 	radius_packet_t *request = NULL;
+#ifdef _WIN32
+	dword_t timeout = 3000;
+#else
+	struct timeval timeout;
+	timeout.tv_sec = 10;
+	timeout.tv_usec = 0;
+#endif
 
 	// open socket
 	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+#ifdef _WIN32
+	setsockopt( sock, SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof( dword_t ) );
+#else
+	setsockopt( sock, SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof( struct timeval ) );
+#endif
+
 	ret = connect( sock, (struct sockaddr*) &client->_addr, sizeof( client->_addr ) );
 
 	send_pap_access_request( client, sock, username, password, &request );
-	recv_pap_auth_result( client, sock, response );
+	ret = recv_pap_auth_result( client, sock, response );
+	if ( ret < 0 )
+		goto cleanup;
 
 	ret = radius_packet_verify_response( *response, request->auth, client->shared_secret );
 
+cleanup:
 	radius_packet_free( request );
 
 	// close socket
