@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,7 +81,7 @@ int radius_client_next_id( radius_client_t *client )
 	return next;
 }
 
-static int send_pap_access_request( radius_client_t *client, socket_t sock, char *username, char *password )
+static int send_pap_access_request( radius_client_t *client, socket_t sock, char *username, char *password, OUT radius_packet_t **request )
 {
 	int id;
 	radius_packet_t *packet = NULL;
@@ -93,13 +108,13 @@ static int send_pap_access_request( radius_client_t *client, socket_t sock, char
 	// send packet
 	sendto( sock, (const char*) packet_bytes, packet->len, 0, (struct sockaddr *) &client->_addr, sizeof( client->_addr ) );
 
-	// free resources
-	radius_packet_free( packet );
+	free( packet_bytes );
 
+	*request = packet;
 	return 0;
 }
 
-int recv_pap_auth_result( radius_client_t *client, socket_t sock, radius_packet_t **response )
+int recv_pap_auth_result( radius_client_t *client, socket_t sock, OUT radius_packet_t **response )
 {
 	char buf[4096];
 	struct sockaddr_in remote_addr;
@@ -108,23 +123,29 @@ int recv_pap_auth_result( radius_client_t *client, socket_t sock, radius_packet_
 
 	addr_len = sizeof( remote_addr );
 
+	// TODO: tx id check + timeout
 	read_bytes = recvfrom( sock, buf, sizeof( buf ), 0, (struct sockaddr *) &remote_addr, &addr_len );
 	radius_packet_parse( buf, read_bytes, response );
 	return 0;
 }
 
-int radius_client_papauth( radius_client_t *client, char *username, char *password, radius_packet_t **response )
+int radius_client_papauth( radius_client_t *client, char *username, char *password, OUT radius_packet_t **response )
 {
-	int ret;
+	int ret = 0;
 	socket_t sock;
+	radius_packet_t *request = NULL;
 
 	// open socket
 	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	ret = connect( sock, (struct sockaddr*) &client->_addr, sizeof( client->_addr ) );
 
-	send_pap_access_request( client, sock, username, password );
+	send_pap_access_request( client, sock, username, password, &request );
 	recv_pap_auth_result( client, sock, response );
-	
+
+	ret = radius_packet_verify_response( *response, request->auth, client->shared_secret );
+
+	radius_packet_free( request );
+
 	// close socket
 #ifdef WIN32
 	closesocket( sock );
@@ -132,5 +153,5 @@ int radius_client_papauth( radius_client_t *client, char *username, char *passwo
 	close( sock );
 #endif // WIN32
 
-	return 0;
+	return ret;
 }

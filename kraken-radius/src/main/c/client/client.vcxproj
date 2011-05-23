@@ -79,7 +79,6 @@
     <ClCompile Include="client.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="md5.c" />
-    <ClCompile Include="mddriver.c" />
     <ClCompile Include="packet.c" />
     <ClCompile Include="pap.c" />
   </ItemGroup>

@@ -30,9 +30,6 @@
     <ClCompile Include="md5.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="mddriver.c">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="packet.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
