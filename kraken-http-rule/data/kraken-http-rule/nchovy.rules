@@ -55,7 +55,7 @@
 
 (type: lfi; id: NCHOVY-2010-0062; msg: GNUBoard 4.31.04 (09.01.30) Multiple Local/Remote Vulnerabilities; path: poll_result.php; var: skin_dir; reference: http://www.exploit-db.com/exploits/7927/; )
 (type: lfi; id: NCHOVY-2009-0063; msg: GNUBoard 4.31.03 (08.12.29) Local File Inclusion Vulnerability ; path: common.php; var: g4_path; reference: http://www.exploit-db.com/exploits/7792/; cve: CVE-2009-0290; )
-(type: lfi; id: NCHOVY-2009-0063; msg: GNUBoard 4.31.03 (08.12.29) Local File Inclusion Vulnerability ; path: bypass_local.php; var: g4_paht; reference:  http://www.exploit-db.com/exploits/7792/; cve: CVE-2009-0290; )
+(type: lfi; id: NCHOVY-2009-0063; msg: GNUBoard 4.31.03 (08.12.29) Local File Inclusion Vulnerability ; path: bypass_local.php; var: g4_path; reference:  http://www.exploit-db.com/exploits/7792/; cve: CVE-2009-0290; )
 
 (type: regex; id: NCHOVY-2009-0001; msg: Zeroboard 4.1 pl7 now_connect() Remote Code Execution Exploit; path: /bbs/lib.php; var: REMOTE_ADDR; regex: .*; references: http://www.exploit-db.com/exploits/9590/; cve: CVE-2009-4834;)
 (type: rfi; id: NCHOVY-2009-0002; msg: Rgboard v4 5p1 (07.07.27) RFI exploit; path: /include/footer.php; var: _path[counter]; reference: http://www.exploit-db.com/exploits/7978/; )
