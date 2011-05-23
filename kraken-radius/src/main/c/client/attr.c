@@ -4,7 +4,7 @@
 /**
  * 'data' lifecycle is bound to radius_attr_t
  */
-radius_attr_t* radius_attr_new( int type, int len, char *data, int data_type )
+radius_attr_t* radius_attr_new( int type, int len, byte_t *data, int data_type )
 {
 	radius_attr_t *attr = NULL;
 
@@ -21,27 +21,28 @@ radius_attr_t* radius_attr_new( int type, int len, char *data, int data_type )
 
 radius_attr_t* radius_attr_new_string( int type, int len, char *data )
 {
-	return radius_attr_new( type, len, data, RADIUS_ATTR_STRING );
+	return radius_attr_new( type, len, (byte_t*) data, RADIUS_ATTR_STRING );
 }
 
 radius_attr_t* radius_attr_new_int( int type, int len, int data )
 {
-	return radius_attr_new( type, len, (char*)data, RADIUS_ATTR_INTEGER );
+	return radius_attr_new( type, len, (byte_t*) data, RADIUS_ATTR_INTEGER );
 }
 
 radius_attr_t* radius_attr_new_ip( int type, int len, int data )
 {
-	return radius_attr_new( type, len, (char*)data, RADIUS_ATTR_IP );
+	return radius_attr_new( type, len, (byte_t*) data, RADIUS_ATTR_IP );
 }
 
 radius_attr_t* radius_attr_new_text( int type, int len, char *data )
 {
-	return radius_attr_new( type, len, data, RADIUS_ATTR_TEXT );
+	return radius_attr_new( type, len, (byte_t*) data, RADIUS_ATTR_TEXT );
 }
 
 void radius_attr_free( radius_attr_t *attr )
 {
-	if ( attr->data != NULL )
+	if ( attr->data != NULL &&
+		( attr->data_type != RADIUS_ATTR_INTEGER && attr->data_type != RADIUS_ATTR_IP ))
 		free( attr->data );
 
 	free( attr );
@@ -67,4 +68,30 @@ void radius_attr_print( radius_attr_t *attr )
 		printf("(t=%d, l=%d, data=%s)", attr->type, attr->len, attr->data );
 		break;
 	}
+}
+
+int radius_attr_serialize( radius_attr_t *attr, byte_t *buf, int offset, int length )
+{
+	int i = 0;
+	int d;
+	byte_t *b;
+
+	if ( attr->len > length )
+		return ERR_BUFFER_OVERFLOW;
+
+	buf[ offset ] = attr->type;
+	buf[ offset + 1 ] = attr->len;
+	
+	if (attr->data_type == RADIUS_ATTR_INTEGER || attr->data_type == RADIUS_ATTR_IP )
+	{
+		d = htonl( (int) attr->data );
+		b = (byte_t*) &d;
+	}
+	else 
+		b = attr->data;
+
+	for ( i = 0; i < attr->len - 2; i++ )
+		buf[ offset + 2 + i ] = b[ i ];
+
+	return 0;
 }

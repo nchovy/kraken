@@ -46,6 +46,7 @@ Arguments (may be any combination):
   filename - digests file
   (none)   - digests standard input
  */
+/*
 int main (int argc, char *argv[])
 {
   int i;
@@ -65,6 +66,7 @@ int main (int argc, char *argv[])
 
   return (0);
 }
+*/
 
 /* Digests a string and prints the result.
  */

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "radius.h"
 
 radius_attrs_t *radius_attrs_new()
@@ -58,6 +59,8 @@ void radius_attrs_print( radius_attrs_t **attrs )
 			break;
 
 		radius_attr_print( it->attr );
+		printf("\n");
+		it = it->next;
 	}
 }
 
@@ -76,7 +79,11 @@ void radius_attrs_push_back( radius_attrs_t **attrs, radius_attr_t *attr )
 		return;
 	}
 
+	last = *attrs;
+	while ( last->next != NULL )
+		last = last->next;
 
+	last->next = node;
 }
 
 void radius_attrs_push_front( radius_attrs_t **attrs, radius_attr_t *attr )

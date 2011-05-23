@@ -8,12 +8,30 @@
 #define RADIUS_AUTH_PORT		1812
 
 /* error codes */
-#define ERR_NO_ADDRESS			0x10000001
-#define ERR_NO_SHARED_SECRET	0x10000002
-#define ERR_INVALID_PORT_RANGE	0x10000003
+#define ERR_NULL_ADDRESS		0x10000001
+#define ERR_NULL_SHARED_SECRET	0x10000002
+#define ERR_NULL_AUTHENTICATOR	0x10000003
+#define ERR_NULL_PASSWORD		0x10000004
+#define ERR_INVALID_PORT_RANGE	0x10000005
+#define ERR_BUFFER_OVERFLOW		0x10000006
+#define ERR_BUFFER_UNDERFLOW	0x10000007
+#define ERR_IP_RESOLVE_ERROR	0x10000008
+
+/* radius packet codes */
+#define RADIUS_ACCESS_REQUEST	1
+#define RADIUS_ACCESS_ACCEPT	2
+#define RADIUS_ACCESS_REJECT	3
+
+/* attr type codes */
+#define RADIUS_USER_NAME		1
+#define RADIUS_USER_PASSWORD	2
+#define RADIUS_CHAP_PASSWORD	3
+#define	RADIUS_NAS_IP_ADDR		4
+#define RADIUS_NAS_PORT			5
+#define	RADIUS_NAS_ID			32
+#define	RADIUS_NAS_PORT_TYPE	61
 
 /* object structures */
-
 #define RADIUS_ATTR_BINARY	1
 #define RADIUS_ATTR_STRING	2
 #define RADIUS_ATTR_INTEGER	3
@@ -24,7 +42,7 @@
 
 typedef struct _radius_attr {
 	byte_t type;
-	byte_t len;
+	byte_t len; /* includes metadata length (= data length + 2) */
 	byte_t data_type;
 	byte_t *data;
 } radius_attr_t;
@@ -47,16 +65,24 @@ typedef struct _radius_client {
 	int port;
 	char *shared_secret;
 	int next_id;
+	struct sockaddr_in _addr;
 } radius_client_t;
-
-#endif // __RADIUS_H_
 
 /* function prototypes */
 char*	radius_string_clone( char *src );
 
 int		radius_client_new( char *addr, int port, char *shared_secret, OUT radius_client_t **client );
 void	radius_client_free( radius_client_t *client );
-int		radius_client_papauth( radius_client_t *client, char *username, char *password );
+int		radius_client_next_id( radius_client_t *client );
+int		radius_client_papauth( radius_client_t *client, char *username, char *password, radius_packet_t **response );
+
+int		radius_pap_encode_password(byte_t *authenticator, char *shared_secret, char *password, OUT byte **encoded, OUT int *encoded_len);
+
+int		radius_packet_new( byte_t code, byte_t id, byte_t *authenticator, radius_attrs_t *attrs, OUT radius_packet_t **packet );
+void	radius_packet_free( radius_packet_t *packet );
+byte_t*	radius_packet_gen_auth();
+int		radius_packet_serialize( radius_packet_t *packet, OUT byte_t **bytes );
+int		radius_packet_parse( char *buf, int buf_len, radius_packet_t **packet );
 
 radius_attrs_t*	radius_attrs_new();
 void			radius_attrs_free( radius_attrs_t **attrs );
@@ -64,11 +90,16 @@ int				radius_attrs_count( radius_attrs_t **attrs );
 void			radius_attrs_push_back( radius_attrs_t **attrs, radius_attr_t *attr );
 void			radius_attrs_push_front( radius_attrs_t **attrs, radius_attr_t *attr );
 radius_attr_t*	radius_attrs_pop( radius_attrs_t **attrs );
+int				radius_attrs_is_empty( radius_attrs_t **attrs );
+void			radius_attrs_print( radius_attrs_t **attrs );
 
-radius_attr_t*	radius_attr_new( int type, int len, char *data, int data_type );
+radius_attr_t*	radius_attr_new( int type, int len, byte_t *data, int data_type );
 radius_attr_t*	radius_attr_new_string( int type, int len, char *data );
 radius_attr_t*	radius_attr_new_int( int type, int len, int data );
 radius_attr_t*	radius_attr_new_ip( int type, int len, int data );
 radius_attr_t*	radius_attr_new_text( int type, int len, char *data );
 void			radius_attr_free( radius_attr_t *attr );
 void			radius_attr_print( radius_attr_t *attr );
+int				radius_attr_serialize( radius_attr_t *attr, byte_t *buf, int offset, int length );
+
+#endif // __RADIUS_H_

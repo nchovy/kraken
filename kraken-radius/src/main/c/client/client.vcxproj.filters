@@ -44,9 +44,6 @@
     <ClInclude Include="md5.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="pap.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="radius.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
