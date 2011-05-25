@@ -105,7 +105,7 @@ public class JpaScript implements Script {
 			int i = 1;
 			List<DatabaseConfigTemplate> templates = getConfigTemplates();
 			for (DatabaseConfigTemplate t : templates)
-				context.println("[" + i + "] " + t.toString());
+				context.println("[" + (i++) + "] " + t.toString());
 
 			context.print("select? ");
 			int selected = Integer.valueOf(context.readLine());
