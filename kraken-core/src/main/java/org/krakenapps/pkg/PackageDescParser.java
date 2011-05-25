@@ -64,6 +64,9 @@ public class PackageDescParser {
 		int pos = line.indexOf(" ");
 		if (pos < 0)
 			pos = line.indexOf("\t");
+		
+		if (pos < 0)
+			throw new IllegalStateException("version not found, check syntax");
 
 		String symbolicName = line.substring(0, pos).trim();
 		String version = line.substring(pos + 1).trim();

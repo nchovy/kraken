@@ -239,6 +239,9 @@ public class PackageScript implements Script {
 			} else if (e.getCause() instanceof BackingStoreException) {
 				context.println("database failure");
 				logger.error("kraken core: database error", e);
+			} else {
+				context.println("unknown error: " + e.getMessage());
+				logger.error("kraken core: unknown error", e);
 			}
 		}
 	}
