@@ -15,6 +15,8 @@
  */
 package org.krakenapps.jpa;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -88,6 +90,76 @@ public class JpaScript implements Script {
 
 	}
 
+	@ScriptUsage(description = "Create and register new entity manager factory", arguments = {
+			@ScriptArgument(name = "Bundle ID", type = "int", description = "Bundle that contains JPA model classes and kraken-jpa configurations"),
+			@ScriptArgument(name = "Entity Manager Factory Name", type = "string", description = "Alias for entity manager factory") })
+	public void configure(String[] args) {
+		int bundleId = Integer.parseInt(args[0]);
+		String factoryName = args[1];
+		Properties props = new Properties();
+
+		try {
+			context.println("Config Templates");
+			context.println("------------------");
+
+			int i = 1;
+			List<DatabaseConfigTemplate> templates = getConfigTemplates();
+			for (DatabaseConfigTemplate t : templates)
+				context.println("[" + i + "] " + t.toString());
+
+			context.print("select? ");
+			int selected = Integer.valueOf(context.readLine());
+
+			if (selected < 1 && selected > templates.size()) {
+				context.println("invalid number");
+				return;
+			}
+
+			DatabaseConfigTemplate t = templates.get(i - 1);
+
+			context.print("Host (default: localhost)? ");
+			String host = context.readLine();
+
+			context.print("Database? ");
+			String db = context.readLine().trim();
+			if (db.isEmpty()) {
+				context.println("=> database name is empty");
+				return;
+			}
+
+			context.print("User? ");
+			String user = context.readLine().trim();
+			if (user.isEmpty())
+				context.println("=> user will be JPA config default");
+
+			context.print("Password? ");
+			String password = context.readPassword().trim();
+			if (password.isEmpty())
+				context.println("=> password will be JPA config default");
+
+			t.set(props, host, db, user, password);
+
+			jpa.registerEntityManagerFactory(factoryName, props, bundleId);
+
+			context.println(factoryName + " registered");
+		} catch (NumberFormatException e) {
+			context.println("invalid number format");
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("interrupted");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+		}
+	}
+
+	private List<DatabaseConfigTemplate> getConfigTemplates() {
+		List<DatabaseConfigTemplate> configs = new ArrayList<JpaScript.DatabaseConfigTemplate>();
+		configs.add(new DatabaseConfigTemplate("MySQL", "com.mysql.jdbc.Driver",
+				"jdbc:mysql://$host/$db??useUnicode=true&amp;characterEncoding=utf8"));
+		configs.add(new DatabaseConfigTemplate("PostgreSQL", "org.postgresql.Driver", "jdbc:postgresql://$host/$db"));
+		return configs;
+	}
+
 	/**
 	 * Create and register new entity manager factory with specified JPA model
 	 * bundle id and properties for overriding
@@ -127,5 +199,44 @@ public class JpaScript implements Script {
 
 		jpa.unregisterEntityManagerFactory(factoryName);
 		context.println(factoryName + " unregistered.");
+	}
+
+	private static class DatabaseConfigTemplate {
+		private String displayText;
+		private String connectionString;
+		private String driverClass;
+
+		public DatabaseConfigTemplate(String displayText, String driverClass, String connectionString) {
+			this.displayText = displayText;
+			this.driverClass = driverClass;
+			this.connectionString = connectionString;
+		}
+
+		public void set(Properties props, String host, String db, String user, String password) {
+			String url = connectionString.replace("$host", host).replace("$db", db);
+			host = emptyToNull(host);
+			db = emptyToNull(db);
+			user = emptyToNull(user);
+			password = emptyToNull(password);
+
+			props.put("hibernate.connection.driver_class", driverClass);
+			props.put("hibernate.connection.url", url);
+
+			if (user != null)
+				props.put("hibernate.connection.username", user);
+			if (password != null)
+				props.put("hibernate.connection.password", password);
+		}
+
+		private String emptyToNull(String s) {
+			if (s == null || s.isEmpty())
+				return null;
+			return s;
+		}
+
+		@Override
+		public String toString() {
+			return displayText;
+		}
 	}
 }
