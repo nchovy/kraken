@@ -115,7 +115,7 @@ public class JpaScript implements Script {
 				return;
 			}
 
-			DatabaseConfigTemplate t = templates.get(i - 1);
+			DatabaseConfigTemplate t = templates.get(selected - 1);
 
 			context.print("Host (default: localhost)? ");
 			String host = context.readLine();
