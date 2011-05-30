@@ -16,15 +16,21 @@ public abstract class ResourceContext extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		InputStream is = getInputStream(req);
-		if (is != null) {
+
+		if (is == null)
+			throw new IOException("404");
+
+		try {
 			byte[] b = new byte[4096];
 			int len;
-
 			while ((len = is.read(b)) != -1)
 				resp.getOutputStream().write(b, 0, len);
-
 			resp.getOutputStream().flush();
-			resp.getOutputStream().close();
+		} catch (IOException e) {
+			throw e;
+		} finally {
+			// resp.getOutputStream().close();
+			is.close();
 		}
 	}
 }

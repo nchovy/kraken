@@ -63,12 +63,11 @@ public class Response implements HttpServletResponse {
 			}
 			if (cookie != null)
 				header.put(HttpHeaders.Names.COOKIE, cookie);
-			if (!header.containsKey(HttpHeaders.Names.CONTENT_LENGTH))
-				header.put(HttpHeaders.Names.CONTENT_LENGTH, buf.readableBytes());
 
 			for (String name : header.keySet())
 				resp.setHeader(name, header.get(name));
 			resp.setContent(buf);
+			HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
 
 			ChannelFuture f = ctx.getChannel().write(resp);
 			if (!HttpHeaders.isKeepAlive(req) || !resp.getStatus().equals(HttpResponseStatus.OK)) {

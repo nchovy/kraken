@@ -39,7 +39,7 @@ public class FileResourceContext extends ResourceContext {
 	@Override
 	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
-			return new FileInputStream(new File(basePath, req.getRequestURI()));
+			return new FileInputStream(new File(basePath, req.getPathInfo()));
 		} catch (FileNotFoundException e) {
 			return null;
 		}

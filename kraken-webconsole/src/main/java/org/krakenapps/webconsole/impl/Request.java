@@ -26,23 +26,23 @@ public class Request implements HttpServletRequest {
 	private ChannelHandlerContext ctx;
 	private HttpRequest req;
 	private String servletPath;
-	private String uri;
+	private String pathInfo;
 	private String queryString;
 	private ServletInputStream is;
 	private Map<String, Object> attributes = new HashMap<String, Object>();
 	private Map<String, String> parameters = new HashMap<String, String>();
 	private Cookie[] cookies;
 
-	public Request(ChannelHandlerContext ctx, HttpRequest req, String servletPath, String uri) {
+	public Request(ChannelHandlerContext ctx, HttpRequest req, String servletPath, String pathInfo) {
 		this.ctx = ctx;
 		this.req = req;
 		this.servletPath = servletPath;
-		this.uri = uri;
+		this.pathInfo = pathInfo;
 		this.queryString = "";
-		if (uri.contains("?")) {
-			this.queryString = uri.substring(uri.indexOf("?") + 1);
-			this.uri = uri.substring(0, uri.indexOf("?"));
-			String params = uri.substring(uri.indexOf("?") + 1);
+		if (pathInfo.contains("?")) {
+			this.queryString = pathInfo.substring(pathInfo.indexOf("?") + 1);
+			this.pathInfo = pathInfo.substring(0, pathInfo.indexOf("?"));
+			String params = pathInfo.substring(pathInfo.indexOf("?") + 1);
 			for (String param : params.split("&")) {
 				String name = param.substring(0, param.indexOf("="));
 				String value = param.substring(param.indexOf("=") + 1);
@@ -233,7 +233,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getPathInfo() {
-		return req.getUri();
+		return pathInfo;
 	}
 
 	@Override
@@ -255,7 +255,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		return uri;
+		return servletPath + pathInfo;
 	}
 
 	@Override

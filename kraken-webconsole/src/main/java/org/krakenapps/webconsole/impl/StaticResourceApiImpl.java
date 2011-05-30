@@ -22,9 +22,9 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -85,38 +85,38 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 		} catch (ServletException e) {
 			logger.error("kraken webconsole: servlet service error.", e);
 		} catch (IOException e) {
-			logger.error("kraken webconsole: io error.", e);
+			if (!e.getMessage().equals("404"))
+				logger.error("kraken webconsole: io error.", e);
 		}
 	}
 
 	private void serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service) throws ServletException,
 			IOException {
 		ServletResponse response = null;
+
 		try {
 			String servletPath = findServlet(req.getUri());
 			if (servletPath == null)
 				throw new IllegalArgumentException("invalid request path");
 
-			HttpServlet servlet = directoryMap.get(servletPath + "context");
+			HttpServlet servlet = directoryMap.get(servletPath + "/context");
 
-			String requestPath = req.getUri().substring(servletPath.length());
-			if (requestPath.isEmpty()) {
-				requestPath = "index.html";
+			String pathInfo = req.getUri().substring(servletPath.length());
+			if (pathInfo.endsWith("/")) {
+				pathInfo += "index.html";
 			}
 
-			ServletRequest request = new Request(ctx, req, servletPath, requestPath);
+			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
 			response = new Response(ctx, req, service);
-			response.setContentType(getMimeType(requestPath));
+			response.setContentType(getMimeType(pathInfo));
 
 			servlet.service(request, response);
-
-			response.getOutputStream().flush();
 		} catch (IOException e) {
-			if (!e.getMessage().equals("403 Forbidden"))
+			if (!e.getMessage().equals("404"))
 				throw e;
 
 			if (req.getUri().endsWith("/")) {
-				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
 				HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
 				ctx.getChannel().write(resp);
 			} else {
@@ -128,7 +128,8 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 				ctx.getChannel().write(resp);
 			}
 		} finally {
-			response.getOutputStream().close();
+			if (response != null)
+				response.getOutputStream().close();
 		}
 	}
 
@@ -136,7 +137,7 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 		String[] tokens = split(path);
 
 		String prefix = null;
-		String dir = "/";
+		String dir = "";
 
 		// default
 		if (directoryMap.containsKey("/context"))
@@ -144,8 +145,8 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 
 		// longest match
 		for (int i = 0; i < tokens.length; i++) {
-			dir += tokens[i] + "/";
-			if (directoryMap.containsKey(dir + "context"))
+			dir += "/" + tokens[i];
+			if (directoryMap.containsKey(dir + "/context"))
 				prefix = dir;
 		}
 

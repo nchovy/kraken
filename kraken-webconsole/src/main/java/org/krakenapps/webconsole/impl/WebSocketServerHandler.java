@@ -179,8 +179,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-		// logger.error("kraken webconsole: websocket transport error",
-		// e.getCause());
+		logger.error("kraken webconsole: websocket transport error", e.getCause());
 		e.getChannel().close();
 	}
 

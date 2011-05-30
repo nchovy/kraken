@@ -43,7 +43,7 @@ public class BundleResourceContext extends ResourceContext {
 	@Override
 	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
-			URL url = bundle.getEntry(basePath + "/" + req.getRequestURI());
+			URL url = bundle.getEntry(basePath + req.getPathInfo());
 			return url.openStream();
 		} catch (Exception e) {
 			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(),
