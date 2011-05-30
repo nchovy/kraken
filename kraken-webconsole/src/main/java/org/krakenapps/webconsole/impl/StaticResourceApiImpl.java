@@ -30,7 +30,12 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.krakenapps.util.DirectoryMap;
 import org.krakenapps.webconsole.StaticResourceApi;
 import org.slf4j.Logger;
@@ -75,65 +80,82 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 
 	@Override
 	public void service(ChannelHandlerContext ctx, HttpRequest req) {
-		String path = req.getUri();
+		try {
+			serviceInternal(ctx, req, true);
+		} catch (ServletException e) {
+			logger.error("kraken webconsole: servlet service error.", e);
+		} catch (IOException e) {
+			logger.error("kraken webconsole: io error.", e);
+		}
+	}
+
+	private void serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service) throws ServletException,
+			IOException {
+		ServletResponse response = null;
+		try {
+			String servletPath = findServlet(req.getUri());
+			if (servletPath == null)
+				throw new IllegalArgumentException("invalid request path");
+
+			HttpServlet servlet = directoryMap.get(servletPath + "context");
+
+			String requestPath = req.getUri().substring(servletPath.length());
+			if (requestPath.isEmpty()) {
+				requestPath = "index.html";
+			}
+
+			ServletRequest request = new Request(ctx, req, servletPath, requestPath);
+			response = new Response(ctx, req, service);
+			response.setContentType(getMimeType(requestPath));
+
+			servlet.service(request, response);
+
+			response.getOutputStream().flush();
+		} catch (IOException e) {
+			if (!e.getMessage().equals("403 Forbidden"))
+				throw e;
+
+			if (req.getUri().endsWith("/")) {
+				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+				HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
+				ctx.getChannel().write(resp);
+			} else {
+				req.setUri(req.getUri() + "/");
+				serviceInternal(ctx, req, false);
+				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY);
+				resp.setHeader(HttpHeaders.Names.LOCATION, req.getUri());
+				HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
+				ctx.getChannel().write(resp);
+			}
+		} finally {
+			response.getOutputStream().close();
+		}
+	}
+
+	private String findServlet(String path) {
 		String[] tokens = split(path);
 
-		HttpServlet servlet = null;
-		String selectedPrefix = null;
+		String prefix = null;
 		String dir = "/";
 
 		// default
-		{
-			HttpServlet c = directoryMap.get("/context");
-			if (c != null) {
-				servlet = c;
-				selectedPrefix = dir;
-			}
-		}
+		if (directoryMap.containsKey("/context"))
+			prefix = dir;
 
 		// longest match
 		for (int i = 0; i < tokens.length; i++) {
 			dir += tokens[i] + "/";
-			HttpServlet c = directoryMap.get(dir + "context");
-			if (c != null) {
-				servlet = c;
-				selectedPrefix = dir;
-			}
+			if (directoryMap.containsKey(dir + "context"))
+				prefix = dir;
 		}
 
-		if (selectedPrefix == null)
-			throw new IllegalArgumentException("invalid request path");
-
-		String requestPath = path.length() < selectedPrefix.length() ? "" : path.substring(selectedPrefix.length());
-		requestPath = requestPath.isEmpty() ? "index.html" : requestPath;
-		ServletRequest request = new Request(ctx, req, selectedPrefix, requestPath);
-		ServletResponse response = new Response(ctx, req);
-
-		response.setContentType(getMimeType(req.getUri()));
-
-		try {
-			servlet.service(request, response);
-		} catch (ServletException e) {
-			logger.error("kraken webconsole: servlet service error.", e);
-		} catch (IOException e) {
-			logger.error("kraken webconsole: servlet service error.", e);
-		}
-	}
-
-	private String getMimeType(String path) {
-		String mimeType = MimeTypes.instance().getByFile(path);
-
-		if (mimeType == null)
-			mimeType = "text/html";
-
-		if (mimeType.startsWith("text/"))
-			mimeType += "; charset=utf-8";
-
-		return mimeType;
+		return prefix;
 	}
 
 	private String[] split(String path) {
+		path = path.substring(0, path.lastIndexOf("/"));
 		String[] s = path.split("/");
+
 		int count = 0;
 		for (int i = 0; i < s.length; i++)
 			if (!s[i].isEmpty())
@@ -146,6 +168,18 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 				n[j++] = s[i];
 
 		return n;
+	}
+
+	private String getMimeType(String path) {
+		String mimeType = MimeTypes.instance().getByFile(path);
+
+		if (mimeType == null)
+			mimeType = "text/html";
+
+		if (mimeType.startsWith("text/"))
+			mimeType += "; charset=utf-8";
+
+		return mimeType;
 	}
 
 	@Override

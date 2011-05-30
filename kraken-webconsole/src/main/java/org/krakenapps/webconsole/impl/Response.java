@@ -30,11 +30,13 @@ public class Response implements HttpServletResponse {
 	private HttpResponseStatus status = HttpResponseStatus.OK;
 	private Map<String, Object> header = new HashMap<String, Object>();
 	private Set<Cookie> cookies = new HashSet<Cookie>();
+	private boolean service;
 
-	public Response(ChannelHandlerContext ctx, HttpRequest req) {
+	public Response(ChannelHandlerContext ctx, HttpRequest req, boolean service) {
 		this.ctx = ctx;
 		this.req = req;
 		this.os = new ResponseOutputStream();
+		this.service = service;
 	}
 
 	private class ResponseOutputStream extends ServletOutputStream {
@@ -47,6 +49,9 @@ public class Response implements HttpServletResponse {
 
 		@Override
 		public void flush() throws IOException {
+			if (!service)
+				return;
+
 			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
 			String cookie = null;
