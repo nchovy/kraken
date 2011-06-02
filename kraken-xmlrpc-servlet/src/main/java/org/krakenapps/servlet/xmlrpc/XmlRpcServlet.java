@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,27 +28,20 @@ public class XmlRpcServlet extends HttpServlet {
 
 	@Requires
 	private XmlRpcMethodRegistry registry;
-	
-	@Override
-	public void init() throws ServletException {
-		System.out.println("xmlrpc servlet init()");
-		super.init();
-	}
-
-	@Override
-	public void destroy() {
-		System.out.println("xmlrpc servlet destroy()");
-		super.destroy();
-	}
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
-		Document methodResponse = processRpc(req);
-		String response = XmlUtil.toXmlString(methodResponse);
-		resp.setContentType("text/xml");
-		resp.getOutputStream().write(response.getBytes("utf-8"));
-		resp.getOutputStream().close();
+		try {
+			Document methodResponse = processRpc(req);
+			String response = XmlUtil.toXmlString(methodResponse);
+			resp.setContentType("text/xml");
+			resp.getOutputStream().write(response.getBytes("utf-8"));
+
+			// NOTE: do NOT close servlet outputstream
+		} catch (Exception e) {
+			logger.error("kraken xmlrpc: cannot process xmlrpc", e);
+		}
 	}
 
 	private Document processRpc(HttpServletRequest req) throws IOException {
@@ -68,9 +62,10 @@ public class XmlRpcServlet extends HttpServlet {
 	}
 
 	private String readXmlBody(HttpServletRequest req) throws IOException {
-		StringBuilder sb = new StringBuilder(81920);
+		ServletInputStream is = req.getInputStream();
+		StringBuilder sb = new StringBuilder();
 		char[] chars = new char[4096];
-		InputStreamReader reader = new InputStreamReader(req.getInputStream());
+		InputStreamReader reader = new InputStreamReader(is);
 
 		while (true) {
 			int len = reader.read(chars, 0, chars.length);
@@ -83,7 +78,8 @@ public class XmlRpcServlet extends HttpServlet {
 		String xmlBody = sb.toString();
 
 		if (logger.isTraceEnabled())
-			logger.trace("xmlrpc servlet input: " + xmlBody);
+			logger.trace("kraken xmlrpc servlet: request [{}]" + xmlBody);
+		
 		return xmlBody;
 	}
 }
