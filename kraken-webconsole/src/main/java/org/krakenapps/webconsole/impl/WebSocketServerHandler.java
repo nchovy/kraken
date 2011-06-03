@@ -15,6 +15,7 @@
  */
 package org.krakenapps.webconsole.impl;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -162,7 +163,8 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 		}
 
 		Message msg = KrakenMessageDecoder.decode(frame.getTextData());
-		msgbus.dispatch(session, msg);
+		if (msg != null)
+			msgbus.dispatch(session, msg);
 	}
 
 	private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse resp) {
@@ -179,8 +181,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-		logger.error("kraken webconsole: websocket transport error", e.getCause());
-		e.getChannel().close();
+		if (e.getCause() instanceof IOException && e.getCause().getMessage().equals("Connection reset by peer")) {
+			logger.trace("kraken webconsole: connection reset", e.getChannel().getRemoteAddress());
+		} else {
+			logger.error("kraken webconsole: websocket transport error", e.getCause());
+			e.getChannel().close();
+		}
 	}
 
 	private String getWebSocketLocation(HttpRequest req) {
