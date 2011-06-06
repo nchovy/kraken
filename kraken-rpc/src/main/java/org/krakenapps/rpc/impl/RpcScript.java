@@ -262,4 +262,45 @@ public class RpcScript implements Script {
 			context.println(waiting.toString());
 		}
 	}
+
+	@ScriptUsage(description = "set connection property", arguments = {
+			@ScriptArgument(name = "cid", type = "int", description = "connection id"),
+			@ScriptArgument(name = "property key", type = "string", description = "property key name"),
+			@ScriptArgument(name = "property value", type = "string", description = "property value") })
+	public void setprop(String[] args) {
+		try {
+			int cid = Integer.valueOf(args[0]);
+			RpcConnection conn = agent.findConnection(cid);
+			if (conn == null) {
+				context.println("connection not found");
+				return;
+			}
+
+			conn.setProperty(args[1], args[2]);
+			context.println("set");
+		} catch (NumberFormatException e) {
+			context.println("invalid connection id format");
+		}
+	}
+
+	@ScriptUsage(description = "print all connection properties", arguments = { @ScriptArgument(name = "cid", type = "int", description = "connectino id") })
+	public void props(String[] args) {
+		try {
+			int cid = Integer.valueOf(args[0]);
+			RpcConnection conn = agent.findConnection(cid);
+			if (conn == null) {
+				context.println("connection not found");
+				return;
+			}
+			
+			context.println("RPC Connection Properties");
+			context.println("---------------------------");
+			
+			for (String key : conn.getPropertyKeys()) 
+				context.println(key + ": " + conn.getProperty(key));
+			
+		} catch (NumberFormatException e) {
+			context.println("invalid connection id format");
+		}
+	}
 }

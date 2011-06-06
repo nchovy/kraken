@@ -104,6 +104,7 @@
     <module>kraken-dhcp</module>
     <module>kraken-captive-portal</module>
     <module>kraken-radius</module>
+    <module>kraken-grid</module>
   </modules>
   <url>http://krakenapps.org</url>
   <inceptionYear>2008</inceptionYear>

@@ -9,29 +9,22 @@
 		<version>1.0.0</version>
 	</parent>
 	<groupId>org.krakenapps</groupId>
-	<artifactId>kraken-rpc</artifactId>
-	<version>1.1.0</version>
+	<artifactId>kraken-grid</artifactId>
+	<version>0.1.0</version>
 	<packaging>bundle</packaging>
-	<name>Kraken RPC</name>
-	<repositories>
-		<repository>
-			<id>jboss</id>
-			<url>http://repository.jboss.com/maven2/</url>
-		</repository>
-	</repositories>
+	<name>Kraken Grid</name>
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-bundle-plugin</artifactId>
-				<version>2.1.0</version>
+				<version>2.0.1</version>
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>org.krakenapps.rpc</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.rpc</Export-Package>
-						<Private-Package>org.krakenapps.rpc.impl</Private-Package>
-						<Import-Package>!org.junit, *</Import-Package>
+						<Bundle-SymbolicName>org.krakenapps.grid</Bundle-SymbolicName>
+						<Export-Package>org.krakenapps.grid</Export-Package>
+						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -53,31 +46,16 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.jboss.netty</groupId>
-			<artifactId>netty</artifactId>
-			<version>3.1.5.GA</version>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.5.6</version>
+			<version>1.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
-			<artifactId>org.osgi.core</artifactId>
-			<version>1.4.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.felix</groupId>
-			<artifactId>org.apache.felix.ipojo</artifactId>
+			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
 			<version>1.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-codec</artifactId>
+			<artifactId>kraken-rpc</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 	</dependencies>
