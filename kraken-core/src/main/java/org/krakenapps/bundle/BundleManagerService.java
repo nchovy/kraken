@@ -184,8 +184,9 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 		if (isBuiltinArtifact(artifact.getGroupId(), artifact.getArtifactId()))
 			throw new IllegalStateException("provided in system bundle");
 
-		monitor.writeln(String.format("Resolving %s/%s", artifact.getGroupId(), artifact.getArtifactId())
-				+ (artifact.getVersion() != null ? (" (" + artifact.getVersion() + ")") : ""));
+		if (monitor != null)
+			monitor.writeln(String.format("Resolving %s/%s", artifact.getGroupId(), artifact.getArtifactId())
+					+ (artifact.getVersion() != null ? (" (" + artifact.getVersion() + ")") : ""));
 
 		File file = resolver.resolve(artifact);
 		String filePath = file.getAbsolutePath();

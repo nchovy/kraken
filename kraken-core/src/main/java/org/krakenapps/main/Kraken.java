@@ -176,7 +176,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * 
 	 * @throws Exception
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked" })
 	public void boot() throws Exception {
 		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
 		String dir = jarPath.getParentFile().getAbsolutePath();

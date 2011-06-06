@@ -14,7 +14,6 @@ public class Encoder {
 	CharsetEncoder charsetEncoder = charset.newEncoder();
 	
 	private final byte INTERPRET_AS_CONTROL = (byte) 255;
-	private final String TAG = Encoder.class.getSimpleName();
 	
 	public void encode(Session session, Object message, Writer out) throws Exception {
 		if (message instanceof TelnetCommand) {

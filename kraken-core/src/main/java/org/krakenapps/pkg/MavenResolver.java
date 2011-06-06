@@ -62,7 +62,7 @@ public class MavenResolver {
 		File localJar = download(artifact);
 
 		if (localJar == null)
-			throw new MavenResolveException();
+			throw new MavenResolveException(artifact);
 
 		return localJar;
 	}
@@ -78,8 +78,7 @@ public class MavenResolver {
 			try {
 				return new File(new File(repo.getUrl().toURI()), relativePath + ".pom");
 			} catch (URISyntaxException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
 		}
 		return new File(localRepository, relativePath + ".pom");
@@ -91,8 +90,7 @@ public class MavenResolver {
 			try {
 				return new File(new File(repo.getUrl().toURI()), relativePath + ".jar");
 			} catch (URISyntaxException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
 		}
 		return new File(localRepository, relativePath + ".jar");
@@ -142,7 +140,7 @@ public class MavenResolver {
 				} catch (Exception e) {
 					String metadataUrl = normalize(repo.getUrl())
 							+ String.format("%s/%s/maven-metadata.xml", artifact.getGroupId().replace(".", "/"),
-									artifact.getArtifactId());
+							artifact.getArtifactId());
 					logger.info("maven resolver: failed to get {} {}", metadataUrl, e.getMessage());
 				}
 			} else
@@ -167,7 +165,8 @@ public class MavenResolver {
 			URL pomUrl = getPomUrl(repo.getUrl(), artifact);
 			URL jarUrl = getJarUrl(repo.getUrl(), artifact);
 
-			monitor.writeln("  -> trying to download from " + repo);
+			if (monitor != null)
+				monitor.writeln("  -> trying to download from " + repo);
 
 			// download pom
 			if (localPom.exists() == false) {

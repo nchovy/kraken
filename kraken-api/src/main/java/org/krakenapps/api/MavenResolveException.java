@@ -18,4 +18,16 @@ package org.krakenapps.api;
 public class MavenResolveException extends Exception {
 	private static final long serialVersionUID = 1L;
 
+	private MavenArtifact artifact;
+
+	public MavenResolveException() {
+	}
+
+	public MavenResolveException(MavenArtifact artifact) {
+		this.artifact = artifact;
+	}
+
+	public MavenArtifact getArtifact() {
+		return artifact;
+	}
 }
