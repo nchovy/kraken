@@ -28,6 +28,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcAgent;
+import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcPeerRegistry;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
@@ -104,26 +105,14 @@ public class RpcAgentImpl implements RpcAgent {
 	}
 
 	@Override
-	public RpcConnection connect(InetSocketAddress address) {
-		return connect(address.getAddress().getHostAddress(), address.getPort());
-	}
-
-	@Override
-	public RpcConnection connectSsl(InetSocketAddress address) {
-		return connectSsl(address, "rpc-agent", "rpc-ca");
-	}
-
-	@Override
-	public RpcConnection connectSsl(InetSocketAddress address, String keyAlias, String trustAlias) {
-		return connectSsl(address.getAddress().getHostAddress(), address.getPort(), keyAlias, trustAlias);
-	}
-
-	@Override
-	public RpcConnection connectSsl(String host, int port, final String keyAlias, final String trustAlias) {
-		ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(Executors
-				.newCachedThreadPool(), Executors.newCachedThreadPool()));
+	public RpcConnection connectSsl(RpcConnectionProperties props) {
+		ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(
+				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 		bootstrap.setOption("tcpNoDelay", true);
 		bootstrap.setOption("keepAlive", true);
+		
+		final String trustAlias = props.getTrustAlias();
+		final String keyAlias = props.getKeyAlias();
 
 		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 			@Override
@@ -156,13 +145,15 @@ public class RpcAgentImpl implements RpcAgent {
 			}
 		});
 
-		ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(host, port));
+		ChannelFuture channelFuture = bootstrap.connect(props.getRemoteAddress());
 		Channel channel = channelFuture.awaitUninterruptibly().getChannel();
 		SslHandler sslHandler = (SslHandler) channel.getPipeline().get("ssl");
 		try {
 			sslHandler.handshake(channel).await(5000);
 			X509Certificate peerCert = (X509Certificate) sslHandler.getEngine().getSession().getPeerCertificates()[0];
-			return doPostConnectSteps(channel, peerCert);
+			props.setPeerCert(peerCert);
+			
+			return doPostConnectSteps(channel, props);
 		} catch (Exception e) {
 			if (channel != null)
 				channel.close();
@@ -173,21 +164,21 @@ public class RpcAgentImpl implements RpcAgent {
 	/**
 	 * Receive and set peer certificate for connection.
 	 */
-	private RpcConnection doPostConnectSteps(Channel channel, X509Certificate peerCert) {
+	private RpcConnection doPostConnectSteps(Channel channel, RpcConnectionProperties props) {
 		if (channel != null && channel.isConnected()) {
-			if (peerCert != null)
-				logger.info("kraken-rpc: connected with peer {}", peerCert.getSubjectDN().getName());
+			if (props.getPeerCert() != null)
+				logger.info("kraken-rpc: connected with peer {}", props.getPeerCert().getSubjectDN().getName());
 
-			return handler.newClientConnection(channel, peerCert);
+			return handler.newClientConnection(channel, props);
 		}
 
 		return null;
 	}
 
 	@Override
-	public RpcConnection connect(String host, int port) {
-		ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(Executors
-				.newCachedThreadPool(), Executors.newCachedThreadPool()));
+	public RpcConnection connect(RpcConnectionProperties props) {
+		ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(
+				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 		bootstrap.setOption("tcpNoDelay", true);
 		bootstrap.setOption("keepAlive", true);
 
@@ -203,9 +194,9 @@ public class RpcAgentImpl implements RpcAgent {
 			}
 		});
 
-		ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(host, port));
+		ChannelFuture channelFuture = bootstrap.connect(props.getRemoteAddress());
 		Channel channel = channelFuture.awaitUninterruptibly().getChannel();
-		return doPostConnectSteps(channel, null);
+		return doPostConnectSteps(channel, props);
 	}
 
 	public void bindSsl(int port, final String trustStoreAlias, final String keyStoreAlias) throws Exception {
@@ -214,8 +205,8 @@ public class RpcAgentImpl implements RpcAgent {
 			return;
 		}
 
-		ChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors
-				.newCachedThreadPool());
+		ChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
+				Executors.newCachedThreadPool());
 
 		ServerBootstrap bootstrap = new ServerBootstrap(factory);
 
@@ -267,8 +258,8 @@ public class RpcAgentImpl implements RpcAgent {
 			return;
 		}
 
-		ChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors
-				.newCachedThreadPool());
+		ChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
+				Executors.newCachedThreadPool());
 
 		ServerBootstrap bootstrap = new ServerBootstrap(factory);
 		ChannelPipeline pipeline = bootstrap.getPipeline();

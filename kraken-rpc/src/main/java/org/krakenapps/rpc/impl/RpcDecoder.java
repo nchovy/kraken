@@ -54,11 +54,11 @@ public class RpcDecoder extends FrameDecoder {
 
 		buf.resetReaderIndex();
 		buf.readByte();
-		long length = EncodingRule.decodeNumber(buf.toByteBuffer());
+		long length = EncodingRule.decodeRawNumber(buf.toByteBuffer());
 
 		if (buf.readableBytes() > length) {
 			buf.resetReaderIndex();
-			int numLength = EncodingRule.lengthOfNumber(int.class, length);
+			int numLength = EncodingRule.lengthOfRawNumber(int.class, length);
 			ByteBuffer bb = ByteBuffer.allocate((int) length + numLength + 1);
 			buf.readBytes(bb);
 			bb.flip();

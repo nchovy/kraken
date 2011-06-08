@@ -17,6 +17,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.channel.Channel;
+import org.krakenapps.rpc.RpcAsyncTable;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionEventListener;
@@ -26,6 +27,7 @@ import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcExceptionEvent;
 import org.krakenapps.rpc.RpcMessage;
 import org.krakenapps.rpc.RpcPeerRegistry;
+import org.krakenapps.rpc.RpcPeeringCallback;
 import org.krakenapps.rpc.RpcService;
 import org.krakenapps.rpc.RpcServiceBinding;
 import org.krakenapps.rpc.RpcSession;
@@ -46,6 +48,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 	private AtomicInteger idCounter;
 	private AtomicInteger sessionCounter;
 	private RpcBlockingTableImpl blockingTable;
+	private RpcAsyncTableImpl asyncTable;
 	private String guid;
 	private Set<RpcConnectionEventListener> callbacks;
 	private RpcPeerRegistry peerRegistry;
@@ -73,6 +76,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 		this.sessionMap = new ConcurrentHashMap<Integer, RpcSession>();
 		this.props = new ConcurrentHashMap<String, Object>();
 		this.idCounter = new AtomicInteger();
+		this.asyncTable = new RpcAsyncTableImpl();
 		this.blockingTable = new RpcBlockingTableImpl();
 
 		this.guid = guid;
@@ -335,61 +339,19 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 	}
 
 	@Override
-	public boolean requestPeering() {
-		return requestPeering(null);
+	public void requestPeering(RpcPeeringCallback callback) {
+		requestPeering(callback, null);
 	}
 
 	@Override
-	public boolean requestPeering(String password) {
-		final int TIMEOUT = 5000;
+	public void requestPeering(RpcPeeringCallback callback, String password) {
 		if (password != null)
 			setProperty("password", password);
 
-		try {
-			RpcSession session = findSession(0);
+		RpcSession session = findSession(0);
 
-			// call peer request
-			Object[] tuple = (Object[]) session.call("peering-request", new Object[] { guid }, TIMEOUT);
-			String type = (String) tuple[0];
-			this.peerGuid = (String) tuple[1];
-
-			if (type.equals("success")) {
-				// no challenge
-				int trustedLevel = (Integer) tuple[2];
-				setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
-
-				logger.info("kraken-rpc: {} login success, trusted level = {}", new Object[] { this.peerGuid,
-						trustedLevel });
-
-				return true;
-			} else if (type.equals("challenge")) {
-				// set peer information
-				this.nonce = (String) tuple[2];
-
-				// hash = sha1(password + nonce)
-				String hash = peerRegistry.calculatePasswordHash(password, this.nonce);
-
-				// try authenticate
-				Object[] ret = (Object[]) session.call("authenticate", new Object[] { guid, hash }, TIMEOUT);
-				boolean peered = (Boolean) ret[0];
-				int trustedLevel = (Integer) ret[1];
-
-				// challenge result
-				logger.info("kraken-rpc: {} login result = {}, trusted level = {}", new Object[] { this.peerGuid,
-						peered, trustedLevel });
-
-				if (peered)
-					setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
-
-				return peered;
-			}
-		} catch (RpcException e) {
-			logger.error("kraken-rpc: {} peering failed, {}", peerGuid, e.getMessage());
-		} catch (InterruptedException e) {
-			logger.trace("kraken-rpc: [{}] peering interrupted", peerGuid);
-		}
-
-		return false;
+		// call peer request
+		session.call("peering-request", new Object[] { guid }, new NonPasswordPeering(session, callback, password));
 	}
 
 	@Override
@@ -415,6 +377,11 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 	@Override
 	public RpcBlockingTable getBlockingTable() {
 		return blockingTable;
+	}
+
+	@Override
+	public RpcAsyncTable getAsyncTable() {
+		return asyncTable;
 	}
 
 	@Override
@@ -470,5 +437,81 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 	public String toString() {
 		return String.format("id=%d, peer=%s, trusted level=%s, ssl=%s", channel.getId(), getRemoteAddress(),
 				trustedLevel, getPeerCertificate() != null);
+	}
+
+	private class NonPasswordPeering implements RpcAsyncCallback {
+		private RpcSession session;
+		private RpcPeeringCallback callback;
+		private String password;
+
+		public NonPasswordPeering(RpcSession session, RpcPeeringCallback callback, String password) {
+			this.session = session;
+			this.callback = callback;
+			this.password = password;
+		}
+
+		@Override
+		public void onComplete(RpcAsyncResult r) {
+			if (r.isError()) {
+				logger.error("kraken rpc: peering error", r.getException());
+				return;
+			}
+
+			Object[] tuple = (Object[]) r.getReturn();
+			String type = (String) tuple[0];
+			peerGuid = (String) tuple[1];
+
+			if (type.equals("success"))
+				onSuccess(tuple);
+			else if (type.equals("challenge"))
+				onFaliure(tuple);
+		}
+
+		private void onFaliure(Object[] tuple) {
+			// set peer information
+			String nonce = (String) tuple[2];
+
+			// hash = sha1(password + nonce)
+			String hash = peerRegistry.calculatePasswordHash(password, nonce);
+
+			// try authenticate
+			session.call("authenticate", new Object[] { guid, hash }, new PasswordPeering(session, callback));
+		}
+
+		private void onSuccess(Object[] tuple) {
+			// no challenge
+			int trustedLevel = (Integer) tuple[2];
+			setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
+
+			logger.info("kraken-rpc: {} login success, trusted level = {}", new Object[] { peerGuid, trustedLevel });
+			RpcConnection conn = session.getConnection();
+			callback.onCompleted(conn);
+		}
+	}
+
+	private class PasswordPeering implements RpcAsyncCallback {
+		private RpcSession session;
+		private RpcPeeringCallback callback;
+
+		public PasswordPeering(RpcSession session, RpcPeeringCallback callback) {
+			this.session = session;
+			this.callback = callback;
+		}
+
+		@Override
+		public void onComplete(RpcAsyncResult r) {
+			Object[] ret = (Object[]) r.getReturn();
+			boolean peered = (Boolean) ret[0];
+			int trustedLevel = (Integer) ret[1];
+
+			// challenge result
+			logger.info("kraken-rpc: {} login result = {}, trusted level = {}", new Object[] { peerGuid, peered,
+					trustedLevel });
+
+			if (peered)
+				setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
+			
+			callback.onCompleted(session.getConnection());
+		}
 	}
 }

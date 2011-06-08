@@ -42,7 +42,7 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 		RpcWaitingCallImpl item = (RpcWaitingCallImpl) lockMap.get(id);
 		if (item == null)
 			return;
-		
+
 		synchronized (item) {
 			item.result = interruptSignal;
 			item.notifyAll();
@@ -63,8 +63,7 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 
 		RpcWaitingCallImpl item = (RpcWaitingCallImpl) lockMap.get(id);
 		if (item == null) {
-			if (logger.isDebugEnabled())
-				logger.debug("kraken-rpc: no waiting item {}, maybe timeout", id);
+			logger.warn("kraken-rpc: no waiting item {}, maybe timeout", id);
 			return;
 		}
 
@@ -96,10 +95,10 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 				while (item.result == null)
 					item.wait();
 			}
-			
+
 			if (item.result == interruptSignal)
 				throw new InterruptedException("call cancelled");
-			
+
 		} finally {
 			if (logger.isDebugEnabled())
 				logger.debug("kraken-rpc: removing blocking lock id {}", id);
@@ -127,7 +126,7 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 					}
 				}
 			}
-			
+
 			if (item.result == interruptSignal)
 				throw new InterruptedException("call cancelled");
 		} finally {

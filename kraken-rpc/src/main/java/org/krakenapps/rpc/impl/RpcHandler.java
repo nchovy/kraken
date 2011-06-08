@@ -3,6 +3,8 @@ package org.krakenapps.rpc.impl;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -25,13 +27,16 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.krakenapps.rpc.RpcAsyncTable;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionEventListener;
+import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcContext;
 import org.krakenapps.rpc.RpcExceptionEvent;
 import org.krakenapps.rpc.RpcMessage;
 import org.krakenapps.rpc.RpcPeerRegistry;
+import org.krakenapps.rpc.RpcPeeringCallback;
 import org.krakenapps.rpc.RpcService;
 import org.krakenapps.rpc.RpcServiceBinding;
 import org.krakenapps.rpc.RpcSession;
@@ -75,8 +80,13 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		executor = null;
 	}
 
-	public RpcConnection newClientConnection(Channel channel, X509Certificate peerCert) {
-		return initializeConnection(channel, peerCert);
+	public RpcConnection newClientConnection(Channel channel, RpcConnectionProperties props) {
+		try {
+			return initializeConnection(channel, props);
+		} catch (InterruptedException e) {
+			logger.warn("kraken-rpc: interrupted", e);
+			return null;
+		}
 	}
 
 	public RpcConnection findConnection(int id) {
@@ -92,41 +102,45 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		// register connection
 		Channel channel = e.getChannel();
 		RpcConnectionImpl newConnection = new RpcConnectionImpl(channel, guid, peerRegistry);
+		InetSocketAddress addr = newConnection.getRemoteAddress();
+		RpcConnectionProperties props = new RpcConnectionProperties(addr.getAddress().getHostAddress(), addr.getPort());
 
 		// register handler to connection
 		newConnection.addListener(this);
 
 		connMap.put(channel.getId(), newConnection);
 
-		logger.info("kraken-rpc: [{}] {} connected, remote={}", new Object[] { newConnection.getId(),
-				newConnection.isClient() ? "client" : "server", newConnection.getRemoteAddress() });
+		logger.info("kraken-rpc: [{}] {} connected, remote={}",
+				new Object[] { newConnection.getId(), newConnection.isClient() ? "client" : "server", addr });
 
 		// ssl handshake
 		SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
 		if (sslHandler != null) {
 			ChannelFuture cf = sslHandler.handshake(e.getChannel());
-			cf.addListener(new SslConnectInitializer(sslHandler));
+			cf.addListener(new SslConnectInitializer(props, sslHandler));
 			return;
 		}
 
-		init(e.getChannel(), null);
+		init(e.getChannel(), props);
 	}
 
 	private class SslConnectInitializer implements ChannelFutureListener, Runnable {
 		private SslHandler sslHandler;
 		private Channel channel;
-		private X509Certificate peerCert;
+		private RpcConnectionProperties props;
 
-		public SslConnectInitializer(SslHandler sslHandler) {
+		public SslConnectInitializer(RpcConnectionProperties props, SslHandler sslHandler) {
+			this.props = props;
 			this.sslHandler = sslHandler;
 		}
 
 		@Override
 		public void operationComplete(ChannelFuture cf) throws Exception {
-			Certificate[] certs = sslHandler.getEngine().getSession().getPeerCertificates();
-
-			peerCert = (X509Certificate) certs[0];
 			channel = cf.getChannel();
+
+			Certificate[] certs = sslHandler.getEngine().getSession().getPeerCertificates();
+			X509Certificate peerCert = (X509Certificate) certs[0];
+			props.setPeerCert(peerCert);
 
 			String peerCommonName = peerCert.getSubjectDN().getName();
 			logger.info("kraken-rpc: new peer certificate subject={}, remote={}", peerCommonName,
@@ -137,16 +151,20 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 
 		@Override
 		public void run() {
-			init(channel, peerCert);
+			init(channel, props);
 		}
 	}
 
-	private void init(Channel channel, X509Certificate peerCert) {
+	private void init(Channel channel, RpcConnectionProperties props) {
 		// client will initialize connection at caller side.
 		logger.trace("kraken-rpc: new channel {}", channel.getLocalAddress());
 
-		if (channel.getParent() != null)
-			initializeConnection(channel, peerCert);
+		try {
+			if (channel.getParent() != null)
+				initializeConnection(channel, props);
+		} catch (InterruptedException e) {
+			logger.warn("kraken-rpc: interrupted", e);
+		}
 	}
 
 	@Override
@@ -160,9 +178,17 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		connection.close();
 	}
 
-	private RpcConnection initializeConnection(Channel channel, X509Certificate peerCert) {
-		RpcConnectionImpl newConnection = connMap.get(channel.getId());
-		newConnection.setPeerCert(peerCert);
+	private RpcConnection initializeConnection(Channel channel, RpcConnectionProperties props)
+			throws InterruptedException {
+		RpcConnectionImpl newConnection = null;
+
+		// wait connect callback thread ends
+		while (newConnection == null) {
+			newConnection = connMap.get(channel.getId());
+			Thread.sleep(100);
+		}
+
+		newConnection.setPeerCert(props.getPeerCert());
 
 		// bind rpc control service by default
 		newConnection.bind("rpc-control", control);
@@ -185,16 +211,17 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		newConnection.setControlReady();
 
 		// try peering
-		boolean peeringResult = newConnection.requestPeering();
-		if (!peeringResult) {
-			logger.error("kraken-rpc: {} peering failed with {}, connection will be closed", newConnection.getId(),
-					newConnection.getRemoteAddress());
-
-			newConnection.close();
-			return null;
-		}
-
+		newConnection.requestPeering(new FailureHandler(), props.getPassword());
 		return newConnection;
+	}
+
+	private class FailureHandler implements RpcPeeringCallback {
+		@Override
+		public void onCompleted(RpcConnection conn) {
+			if (conn.getTrustedLevel() == null || conn.getTrustedLevel() == RpcTrustLevel.Untrusted) {
+				logger.warn("kraken-rpc: {} peering failed with {}", conn.getId(), conn.getRemoteAddress());
+			}
+		}
 	}
 
 	@Override
@@ -202,6 +229,11 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		Throwable cause = e.getCause();
 		if (cause instanceof ConnectException) {
 			logger.debug("kraken-rpc: connect failed");
+			return;
+		}
+
+		if (cause instanceof ClosedChannelException) {
+			logger.debug("kraken-rpc: connection [{}] closed", e.getChannel().getRemoteAddress());
 			return;
 		}
 
@@ -253,8 +285,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 
 			RpcSession session = conn.findSession(sessionId);
 			if (session == null) {
-				logger.warn("kraken-rpc: session {} not found, connection={}, peer={}", new Object[] { sessionId,
-						conn.getId(), conn.getRemoteAddress() });
+				logger.warn("kraken-rpc: session {} not found, connection={}, peer={}",
+						new Object[] { sessionId, conn.getId(), conn.getRemoteAddress() });
 				return;
 			}
 
@@ -265,7 +297,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			if (type.equals("rpc-call")) {
 				try {
 					Object ret = call(binding, msg);
-					RpcMessage resp = RpcMessage.newResponse(conn.nextMessageId(), session.getId(), id, methodName, ret);
+					RpcMessage resp = RpcMessage
+							.newResponse(conn.nextMessageId(), session.getId(), id, methodName, ret);
 					channel.write(resp);
 				} catch (Throwable t) {
 					if (t.getCause() != null)
@@ -288,12 +321,17 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 					service.exceptionCaught(ex);
 				}
 			} else if (type.equals("rpc-ret") || type.equals("rpc-error")) {
+				RpcAsyncTable asyncTable = conn.getAsyncTable();
 				RpcBlockingTable blockingTable = conn.getBlockingTable();
+
 				int originalId = (Integer) msg.getHeader("ret-for");
 				if (logger.isDebugEnabled())
 					logger.debug("kraken-rpc: response for msg {}", originalId);
 
-				blockingTable.signal(originalId, msg);
+				if (asyncTable.contains(originalId))
+					asyncTable.signal(originalId, msg);
+				else
+					blockingTable.signal(originalId, msg);
 			}
 		}
 	}

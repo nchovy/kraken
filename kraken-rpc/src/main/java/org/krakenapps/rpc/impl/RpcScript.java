@@ -4,6 +4,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -12,8 +14,10 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcAgent;
+import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcPeer;
 import org.krakenapps.rpc.RpcPeerRegistry;
+import org.krakenapps.rpc.RpcPeeringCallback;
 import org.krakenapps.rpc.RpcServiceBinding;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.rpc.RpcWaitingCall;
@@ -110,11 +114,43 @@ public class RpcScript implements Script {
 			return;
 		}
 
-		boolean ret = conn.requestPeering(password);
-		if (ret)
-			context.println(conn.getRemoteAddress() + " peering succeeded");
-		else
-			context.println(conn.getRemoteAddress() + " peering failed");
+		PeeringResultPrinter p = new PeeringResultPrinter();
+		try {
+			p.lock.lock();
+			conn.requestPeering(p, password);
+			p.cond.await();
+		} catch (InterruptedException e) {
+			context.println("interrupted");
+		} finally {
+			p.lock.unlock();
+		}
+
+	}
+
+	private class PeeringResultPrinter implements RpcPeeringCallback {
+		private ReentrantLock lock;
+		private Condition cond;
+
+		public PeeringResultPrinter() {
+			lock = new ReentrantLock();
+			cond = lock.newCondition();
+		}
+
+		@Override
+		public void onCompleted(RpcConnection conn) {
+			try {
+				lock.lock();
+
+				if (conn.getTrustedLevel() == null || conn.getTrustedLevel() == RpcTrustLevel.Untrusted)
+					context.println(conn.getRemoteAddress() + " peering failed");
+				else
+					context.println(conn.getRemoteAddress() + " peering succeeded");
+
+				cond.signalAll();
+			} finally {
+				lock.unlock();
+			}
+		}
 	}
 
 	@ScriptUsage(description = "connect to rpc peer", arguments = {
@@ -151,9 +187,9 @@ public class RpcScript implements Script {
 
 			RpcConnection connection = null;
 			if (isSsl)
-				connection = agent.connectSsl(host, port, keyAlias, trustAlias);
+				connection = agent.connectSsl(new RpcConnectionProperties(host, port, keyAlias, trustAlias));
 			else
-				connection = agent.connect(host, port);
+				connection = agent.connect(new RpcConnectionProperties(host, port));
 
 			if (connection != null)
 				context.printf("%s connected\n", connection.getRemoteAddress());
@@ -292,13 +328,13 @@ public class RpcScript implements Script {
 				context.println("connection not found");
 				return;
 			}
-			
+
 			context.println("RPC Connection Properties");
 			context.println("---------------------------");
-			
-			for (String key : conn.getPropertyKeys()) 
+
+			for (String key : conn.getPropertyKeys())
 				context.println(key + ": " + conn.getProperty(key));
-			
+
 		} catch (NumberFormatException e) {
 			context.println("invalid connection id format");
 		}

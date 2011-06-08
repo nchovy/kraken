@@ -1,5 +1,7 @@
 package org.krakenapps.rpc;
 
+import org.krakenapps.rpc.impl.RpcAsyncCallback;
+import org.krakenapps.rpc.impl.RpcAsyncResult;
 
 public interface RpcSession {
 	RpcSessionState getState();
@@ -13,6 +15,8 @@ public interface RpcSession {
 	Object getProperty(String name);
 
 	void setProperty(String name, Object value);
+
+	RpcAsyncResult call(String method, Object[] params, RpcAsyncCallback callback);
 
 	Object call(String method, Object[] params) throws RpcException, InterruptedException;
 

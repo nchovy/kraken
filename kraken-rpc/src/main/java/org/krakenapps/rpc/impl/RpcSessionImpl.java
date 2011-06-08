@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.krakenapps.rpc.RpcAsyncTable;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcException;
@@ -18,12 +19,21 @@ import org.slf4j.LoggerFactory;
 
 public class RpcSessionImpl implements RpcSession {
 	private final Logger logger = LoggerFactory.getLogger(RpcSessionImpl.class.getName());
+
 	private int id;
 	private String serviceName;
 	private RpcConnection connection;
 	private Map<String, Object> props;
 	private RpcSessionState state = RpcSessionState.Opened;
+
+	/**
+	 * To cancel all blocking calls at close()
+	 */
 	private Set<Integer> blockingCalls;
+	
+	/**
+	 * event callbacks
+	 */
 	private Set<RpcSessionEventCallback> callbacks;
 
 	public RpcSessionImpl(int id, String serviceName, RpcConnection connection) {
@@ -66,6 +76,23 @@ public class RpcSessionImpl implements RpcSession {
 	}
 
 	@Override
+	public RpcAsyncResult call(String method, Object[] params, RpcAsyncCallback callback) {
+		verify();
+
+		// NOTE: how about return async future object for blocking?
+		RpcConnection conn = getConnection();
+		RpcAsyncTable table = conn.getAsyncTable();
+
+		int msgId = conn.nextMessageId();
+		RpcMessage msg = RpcMessage.newCall(msgId, getId(), method, params);
+
+		RpcAsyncResult result = new RpcAsyncResult(callback);
+		table.submit(msgId, result);
+		conn.send(msg);
+		return result;
+	}
+
+	@Override
 	public Object call(String method, Object[] params) throws RpcException, InterruptedException {
 		return call(method, params, 0);
 	}
@@ -84,6 +111,9 @@ public class RpcSessionImpl implements RpcSession {
 		int msgId = conn.nextMessageId();
 		RpcMessage msg = RpcMessage.newCall(msgId, getId(), method, params);
 		conn.send(msg);
+
+		// TODO: response may be received before blocking, then response loss
+		// can be occurred.
 
 		// set blocking call
 		blockingCalls.add(msgId);

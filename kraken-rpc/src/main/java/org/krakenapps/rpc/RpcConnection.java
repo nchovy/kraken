@@ -91,15 +91,17 @@ public interface RpcConnection {
 
 	Collection<String> getPropertyKeys();
 
-	boolean requestPeering();
+	void requestPeering(RpcPeeringCallback callback);
 
-	boolean requestPeering(String password);
+	void requestPeering(RpcPeeringCallback callback, String password);
 
 	void addListener(RpcConnectionEventListener callback);
 
 	void removeListener(RpcConnectionEventListener callback);
 
 	RpcBlockingTable getBlockingTable();
+	
+	RpcAsyncTable getAsyncTable();
 
 	void waitControlReady();
 	
