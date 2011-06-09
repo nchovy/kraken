@@ -30,7 +30,7 @@ import org.krakenapps.pcap.decoder.ethernet.MacAddress;
  */
 public class DhcpMessage {
 	public enum Type {
-		Unknown(0), Request(3), Ack(5), Inform(8);
+		Unknown(0), Discover(1), Offer(2), Request(3), Decline(4), Ack(5), Nak(6), Release(7), Inform(8);
 
 		private int value;
 

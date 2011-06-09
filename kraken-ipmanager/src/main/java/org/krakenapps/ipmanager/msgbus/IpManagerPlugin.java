@@ -16,6 +16,7 @@
 package org.krakenapps.ipmanager.msgbus;
 
 import java.net.InetAddress;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -62,7 +63,7 @@ public class IpManagerPlugin implements IpEventListener {
 
 	@Requires
 	private PushApi pushApi;
-	
+
 	@Requires
 	private ArpScanner arpScanner;
 
@@ -235,40 +236,43 @@ public class IpManagerPlugin implements IpEventListener {
 	@MsgbusMethod
 	@Override
 	public void onNewIpDetected(Agent agent, InetAddress ip, MacAddress mac) {
-		push(Type.NewIpDetected, agent, ip, mac, null);
+		push(Type.NewIpDetected, agent, ip, null, mac, null);
 	}
 
 	@Override
 	public void onNewMacDetected(Agent agent, InetAddress ip, MacAddress mac) {
-		push(Type.NewMacDetected, agent, ip, mac, null);
+		push(Type.NewMacDetected, agent, ip, null, mac, null);
 	}
 
 	@Override
-	public void onIpChanged(Agent agent, InetAddress ip, MacAddress mac) {
-		push(Type.IpChanged, agent, ip, mac, null);
+	public void onIpChanged(Agent agent, InetAddress ip1, InetAddress ip2, MacAddress mac) {
+		push(Type.IpChanged, agent, ip1, ip2, mac, null);
 	}
 
 	@Override
 	public void onMacChanged(Agent agent, InetAddress ip, MacAddress oldMac, MacAddress newMac) {
-		push(Type.MacChanged, agent, ip, oldMac, newMac);
+		push(Type.MacChanged, agent, ip, null, oldMac, newMac);
 	}
 
 	@Override
 	public void onIpConflict(Agent agent, InetAddress ip, MacAddress originalMac, MacAddress conflictMac) {
-		push(Type.IpConflict, agent, ip, originalMac, conflictMac);
+		push(Type.IpConflict, agent, ip, null, originalMac, conflictMac);
 	}
 
-	private void push(Type type, Agent agent, InetAddress ip, MacAddress mac1, MacAddress mac2) {
+	private void push(Type type, Agent agent, InetAddress ip1, InetAddress ip2, MacAddress mac1, MacAddress mac2) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Map<String, Object> m = new HashMap<String, Object>();
 
 		// TODO: localized log message using push interceptor
 		m.put("type", type.getCode());
-		m.put("ip", ip.getHostAddress());
+		m.put("ip1", ip1.getHostAddress());
+		m.put("ip2", ip2 == null ? null : ip2.getHostAddress());
 		m.put("mac1", mac1.toString());
 		m.put("mac2", mac2 == null ? null : mac2.toString());
+		m.put("date", dateFormat.format(new Date()));
 
 		pushApi.push(agent.getOrgId(), "kraken-ipm-log", m);
 
-		logger.info("kraken ipmanager: push message ip event [type={}, ip={}]", type, ip.getHostAddress());
+		logger.info("kraken ipmanager: push message ip event [type={}, ip={}]", type, ip1.getHostAddress());
 	}
 }

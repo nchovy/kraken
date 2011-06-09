@@ -71,7 +71,8 @@ public class ArpScannerService implements ArpScanner {
 				for (InetAddress ip : m.keySet()) {
 					MacAddress mac = m.get(ip);
 					IpDetection d = new IpDetection("local", now, mac, ip);
-					ipManager.updateIpEntry(d);
+					if (ipManager != null)
+						ipManager.updateIpEntry(d);
 
 					logger.trace("kraken ipmanager: found arp entry [{}, {}]", ip, mac);
 				}

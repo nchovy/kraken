@@ -31,7 +31,7 @@ public abstract class DefaultIpEventListener implements IpEventListener {
 	}
 
 	@Override
-	public void onIpChanged(Agent agent, InetAddress ip, MacAddress mac) {
+	public void onIpChanged(Agent agent, InetAddress ip1, InetAddress ip2, MacAddress mac) {
 	}
 
 	@Override

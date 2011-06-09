@@ -15,6 +15,7 @@
  */
 package org.krakenapps.ipmanager.impl;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -36,7 +37,6 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.dom.api.PushApi;
 import org.krakenapps.ipmanager.IpDetection;
 import org.krakenapps.ipmanager.IpEventListener;
 import org.krakenapps.ipmanager.IpManager;
@@ -66,9 +66,6 @@ public class IpManagerService implements IpManager, Runnable {
 
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
-
-	@Requires
-	private PushApi pushApi;
 
 	private BlockingQueue<IpDetection> queue;
 
@@ -384,15 +381,15 @@ public class IpManagerService implements IpManager, Runnable {
 			return;
 		}
 
-		if (d.getIp() != null && !d.getIp().getHostAddress().equals("0.0.0.0"))
-			syncIpEntry(em, entries, macs, d, agent);
-
 		// netbios/dhcp host check
-		syncHostEntry(em, d, agent);
+		HostEntry host = syncHostEntry(em, d, agent);
+
+		if (d.getIp() != null && !d.getIp().getHostAddress().equals("0.0.0.0"))
+			syncIpEntry(em, entries, macs, d, agent, host);
 	}
 
 	private void syncIpEntry(EntityManager em, Map<IpEntryKey, IpEntry> entries, Map<DetectedMacKey, DetectedMac> macs,
-			IpDetection d, Agent agent) {
+			IpDetection d, Agent agent, HostEntry host) {
 		IpEntry entry = null;
 		logger.debug("kraken ipmanager: trace ip detection [{}]", d);
 
@@ -405,6 +402,8 @@ public class IpManagerService implements IpManager, Runnable {
 			entry.setFirstSeen(d.getDate());
 			entry.setLastSeen(d.getDate());
 			entry.setCurrentMac(d.getMac().toString());
+			if (host != null)
+				entry.getHostEntries().add(host);
 			em.persist(entry);
 
 			entries.put(key, entry);
@@ -415,6 +414,8 @@ public class IpManagerService implements IpManager, Runnable {
 			logger.trace("kraken ipmanager: new ip [{}] added", d);
 		} else {
 			entry = entries.get(key);
+			if (host != null)
+				entry.getHostEntries().add(host);
 			// ip conflict?
 			if (!entry.getCurrentMac().equals(d.getMac().toString())) {
 				MacAddress originalMac = new MacAddress(entry.getCurrentMac());
@@ -446,7 +447,7 @@ public class IpManagerService implements IpManager, Runnable {
 				macs.put(macKey, changed);
 
 				generateLog(em, agent, Type.IpChanged, d, null, detectedMac.getIp().getIp());
-				notifyIpChanged(d, agent);
+				notifyIpChanged(d, agent, detectedMac.getIp().getIp());
 			} else {
 				// not changed, just update last seen
 				detectedMac.setLastSeen(d.getDate());
@@ -466,9 +467,9 @@ public class IpManagerService implements IpManager, Runnable {
 		return detectedMac;
 	}
 
-	private void syncHostEntry(EntityManager em, IpDetection d, Agent agent) {
+	private HostEntry syncHostEntry(EntityManager em, IpDetection d, Agent agent) {
 		if (d.getHostName() == null && d.getWorkGroup() == null)
-			return;
+			return null;
 
 		HostEntry hostEntry = null;
 		try {
@@ -497,6 +498,8 @@ public class IpManagerService implements IpManager, Runnable {
 
 			em.persist(nic);
 		}
+
+		return hostEntry;
 	}
 
 	private void setHostEntry(IpDetection d, HostEntry hostEntry) {
@@ -614,8 +617,6 @@ public class IpManagerService implements IpManager, Runnable {
 
 		log.setOrgId(agent.getOrgId());
 		em.persist(log);
-
-		pushApi.push(agent.getOrgId(), "kraken-ipm-log", log.marshal());
 	}
 
 	private void notifyIpConflict(IpDetection d, Agent agent, MacAddress originalMac) {
@@ -651,11 +652,11 @@ public class IpManagerService implements IpManager, Runnable {
 		}
 	}
 
-	private void notifyIpChanged(IpDetection d, Agent agent) {
+	private void notifyIpChanged(IpDetection d, Agent agent, String oldIp) {
 		// fire ip changed callbacks
 		for (IpEventListener callback : callbacks) {
 			try {
-				callback.onIpChanged(agent, d.getIp(), d.getMac());
+				callback.onIpChanged(agent, InetAddress.getByName(oldIp), d.getIp(), d.getMac());
 			} catch (Exception e) {
 				logger.warn("kraken ipmanager: event callback should not throw any exception", e);
 			}

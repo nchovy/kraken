@@ -25,7 +25,7 @@ public interface IpEventListener {
 
 	void onNewMacDetected(Agent agent, InetAddress ip, MacAddress mac);
 
-	void onIpChanged(Agent agent, InetAddress ip, MacAddress mac);
+	void onIpChanged(Agent agent, InetAddress ip1, InetAddress ip2, MacAddress mac);
 
 	void onMacChanged(Agent agent, InetAddress ip, MacAddress oldMac, MacAddress newMac);
 

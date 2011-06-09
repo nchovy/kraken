@@ -18,9 +18,11 @@ package org.krakenapps.ipmanager.impl;
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.PriorityQueue;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
@@ -73,6 +75,10 @@ public class IpMonitorService implements IpMonitor, PcapStreamEventListener, Udp
 	private NetBiosDecoder netbios;
 	private DhcpDecoder dhcp;
 
+	private Map<Integer, TemporaryIpDetection> dhcpRequests = new HashMap<Integer, TemporaryIpDetection>();
+	private PriorityQueue<RequestTimestamp> reqTimestamps = new PriorityQueue<RequestTimestamp>(11,
+			new RequestTimestampComparator());
+
 	@Validate
 	public void start() {
 		netbios = new NetBiosDecoder();
@@ -83,12 +89,13 @@ public class IpMonitorService implements IpMonitor, PcapStreamEventListener, Udp
 
 		for (PcapDeviceMetadata metadata : PcapDeviceManager.getDeviceMetadataList()) {
 			try {
-				PcapDevice device = PcapDeviceManager.open(metadata.getName(), 5000);
+				PcapDevice device = PcapDeviceManager.open(metadata.getName(), 30000);
+				device.setFilter("udp");
 				PcapLiveRunner runner = new PcapLiveRunner(device);
 				runner.getUdpDecoder().registerUdpProcessor(this);
 				runner.setUdpProcessor(Protocol.DHCP, dhcp);
 				runner.setUdpProcessor(Protocol.NETBIOS, netbios);
-				Thread thread = new Thread(runner);
+				Thread thread = new Thread(runner, "IP Monitor " + device.getMetadata().getName());
 				stream.put(runner, thread);
 				thread.start();
 			} catch (IOException e) {
@@ -191,31 +198,80 @@ public class IpMonitorService implements IpMonitor, PcapStreamEventListener, Udp
 
 	@Override
 	public void process(DhcpMessage msg) {
-		String hostName = DhcpOptions.getHostName(msg);
-		if (hostName == null)
-			return;
-
 		Type type = DhcpOptions.getDhcpMessageType(msg);
-		if (type != Type.Inform && type != Type.Request)
-			return;
-
-		String fingerprint = DhcpOptions.getFingerprint(msg);
-		FingerprintMetadata metadata = FingerprintDetector.matches(fingerprint);
-		if (metadata != null)
-			logger.trace("kraken ipmanager: dhcp [{}] metadata [{}]", hostName, metadata);
 
 		MacAddress mac = msg.getClientMac();
 		InetAddress ip = msg.getClientAddress();
 		String workgroup = DhcpOptions.getDomainName(msg);
-
 		String category = null;
 		String vendor = null;
+		String hostName = DhcpOptions.getHostName(msg);
+
+		String fingerprint = DhcpOptions.getFingerprint(msg);
+		FingerprintMetadata metadata = FingerprintDetector.matches(fingerprint);
 		if (metadata != null) {
 			category = metadata.getCategory();
 			vendor = metadata.getVendor();
+			logger.trace("kraken ipmanager: dhcp [{}] metadata [{}]", hostName, metadata);
 		}
 
-		IpDetection d = new IpDetection("local", new Date(), mac, ip, hostName, workgroup, category, vendor);
-		ipManager.updateIpEntry(d);
+		if (type == Type.Request) {
+			TemporaryIpDetection tid = new TemporaryIpDetection();
+			tid.mac = mac;
+			tid.hostName = hostName;
+			tid.workgroup = workgroup;
+			tid.category = category;
+			tid.vendor = vendor;
+			dhcpRequests.put(msg.getTransactionId(), tid);
+			reqTimestamps.add(new RequestTimestamp(msg.getTransactionId()));
+		} else if (type == Type.Inform) {
+			IpDetection d = new IpDetection("local", new Date(), mac, ip, hostName, workgroup, category, vendor);
+			ipManager.updateIpEntry(d);
+		} else if (type == Type.Ack) {
+			TemporaryIpDetection tid = dhcpRequests.get(msg.getTransactionId());
+			if (tid == null)
+				return;
+
+			mac = tid.mac;
+			ip = msg.getYourAddress();
+			hostName = tid.hostName;
+			workgroup = tid.workgroup;
+			category = tid.category;
+			vendor = tid.vendor;
+			dhcpRequests.remove(msg.getTransactionId());
+
+			IpDetection d = new IpDetection("local", new Date(), mac, ip, hostName, workgroup, category, vendor);
+			ipManager.updateIpEntry(d);
+		}
+
+		long now = System.currentTimeMillis();
+		while (!reqTimestamps.isEmpty() && now - reqTimestamps.peek().date.getTime() > 30000) {
+			RequestTimestamp rt = reqTimestamps.poll();
+			dhcpRequests.remove(rt.transactionId);
+		}
+	}
+
+	private class TemporaryIpDetection {
+		private MacAddress mac;
+		private String hostName;
+		private String workgroup;
+		private String category;
+		private String vendor;
+	}
+
+	private class RequestTimestamp {
+		private Integer transactionId;
+		private Date date = new Date();
+
+		private RequestTimestamp(Integer transactionId) {
+			this.transactionId = transactionId;
+		}
+	}
+
+	private class RequestTimestampComparator implements Comparator<RequestTimestamp> {
+		@Override
+		public int compare(RequestTimestamp o1, RequestTimestamp o2) {
+			return (int) (o1.date.getTime() - o2.date.getTime());
+		}
 	}
 }
