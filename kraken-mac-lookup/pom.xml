@@ -12,7 +12,7 @@
 	<artifactId>kraken-mac-lookup</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken MAC Address Lookup</name>
-	<version>1.2.0</version>
+	<version>1.4.0</version>
 	<build>
 		<plugins>
 			<plugin>
