@@ -270,6 +270,16 @@ body {
 	background-image:url(../img/application_view_tile.png) !important
 }
 
+.ico-cross {
+	background-image:url(../img/badge-circle-cross-16-ns.png) !important;
+	width: 16px; height: 16px;
+}
+
+.ico-check {
+	background-image:url(../img/badge-circle-check-16-ns.png) !important;
+	width: 16px; height: 16px;
+}
+
 .mapInfo {
 	font-family: 'Lucida Grande', 'Segoe UI';
 	font-size: 13pt
