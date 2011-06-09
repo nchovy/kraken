@@ -7,3 +7,4 @@ org.krakenapps.ipmanager.model.HostEntry
 org.krakenapps.ipmanager.model.HostNic
 org.krakenapps.ipmanager.model.IpEntry
 org.krakenapps.ipmanager.model.IpEventLog
+org.krakenapps.ipmanager.model.IpAllocationRequest

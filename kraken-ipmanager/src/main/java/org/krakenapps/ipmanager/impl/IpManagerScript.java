@@ -15,10 +15,16 @@
  */
 package org.krakenapps.ipmanager.impl;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 
 import org.krakenapps.api.DefaultScript;
 import org.krakenapps.api.ScriptArgument;
@@ -28,7 +34,13 @@ import org.krakenapps.ipmanager.IpManager;
 import org.krakenapps.ipmanager.IpQueryCondition;
 import org.krakenapps.ipmanager.LogQueryCondition;
 import org.krakenapps.ipmanager.model.Agent;
+import org.krakenapps.ipmanager.model.AllowedMac;
+import org.krakenapps.ipmanager.model.AuditLog;
+import org.krakenapps.ipmanager.model.DeniedMac;
+import org.krakenapps.ipmanager.model.DetectedMac;
 import org.krakenapps.ipmanager.model.HostEntry;
+import org.krakenapps.ipmanager.model.HostNic;
+import org.krakenapps.ipmanager.model.IpAllocationRequest;
 import org.krakenapps.ipmanager.model.IpEntry;
 import org.krakenapps.ipmanager.model.IpEventLog;
 import org.krakenapps.jpa.JpaService;
@@ -76,6 +88,37 @@ public class IpManagerScript extends DefaultScript {
 			context.println(e.getMessage());
 			logger.error("cannot load jpa model", e.getMessage());
 		}
+	}
+
+	public void install(String[] args) {
+		EntityManagerFactory emf = jpa.getEntityManagerFactory(JPA_FACTORY_NAME);
+		if (emf == null) {
+			context.println("run load first");
+			return;
+		}
+
+		EntityManager em = emf.createEntityManager();
+		if (em.createQuery("FROM Agent").getResultList().size() == 0) {
+			Agent agent = new Agent();
+			agent.setOrgId(1);
+			agent.setAreaId(1);
+			agent.setName("local");
+			agent.setGuid("local");
+			try {
+				agent.setIp(InetAddress.getLocalHost().getHostAddress());
+				agent.setNetmask("");
+			} catch (UnknownHostException e) {
+			}
+			agent.setPreventNewIp(true);
+			agent.setPreventNewMac(true);
+			agent.setProtectMode(true);
+			agent.setProtectAll(true);
+			agent.setCreateDateTime(new Date());
+			em.getTransaction().begin();
+			em.persist(agent);
+			em.getTransaction().commit();
+		}
+		context.println("default agent is intalled");
 	}
 
 	public void unload(String[] args) {
@@ -233,5 +276,56 @@ public class IpManagerScript extends DefaultScript {
 
 		for (IpEventLog log : logs)
 			context.println(log);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void purge(String[] args) {
+		context.print("really? ");
+		try {
+			String ans = context.readLine();
+			if (ans.equalsIgnoreCase("y") || ans.equalsIgnoreCase("yes")) {
+				EntityManagerFactory emf = jpa.getEntityManagerFactory(JPA_FACTORY_NAME);
+				if (emf == null) {
+					context.println("run load first");
+					return;
+				}
+
+				EntityManager em = emf.createEntityManager();
+				em.getTransaction().begin();
+				List<AllowedMac> allowedMacs = em.createQuery("FROM AllowedMac").getResultList();
+				for (AllowedMac am : allowedMacs)
+					em.remove(am);
+				List<AuditLog> auditLogs = em.createQuery("FROM AuditLog").getResultList();
+				for (AuditLog al : auditLogs)
+					em.remove(al);
+				List<DeniedMac> deniedMacs = em.createQuery("FROM DeniedMac").getResultList();
+				for (DeniedMac dm : deniedMacs)
+					em.remove(dm);
+				List<DetectedMac> detectedMacs = em.createQuery("FROM DetectedMac").getResultList();
+				for (DetectedMac dm : detectedMacs)
+					em.remove(dm);
+				List<HostEntry> hostEntries = em.createQuery("FROM HostEntry").getResultList();
+				for (HostEntry he : hostEntries)
+					em.remove(he);
+				List<HostNic> hostNics = em.createQuery("FROM HostNic").getResultList();
+				for (HostNic hn : hostNics)
+					em.remove(hn);
+				// List<IpAllocationRequest> ipAllocationRequests =
+				// em.createQuery("FROM IpAllocationRequest")
+				// .getResultList();
+				// for (IpAllocationRequest iar : ipAllocationRequests)
+				// em.remove(iar);
+				List<IpEntry> ipEntries = em.createQuery("FROM IpEntry").getResultList();
+				for (IpEntry ie : ipEntries)
+					em.remove(ie);
+				List<IpEventLog> ipEventLogs = em.createQuery("FROM IpEventLog").getResultList();
+				for (IpEventLog iel : ipEventLogs)
+					em.remove(iel);
+				em.getTransaction().commit();
+				return;
+			}
+		} catch (InterruptedException e) {
+		}
+		context.println("cancel");
 	}
 }

@@ -36,6 +36,7 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.dom.api.PushApi;
 import org.krakenapps.ipmanager.IpDetection;
 import org.krakenapps.ipmanager.IpEventListener;
 import org.krakenapps.ipmanager.IpManager;
@@ -65,6 +66,9 @@ public class IpManagerService implements IpManager, Runnable {
 
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
+
+	@Requires
+	private PushApi pushApi;
 
 	private BlockingQueue<IpDetection> queue;
 
@@ -610,6 +614,8 @@ public class IpManagerService implements IpManager, Runnable {
 
 		log.setOrgId(agent.getOrgId());
 		em.persist(log);
+
+		pushApi.push(agent.getOrgId(), "kraken-ipm-log", log.marshal());
 	}
 
 	private void notifyIpConflict(IpDetection d, Agent agent, MacAddress originalMac) {

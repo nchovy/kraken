@@ -15,9 +15,12 @@
  */
 package org.krakenapps.ipmanager.impl;
 
+import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
@@ -45,8 +48,10 @@ import org.krakenapps.pcap.decoder.netbios.NetBiosNameHeader.Opcode;
 import org.krakenapps.pcap.decoder.netbios.rr.NbResourceRecord;
 import org.krakenapps.pcap.decoder.udp.UdpPacket;
 import org.krakenapps.pcap.decoder.udp.UdpProcessor;
+import org.krakenapps.pcap.live.PcapDevice;
+import org.krakenapps.pcap.live.PcapDeviceManager;
+import org.krakenapps.pcap.live.PcapDeviceMetadata;
 import org.krakenapps.pcap.live.PcapStreamEventListener;
-import org.krakenapps.pcap.live.PcapStreamManager;
 import org.krakenapps.pcap.util.PcapLiveRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,38 +68,54 @@ public class IpMonitorService implements IpMonitor, PcapStreamEventListener, Udp
 	@Requires
 	private IpManager ipManager;
 
-	@Requires
-	private PcapStreamManager pcapStreamManager;
+	private Map<PcapLiveRunner, Thread> stream = new HashMap<PcapLiveRunner, Thread>();
 
 	private NetBiosDecoder netbios;
 	private DhcpDecoder dhcp;
 
 	@Validate
 	public void start() {
-		pcapStreamManager.addEventListener(this);
-
 		netbios = new NetBiosDecoder();
 		netbios.registerNameProcessor(this);
 
 		dhcp = new DhcpDecoder();
 		dhcp.register(this);
 
-		for (String key : pcapStreamManager.getStreamKeys()) {
-			PcapLiveRunner runner = pcapStreamManager.get(key);
-			onOpen(key, runner);
+		for (PcapDeviceMetadata metadata : PcapDeviceManager.getDeviceMetadataList()) {
+			try {
+				PcapDevice device = PcapDeviceManager.open(metadata.getName(), 5000);
+				PcapLiveRunner runner = new PcapLiveRunner(device);
+				runner.getUdpDecoder().registerUdpProcessor(this);
+				runner.setUdpProcessor(Protocol.DHCP, dhcp);
+				runner.setUdpProcessor(Protocol.NETBIOS, netbios);
+				Thread thread = new Thread(runner);
+				stream.put(runner, thread);
+				thread.start();
+			} catch (IOException e) {
+				logger.error("kraken ipmanager: device open failed (" + metadata.getName() + ")", e);
+			}
 		}
+
+		for (PcapLiveRunner runner : stream.keySet())
+			onOpen("ipm", runner);
 	}
 
 	@Invalidate
 	public void stop() {
-		if (pcapStreamManager != null) {
-			// remove all callbacks
-			for (String key : pcapStreamManager.getStreamKeys()) {
-				PcapLiveRunner runner = pcapStreamManager.get(key);
-				onClose(key, runner);
-			}
+		// remove all callbacks
+		if (stream != null) {
+			for (PcapLiveRunner runner : stream.keySet()) {
+				stream.get(runner).interrupt();
+				onClose("ipm", runner);
 
-			pcapStreamManager.removeEventListener(this);
+				try {
+					runner.getDevice().close();
+				} catch (IOException e) {
+					logger.error("kraken ipmanager: device close failed (" + runner.getDevice().getMetadata().getName()
+							+ ")", e);
+				}
+			}
+			stream.clear();
 		}
 
 		dhcp.unregister(this);

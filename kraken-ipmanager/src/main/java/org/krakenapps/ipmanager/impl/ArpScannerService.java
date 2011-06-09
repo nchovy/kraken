@@ -27,10 +27,9 @@ import org.krakenapps.ipmanager.ArpScanner;
 import org.krakenapps.ipmanager.IpDetection;
 import org.krakenapps.ipmanager.IpManager;
 import org.krakenapps.pcap.decoder.ethernet.MacAddress;
+import org.krakenapps.pcap.live.PcapDeviceManager;
 import org.krakenapps.pcap.live.PcapDeviceMetadata;
-import org.krakenapps.pcap.live.PcapStreamManager;
 import org.krakenapps.pcap.util.Arping;
-import org.krakenapps.pcap.util.PcapLiveRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +41,6 @@ public class ArpScannerService implements ArpScanner {
 
 	@Requires
 	private IpManager ipManager;
-
-	@Requires
-	private PcapStreamManager pcapStreamManager;
 
 	private int timeout = 10000; // 10sec by default
 
@@ -60,13 +56,13 @@ public class ArpScannerService implements ArpScanner {
 
 	@Override
 	public void run() {
+		if (ipManager == null)
+			return;
+
 		logger.trace("kraken ipmanager: begin arp scanning");
 
-		for (String key : pcapStreamManager.getStreamKeys()) {
+		for (PcapDeviceMetadata metadata : PcapDeviceManager.getDeviceMetadataList()) {
 			try {
-				PcapLiveRunner runner = pcapStreamManager.get(key);
-				PcapDeviceMetadata metadata = runner.getDevice().getMetadata();
-
 				logger.trace("kraken ipmanager: begin arp scanning for [{}]", metadata.getName());
 
 				Date now = new Date();

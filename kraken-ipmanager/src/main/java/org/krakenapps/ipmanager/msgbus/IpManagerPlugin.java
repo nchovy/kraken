@@ -26,6 +26,7 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.PushApi;
+import org.krakenapps.ipmanager.ArpScanner;
 import org.krakenapps.ipmanager.IpEventListener;
 import org.krakenapps.ipmanager.IpManager;
 import org.krakenapps.ipmanager.IpQueryCondition;
@@ -33,6 +34,7 @@ import org.krakenapps.ipmanager.LogQueryCondition;
 import org.krakenapps.ipmanager.model.Agent;
 import org.krakenapps.ipmanager.model.AllowedMac;
 import org.krakenapps.ipmanager.model.DeniedMac;
+import org.krakenapps.ipmanager.model.HostEntry;
 import org.krakenapps.ipmanager.model.IpEntry;
 import org.krakenapps.ipmanager.model.IpEventLog;
 import org.krakenapps.ipmanager.model.IpEventLog.Type;
@@ -60,6 +62,9 @@ public class IpManagerPlugin implements IpEventListener {
 
 	@Requires
 	private PushApi pushApi;
+	
+	@Requires
+	private ArpScanner arpScanner;
 
 	@Validate
 	public void start() {
@@ -215,6 +220,19 @@ public class IpManagerPlugin implements IpEventListener {
 
 	}
 
+	@MsgbusMethod
+	public void getHosts(Request req, Response resp) {
+		int orgId = req.getOrgId();
+		List<HostEntry> hosts = ipManager.getHosts(orgId);
+		resp.put("hosts", Marshaler.marshal(hosts));
+	}
+
+	@MsgbusMethod
+	public void arpscan(Request req, Response resp) {
+		arpScanner.run();
+	}
+
+	@MsgbusMethod
 	@Override
 	public void onNewIpDetected(Agent agent, InetAddress ip, MacAddress mac) {
 		push(Type.NewIpDetected, agent, ip, mac, null);
