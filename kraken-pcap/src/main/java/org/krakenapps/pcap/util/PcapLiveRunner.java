@@ -66,7 +66,7 @@ public class PcapLiveRunner implements Runnable {
 		ipv6 = new Ipv6Decoder();
 		icmp = new IcmpDecoder();
 		icmpv6 = new Icmpv6Decoder();
-		tcp = new TcpDecoder(new TcpPortProtocolMapper());
+		// tcp = new TcpDecoder(new TcpPortProtocolMapper());
 		udp = new UdpDecoder(new UdpPortProtocolMapper());
 
 		eth.register(EthernetType.IPV4, ip);
@@ -75,10 +75,10 @@ public class PcapLiveRunner implements Runnable {
 
 		ip.register(InternetProtocol.ICMP, icmp);
 		ip.register(InternetProtocol.UDP, udp);
-		ip.register(InternetProtocol.TCP, tcp);
+		// ip.register(InternetProtocol.TCP, tcp);
 
 		ipv6.register(InternetProtocol.ICMPV6, icmpv6);
-		ipv6.register(InternetProtocol.TCP, tcp);
+		// ipv6.register(InternetProtocol.TCP, tcp);
 		ipv6.register(InternetProtocol.UDP, udp);
 	}
 
@@ -90,11 +90,12 @@ public class PcapLiveRunner implements Runnable {
 						break;
 
 					PcapPacket packet = device.getPacket();
-					eth.decode(packet);
+					if (packet != null)
+						eth.decode(packet);
 				} catch (IOException e) {
 					if (e.getMessage().equalsIgnoreCase("Timeout"))
 						continue;
-					
+
 					throw e;
 				} catch (Exception e) {
 					logger.warn("kraken-pcap: decode error", e);
@@ -132,7 +133,7 @@ public class PcapLiveRunner implements Runnable {
 	public void setUdpProcessor(Protocol protocol, UdpProcessor processor) {
 		udp.getProtocolMapper().register(protocol, processor);
 	}
-	
+
 	public void unsetUdpProcessor(Protocol protocol, UdpProcessor processor) {
 		udp.getProtocolMapper().unregister(protocol, processor);
 	}
@@ -140,7 +141,7 @@ public class PcapLiveRunner implements Runnable {
 	public void addTcpCallback(TcpSegmentCallback callback) {
 		tcp.registerSegmentCallback(callback);
 	}
-	
+
 	public void removeTcpCallback(TcpSegmentCallback callback) {
 		tcp.unregisterSegmentCallback(callback);
 	}
