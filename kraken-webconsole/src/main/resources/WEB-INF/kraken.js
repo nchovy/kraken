@@ -3,7 +3,6 @@ var channel;
 var processManager;
 var programManager;
 var windowManager;
-var eventManager;
 
 if (window.WebSocket) {
 	socket = new WebSocket("ws://" + window.location.host + "/websocket");
@@ -25,7 +24,6 @@ if (window.WebSocket) {
 		processManager = new ProcessManager();
 		programManager = new ProgramManager();
 		windowManager = new WindowManager();
-		eventManager = new EventManager();
 	};
 	socket.onerror = function(error) {
 		console.error(error);
@@ -297,28 +295,42 @@ Channel = function() {
 		}
 	}
 	
+	var trapCallbackMap = {};
+	
+	this.registerTrap = function(method, callback) {
+		var map = trapCallbackMap;
+		map[method] = callback;
+	}
+	
 	this.fireCallback = function(msg) {
-		var reqId = msg[0].requestId;
-		
-		// get and remove from waiting map
-		var callback = waitingReqs[reqId];
-		var error_callback = errorReqs[reqId];
-		delete waitingReqs[reqId];
-		delete errorReqs[reqId];
-		
-		if(!!msg[0].errorMessage) {
-			if(error_callback != null) {
-				error_callback(msg[0]);
-			}
-			else { 
-				console.log('An error occurred from ' + msg[0].method);
-				console.log(msg);
-			}
+		if(msg[0].type == 'Trap') {
+			var map = trapCallbackMap;
+			var method = msg[0].method;
+			map[method](msg[1]);
 		}
-		else {
-			// invoke callback
-			callback(msg[1]);
-		}
+		else if(msg[0].type == 'Response') {
+			var reqId = msg[0].requestId;
+			
+			// get and remove from waiting map
+			var callback = waitingReqs[reqId];
+			var error_callback = errorReqs[reqId];
+			delete waitingReqs[reqId];
+			delete errorReqs[reqId];
+			
+			if(!!msg[0].errorMessage) {
+				if(error_callback != null) {
+					error_callback(msg[0]);
+				}
+				else { 
+					console.log('An error occurred from ' + msg[0].method);
+					console.log(msg);
+				}
+			}
+			else {
+				// invoke callback
+				callback(msg[1]);
+			}
+		}		
 	}
 	
 	StreamStore = new Ext.data.JsonStore({
@@ -343,6 +355,7 @@ Channel = function() {
 	}
 	
 	this.onreceive = function(data) {
+		//console.log(data);
 		var msg = JSON.parse(data);
 		if(this.streaming) {
 			var m = msg[0];
@@ -353,15 +366,7 @@ Channel = function() {
 			StreamStore.insert(0, newMsg);
 		}
 		
-		if(msg[0].type == 'Trap') {
-			eventManager.sendEvent(msg);
-		}
-		else if(msg[0].type == 'Response') {
-			this.fireCallback(msg);
-		}
-		else {
-			console.log(data);
-		}
+		this.fireCallback(msg);
 	}
 	
 	this.send = function(pid, method, params, callback, error_callback) {
@@ -390,23 +395,6 @@ Channel = function() {
 	}
 	
 	StreamStore.loadData(stream);
-}
-
-EventManager = function() {
-	this.sendEvent = function(msg) {
-		console.log(msg);
-		$.each(processManager.getProcesses(), function(i, prc) {
-			if(prc.name == 'Dashboard') {
-				try {
-					console.log(prc);
-					prc.msg.unshift(msg);
-				}
-				catch (e) {
-					console.log(e);
-				}
-			}
-		});
-	}
 }
 
 LoginPage = function() {
