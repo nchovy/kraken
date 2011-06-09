@@ -24,7 +24,6 @@
         IpmLogStore.loadData(initIpmLog);
 		
 		channel.registerTrap('kraken-ipm-log', function(msg) {
-			console.log(msg);
 			switch(msg.type) {
 				case 1: msg.msg = String.format('New IP [{0} ({1})] detected', msg.ip1, msg.mac1); break;
 				case 2: msg.msg = String.format('New MAC [{0} ({1})] detected', msg.ip1, msg.mac1); break;
@@ -65,7 +64,6 @@
 		function getIpEntries() {
 			channel.send(1, 'org.krakenapps.ipmanager.msgbus.IpManagerPlugin.getIpEntries', {}, 
 				function(resp) {
-					console.log(resp);
 					IpEntryStore.removeAll();
 					IpEntryStore.loadData(resp);
 				}
@@ -77,7 +75,8 @@
 				xtype: 'gridcolumn',
 				dataIndex: 'date',
 				header: 'Time',
-				width: 95
+				width: 30,
+				renderer: simpleDateTime
 			},
 			{
 				xtype: 'gridcolumn',
@@ -107,7 +106,7 @@
                 split: true
             },
             items: [
-				new Ext.TabPanel({
+				that.IpmLogTab = new Ext.TabPanel({
 					region: 'south',
 					activeTab: 0,
 					height: 200,
@@ -205,6 +204,11 @@
 										{
 											property: 'type',
 											value: 5
+										},
+										{
+											fn: function(r) {
+												return true;
+											}
 										}
 									]);
 								}
@@ -224,14 +228,8 @@
 						},
 						{
 							click: function() {
-								console.log(this);
 							},
 							append: function(a, b, c) {
-								console.log(a);/*
-								this.appendChild(new Ext.tree.TreeNode({
-									text: 'hello'
-								}));
-								a.un('append');*/
 							}
 						}),
 						{
