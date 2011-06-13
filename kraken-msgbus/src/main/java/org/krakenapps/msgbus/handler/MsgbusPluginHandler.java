@@ -184,14 +184,8 @@ public class MsgbusPluginHandler extends PrimitiveHandler implements MessageHand
 	private void fireSessionEvent(Object plugin, Method method, Session session) {
 		try {
 			method.invoke(plugin, new Object[] { session });
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.warn("kraken msgbus: session event handler should not throw any exception", e);
 		}
 	}
 
