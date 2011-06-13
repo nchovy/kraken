@@ -17,6 +17,7 @@ package org.krakenapps.webconsole.impl;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Properties;
 
 import javax.servlet.http.HttpServlet;
 
@@ -55,7 +56,16 @@ public class WebConsoleScript implements Script {
 		context.println("Port Bindings");
 		context.println("---------------------");
 		for (InetSocketAddress binding : server.getBindings()) {
-			context.println(binding);
+			String metadata = "";
+
+			Properties p = server.getProperties(binding);
+			boolean https = (Boolean) p.get("https");
+			if (https == true) {
+				metadata = " => https: key [" + p.getProperty("key_alias") + "] trust [" + p.getProperty("trust_alias")
+						+ "]";
+			}
+
+			context.println(binding + metadata);
 		}
 	}
 
@@ -64,10 +74,28 @@ public class WebConsoleScript implements Script {
 		try {
 			int port = Integer.valueOf(args[0]);
 			server.open(new InetSocketAddress(port));
-			context.println("opened");
+			context.println("opened http server");
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("kraken webconsole: cannot open port", e);
+		}
+	}
+
+	@ScriptUsage(description = "open https server", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "bind port"),
+			@ScriptArgument(name = "key alias", type = "string", description = "keystore name"),
+			@ScriptArgument(name = "trust alias", type = "string", description = "truststore name") })
+	public void openSsl(String[] args) {
+		try {
+			int port = Integer.valueOf(args[0]);
+			String keyAlias = args[1];
+			String trustAlias = args[2];
+
+			server.openSsl(new InetSocketAddress(port), keyAlias, trustAlias);
+			context.println("opened https server");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+			logger.error("kraken webconsole: cannot open ssl port");
 		}
 	}
 

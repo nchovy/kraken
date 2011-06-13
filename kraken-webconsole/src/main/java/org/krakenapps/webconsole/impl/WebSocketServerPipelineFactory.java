@@ -15,27 +15,39 @@
  */
 package org.krakenapps.webconsole.impl;
 
+import javax.net.ssl.SSLEngine;
+
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.webconsole.StaticResourceApi;
 
 public class WebSocketServerPipelineFactory implements ChannelPipelineFactory {
 	private MessageBus msgbus;
 	private StaticResourceApi staticResourceApi;
+	private WebSocketServerContext ctx;
 
-	public WebSocketServerPipelineFactory(MessageBus msgbus, StaticResourceApi staticResourceApi) {
+	public WebSocketServerPipelineFactory(MessageBus msgbus, StaticResourceApi staticResourceApi,
+			WebSocketServerContext ctx) {
 		this.msgbus = msgbus;
 		this.staticResourceApi = staticResourceApi;
+		this.ctx = ctx;
 	}
 
 	@Override
 	public ChannelPipeline getPipeline() throws Exception {
 		ChannelPipeline pipeline = Channels.pipeline();
+		if (ctx.isSsl()) {
+			SSLEngine engine = ctx.getSslContext().createSSLEngine();
+			engine.setUseClientMode(false);
+			pipeline.addLast("ssl", new SslHandler(engine));
+		}
+
 		pipeline.addLast("decoder", new HttpRequestDecoder());
 		pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
