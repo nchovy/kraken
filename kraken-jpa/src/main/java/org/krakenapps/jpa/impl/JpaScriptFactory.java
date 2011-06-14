@@ -15,6 +15,7 @@
  */
 package org.krakenapps.jpa.impl;
 
+import org.krakenapps.api.BundleManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.jpa.JpaScript;
@@ -30,6 +31,7 @@ import org.osgi.framework.ServiceReference;
  */
 public class JpaScriptFactory implements ScriptFactory {
 	private BundleContext context;
+	private BundleManager bundleManager;
 
 	public JpaScriptFactory(BundleContext context) {
 		this.context = context;
@@ -37,10 +39,9 @@ public class JpaScriptFactory implements ScriptFactory {
 
 	@Override
 	public Script createScript() {
-		ServiceReference ref = context.getServiceReference(JpaService.class
-				.getName());
+		ServiceReference ref = context.getServiceReference(JpaService.class.getName());
 		JpaService jpa = (JpaService) context.getService(ref);
-		return new JpaScript(jpa);
+		return new JpaScript(jpa, bundleManager);
 	}
 
 }

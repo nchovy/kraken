@@ -42,9 +42,7 @@ public interface JpaService {
 	 *            the related JPA entity class names
 	 * @return the newly created entity manager factory
 	 */
-	@SuppressWarnings("unchecked")
-	EntityManagerFactory createEntityManagerFactory(Properties props,
-			List<Class> entityClasses);
+	EntityManagerFactory createEntityManagerFactory(Properties props, List<Class<?>> entityClasses);
 
 	/**
 	 * Returns names of current registered JPA entity manager factories
@@ -73,8 +71,7 @@ public interface JpaService {
 	 * @throws BundleException
 	 *             if bundle not found
 	 */
-	void registerEntityManagerFactory(String factoryName, Properties props,
-			long bundleId) throws BundleException;
+	void registerEntityManagerFactory(String factoryName, Properties props, long bundleId) throws BundleException;
 
 	/**
 	 * Close and unregister the entity manager factory
@@ -121,8 +118,7 @@ public interface JpaService {
 	 *            the properties
 	 * @return an entity manager or null if factory not found
 	 */
-	@SuppressWarnings("unchecked")
-	EntityManager createEntityManager(String factoryName, Map map);
+	EntityManager createEntityManager(String factoryName, Map<Object, Object> map);
 
 	/**
 	 * Add a listener for receiving entity manager factory event
@@ -138,6 +134,5 @@ public interface JpaService {
 	 * @param listener
 	 *            the listener instance
 	 */
-	void removeEntityManagerFactoryListener(
-			EntityManagerFactoryListener listener);
+	void removeEntityManagerFactoryListener(EntityManagerFactoryListener listener);
 }

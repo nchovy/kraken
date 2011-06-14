@@ -53,7 +53,7 @@ public class TransactionalHandler extends PrimitiveHandler implements EntityMana
 	/**
 	 * Find and hook all transactional methods.
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	@Override
 	public void configure(Element metadata, Dictionary configuration) throws ConfigurationException {
 		// Get factory name
@@ -68,7 +68,7 @@ public class TransactionalHandler extends PrimitiveHandler implements EntityMana
 			Element[] el = metadata.getElements("JpaConfig", "org.krakenapps.jpa.handler");
 			if (el == null || el.length == 0)
 				throw new IllegalStateException("@JpaConfig configuration not found.");
-			
+
 			Element entityManagerFactoryElement = el[0];
 			factoryName = entityManagerFactoryElement.getAttribute("factory");
 		}

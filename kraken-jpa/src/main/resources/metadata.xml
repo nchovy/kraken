@@ -3,7 +3,7 @@
 	<handler classname="org.krakenapps.jpa.handler.TransactionalHandler"
 		name="transactional" namespace="org.krakenapps.jpa.handler">
 		<requires field="jpaService">
-			<callback type="bind" method="setJpaService" /> 
+			<callback type="bind" method="setJpaService" />
 		</requires>
 		<requires field="threadLocalEntityManager">
 			<callback type="bind" method="setThreadLocalEntityManager" />
@@ -12,7 +12,7 @@
 	<handler classname="org.krakenapps.jpa.handler.TransactionalHandler"
 		name="jpaconfig" namespace="org.krakenapps.jpa.handler">
 		<requires field="jpaService">
-			<callback type="bind" method="setJpaService" /> 
+			<callback type="bind" method="setJpaService" />
 		</requires>
 		<requires field="threadLocalEntityManager">
 			<callback type="bind" method="setThreadLocalEntityManager" />
@@ -36,6 +36,7 @@
 		<provides>
 			<property name="alias" type="string" value="jpa" />
 		</provides>
+		<requires field="bundleManager" />
 	</component>
 	<instance component="jpa-service" />
 	<instance component="jpa-thread-local-entity-manager" />

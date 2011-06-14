@@ -22,6 +22,9 @@ import java.util.Set;
 
 import javax.persistence.PersistenceException;
 
+import org.krakenapps.api.BundleManager;
+import org.krakenapps.api.MavenResolveException;
+import org.krakenapps.api.ProgressMonitor;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -37,6 +40,7 @@ import org.osgi.framework.BundleException;
 public class JpaScript implements Script {
 	private JpaService jpa;
 	private ScriptContext context;
+	private BundleManager bundleManager;
 
 	/**
 	 * Created with the specific JPA service
@@ -44,8 +48,9 @@ public class JpaScript implements Script {
 	 * @param jpa
 	 *            the JPA service
 	 */
-	public JpaScript(JpaService jpa) {
+	public JpaScript(JpaService jpa, BundleManager bundleManager) {
 		this.jpa = jpa;
+		this.bundleManager = bundleManager;
 	}
 
 	/**
@@ -87,7 +92,6 @@ public class JpaScript implements Script {
 		}
 
 		context.println("");
-
 	}
 
 	@ScriptUsage(description = "Create and register new entity manager factory", arguments = {
@@ -158,6 +162,43 @@ public class JpaScript implements Script {
 				"jdbc:mysql://$host/$db??useUnicode=true&amp;characterEncoding=utf8"));
 		configs.add(new DatabaseConfigTemplate("PostgreSQL", "org.postgresql.Driver", "jdbc:postgresql://$host/$db"));
 		return configs;
+	}
+
+	public void installDriver(String[] args) {
+		try {
+			context.println("Database");
+			context.println("-------------");
+			List<JDBCDriverBundleInfo> infos = getDriverInfos();
+			int i = 1;
+			for (JDBCDriverBundleInfo info : infos)
+				context.println("[" + (i++) + "] " + info.toString());
+
+			context.print("select? ");
+			int selected = Integer.valueOf(context.readLine());
+
+			if (selected < 1 && selected > infos.size()) {
+				context.println("invalid number");
+				return;
+			}
+
+			JDBCDriverBundleInfo info = infos.get(selected - 1);
+			long bundleId = bundleManager.installBundle(new ProgressMonitorImpl(context), info.groupId,
+					info.artifactId, info.version);
+			context.println("bundle [" + bundleId + "] loaded");
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("interrupted");
+		} catch (MavenResolveException e) {
+			context.println("install failed");
+		}
+	}
+
+	private List<JDBCDriverBundleInfo> getDriverInfos() {
+		List<JDBCDriverBundleInfo> infos = new ArrayList<JDBCDriverBundleInfo>();
+		infos.add(new JDBCDriverBundleInfo("MySQL", "com.mysql.jdbc", "com.springsource.com.mysql.jdbc", "5.1.6"));
+		infos.add(new JDBCDriverBundleInfo("PostgreSQL", "org.postgresql", "com.springsource.org.postgresql.jdbc4",
+				"8.3.604"));
+		return infos;
 	}
 
 	/**
@@ -237,6 +278,43 @@ public class JpaScript implements Script {
 		@Override
 		public String toString() {
 			return displayText;
+		}
+	}
+
+	private static class JDBCDriverBundleInfo {
+		private String displayText;
+		private String groupId;
+		private String artifactId;
+		private String version;
+
+		private JDBCDriverBundleInfo(String displayText, String groupId, String artifactId, String version) {
+			this.displayText = displayText;
+			this.groupId = groupId;
+			this.artifactId = artifactId;
+			this.version = version;
+		}
+
+		@Override
+		public String toString() {
+			return displayText;
+		}
+	}
+
+	private static class ProgressMonitorImpl implements ProgressMonitor {
+		private ScriptContext context;
+
+		public ProgressMonitorImpl(ScriptContext context) {
+			this.context = context;
+		}
+
+		@Override
+		public void write(String message) {
+			context.print(message);
+		}
+
+		@Override
+		public void writeln(String message) {
+			context.println(message);
 		}
 	}
 }

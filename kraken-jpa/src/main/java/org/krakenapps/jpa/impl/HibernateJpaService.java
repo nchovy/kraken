@@ -52,6 +52,9 @@ import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mchange.v2.log.MLevel;
+import com.mchange.v2.log.MLog;
+
 public class HibernateJpaService implements JpaService {
 	final Logger logger = LoggerFactory.getLogger(HibernateJpaService.class.getName());
 
@@ -94,6 +97,7 @@ public class HibernateJpaService implements JpaService {
 		disableLog(AnnotationBinder.class);
 		disableLog(EntityBinder.class);
 		disableLog(QueryBinder.class);
+		MLog.getLogger().setLevel(MLevel.WARNING);
 
 		loadEntityManagerFactories();
 	}
@@ -110,13 +114,12 @@ public class HibernateJpaService implements JpaService {
 	public void stop() {
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
-	public EntityManagerFactory createEntityManagerFactory(Properties props, List<Class> entityClasses) {
+	public EntityManagerFactory createEntityManagerFactory(Properties props, List<Class<?>> entityClasses) {
 		Ejb3Configuration c = new Ejb3Configuration();
 		c.setProperties(props);
 
-		for (Class entityClass : entityClasses) {
+		for (Class<?> entityClass : entityClasses) {
 			try {
 				c.addAnnotatedClass(entityClass);
 			} catch (MappingException e) {
@@ -285,9 +288,8 @@ public class HibernateJpaService implements JpaService {
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
-	public EntityManager createEntityManager(String factoryName, Map map) {
+	public EntityManager createEntityManager(String factoryName, Map<Object, Object> map) {
 		EntityManagerFactory factory = factoryMap.get(factoryName);
 		if (factory != null) {
 			return factory.createEntityManager(map);

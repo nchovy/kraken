@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
-<project>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<parent>
 		<artifactId>kraken</artifactId>
 		<groupId>org.krakenapps</groupId>
@@ -59,7 +61,12 @@
 							javax.persistence.*;version=2.0.0;-split-package:=merge-first
 						</Export-Package>
 						<Private-Package>
-							org.krakenapps.jpa.impl;version=1.4.0,net.sf.cglib.*;-split-package:=merge-first,net.sf.ehcache.*;-split-package:=merge-first,org.objectweb.*;-split-package:=merge-first,org.apache.commons.collections.*;-split-package:=merge-first
+							org.krakenapps.jpa.impl;version=1.4.0,
+							net.sf.cglib.*;-split-package:=merge-first,
+							net.sf.ehcache.*;-split-package:=merge-first,
+							org.objectweb.*;-split-package:=merge-first,
+							org.apache.commons.collections.*;-split-package:=merge-first,
+							com.mchange.*;-split-package:=merge-first
 						</Private-Package>
 						<DynamicImport-Package>*</DynamicImport-Package>
 					</instructions>
@@ -88,7 +95,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
+			<version>1.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -138,6 +145,16 @@
 			<artifactId>com.springsource.javax.annotation
 			</artifactId>
 			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-c3p0</artifactId>
+			<version>3.3.2.GA</version>
+		</dependency>
+		<dependency>
+			<groupId>c3p0</groupId>
+			<artifactId>c3p0</artifactId>
+			<version>0.9.1.2</version>
 		</dependency>
 	</dependencies>
 </project>
