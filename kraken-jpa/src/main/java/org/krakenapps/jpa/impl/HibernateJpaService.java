@@ -52,8 +52,15 @@ import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mchange.v2.c3p0.impl.C3P0PooledConnectionPool;
+import com.mchange.v2.c3p0.impl.DefaultConnectionTester;
+import com.mchange.v2.c3p0.impl.NewPooledConnection;
+import com.mchange.v2.c3p0.impl.NewProxyConnection;
+import com.mchange.v2.c3p0.management.DynamicPooledDataSourceManagerMBean;
+import com.mchange.v2.c3p0.stmt.GooGooStatementCache;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
+import com.mchange.v2.sql.SqlUtils;
 
 public class HibernateJpaService implements JpaService {
 	final Logger logger = LoggerFactory.getLogger(HibernateJpaService.class.getName());
@@ -97,7 +104,16 @@ public class HibernateJpaService implements JpaService {
 		disableLog(AnnotationBinder.class);
 		disableLog(EntityBinder.class);
 		disableLog(QueryBinder.class);
-		MLog.getLogger().setLevel(MLevel.WARNING);
+
+		// C3P0 Loggers
+		MLog.getLogger(GooGooStatementCache.class).setLevel(MLevel.WARNING);
+		MLog.getLogger(NewProxyConnection.class).setLevel(MLevel.WARNING);
+		MLog.getLogger(C3P0PooledConnectionPool.class).setLevel(MLevel.WARNING);
+		MLog.getLogger(DynamicPooledDataSourceManagerMBean.class).setLevel(MLevel.WARNING);
+		MLog.getLogger(NewPooledConnection.class).setLevel(MLevel.WARNING);
+		MLog.getLogger(SqlUtils.class).setLevel(MLevel.WARNING);
+		MLog.getLogger(DefaultConnectionTester.class).setLevel(MLevel.WARNING);
+		MLog.getLogger("com.mchange.v2.resourcepool.BasicResourcePool").setLevel(MLevel.WARNING);
 
 		loadEntityManagerFactories();
 	}
