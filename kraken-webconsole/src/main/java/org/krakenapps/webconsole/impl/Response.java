@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.webconsole.impl;
 
 import java.io.IOException;
@@ -27,6 +42,7 @@ public class Response implements HttpServletResponse {
 	private ChannelHandlerContext ctx;
 	private HttpRequest req;
 	private ServletOutputStream os;
+	private PrintWriter writer;
 	private HttpResponseStatus status = HttpResponseStatus.OK;
 	private Map<String, Object> header = new HashMap<String, Object>();
 	private Set<Cookie> cookies = new HashSet<Cookie>();
@@ -37,6 +53,7 @@ public class Response implements HttpServletResponse {
 		this.req = req;
 		this.os = new ResponseOutputStream();
 		this.service = service;
+		this.writer = new PrintWriter(os);
 	}
 
 	private class ResponseOutputStream extends ServletOutputStream {
@@ -45,6 +62,22 @@ public class Response implements HttpServletResponse {
 		@Override
 		public void write(int b) throws IOException {
 			buf.writeByte(b);
+		}
+
+		@Override
+		public void write(byte[] b) throws IOException {
+			write(b, 0, b.length);
+		}
+
+		@Override
+		public void write(byte[] b, int off, int len) throws IOException {
+			buf.writeBytes(b, off, len);
+		}
+
+		@Override
+		public void close() throws IOException {
+			flush();
+			super.close();
 		}
 
 		@Override
@@ -74,7 +107,6 @@ public class Response implements HttpServletResponse {
 				f.addListener(ChannelFutureListener.CLOSE);
 			}
 		}
-
 	}
 
 	@Override
@@ -96,7 +128,7 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public PrintWriter getWriter() throws IOException {
-		return new PrintWriter(os);
+		return writer;
 	}
 
 	@Override
