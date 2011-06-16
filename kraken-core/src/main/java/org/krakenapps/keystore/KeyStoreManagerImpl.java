@@ -102,7 +102,8 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 	public KeyStore getKeyStore(String alias) {
 		if (alias == null)
 			return null;
-		
+
+		FileInputStream is = null;
 		Preferences prefs = getKeyStorePreferences();
 		try {
 			if (!prefs.nodeExists(alias)) {
@@ -121,11 +122,17 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 			if (ks == null)
 				return null;
 
-			FileInputStream is = new FileInputStream(new File(path));
+			is = new FileInputStream(new File(path));
 			ks.load(is, password);
 			return ks;
 		} catch (Exception e) {
 			logger.warn("getKeyStore() error: ", e);
+		} finally {
+			if (is != null)
+				try {
+					is.close();
+				} catch (IOException e) {
+				}
 		}
 
 		return null;
@@ -208,7 +215,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 			p.removeNode();
 			prefs.flush();
 			prefs.sync();
-			
+
 			keyStoreMap.remove(alias);
 		} catch (BackingStoreException e) {
 			throw new RuntimeException("failed to unregister key store", e);

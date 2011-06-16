@@ -78,9 +78,15 @@ public class KeyStoreScript implements Script {
 	@ScriptUsage(description = "List all aliases in keystore", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the keystore") })
 	public void aliases(String[] args) {
 		String name = args[0];
-		context.println("Aliases");
-		context.println("=============");
 		KeyStore store = manager.getKeyStore(name);
+		if (store == null) {
+			context.println("not found");
+			return;
+		}
+		
+		context.println("Aliases");
+		context.println("-------------");
+		
 		try {
 			Enumeration<String> it = store.aliases();
 			while (it.hasMoreElements()) {
@@ -97,7 +103,7 @@ public class KeyStoreScript implements Script {
 	@ScriptUsage(description = "List all key stores")
 	public void list(String[] args) {
 		context.println("Key Stores");
-		context.println("=============");
+		context.println("-------------");
 		for (String name : manager.getKeyStoreNames()) {
 			Properties p = manager.getKeyStoreProperties(name);
 			String type = p.getProperty("type");
