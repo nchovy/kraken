@@ -144,6 +144,8 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 			root.put(REDIRECT_IP_KEY, ip.getHostAddress());
 			root.flush();
 			root.sync();
+
+			this.redirectAddress = ip;
 		} catch (BackingStoreException e) {
 			logger.error("kraken captive portal: cannot set redirect ip", e);
 			throw new RuntimeException(e);
@@ -220,11 +222,15 @@ public class CaptivePortalService implements CaptivePortal, Runnable {
 		MacAddress targetMac = mapping.mac;
 		PcapDevice device = PcapDeviceManager.open(deviceName, ARP_TIMEOUT);
 
-		// spoof host (as gateway)
-		sendArpRequest(device, device.getMetadata().getMacAddress(), gatewayAddress, targetMac, targetIp);
+		try {
+			// spoof host (as gateway)
+			sendArpRequest(device, device.getMetadata().getMacAddress(), gatewayAddress, targetMac, targetIp);
 
-		// spoof gateway (as host)
-		sendArpRequest(device, device.getMetadata().getMacAddress(), targetIp, gatewayMac, gatewayAddress);
+			// spoof gateway (as host)
+			sendArpRequest(device, device.getMetadata().getMacAddress(), targetIp, gatewayMac, gatewayAddress);
+		} finally {
+			device.close();
+		}
 	}
 
 	private void unspoof(InetAddress targetIp) throws IOException {
