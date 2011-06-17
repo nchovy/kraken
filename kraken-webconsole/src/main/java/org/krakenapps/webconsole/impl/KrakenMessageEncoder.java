@@ -16,14 +16,21 @@
 package org.krakenapps.webconsole.impl;
 
 import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONException;
 import org.json.JSONWriter;
 import org.krakenapps.msgbus.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KrakenMessageEncoder {
+	private static Logger logger = LoggerFactory.getLogger(KrakenMessageEncoder.class);
+
 	private KrakenMessageEncoder() {
 	}
 
@@ -64,6 +71,7 @@ public class KrakenMessageEncoder {
 
 			jsonWriter.object();
 
+			properties = convertDate(properties);
 			for (String key : properties.keySet()) {
 				jsonWriter.key(key).value(properties.get(key));
 			}
@@ -71,11 +79,38 @@ public class KrakenMessageEncoder {
 			jsonWriter.endObject();
 
 			jsonWriter.endArray();
-		} catch (JSONException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			logger.error("kraken webconsole: json encode error", e);
 		}
 
 		return writer.toString();
 	}
 
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> convertDate(Map<String, Object> properties) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+
+		for (String key : properties.keySet()) {
+			Object value = properties.get(key);
+
+			if (value instanceof Date)
+				m.put(key, dateFormat.format((Date) value));
+			else if (value instanceof Map)
+				m.put(key, convertDate((Map<String, Object>) value));
+			else if (value instanceof Collection) {
+				Collection<Object> c = new ArrayList<Object>();
+				for (Object v : (Collection<?>) value) {
+					if (v instanceof Date)
+						c.add(dateFormat.format((Date) v));
+					else
+						c.add(v);
+				}
+				m.put(key, c);
+			} else
+				m.put(key, value);
+		}
+
+		return m;
+	}
 }

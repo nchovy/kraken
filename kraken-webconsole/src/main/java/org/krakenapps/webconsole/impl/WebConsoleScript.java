@@ -27,7 +27,7 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.webconsole.Program;
 import org.krakenapps.webconsole.ProgramApi;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +35,12 @@ import org.slf4j.LoggerFactory;
 public class WebConsoleScript implements Script {
 	private final Logger logger = LoggerFactory.getLogger(WebConsoleScript.class.getName());
 
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry staticResourceApi;
 	private ScriptContext context;
 	private WebSocketServer server;
 	private ProgramApi programApi;
 
-	public WebConsoleScript(WebSocketServer server, StaticResourceApi staticResourceApi, ProgramApi programApi) {
+	public WebConsoleScript(WebSocketServer server, ServletRegistry staticResourceApi, ProgramApi programApi) {
 		this.server = server;
 		this.staticResourceApi = staticResourceApi;
 		this.programApi = programApi;

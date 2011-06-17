@@ -22,7 +22,7 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.webconsole.ProgramApi;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 
 @Component(name = "webconsole-script-factory")
@@ -36,7 +36,7 @@ public class WebConsoleScriptFactory implements ScriptFactory {
 	private WebSocketServer server;
 
 	@Requires
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry staticResourceApi;
 	
 	@Requires
 	private ProgramApi programApi;

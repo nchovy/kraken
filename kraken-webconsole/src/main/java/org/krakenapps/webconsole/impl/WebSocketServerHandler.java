@@ -17,6 +17,8 @@ package org.krakenapps.webconsole.impl;
 
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.List;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -42,7 +44,7 @@ import org.jboss.netty.util.CharsetUtil;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.Session;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,11 +53,11 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 	private static final String WEBSOCKET_PATH = "/websocket";
 
 	private MessageBus msgbus;
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry servletRegistry;
 
-	public WebSocketServerHandler(MessageBus msgbus, StaticResourceApi staticResourceApi) {
+	public WebSocketServerHandler(MessageBus msgbus, ServletRegistry servletRegistry) {
 		this.msgbus = msgbus;
-		this.staticResourceApi = staticResourceApi;
+		this.servletRegistry = servletRegistry;
 	}
 
 	@Override
@@ -146,7 +148,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 		}
 
 		try {
-			staticResourceApi.service(ctx, req);
+			servletRegistry.service(ctx, req);
 		} catch (IllegalArgumentException e) {
 			// send an error page otherwise
 			sendHttpResponse(ctx, req, new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
@@ -181,8 +183,11 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-		if (e.getCause() instanceof IOException && e.getCause().getMessage().equals("Connection reset by peer")) {
-			logger.trace("kraken webconsole: connection reset", e.getChannel().getRemoteAddress());
+		List<String> trace = Arrays.asList("Connection reset by peer",
+				"An existing connection was forcibly closed by the remote host");
+
+		if (e.getCause() instanceof IOException && trace.contains(e.getCause().getMessage())) {
+			logger.trace("kraken webconsole: websocket transport error", e.getCause());
 		} else {
 			logger.error("kraken webconsole: websocket transport error", e.getCause());
 			e.getChannel().close();

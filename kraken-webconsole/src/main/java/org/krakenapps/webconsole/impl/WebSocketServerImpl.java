@@ -37,7 +37,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.msgbus.MessageBus;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
@@ -57,7 +57,7 @@ public class WebSocketServerImpl implements WebSocketServer {
 	private MessageBus msgbus;
 
 	@Requires
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry staticResourceApi;
 
 	@Requires
 	private PreferencesService prefsvc;

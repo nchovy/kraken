@@ -25,14 +25,14 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.krakenapps.msgbus.MessageBus;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 
 public class WebSocketServerPipelineFactory implements ChannelPipelineFactory {
 	private MessageBus msgbus;
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry staticResourceApi;
 	private WebSocketServerContext ctx;
 
-	public WebSocketServerPipelineFactory(MessageBus msgbus, StaticResourceApi staticResourceApi,
+	public WebSocketServerPipelineFactory(MessageBus msgbus, ServletRegistry staticResourceApi,
 			WebSocketServerContext ctx) {
 		this.msgbus = msgbus;
 		this.staticResourceApi = staticResourceApi;

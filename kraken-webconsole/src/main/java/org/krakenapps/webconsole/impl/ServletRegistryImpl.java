@@ -29,6 +29,8 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -37,15 +39,15 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.krakenapps.util.DirectoryMap;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "static-resource-api")
+@Component(name = "servlet-registry")
 @Provides
-public class StaticResourceApiImpl implements StaticResourceApi {
+public class ServletRegistryImpl implements ServletRegistry {
 	private static final long serialVersionUID = 1L;
-	private Logger logger = LoggerFactory.getLogger(StaticResourceApiImpl.class);
+	private Logger logger = LoggerFactory.getLogger(ServletRegistryImpl.class);
 	private static final String CONTEXT_ITEM = "/context";
 	private DirectoryMap<HttpServlet> directoryMap;
 
@@ -81,17 +83,17 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 	@Override
 	public void service(ChannelHandlerContext ctx, HttpRequest req) {
 		try {
-			serviceInternal(ctx, req, true);
+			if (!serviceInternal(ctx, req, true))
+				sendNotFound(ctx, req);
 		} catch (ServletException e) {
 			logger.error("kraken webconsole: servlet service error.", e);
 		} catch (IOException e) {
-			if (!e.getMessage().equals("404"))
-				logger.error("kraken webconsole: io error.", e);
+			logger.error("kraken webconsole: io error.", e);
 		}
 	}
 
-	private void serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service) throws ServletException,
-			IOException {
+	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service)
+			throws ServletException, IOException {
 		ServletResponse response = null;
 
 		try {
@@ -113,23 +115,30 @@ public class StaticResourceApiImpl implements StaticResourceApi {
 			servlet.service(request, response);
 		} catch (IOException e) {
 			if (!e.getMessage().equals("404"))
-				throw e;
+				return false;
 
 			if (req.getUri().endsWith("/")) {
-				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
-				HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
-				ctx.getChannel().write(resp);
+				sendNotFound(ctx, req);
+				return false;
 			} else {
 				req.setUri(req.getUri() + "/");
-				serviceInternal(ctx, req, false);
-				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY);
-				resp.setHeader(HttpHeaders.Names.LOCATION, req.getUri());
-				HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
-				ctx.getChannel().write(resp);
+				if (serviceInternal(ctx, req, false)) {
+					HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+							HttpResponseStatus.MOVED_PERMANENTLY);
+					resp.setHeader(HttpHeaders.Names.LOCATION, req.getUri());
+					ctx.getChannel().write(resp);
+				}
 			}
-		} finally {
-			if (response != null)
-				response.getOutputStream().close();
+		}
+
+		return true;
+	}
+
+	private void sendNotFound(ChannelHandlerContext ctx, HttpRequest req) {
+		HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+		ChannelFuture f = ctx.getChannel().write(resp);
+		if (!HttpHeaders.isKeepAlive(req) || !resp.getStatus().equals(HttpResponseStatus.OK)) {
+			f.addListener(ChannelFutureListener.CLOSE);
 		}
 	}
 

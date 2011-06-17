@@ -100,7 +100,7 @@ public class Response implements HttpServletResponse {
 			for (String name : header.keySet())
 				resp.setHeader(name, header.get(name));
 			resp.setContent(buf);
-			HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
+			HttpHeaders.setContentLength(resp, buf.readableBytes());
 
 			ChannelFuture f = ctx.getChannel().write(resp);
 			if (!HttpHeaders.isKeepAlive(req) || !resp.getStatus().equals(HttpResponseStatus.OK)) {

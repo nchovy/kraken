@@ -27,7 +27,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.webconsole.PackageApi;
 import org.krakenapps.webconsole.ProgramApi;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -47,7 +47,7 @@ public class BundleMetadataMonitor implements BundleListener {
 	@Requires
 	private ProgramApi programApi;
 	@Requires
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry staticResourceApi;
 
 	public BundleMetadataMonitor(BundleContext bc) {
 		this.bc = bc;
