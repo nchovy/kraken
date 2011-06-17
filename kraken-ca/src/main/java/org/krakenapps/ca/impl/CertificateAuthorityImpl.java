@@ -15,11 +15,14 @@
  */
 package org.krakenapps.ca.impl;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -106,7 +109,9 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 			}
 		}
 
-		certGen.setSerialNumber(new BigInteger("1"));
+		BigInteger serial = getSerial(caCert);
+
+		certGen.setSerialNumber(serial.add(new BigInteger("1")));
 		certGen.setIssuerDN(caCert.getSubjectX500Principal());
 		certGen.setNotBefore(notBefore);
 		certGen.setNotAfter(notAfter);
@@ -143,10 +148,60 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		pfx.load(null, null);
 		pfx.setKeyEntry(alias, keyPair.getPrivate(), null, new Certificate[] { cert, caCert });
 
-		FileOutputStream out = new FileOutputStream(f);
-		pfx.store(out, keyPassword.toCharArray());
-		out.close();
+		setSerial((X509Certificate) caCert, ((X509Certificate) cert).getSerialNumber());
 
+		FileOutputStream out = null;
+		try {
+			out = new FileOutputStream(f);
+			pfx.store(out, keyPassword.toCharArray());
+		} finally {
+			out.close();
+		}
+
+	}
+
+	private BigInteger getSerial(X509Certificate cert) {
+		String caCN = cert.getSubjectX500Principal().getName();
+		caCN = caCN.substring(caCN.indexOf("CN=") + 3);
+		File srl = new File(new File(home, caCN), caCN + ".srl");
+
+		if (srl.exists()) {
+			BigInteger serial = null;
+			BufferedReader reader = null;
+			try {
+				reader = new BufferedReader(new InputStreamReader(new FileInputStream(srl)));
+				serial = new BigInteger(reader.readLine());
+			} catch (Exception e) {
+				return new BigInteger("1");
+			} finally {
+				try {
+					if (reader != null)
+						reader.close();
+				} catch (IOException e) {
+				}
+
+			}
+
+			return serial;
+		}
+
+		return new BigInteger("1");
+	}
+
+	private void setSerial(X509Certificate cert, BigInteger serial) {
+		String caCN = cert.getSubjectX500Principal().getName();
+		caCN = caCN.substring(caCN.indexOf("CN=") + 3);
+		File srl = new File(new File(home, caCN), caCN + ".srl");
+
+		PrintWriter writer = null;
+		try {
+			writer = new PrintWriter(srl);
+			writer.write(serial.toString());
+		} catch (Exception e) {
+		} finally {
+			if (writer != null)
+				writer.close();
+		}
 	}
 
 	@Override

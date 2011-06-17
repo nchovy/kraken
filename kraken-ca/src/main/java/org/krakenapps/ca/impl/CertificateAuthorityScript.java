@@ -81,7 +81,7 @@ public class CertificateAuthorityScript implements Script {
 			store.load(is, password.toCharArray());
 
 			Certificate caCert = store.getCertificate("ca");
-			os = new FileOutputStream(new File(caCN + ".crt"));
+			os = new FileOutputStream(new File(new File(home, caCN), caCN + ".crt"));
 			os.write(caCert.getEncoded());
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
@@ -128,7 +128,8 @@ public class CertificateAuthorityScript implements Script {
 
 				caCert = store.getCertificate("ca");
 				caKey = (RSAPrivateKey) store.getKey("ca-key", keyPassword.toCharArray());
-
+			} catch (InterruptedException e) {
+				throw e;
 			} catch (Exception e) {
 				context.println("CA keystore open failed: " + e.getMessage());
 				logger.warn("kraken x509: ca keystore open failed", e);
@@ -221,8 +222,8 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate cert
-			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn,
-					attrs, notBefore, notAfter, signatureAlgorithm);
+			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair,
+					dn, attrs, notBefore, notAfter, signatureAlgorithm);
 
 			context.println(cert.toString());
 
@@ -237,6 +238,7 @@ public class CertificateAuthorityScript implements Script {
 			context.turnEchoOff();
 			try {
 				String password = context.readLine();
+				context.println("");
 				context.println("Writing pfx file to " + f.getAbsolutePath());
 				x509cert.exportPkcs12(alias, f, keyPair, password, cert, caCert);
 			} finally {
@@ -312,7 +314,8 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate
-			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
+			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter,
+					signatureAlgorithm);
 			context.println(cert.toString());
 
 			// save
@@ -321,15 +324,16 @@ public class CertificateAuthorityScript implements Script {
 
 			try {
 				context.turnEchoOff();
-				context.print("PrivateKey Password? ");
-				keyPassword = context.readLine();
-				if (keyPassword.isEmpty())
-					keyPassword = null;
-
 				context.print("KeyStore Password? ");
 				storePassword = context.readLine();
 				if (storePassword.isEmpty())
 					storePassword = null;
+
+				context.println("");
+				context.print("PrivateKey Password? ");
+				keyPassword = context.readLine();
+				if (keyPassword.isEmpty())
+					keyPassword = null;
 			} finally {
 				context.turnEchoOn();
 			}
