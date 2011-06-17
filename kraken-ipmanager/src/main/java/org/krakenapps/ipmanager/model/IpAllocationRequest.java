@@ -55,10 +55,10 @@ public class IpAllocationRequest {
 	@Column(length = 250, nullable = false)
 	private String location;
 
-	@Column(nullable = false)
+	@Column(name = "date_from", nullable = false)
 	private Date from;
 
-	@Column(nullable = false)
+	@Column(name = "date_to", nullable = false)
 	private Date to;
 
 	@Column(length = 250, nullable = false)

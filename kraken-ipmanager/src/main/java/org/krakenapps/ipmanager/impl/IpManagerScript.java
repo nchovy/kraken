@@ -40,7 +40,6 @@ import org.krakenapps.ipmanager.model.DeniedMac;
 import org.krakenapps.ipmanager.model.DetectedMac;
 import org.krakenapps.ipmanager.model.HostEntry;
 import org.krakenapps.ipmanager.model.HostNic;
-import org.krakenapps.ipmanager.model.IpAllocationRequest;
 import org.krakenapps.ipmanager.model.IpEntry;
 import org.krakenapps.ipmanager.model.IpEventLog;
 import org.krakenapps.jpa.JpaService;
