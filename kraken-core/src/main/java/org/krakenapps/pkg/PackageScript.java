@@ -54,9 +54,11 @@ import org.slf4j.LoggerFactory;
 public class PackageScript implements Script {
 	private final Logger logger = LoggerFactory.getLogger(PackageScript.class.getName());
 	private ScriptContext context;
+	private BundleContext bc;
 	private PackageManagerService packageManager;
 
-	public PackageScript(PackageManagerService packageManager) {
+	public PackageScript(BundleContext bc, PackageManagerService packageManager) {
+		this.bc = bc;
 		this.packageManager = packageManager;
 	}
 
@@ -444,6 +446,10 @@ public class PackageScript implements Script {
 		} catch (RuntimeException e) {
 			context.println("Database error occurred");
 		}
+	}
+	
+	public void export(String[] args) {
+		context.println(new PackageDescWriter(bc));
 	}
 
 	private String toPackageString(List<PackageDescriptor> packages) {

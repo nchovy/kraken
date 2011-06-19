@@ -15,6 +15,7 @@
  */
 package org.krakenapps.bundle;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -72,6 +73,12 @@ public class BundleScript implements Script {
 		public int compare(BundleRepository o1, BundleRepository o2) {
 			return o2.getPriority() - o1.getPriority();
 		}
+	}
+
+	public void downloadroot(String[] args) {
+		String datadir = System.getProperty("kraken.data.dir");
+		String path = new File(datadir, "download").getAbsolutePath().replaceAll("\\\\", "/");
+		context.println(path);
 	}
 
 	public void repositories(String[] args) {

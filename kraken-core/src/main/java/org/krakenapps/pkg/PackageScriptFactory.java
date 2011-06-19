@@ -23,18 +23,18 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
 
 public class PackageScriptFactory implements ScriptFactory {
-
+	private BundleContext bc;
 	private PackageManagerService packageManager;
 
 	public PackageScriptFactory() throws BackingStoreException {
-		BundleContext bc = Kraken.getContext();
+		this.bc = Kraken.getContext();
 		this.packageManager = new PackageManagerService(Kraken.getContext());
 		bc.registerService(PackageManager.class.getName(), packageManager, null);
 	}
 
 	@Override
 	public Script createScript() {
-		return new PackageScript(packageManager);
+		return new PackageScript(bc, packageManager);
 	}
 
 }
