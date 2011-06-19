@@ -34,6 +34,7 @@ public class PackageDescWriter {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
+		// bundle section
 		sb.append("[bundle]\n");
 
 		for (Bundle bundle : bc.getBundles()) {
@@ -44,16 +45,21 @@ public class PackageDescWriter {
 			sb.append("\n");
 		}
 
+		// start section
 		sb.append("\n[start]\n");
 
 		for (Bundle bundle : bc.getBundles()) {
 			if (bundle.getBundleId() == 0)
 				continue;
 			
+			if (bundle.getState() != Bundle.ACTIVE)
+				continue;
+			
 			sb.append(bundle.getSymbolicName());
 			sb.append("\n");
 		}
 
+		// maven section
 		sb.append("\n[maven]\n");
 
 		for (Bundle bundle : bc.getBundles()) {
