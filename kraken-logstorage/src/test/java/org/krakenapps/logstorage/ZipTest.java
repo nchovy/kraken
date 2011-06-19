@@ -21,10 +21,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.krakenapps.logstorage.engine.ZipFileReader;
 import org.krakenapps.logstorage.engine.ZipFileWriter;
 
+@Ignore
 public class ZipTest {
 	// @Test
 	public void unzip() throws IOException {
