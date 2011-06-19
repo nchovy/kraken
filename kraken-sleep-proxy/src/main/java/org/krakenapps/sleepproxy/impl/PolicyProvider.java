@@ -26,7 +26,7 @@ import org.krakenapps.sleepproxy.model.Agent;
 import org.krakenapps.sleepproxy.model.AgentGroup;
 import org.krakenapps.sleepproxy.model.SleepPolicy;
 import org.krakenapps.webconsole.ResourceContext;
-import org.krakenapps.webconsole.StaticResourceApi;
+import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +36,7 @@ import org.slf4j.LoggerFactory;
 public class PolicyProvider extends ResourceContext {
 	private static final long serialVersionUID = 1L;
 
-	private final Logger logger = LoggerFactory.getLogger(PolicyProvider.class
-			.getName());
+	private final Logger logger = LoggerFactory.getLogger(PolicyProvider.class.getName());
 
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
@@ -46,26 +45,25 @@ public class PolicyProvider extends ResourceContext {
 	WebSocketServer server;
 
 	@Requires
-	private StaticResourceApi staticResourceApi;
+	private ServletRegistry servletRegistry;
 
 	@Requires
 	private ConfigStore cs;
 
 	@Validate
 	public void start() {
-		staticResourceApi.register("/ksp", this);
+		servletRegistry.register("/ksp", this);
 	}
 
 	@Invalidate
 	public void stop() {
-		if (staticResourceApi != null)
-			staticResourceApi.unregister("/ksp");
+		if (servletRegistry != null)
+			servletRegistry.unregister("/ksp");
 	}
 
 	private String getDefaultIp() {
 		try {
-			Enumeration<NetworkInterface> n = NetworkInterface
-					.getNetworkInterfaces();
+			Enumeration<NetworkInterface> n = NetworkInterface.getNetworkInterfaces();
 			while (n.hasMoreElements()) {
 				NetworkInterface ni = n.nextElement();
 				Enumeration<InetAddress> addrs = ni.getInetAddresses();
@@ -92,8 +90,7 @@ public class PolicyProvider extends ResourceContext {
 
 		SleepPolicy policy = getPolicy(guid);
 		if (policy == null) {
-			logger.warn("sleep proxy: default policy not found for guid [{}]",
-					guid);
+			logger.warn("sleep proxy: default policy not found for guid [{}]", guid);
 			return null;
 		}
 
@@ -104,14 +101,11 @@ public class PolicyProvider extends ResourceContext {
 		String heartbeatInterval = cs.get(ConfigKey.HeartbeatInterval, "60");
 
 		int port = server.getBindings().iterator().next().getPort();
-		String url = cs.get(ConfigKey.PolicyUrl, "http://" + syslogIp + ":"
-				+ port + "/ksp/policy");
+		String url = cs.get(ConfigKey.PolicyUrl, "http://" + syslogIp + ":" + port + "/ksp/policy");
 
-		String content = "[policy]\n" + "url = " + url + "\n" + "interval = "
-				+ interval + "\n" + "[power]\n" + "addr = " + logAddr + "\n"
-				+ "heartbeat_interval = " + heartbeatInterval + "\n"
-				+ "away = " + policy.getAwayCriteria() + "\n"
-				+ "force_hibernate = " + policy.getForceHibernate() + "\n";
+		String content = "[policy]\n" + "url = " + url + "\n" + "interval = " + interval + "\n" + "[power]\n"
+				+ "addr = " + logAddr + "\n" + "heartbeat_interval = " + heartbeatInterval + "\n" + "away = "
+				+ policy.getAwayCriteria() + "\n" + "force_hibernate = " + policy.getForceHibernate() + "\n";
 
 		try {
 			return new ByteArrayInputStream(content.getBytes("utf-8"));
@@ -142,16 +136,13 @@ public class PolicyProvider extends ResourceContext {
 	private AgentGroup getAgentGroup(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			Agent agent = (Agent) em
-					.createQuery("FROM Agent a WHERE a.guid = ?")
-					.setParameter(1, guid).getSingleResult();
+			Agent agent = (Agent) em.createQuery("FROM Agent a WHERE a.guid = ?").setParameter(1, guid)
+					.getSingleResult();
 
 			return agent.getAgentGroup();
 		} catch (NoResultException e) {
 			// default reference is root group
-			return (AgentGroup) em.createQuery(
-					"FROM AgentGroup g WHERE g.parent IS NULL")
-					.getSingleResult();
+			return (AgentGroup) em.createQuery("FROM AgentGroup g WHERE g.parent IS NULL").getSingleResult();
 		}
 	}
 
