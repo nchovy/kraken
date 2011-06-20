@@ -69,8 +69,6 @@ public class TcpSessionImpl implements TcpSession {
 	private SegmentBuffer txBuffer;
 	private SegmentBuffer rxBuffer;
 
-	private FinPacketKey finPacketKey;
-
 	private int packetCountAfterFin = 0;
 
 	private int firstFinSeq = -1;
@@ -92,7 +90,6 @@ public class TcpSessionImpl implements TcpSession {
 		rxWaitQueue = new WaitQueue();
 		txBuffer = new SegmentBuffer(mapper);
 		rxBuffer = new SegmentBuffer(mapper);
-		finPacketKey = new FinPacketKey();
 	}
 
 	@Override
@@ -300,10 +297,6 @@ public class TcpSessionImpl implements TcpSession {
 
 	public SegmentBuffer getRxBuffer() {
 		return rxBuffer;
-	}
-
-	public FinPacketKey getFinPacketKey() {
-		return finPacketKey;
 	}
 
 	public void deallocateTxBuffer() {
