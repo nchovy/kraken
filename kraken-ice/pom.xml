@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-ice</artifactId>
-	<version>3.4.2</version>
+	<version>3.4.1</version>
 	<packaging>bundle</packaging>
 	<name>Kraken ICE</name>
 	<build>
