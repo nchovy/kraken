@@ -1,5 +1,5 @@
 hibernate.connection.driver_class = com.mysql.jdbc.Driver
-hibernate.connection.url = jdbc:mysql://localhost/kraken??useUnicode=true&amp;characterEncoding=utf8
+hibernate.connection.url = jdbc:mysql://localhost/kraken?useUnicode=true&characterEncoding=utf8&autoReconnect=true&autoReconnectForPools=true
 hibernate.connection.username = kraken
 hibernate.connection.password = kraken
 hibernate.dialect = org.hibernate.dialect.MySQLDialect
