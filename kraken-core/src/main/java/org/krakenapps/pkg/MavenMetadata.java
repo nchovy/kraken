@@ -47,7 +47,10 @@ public class MavenMetadata {
 	}
 
 	public void refresh() throws KeyManagementException, UnrecoverableKeyException, KeyStoreException, IOException {
-		refresh("maven-metadata.xml");
+		if (this.repo.getUrl().getProtocol().equals("file"))
+			refresh("maven-metadata-local.xml");
+		else
+			refresh("maven-metadata.xml");
 	}
 
 	public void refresh(String metadataFilename) throws KeyManagementException, UnrecoverableKeyException,
