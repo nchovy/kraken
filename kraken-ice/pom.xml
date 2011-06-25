@@ -30,7 +30,8 @@
 							IceInternal,
 							IceSSL,
 							IceUtil,
-							IceUtilInternal
+							IceUtilInternal,
+							org.krakenapps.ice
 						</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
