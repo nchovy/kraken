@@ -295,7 +295,7 @@ public class BundleScript implements Script {
 
 	@ScriptUsage(description = "update all locally-installed bundle(s). before use this method, stop ipojo bundle first.", arguments = { @ScriptArgument(name = "isForced", description = "use 'force' to run this method.", optional = false, type = "force or not") })
 	public void updateAll(String[] args) {
-		if (!args[0].equals("force")) {
+		if (args.length < 1 || !args[0].equals("force")) {
 			context.printf("Ignored. Use 'force' as argument.\n");
 			return;
 		}

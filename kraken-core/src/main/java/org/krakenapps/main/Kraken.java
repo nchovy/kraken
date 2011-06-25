@@ -51,6 +51,8 @@ import org.krakenapps.account.AccountScriptFactory;
 import org.krakenapps.api.InstrumentationService;
 import org.krakenapps.api.LoggerControlService;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.bundle.BundleManagerService;
+import org.krakenapps.bundle.BundleScript;
 import org.krakenapps.bundle.BundleScriptFactory;
 import org.krakenapps.console.TelnetCodecFactory;
 import org.krakenapps.console.TelnetHandler;
@@ -64,6 +66,7 @@ import org.krakenapps.script.EditorScriptFactory;
 import org.krakenapps.script.HelpScriptFactory;
 import org.krakenapps.script.HistoryScriptFactory;
 import org.krakenapps.script.OsgiScriptFactory;
+import org.krakenapps.script.OutputOnlyScriptContext;
 import org.krakenapps.script.PerfScriptFactory;
 import org.krakenapps.script.RegistryScriptFactory;
 import org.krakenapps.script.SunPerfScriptFactory;
@@ -123,12 +126,12 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		startKraken();
+		startKraken(new StartOptions(args));
 	}
 
 	private static Kraken kraken;
 
-	private static void startKraken() throws Exception {
+	private static void startKraken(StartOptions startOptions) throws Exception {
 		kraken = new Kraken();
 		try {
 			Signal signal = new Signal("TERM");
@@ -137,7 +140,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 			System.out.println("Signal handling is only supported on Sun JVM");
 		}
 
-		kraken.boot();
+		kraken.boot(startOptions);
 	}
 
 	public static boolean isServiceMode() {
@@ -156,7 +159,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 
 		if ("start".equals(cmd)) {
 			serviceMode = true;
-			startKraken();
+			startKraken(new StartOptions());
 		} else {
 			stopKraken();
 		}
@@ -173,11 +176,12 @@ public class Kraken implements BundleActivator, SignalHandler {
 
 	/**
 	 * Boot felix framework up.
+	 * @param startOptions 
 	 * 
 	 * @throws Exception
 	 */
 	@SuppressWarnings({ "unchecked" })
-	public void boot() throws Exception {
+	public void boot(StartOptions startOptions) throws Exception {
 		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
 		String dir = jarPath.getParentFile().getAbsolutePath();
 		System.setProperty("kraken.data.dir", dir);
@@ -199,6 +203,16 @@ public class Kraken implements BundleActivator, SignalHandler {
 				"org.eclipse.tptp.martini,com.jprofiler.*,com.jprofiler.agent.*");
 
 		felix = new Felix(configMap);
+		if (startOptions.isDeveloperMode()) {
+			felix.init();
+			BundleContext bundleContext = felix.getBundleContext();
+			BundleManagerService manager = new BundleManagerService(bundleContext);
+			BundleScript script = new BundleScript(manager);
+			script.setScriptContext(new OutputOnlyScriptContext(logger));
+			script.updateAll(new String[] { "force" });
+			script.refresh(new String[0]);
+			bundleContext.removeBundleListener(manager);
+		}
 		felix.start();
 	}
 
