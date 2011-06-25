@@ -16,11 +16,11 @@ public class Request {
 	public Session getSession() {
 		return session;
 	}
-	
+
 	public Integer getOrgId() {
 		return session.getOrgId();
 	}
-	
+
 	public Integer getAdminId() {
 		return session.getAdminId();
 	}
@@ -48,18 +48,27 @@ public class Request {
 	public Integer getInteger(String key) {
 		return msg.getIntParameter(key);
 	}
-	
+
 	public Boolean getBoolean(String key) {
 		return msg.getBooleanParameter(key);
 	}
 
 	public Date getDate(String key) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		try {
-			if (has(key))
-				return dateFormat.parse(getString(key));
-		} catch (ParseException e) {
+		SimpleDateFormat f1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+		SimpleDateFormat f2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String value = getString(key);
+
+		if (has(key)) {
+			try {
+				return f1.parse(value);
+			} catch (ParseException e) {
+				try {
+					return f2.parse(value);
+				} catch (ParseException e1) {
+				}
+			}
 		}
+		
 		return null;
 	}
 }
