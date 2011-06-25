@@ -18,20 +18,30 @@ package org.krakenapps.dom.api.impl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityManager;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.api.UserExtensionSchema;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+import org.osgi.util.tracker.ServiceTracker;
 
 @Component(name = "dom-user-api")
 @Provides
@@ -39,6 +49,47 @@ import org.krakenapps.jpa.handler.Transactional;
 public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
+
+	private UserExtensionProviderTracker tracker;
+
+	private Map<String, UserExtensionProvider> userExtensionProviders;
+
+	public UserApiImpl(BundleContext bc) {
+		tracker = new UserExtensionProviderTracker(bc);
+	}
+
+	@Validate
+	public void start() {
+		userExtensionProviders = new ConcurrentHashMap<String, UserExtensionProvider>();
+		tracker.open();
+	}
+
+	@Invalidate
+	public void stop() {
+		tracker.close();
+	}
+
+	@Override
+	public Map<String, UserExtensionSchema> getExtensionSchemas() {
+		Map<String, UserExtensionSchema> schemas = new HashMap<String, UserExtensionSchema>();
+		
+		for (String name : userExtensionProviders.keySet()) {
+			UserExtensionProvider p = userExtensionProviders.get(name);
+			schemas.put(name, p.getSchema());
+		}
+		
+		return schemas;
+	}
+
+	@Override
+	public Collection<UserExtensionProvider> getExtensionProviders() {
+		return new ArrayList<UserExtensionProvider>(userExtensionProviders.values());
+	}
+
+	@Override
+	public UserExtensionProvider getExtensionProvider(String name) {
+		return userExtensionProviders.get(name);
+	}
 
 	@SuppressWarnings("unchecked")
 	@Transactional
@@ -158,4 +209,23 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		return Sha1.hashPassword(text);
 	}
 
+	private class UserExtensionProviderTracker extends ServiceTracker {
+		public UserExtensionProviderTracker(BundleContext bc) {
+			super(bc, UserExtensionProvider.class.getName(), null);
+		}
+
+		@Override
+		public Object addingService(ServiceReference reference) {
+			UserExtensionProvider p = (UserExtensionProvider) super.addingService(reference);
+			userExtensionProviders.put(p.getName(), p);
+			return p;
+		}
+
+		@Override
+		public void removedService(ServiceReference reference, Object service) {
+			UserExtensionProvider p = (UserExtensionProvider) service;
+			userExtensionProviders.remove(p.getName());
+			super.removedService(reference, service);
+		}
+	}
 }

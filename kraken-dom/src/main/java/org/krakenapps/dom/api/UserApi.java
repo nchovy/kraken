@@ -16,12 +16,19 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 
 public interface UserApi {
+	Map<String, UserExtensionSchema> getExtensionSchemas();
+	
+	Collection<UserExtensionProvider> getExtensionProviders();
+	
+	UserExtensionProvider getExtensionProvider(String name);
+	
 	Collection<User> getUsers();
 	
 	Collection<User> getUsers(Organization org);

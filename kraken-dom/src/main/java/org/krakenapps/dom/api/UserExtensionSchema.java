@@ -6,7 +6,10 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public class UserExtensionSchema {
+import org.krakenapps.msgbus.Localizable;
+import org.krakenapps.msgbus.Marshaler;
+
+public class UserExtensionSchema implements Localizable {
 	private Map<String, FieldDefinition> fields = new HashMap<String, UserExtensionSchema.FieldDefinition>();
 
 	public Collection<String> keySet() {
@@ -25,7 +28,17 @@ public class UserExtensionSchema {
 		return fields.get(name);
 	}
 
-	public static class FieldDefinition {
+	@Override
+	public Map<String, Object> marshal() {
+		return Marshaler.marshal(fields);
+	}
+
+	@Override
+	public Map<String, Object> marshal(Locale locale) {
+		return Marshaler.marshal(fields, locale);
+	}
+
+	public static class FieldDefinition implements Localizable {
 		private String name;
 		private Map<Locale, String> displayNames = new HashMap<Locale, String>();
 		private Map<Locale, String> descriptions = new HashMap<Locale, String>();
@@ -97,6 +110,42 @@ public class UserExtensionSchema {
 			if (value instanceof Date && type.equalsIgnoreCase("date"))
 				return;
 			throw new IllegalArgumentException("kraken-dom: " + name + " type does not match");
+		}
+
+		@Override
+		public Map<String, Object> marshal() {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("name", name);
+			m.put("type", type);
+			m.put("default_value", defaultValue);
+			m.put("display_names", marshal(displayNames));
+			m.put("descriptions", marshal(descriptions));
+			return m;
+		}
+
+		@Override
+		public Map<String, Object> marshal(Locale locale) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("name", name);
+			m.put("type", type);
+			m.put("default_value", defaultValue);
+			m.put("display_name", localize(displayNames, locale));
+			m.put("description", localize(descriptions, locale));
+			return m;
+		}
+
+		private String localize(Map<Locale, String> ls, Locale locale) {
+			if (ls.containsKey(locale))
+				return ls.get(locale);
+
+			return ls.get(Locale.ENGLISH);
+		}
+
+		private Map<String, Object> marshal(Map<Locale, String> ls) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			for (Locale l : ls.keySet())
+				m.put(l.getLanguage(), ls.get(l));
+			return m;
 		}
 	}
 }

@@ -17,12 +17,16 @@ package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.api.UserExtensionSchema;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
@@ -45,6 +49,34 @@ public class UserPlugin {
 
 	@Requires
 	private UserApi userApi;
+
+	@MsgbusMethod
+	public void getExtensionSchemas(Request req, Response resp) {
+		Locale locale = req.getSession().getLocale();
+		Map<String, UserExtensionSchema> schemas = userApi.getExtensionSchemas();
+		resp.put("schemas", Marshaler.marshal(schemas, locale));
+	}
+
+	@MsgbusMethod
+	public void getExtensions(Request req, Response resp) {
+		int orgId = req.getOrgId();
+		int id = req.getInteger("id");
+
+		for (UserExtensionProvider p : userApi.getExtensionProviders()) {
+			resp.put(p.getName(), p.getExtension(orgId, id));
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void setExtension(Request req, Response resp) {
+		String name = req.getString("provider_name");
+		int id = req.getInteger("id");
+		Map<String, Object> m = (Map<String, Object>) req.get("data");
+
+		UserExtensionProvider p = userApi.getExtensionProvider(name);
+		p.set(req.getOrgId(), id, m);
+	}
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
@@ -82,11 +114,11 @@ public class UserPlugin {
 		User user = new User();
 		if (req.has("id"))
 			user.setId(req.getInteger("id"));
-		
+
 		user.setOrganization(orgApi.getOrganization(req.getOrgId()));
 		if (req.get("org_unit_id") != null)
 			user.setOrganizationUnit(orgUnitApi.getOrganizationUnit(req.getInteger("org_unit_id")));
-			
+
 		user.setName(req.getString("name"));
 		user.setLoginName(req.getString("login_name"));
 		user.setDescription(req.getString("description"));
@@ -101,13 +133,13 @@ public class UserPlugin {
 	public void removeUser(Request req, Response resp) {
 		userApi.removeUser(req.getInteger("id"));
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeUsers(Request req, Response resp) {
 		List<Integer> users = (List<Integer>) req.get("ids");
-		for (int id : users) 
+		for (int id : users)
 			userApi.removeUser(id);
 	}
 }
