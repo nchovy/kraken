@@ -25,7 +25,9 @@ import org.krakenapps.ldap.DomainOrganizationalUnit;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
+import org.krakenapps.ldap.LdapSyncService;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 
 public class LdapScript implements Script {
 	private BundleContext bc;
@@ -139,6 +141,14 @@ public class LdapScript implements Script {
 
 	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
 	public void syncDom(String args[]) {
+		ServiceReference ref = bc.getServiceReference(LdapSyncService.class.getName());
+		if (ref == null) {
+			context.println("kraken-dom not found");
+			return;
+		}
+
+		LdapSyncService ldapSync = (LdapSyncService) bc.getService(ref);
+
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
 		if (profile == null) {
@@ -146,6 +156,6 @@ public class LdapScript implements Script {
 			return;
 		}
 
-		ldap.sync(bc, profile);
+		ldapSync.sync(profile);
 	}
 }

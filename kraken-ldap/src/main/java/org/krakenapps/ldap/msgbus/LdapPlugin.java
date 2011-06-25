@@ -27,12 +27,14 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
+import org.krakenapps.ldap.LdapSyncService;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPException;
@@ -128,13 +130,18 @@ public class LdapPlugin {
 
 	@MsgbusMethod
 	public void syncDom(Request req, Response resp) {
-		String profileName = req.getString("profile_name");
+		ServiceReference ref = bc.getServiceReference(LdapSyncService.class.getName());
+		if (ref == null) {
+			throw new MsgbusException("ldap", "kraken-dom not found");
+		}
 
+		String profileName = req.getString("profile_name");
 		LdapProfile profile = ldap.getProfile(profileName);
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
-		ldap.sync(bc, profile);
+		LdapSyncService ldapSync = (LdapSyncService) bc.getService(ref);
+		ldapSync.sync(profile);
 	}
 
 	private Map<String, Object> marshal(LdapProfile profile) {

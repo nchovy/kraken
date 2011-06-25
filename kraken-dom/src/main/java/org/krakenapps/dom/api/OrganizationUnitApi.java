@@ -20,7 +20,7 @@ import java.util.Collection;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 
-public interface OrganizationUnitApi {
+public interface OrganizationUnitApi extends EntityEventProvider<OrganizationUnit> {
 	Collection<OrganizationUnit> getOrganizationUnits();
 
 	Collection<OrganizationUnit> getOrganizationUnits(Organization org);

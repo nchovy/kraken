@@ -47,7 +47,7 @@ public class OrganizationUnitPlugin {
 			throw new OrganizationNotFoundException(req.getOrgId());
 
 		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits(organization);
-		resp.put("result", Marshaler.marshal(orgUnits));
+		resp.put("org_units", Marshaler.marshal(orgUnits));
 	}
 
 	@MsgbusMethod
@@ -55,7 +55,7 @@ public class OrganizationUnitPlugin {
 	public void createOrganizationUnit(Request req, Response resp) {
 		OrganizationUnit orgUnit = toOrganizationUnit(req);
 		orgUnitApi.createOrganizationUnit(orgUnit);
-		resp.put("new_id", orgUnit.getId());
+		resp.put("id", orgUnit.getId());
 	}
 
 	@MsgbusMethod

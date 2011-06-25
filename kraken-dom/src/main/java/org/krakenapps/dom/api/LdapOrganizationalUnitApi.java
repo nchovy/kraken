@@ -18,6 +18,7 @@ package org.krakenapps.dom.api;
 import java.util.Collection;
 
 import org.krakenapps.dom.model.LdapOrganizationalUnit;
+import org.krakenapps.dom.model.OrganizationUnit;
 
 public interface LdapOrganizationalUnitApi {
 	Collection<LdapOrganizationalUnit> getLdapOrganizationalUnits();
@@ -29,6 +30,8 @@ public interface LdapOrganizationalUnitApi {
 	void updateLdapOrganizationalUnit(LdapOrganizationalUnit unit);
 
 	void removeLdapOrganizationalUnit(int id);
+	
+	void removeLdapOrganizationalUnit(OrganizationUnit unit);
 
 	void sync();
 }

@@ -16,6 +16,7 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -60,7 +61,7 @@ public class UserPlugin {
 		} else
 			users = userApi.getUsers(organization);
 
-		resp.put("result", Marshaler.marshal(users));
+		resp.put("users", Marshaler.marshal(users));
 	}
 
 	@MsgbusMethod
@@ -68,7 +69,7 @@ public class UserPlugin {
 	public void createUser(Request req, Response resp) {
 		User user = toUser(req);
 		userApi.createUser(user);
-		resp.put("new_id", user.getId());
+		resp.put("id", user.getId());
 	}
 
 	@MsgbusMethod
@@ -99,5 +100,14 @@ public class UserPlugin {
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeUser(Request req, Response resp) {
 		userApi.removeUser(req.getInteger("id"));
+	}
+	
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom.org", code = "manage")
+	public void removeUsers(Request req, Response resp) {
+		List<Integer> users = (List<Integer>) req.get("ids");
+		for (int id : users) 
+			userApi.removeUser(id);
 	}
 }

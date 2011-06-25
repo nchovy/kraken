@@ -17,8 +17,6 @@ package org.krakenapps.ldap;
 
 import java.util.Collection;
 
-import org.osgi.framework.BundleContext;
-
 public interface LdapService {
 	void createProfile(LdapProfile profile);
 
@@ -33,8 +31,6 @@ public interface LdapService {
 	Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile);
 
 	boolean verifyPassword(LdapProfile profile, String account, String password);
-	
-	boolean verifyPassword(LdapProfile profile, String account, String password, int timeout);
 
-	void sync(BundleContext bc, LdapProfile profile);
+	boolean verifyPassword(LdapProfile profile, String account, String password, int timeout);
 }

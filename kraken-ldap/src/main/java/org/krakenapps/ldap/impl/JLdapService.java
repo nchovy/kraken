@@ -19,31 +19,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.AdminApi;
-import org.krakenapps.dom.api.LdapOrganizationalUnitApi;
-import org.krakenapps.dom.api.OrganizationParameterApi;
-import org.krakenapps.dom.api.ProgramApi;
-import org.krakenapps.dom.api.RoleApi;
-import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.LdapOrganizationalUnit;
-import org.krakenapps.dom.model.OrganizationParameter;
-import org.krakenapps.dom.model.ProgramProfile;
-import org.krakenapps.dom.model.User;
 import org.krakenapps.ldap.DomainOrganizationalUnit;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
 import org.osgi.service.prefs.PreferencesService;
@@ -257,147 +242,6 @@ public class JLdapService implements LdapService {
 		}
 	}
 
-	@Override
-	public void sync(BundleContext bc, LdapProfile profile) {
-		ServiceReference ldapOrgUnitApiRef = bc.getServiceReference(LdapOrganizationalUnitApi.class.getName());
-		ServiceReference userApiRef = bc.getServiceReference(UserApi.class.getName());
-		if (ldapOrgUnitApiRef == null || userApiRef == null)
-			throw new IllegalStateException("kraken-dom not ready");
-
-		try {
-			Map<String, LdapOrganizationalUnit> ldapOrgUnits = syncLdapOrgUnit(bc, ldapOrgUnitApiRef, profile);
-			syncUser(bc, userApiRef, profile, ldapOrgUnits);
-		} catch (NullPointerException e) {
-			throw new IllegalStateException("check database character set");
-		}
-	}
-
-	private Map<String, LdapOrganizationalUnit> syncLdapOrgUnit(BundleContext bc, ServiceReference ref,
-			LdapProfile profile) {
-		LdapOrganizationalUnitApi api = (LdapOrganizationalUnitApi) bc.getService(ref);
-		Map<String, LdapOrganizationalUnit> before = new HashMap<String, LdapOrganizationalUnit>();
-
-		for (LdapOrganizationalUnit ldapOrgUnit : api.getLdapOrganizationalUnits())
-			before.put(ldapOrgUnit.getDistinguishedName(), ldapOrgUnit);
-
-		Collection<DomainOrganizationalUnit> domainOrgUnits = getOrganizationUnits(profile);
-		for (DomainOrganizationalUnit domainOrgUnit : domainOrgUnits) {
-			String dn = domainOrgUnit.getDistinguishedName();
-
-			if (before.containsKey(dn))
-				before.remove(dn);
-			else {
-				LdapOrganizationalUnit ldapOrgUnit = new LdapOrganizationalUnit();
-				ldapOrgUnit.setDistinguishedName(domainOrgUnit.getDistinguishedName());
-				ldapOrgUnit.setProfile(profile.getDc());
-				api.createLdapOrganizationalUnit(ldapOrgUnit);
-			}
-		}
-
-		for (LdapOrganizationalUnit dn : before.values())
-			api.removeLdapOrganizationalUnit(dn.getId());
-
-		api.sync();
-
-		Map<String, LdapOrganizationalUnit> after = new HashMap<String, LdapOrganizationalUnit>();
-		for (LdapOrganizationalUnit ldapOrgUnit : api.getLdapOrganizationalUnits())
-			after.put(ldapOrgUnit.getOrganizationUnit().getName(), ldapOrgUnit);
-
-		return after;
-	}
-
-	private void syncUser(BundleContext bc, ServiceReference ref, LdapProfile profile,
-			Map<String, LdapOrganizationalUnit> ldapOrgUnits) {
-		UserApi api = (UserApi) bc.getService(ref);
-
-		Collection<User> users = api.getUsers(profile.getDc());
-		Map<String, User> before = new HashMap<String, User>();
-		for (User user : users)
-			before.put(user.getLoginName(), user);
-
-		Collection<DomainUserAccount> domainUsers = getDomainUserAccounts(profile);
-		for (DomainUserAccount domainUser : domainUsers) {
-			User user = null;
-			boolean isUpdate = false;
-
-			if (before.containsKey(domainUser.getAccountName())) {
-				user = before.get(domainUser.getAccountName());
-				before.remove(domainUser.getAccountName());
-				isUpdate = true;
-			} else {
-				user = new User();
-				user.setLoginName(domainUser.getAccountName());
-				user.setDomainController(profile.getDc());
-				user.setCreateDateTime(new Date());
-			}
-
-			user.setName(domainUser.getDisplayName());
-			user.setOrganizationUnit(ldapOrgUnits.get(domainUser.getOrganizationUnitName()).getOrganizationUnit());
-			user.setOrganization(user.getOrganizationUnit().getOrganization());
-			user.setTitle(domainUser.getTitle());
-			user.setDepartment(domainUser.getDepartment());
-			user.setEmail(domainUser.getMail());
-			user.setPhone(domainUser.getMobile());
-			user.setUpdateDateTime(new Date());
-
-			if (isUpdate)
-				api.updateUser(user);
-			else
-				api.createUser(user);
-
-			if (domainUser.isDomainAdmin())
-				syncAdmin(bc, user, domainUser);
-		}
-
-		for (User user : before.values())
-			api.removeUser(user.getId());
-	}
-
-	private void syncAdmin(BundleContext bc, User user, DomainUserAccount domainUser) {
-		ServiceReference adminApiRef = bc.getServiceReference(AdminApi.class.getName());
-		ServiceReference roleApiRef = bc.getServiceReference(RoleApi.class.getName());
-		AdminApi adminApi = (AdminApi) bc.getService(adminApiRef);
-		RoleApi roleApi = (RoleApi) bc.getService(roleApiRef);
-
-		Admin admin = null;
-		boolean isUpdate = false;
-
-		if (user.getAdmin() == null) {
-			admin = new Admin();
-			admin.setRole(roleApi.getRole("admin"));
-			admin.setUser(user);
-		} else {
-			admin = user.getAdmin();
-			isUpdate = true;
-		}
-		admin.setLastLoginDateTime(domainUser.getLastLogon());
-		admin.setEnabled(true);
-
-		ProgramProfile programProfile = getProgramProfile(bc, admin);
-		if (programProfile == null)
-			return;
-
-		admin.setProgramProfile(programProfile);
-
-		if (isUpdate)
-			adminApi.updateAdmin(admin.getUser().getOrganization().getId(), null, admin);
-		else
-			adminApi.createAdmin(admin.getUser().getOrganization().getId(), null, admin);
-	}
-
-	private ProgramProfile getProgramProfile(BundleContext bc, Admin admin) {
-		ServiceReference orgParameterApiRef = bc.getServiceReference(OrganizationParameterApi.class.getName());
-		OrganizationParameterApi orgParameterApi = (OrganizationParameterApi) bc.getService(orgParameterApiRef);
-		ServiceReference programApiRef = bc.getServiceReference(ProgramApi.class.getName());
-		ProgramApi programApi = (ProgramApi) bc.getService(programApiRef);
-
-		OrganizationParameter op = orgParameterApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
-				"default_program_profile_id");
-		ProgramProfile profile = programApi.getProgramProfile(admin.getUser().getOrganization().getId(),
-				Integer.parseInt(op.getValue()));
-
-		return profile;
-	}
 
 	private String buildBaseDN(String domain) {
 		StringTokenizer t = new StringTokenizer(domain, ".");

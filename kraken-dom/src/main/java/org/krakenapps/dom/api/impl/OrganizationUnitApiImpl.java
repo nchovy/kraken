@@ -25,8 +25,10 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
+import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
+import org.krakenapps.dom.model.User;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
@@ -37,6 +39,9 @@ import org.krakenapps.jpa.handler.Transactional;
 public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> implements OrganizationUnitApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
+	
+	@Requires
+	private UserApi userApi;
 
 	@SuppressWarnings("unchecked")
 	@Transactional
@@ -95,6 +100,16 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 
 	@Override
 	public void removeOrganizationUnit(int id) {
+		// remove all related users
+		OrganizationUnit ou = getOrganizationUnit(id);
+		if (ou == null)
+			throw new IllegalStateException("organization unit not found: " + id);
+		
+		Collection<User> users = userApi.getUsers(ou, true);
+		for (User user : users) 
+			userApi.removeUser(user.getId());
+		
+		// remove org unit
 		OrganizationUnit orgUnit = removeOrganizationUnitInternal(id);
 		fireEntityRemoved(orgUnit);
 	}

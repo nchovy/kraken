@@ -114,6 +114,23 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 		return unit;
 	}
 
+	@Override
+	public void removeLdapOrganizationalUnit(OrganizationUnit orgUnit) {
+		LdapOrganizationalUnit ldapUnit = removeLdapOrganizationalUnitInternal(orgUnit);
+		fireEntityRemoved(ldapUnit);
+	}
+
+	@Transactional
+	private LdapOrganizationalUnit removeLdapOrganizationalUnitInternal(OrganizationUnit orgUnit) {
+		EntityManager em = entityManagerService.getEntityManager();
+		LdapOrganizationalUnit ldapUnit = (LdapOrganizationalUnit) em
+				.createQuery("FROM LdapOrganizationalUnit l WHERE l.organizationUnit.id = ?")
+				.setParameter(1, orgUnit.getId()).getSingleResult();
+		
+		em.remove(ldapUnit);
+		return ldapUnit;
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	@Transactional
