@@ -100,6 +100,7 @@ public class UserPlugin {
 			user.setOrganizationUnit(orgUnitApi.getOrganizationUnit(req.getInteger("org_unit_id")));
 
 		user.setName(req.getString("name"));
+		user.setPassword(req.getString("password"));
 		user.setLoginName(req.getString("login_name"));
 		user.setDescription(req.getString("description"));
 		user.setTitle(req.getString("title"));

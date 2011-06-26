@@ -194,8 +194,6 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		EntityManager em = entityManagerService.getEntityManager();
 
 		try {
-			logger.info("kraken dom: begin update admin [{}]", targetAdmin.getId());
-
 			if (requestAdminId != null) {
 				Admin requestAdmin = em.find(Admin.class, requestAdminId);
 				if (requestAdmin == null)
@@ -214,9 +212,6 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			admin.setLastLoginDateTime(targetAdmin.getLastLoginDateTime());
 			admin.setProgramProfile(targetAdmin.getProgramProfile());
 			em.merge(admin);
-
-			logger.info("kraken dom: updated admin [admin {}, role {}, profile {}]", new Object[] {
-					targetAdmin.getId(), role.getId(), admin.getProgramProfile().getId() });
 
 			return admin;
 		} catch (NoResultException e) {

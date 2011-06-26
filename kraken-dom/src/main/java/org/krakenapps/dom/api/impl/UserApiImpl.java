@@ -160,13 +160,12 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 			throw new IllegalArgumentException("check user id");
 
 		User u = em.find(User.class, user.getId());
-		if (!u.getOrganization().equals(user.getOrganizationUnit().getOrganization()))
-			; // TODO
 		u.setOrganizationUnit(user.getOrganizationUnit());
 		u.setLoginName(user.getLoginName());
 		u.setName(user.getName());
 		u.setDescription(user.getDescription());
-		u.setPassword(hashPassword(user.getPassword()));
+		if (user.getPassword() != null)
+			u.setPassword(hashPassword(user.getPassword()));
 		u.setTitle(user.getTitle());
 		u.setEmail(user.getEmail());
 		u.setPhone(user.getPhone());
