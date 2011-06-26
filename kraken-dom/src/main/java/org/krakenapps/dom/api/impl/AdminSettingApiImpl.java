@@ -46,7 +46,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 	@Transactional
 	@Override
 	public List<AdminSetting> getUserSettings(int organizationId, int userId) {
-		Admin user = userApi.getAdmin(organizationId, userId);
+		Admin user = userApi.getAdminByUser(organizationId, userId);
 		if (user == null)
 			throw new AdminNotFoundException(userId);
 
@@ -66,7 +66,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 	@Override
 	public void updateAdminSetting(int organizationId, int userId, String name, String value) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Admin user = userApi.getAdmin(organizationId, userId);
+		Admin user = userApi.getAdminByUser(organizationId, userId);
 		if (user == null)
 			throw new AdminNotFoundException(userId);
 
@@ -87,7 +87,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 	@Override
 	public void removeUserSetting(int organizationId, int userId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Admin user = userApi.getAdmin(organizationId, userId);
+		Admin user = userApi.getAdminByUser(organizationId, userId);
 		if (user == null)
 			throw new AdminNotFoundException(userId);
 

@@ -81,7 +81,7 @@ public class User implements Marshalable {
 	@Column(name = "updated_at", nullable = false)
 	private Date updateDateTime;
 
-	@OneToOne(cascade = CascadeType.ALL, mappedBy = "user")
+	@OneToOne(mappedBy = "user", cascade = CascadeType.REMOVE)
 	private Admin admin;
 
 	public int getId() {

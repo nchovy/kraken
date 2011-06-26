@@ -18,7 +18,6 @@ package org.krakenapps.dom.api.impl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,7 +31,6 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
-import org.krakenapps.dom.api.UserExtensionSchema;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
@@ -67,18 +65,6 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Invalidate
 	public void stop() {
 		tracker.close();
-	}
-
-	@Override
-	public Map<String, UserExtensionSchema> getExtensionSchemas() {
-		Map<String, UserExtensionSchema> schemas = new HashMap<String, UserExtensionSchema>();
-		
-		for (String name : userExtensionProviders.keySet()) {
-			UserExtensionProvider p = userExtensionProviders.get(name);
-			schemas.put(name, p.getSchema());
-		}
-		
-		return schemas;
 	}
 
 	@Override

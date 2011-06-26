@@ -27,7 +27,6 @@ import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.exception.ProgramProfileNotFoundException;
 import org.krakenapps.dom.exception.RoleNotFoundException;
-import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.Role;
 import org.krakenapps.dom.model.Admin;
@@ -66,14 +65,14 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
-	public void getAdmin(Request req, Response resp) {
-		int adminId = req.getInteger("id");
+	public void getAdminByUser(Request req, Response resp) {
+		int userId = req.getInteger("id");
 
-		Admin admin = adminApi.getAdmin(req.getOrgId(), adminId);
+		Admin admin = adminApi.getAdminByUser(req.getOrgId(), userId);
 		if (admin == null)
-			throw new AdminNotFoundException(adminId);
-
-		resp.put("admin", admin.marshal());
+			resp.put("admin", null);
+		else
+			resp.put("admin", admin.marshal());
 	}
 
 	@MsgbusMethod

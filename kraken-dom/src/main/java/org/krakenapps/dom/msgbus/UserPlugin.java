@@ -15,10 +15,9 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -26,7 +25,6 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
-import org.krakenapps.dom.api.UserExtensionSchema;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
@@ -52,30 +50,12 @@ public class UserPlugin {
 
 	@MsgbusMethod
 	public void getExtensionSchemas(Request req, Response resp) {
-		Locale locale = req.getSession().getLocale();
-		Map<String, UserExtensionSchema> schemas = userApi.getExtensionSchemas();
-		resp.put("schemas", Marshaler.marshal(schemas, locale));
-	}
-
-	@MsgbusMethod
-	public void getExtensions(Request req, Response resp) {
-		int orgId = req.getOrgId();
-		int id = req.getInteger("id");
-
+		List<String> schemas = new ArrayList<String>();
 		for (UserExtensionProvider p : userApi.getExtensionProviders()) {
-			resp.put(p.getName(), p.getExtension(orgId, id));
+			schemas.add(p.getName());
 		}
-	}
 
-	@SuppressWarnings("unchecked")
-	@MsgbusMethod
-	public void setExtension(Request req, Response resp) {
-		String name = req.getString("provider_name");
-		int id = req.getInteger("id");
-		Map<String, Object> m = (Map<String, Object>) req.get("data");
-
-		UserExtensionProvider p = userApi.getExtensionProvider(name);
-		p.set(req.getOrgId(), id, m);
+		resp.put("schemas", schemas);
 	}
 
 	@MsgbusMethod

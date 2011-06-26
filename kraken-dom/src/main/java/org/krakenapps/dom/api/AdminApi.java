@@ -27,6 +27,8 @@ public interface AdminApi extends EntityEventProvider<Admin> {
 	List<Admin> getAdmins(int organizationId);
 
 	Admin getAdmin(int organizationId, int adminId);
+	
+	Admin getAdminByUser(int organizationId, int userId);
 
 	void createAdmin(int organizationId, Integer requestAdminId, Admin admin);
 

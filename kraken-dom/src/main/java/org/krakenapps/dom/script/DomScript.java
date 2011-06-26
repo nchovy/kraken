@@ -38,7 +38,7 @@ public class DomScript implements Script {
 
 			Properties props = new Properties();
 			props.put("hibernate.connection.url", "jdbc:mysql://" + host + "/" + databaseName
-					+ "?useUnicode=true&characterEncoding=utf8&autoReconnect=true&autoReconnectForPools=true");
+					+ "?useUnicode=true&characterEncoding=utf8");
 			props.put("hibernate.connection.username", user);
 			props.put("hibernate.connection.password", password);
 

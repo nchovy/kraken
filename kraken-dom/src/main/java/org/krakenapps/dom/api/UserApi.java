@@ -16,25 +16,22 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
-import java.util.Map;
 
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 
-public interface UserApi {
-	Map<String, UserExtensionSchema> getExtensionSchemas();
-	
+public interface UserApi extends EntityEventProvider<User> {
 	Collection<UserExtensionProvider> getExtensionProviders();
-	
+
 	UserExtensionProvider getExtensionProvider(String name);
-	
+
 	Collection<User> getUsers();
-	
+
 	Collection<User> getUsers(Organization org);
-	
+
 	Collection<User> getUsers(OrganizationUnit ou, boolean includeChildren);
-	
+
 	Collection<User> getUsers(String domainController);
 
 	User getUser(int id);
@@ -44,6 +41,6 @@ public interface UserApi {
 	void updateUser(User user);
 
 	void removeUser(int id);
-	
+
 	String hashPassword(String text);
 }
