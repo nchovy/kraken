@@ -67,8 +67,7 @@ public interface Buffer {
 	 * Add a byte buffer to head of internal buffer list.
 	 * 
 	 * @param buffer
-	 *            the byte buffer that you want to add to head of internal
-	 *            buffers.
+	 *            the byte buffer that you want to add to head of internal buffers.
 	 */
 	void addFirst(byte[] buffer);
 
@@ -76,8 +75,7 @@ public interface Buffer {
 	 * Add a byte buffer to end of internal buffer list.
 	 * 
 	 * @param buffer
-	 *            the byte buffer that you want to add to end of internal
-	 *            buffers.
+	 *            the byte buffer that you want to add to end of internal buffers.
 	 */
 	void addLast(byte[] buffer);
 
@@ -202,14 +200,11 @@ public interface Buffer {
 	Buffer reset();
 
 	/**
-	 * Find the first occurrence offset of the target byte pattern from current
-	 * position.
+	 * Find the first occurrence offset of the target byte pattern from current position.
 	 * 
 	 * @param target
 	 *            the byte pattern that you want to search for.
-	 * @return the offset from current position, first offset of the target
-	 *         pattern. for example, if you call bytesBefore('\r\n') for
-	 *         'hello\r\n', it will return 5.
+	 * @return the offset from current position, first offset of the target pattern. for example, if you call bytesBefore('\r\n') for 'hello\r\n', it will return 5.
 	 */
 	int bytesBefore(byte[] target);
 
@@ -221,8 +216,7 @@ public interface Buffer {
 	int readableBytes();
 
 	/**
-	 * Clears this buffer. The position is set to zero and base position is set
-	 * to zero too. and mark is discarded.
+	 * Clears this buffer. The position is set to zero and base position is set to zero too. and mark is discarded.
 	 */
 	Buffer clear();
 
@@ -234,4 +228,9 @@ public interface Buffer {
 	boolean isEOB();
 
 	Buffer duplicate();
+
+	/**
+	 * Flips this buffer. The position is set to zero. If the mark is defined then it is discarded.
+	 */
+	Buffer filp();
 }

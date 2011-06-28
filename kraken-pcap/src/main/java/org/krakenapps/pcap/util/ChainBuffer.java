@@ -20,6 +20,7 @@ import java.nio.BufferUnderflowException;
 import java.nio.InvalidMarkException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -723,5 +724,26 @@ public class ChainBuffer implements Buffer {
 	public Buffer duplicate() {
 		// TODO
 		return null;
+	}
+
+	@Override
+	public Buffer filp() {
+		int i = bufIndex + 1;
+		while(i < buffers.size()) {
+			buffers.remove(i);
+		} 
+
+		if(bufIndex >= buffers.size()) {
+			clear();
+			return this;
+		}
+		
+		byte[] b = buffers.get(bufIndex);
+		byte[] newb = Arrays.copyOf(b, bufOffset);
+		buffers.remove(bufIndex);
+		buffers.add(bufIndex, newb);
+
+		clear();
+		return this;
 	}
 }

@@ -2,6 +2,7 @@ package org.krakenapps.pcap;
 
 import static org.junit.Assert.*;
 
+import java.awt.image.BufferStrategy;
 import java.nio.BufferUnderflowException;
 import java.nio.InvalidMarkException;
 
@@ -94,15 +95,6 @@ public class ChainBufferTest {
 		buffer3.get();
 		buffer.addLast(buffer3);
 		return buffer;
-	}
-
-	@Test
-	public void addTest() {
-		Buffer buffer = initBuffer4();
-		Buffer buffer2 = new ChainBuffer(buffer);
-
-		System.out.println(buffer.getBufIndex());
-		System.out.println(buffer2.getBufIndex());
 	}
 
 	@Test
@@ -1348,5 +1340,298 @@ public class ChainBufferTest {
 
 		int value = buffer.getUnsignedShort();
 		assertEquals(64336, value);
+	}
+	
+	@Test
+	public void flipTest() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		buffer.get();
+		buffer.get();
+		buffer.get();
+		buffer.filp();
+		
+		assertEquals(3, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+		assertEquals(2, buffer.get());
+		assertEquals(3, buffer.get());
+	}
+	
+	@Test
+	public void flipTest2() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		buffer.get();
+		buffer.get();
+		buffer.filp();
+		
+		assertEquals(2, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+		assertEquals(2, buffer.get());
+	}
+	
+	@Test
+	public void flipTest3() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		buffer.get();
+		buffer.filp();
+		
+		assertEquals(1, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+	}
+	
+	@Test
+	public void flipTest4() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		buffer.filp();
+		
+		assertEquals(0, buffer.readableBytes());
+	}
+	
+	@Test
+	public void flipTest5() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		byte[] b = new byte[14];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(14, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+		assertEquals(2, buffer.get());
+	}
+	
+	@Test
+	public void flipTest6() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		byte[] b = new byte[13];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(13, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+		assertEquals(2, buffer.get());
+	}
+	
+	@Test
+	public void flipTest7() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		Buffer buffer2 = new ChainBuffer();
+		byte[] testArray6 = new byte[] { 101, 102, 103, 104 };
+		byte[] testArray7 = new byte[] { 105, 106, 107, 108, 109 };
+		byte[] testArray8 = new byte[] { 110, 111, 112 };
+		buffer2.addLast(testArray6);
+		buffer2.addLast(testArray7);
+		buffer2.addLast(testArray8);
+		
+		buffer.addLast(buffer2);
+		byte[] b = new byte[17];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(17, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+		assertEquals(2, buffer.get());
+		buffer.skip(10);
+		assertEquals(13, buffer.get());
+		assertEquals(14, buffer.get());
+		assertEquals(101, buffer.get());
+	}
+	
+	@Test
+	public void flipTest8() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		Buffer buffer2 = new ChainBuffer();
+		byte[] testArray6 = new byte[] { 101, 102, 103, 104 };
+		byte[] testArray7 = new byte[] { 105, 106, 107, 108, 109 };
+		byte[] testArray8 = new byte[] { 110, 111, 112 };
+		buffer2.addLast(testArray6);
+		buffer2.addLast(testArray7);
+		buffer2.addLast(testArray8);
+		
+		buffer.addLast(buffer2);
+		byte[] b = new byte[26];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(26, buffer.readableBytes());
+	}
+	
+	@Test
+	public void flipTest9() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		Buffer buffer2 = new ChainBuffer();
+		byte[] testArray6 = new byte[] { 101, 102, 103, 104 };
+		byte[] testArray7 = new byte[] { 105, 106, 107, 108, 109 };
+		byte[] testArray8 = new byte[] { 110, 111, 112 };
+		buffer2.addLast(testArray6);
+		buffer2.addLast(testArray7);
+		buffer2.addLast(testArray8);
+		
+		buffer.addLast(buffer2);
+		byte[] b = new byte[14];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(14, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+	}
+	
+	@Test
+	public void flipTest10() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		Buffer buffer2 = new ChainBuffer();
+		byte[] testArray6 = new byte[] { 101, 102, 103, 104 };
+		byte[] testArray7 = new byte[] { 105, 106, 107, 108, 109 };
+		byte[] testArray8 = new byte[] { 110, 111, 112 };
+		buffer2.addLast(testArray6);
+		buffer2.addLast(testArray7);
+		buffer2.addLast(testArray8);
+		
+		buffer.addLast(buffer2);
+		byte[] b = new byte[23];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(23, buffer.readableBytes());
+		assertEquals(1, buffer.get());
+	}
+	
+	@Test
+	public void flipTest11() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		Buffer buffer2 = new ChainBuffer();
+		byte[] testArray6 = new byte[] { 101, 102, 103, 104 };
+		byte[] testArray7 = new byte[] { 105, 106, 107, 108, 109 };
+		byte[] testArray8 = new byte[] { 110, 111, 112 };
+		buffer2.addLast(testArray6);
+		buffer2.addLast(testArray7);
+		buffer2.addLast(testArray8);
+		
+		buffer.addLast(buffer2);
+		byte[] b = new byte[22];
+		buffer.gets(b);
+		buffer.filp();
+		
+		assertEquals(22, buffer.readableBytes());
+		assertEquals(1, buffer.get());
 	}
 }
