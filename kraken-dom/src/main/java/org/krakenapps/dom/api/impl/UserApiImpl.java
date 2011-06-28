@@ -88,6 +88,18 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
+	public Collection<User> getUsers(int orgId, Collection<Integer> idList) {
+		if (idList == null || idList.size() == 0)
+			return new ArrayList<User>();
+
+		EntityManager em = entityManagerService.getEntityManager();
+		return em.createQuery("FROM User u WHERE u.organization.id = :org AND u.id IN (:users)").setParameter("org",
+				orgId).setParameter("users", idList).getResultList();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Transactional
+	@Override
 	public Collection<User> getUsers(Organization organization) {
 		EntityManager em = entityManagerService.getEntityManager();
 		return em.createQuery("FROM User u WHERE u.organization = ?").setParameter(1, organization).getResultList();

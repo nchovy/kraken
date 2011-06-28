@@ -37,8 +37,6 @@ import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-admin-api")
 @Provides
@@ -46,8 +44,6 @@ import org.slf4j.LoggerFactory;
 public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserExtensionProvider {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
-
-	private final Logger logger = LoggerFactory.getLogger(AdminApiImpl.class.getName());
 
 	@Override
 	public String getName() {

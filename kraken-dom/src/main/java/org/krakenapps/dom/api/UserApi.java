@@ -27,6 +27,8 @@ public interface UserApi extends EntityEventProvider<User> {
 	UserExtensionProvider getExtensionProvider(String name);
 
 	Collection<User> getUsers();
+	
+	Collection<User> getUsers(int orgId, Collection<Integer> idList);
 
 	Collection<User> getUsers(Organization org);
 
