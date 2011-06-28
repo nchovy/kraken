@@ -1359,7 +1359,7 @@ public class ChainBufferTest {
 		buffer.get();
 		buffer.get();
 		buffer.get();
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(3, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1383,7 +1383,7 @@ public class ChainBufferTest {
 		
 		buffer.get();
 		buffer.get();
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(2, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1405,7 +1405,7 @@ public class ChainBufferTest {
 		buffer.addLast(testArray5);
 		
 		buffer.get();
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(1, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1425,7 +1425,7 @@ public class ChainBufferTest {
 		buffer.addLast(testArray4);
 		buffer.addLast(testArray5);
 		
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(0, buffer.readableBytes());
 	}
@@ -1446,7 +1446,7 @@ public class ChainBufferTest {
 		
 		byte[] b = new byte[14];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(14, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1469,7 +1469,7 @@ public class ChainBufferTest {
 		
 		byte[] b = new byte[13];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(13, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1501,7 +1501,7 @@ public class ChainBufferTest {
 		buffer.addLast(buffer2);
 		byte[] b = new byte[17];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(17, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1537,7 +1537,7 @@ public class ChainBufferTest {
 		buffer.addLast(buffer2);
 		byte[] b = new byte[26];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(26, buffer.readableBytes());
 	}
@@ -1567,7 +1567,7 @@ public class ChainBufferTest {
 		buffer.addLast(buffer2);
 		byte[] b = new byte[14];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(14, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1598,7 +1598,7 @@ public class ChainBufferTest {
 		buffer.addLast(buffer2);
 		byte[] b = new byte[23];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(23, buffer.readableBytes());
 		assertEquals(1, buffer.get());
@@ -1629,7 +1629,7 @@ public class ChainBufferTest {
 		buffer.addLast(buffer2);
 		byte[] b = new byte[22];
 		buffer.gets(b);
-		buffer.filp();
+		buffer.flip();
 		
 		assertEquals(22, buffer.readableBytes());
 		assertEquals(1, buffer.get());

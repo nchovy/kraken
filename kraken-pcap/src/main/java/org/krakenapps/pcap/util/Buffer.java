@@ -232,5 +232,5 @@ public interface Buffer {
 	/**
 	 * Flips this buffer. The position is set to zero. If the mark is defined then it is discarded.
 	 */
-	Buffer filp();
+	Buffer flip();
 }

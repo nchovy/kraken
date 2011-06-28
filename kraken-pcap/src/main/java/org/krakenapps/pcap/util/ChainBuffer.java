@@ -727,7 +727,7 @@ public class ChainBuffer implements Buffer {
 	}
 
 	@Override
-	public Buffer filp() {
+	public Buffer flip() {
 		int i = bufIndex + 1;
 		while(i < buffers.size()) {
 			buffers.remove(i);
