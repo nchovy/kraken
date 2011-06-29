@@ -15,8 +15,10 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 
@@ -64,6 +66,19 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 	public OrganizationUnit getOrganizationUnit(int id) {
 		EntityManager em = entityManagerService.getEntityManager();
 		return em.find(OrganizationUnit.class, id);
+	}
+
+	@Transactional
+	@Override
+	public Collection<OrganizationUnit> getParents(int orgId, int id) {
+		OrganizationUnit unit = getOrganizationUnit(id);
+		List<OrganizationUnit> parents = new ArrayList<OrganizationUnit>();
+		while (unit.getParent() != null) {
+			parents.add(unit.getParent());
+			unit = unit.getParent();
+		}
+		
+		return parents;
 	}
 
 	@Override
