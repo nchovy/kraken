@@ -21,7 +21,6 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.model.Application;
-import org.krakenapps.dom.model.ApplicationVersion;
 import org.krakenapps.dom.model.Vendor;
 import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
@@ -45,20 +44,20 @@ public class ApplicationPlugin {
 	public void createVendor(Request req, Response resp) {
 		String name = req.getString("name");
 		Vendor vendor = appApi.createVendor(name);
-		resp.put("vendor_id", vendor.getId());
+		resp.put("guid", vendor.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateVendor(Request req, Response resp) {
-		int id = req.getInteger("id");
+		String guid = req.getString("guid");
 		String name = req.getString("name");
-		appApi.updateVendor(id, name);
+		appApi.updateVendor(guid, name);
 	}
 
 	@MsgbusMethod
 	public void removeVendor(Request req, Response resp) {
-		int id = req.getInteger("id");
-		appApi.removeVendor(id);
+		String guid = req.getString("guid");
+		appApi.removeVendor(guid);
 	}
 
 	@MsgbusMethod
@@ -70,56 +69,23 @@ public class ApplicationPlugin {
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
 		String vendorName = req.getString("vendor_name");
-		String name = req.getString("app_name");
+		String name = req.getString("name");
 
 		Application app = appApi.createApplication(vendorName, name);
-		resp.put("app_id", app.getId());
+		resp.put("guid", app.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateApplication(Request req, Response resp) {
-		int id = req.getInteger("app_id");
-		String name = req.getString("app_name");
+		String guid = req.getString("guid");
+		String name = req.getString("name");
 
-		appApi.updateApplication(id, name);
+		appApi.updateApplication(guid, name);
 	}
 
 	@MsgbusMethod
 	public void removeApplication(Request req, Response resp) {
-		int id = req.getInteger("app_id");
-		appApi.removeApplication(id);
-	}
-	
-	@MsgbusMethod
-	public void getApplicationVersions(Request req, Response resp) {
-		String vendorName = req.getString("vendor_name");
-		String appName = req.getString("app_name");
-		
-		Collection<ApplicationVersion> versions = appApi.getApplicationVersions(vendorName, appName);
-		resp.put("versions", Marshaler.marshal(versions));
-	}
-
-	@MsgbusMethod
-	public void createApplicationVersion(Request req, Response resp) {
-		String vendorName = req.getString("vendor_name");
-		String appName = req.getString("app_name");
-		String version = req.getString("version");
-
-		ApplicationVersion appVersion = appApi.createApplicationVersion(vendorName, appName, version);
-		resp.put("version_id", appVersion.getId());
-	}
-
-	@MsgbusMethod
-	public void updateApplicationVersion(Request req, Response resp) {
-		int id = req.getInteger("version_id");
-		String version = req.getString("version");
-
-		appApi.updateApplicationVersion(id, version);
-	}
-
-	@MsgbusMethod
-	public void removeApplicationVersion(Request req, Response resp) {
-		int id = req.getInteger("version_id");
-		appApi.removeApplicationVersion(id);
+		String guid = req.getString("guid");
+		appApi.removeApplication(guid);
 	}
 }

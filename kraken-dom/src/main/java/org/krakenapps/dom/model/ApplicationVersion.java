@@ -22,8 +22,6 @@ import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -35,8 +33,7 @@ import org.krakenapps.msgbus.Marshalable;
 @Table(name = "dom_app_versions")
 public class ApplicationVersion implements Marshalable {
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
+	private int guid;
 
 	@ManyToOne
 	@JoinColumn(name = "app_id")
@@ -51,12 +48,12 @@ public class ApplicationVersion implements Marshalable {
 	@Column(name = "updated_at", nullable = false)
 	private Date updateDateTime;
 
-	public int getId() {
-		return id;
+	public int getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setGuid(int guid) {
+		this.guid = guid;
 	}
 
 	public Application getApplication() {
@@ -95,7 +92,7 @@ public class ApplicationVersion implements Marshalable {
 	public Map<String, Object> marshal() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
+		m.put("guid", guid);
 		m.put("vendor", application.getVendor().getName());
 		m.put("name", application.getName());
 		m.put("version", version);

@@ -25,8 +25,6 @@ import java.util.Map;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -37,8 +35,7 @@ import org.krakenapps.msgbus.Marshalable;
 @Table(name = "dom_vendors")
 public class Vendor implements Marshalable {
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
+	private String guid;
 
 	@Column(nullable = false, length = 60)
 	private String name;
@@ -52,12 +49,12 @@ public class Vendor implements Marshalable {
 	@OneToMany(cascade = CascadeType.ALL, mappedBy = "vendor")
 	private List<HostType> hostTypes = new ArrayList<HostType>();
 
-	public int getId() {
-		return id;
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public String getName() {
@@ -96,7 +93,7 @@ public class Vendor implements Marshalable {
 	public Map<String, Object> marshal() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
+		m.put("guid", guid);
 		m.put("name", name);
 		m.put("created_at", dateFormat.format(createDateTime));
 		m.put("updated_at", dateFormat.format(updateDateTime));

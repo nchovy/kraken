@@ -78,10 +78,10 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public void updateVendor(int id, String name) {
+	public void updateVendor(String guid, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 
-		Vendor vendor = em.find(Vendor.class, id);
+		Vendor vendor = em.find(Vendor.class, guid);
 		if (vendor == null)
 			throw new VendorNotFoundException();
 
@@ -93,9 +93,9 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public void removeVendor(int id) {
+	public void removeVendor(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Vendor vendor = em.find(Vendor.class, id);
+		Vendor vendor = em.find(Vendor.class, guid);
 
 		if (vendor == null)
 			throw new VendorNotFoundException();
@@ -148,9 +148,9 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public void updateApplication(int id, String name) {
+	public void updateApplication(String guid, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Application app = em.find(Application.class, id);
+		Application app = em.find(Application.class, guid);
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
@@ -162,9 +162,9 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public void removeApplication(int id) {
+	public void removeApplication(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
-		Application app = em.find(Application.class, id);
+		Application app = em.find(Application.class, guid);
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
@@ -180,8 +180,8 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
-		return (Collection<ApplicationVersion>) em.createQuery("FROM ApplicationVersion v WHERE v.application.id = ?")
-				.setParameter(1, app.getId());
+		return (Collection<ApplicationVersion>) em.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?")
+				.setParameter(1, app.getGuid());
 	}
 
 	@Transactional
@@ -209,9 +209,9 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public void updateApplicationVersion(int id, String version) {
+	public void updateApplicationVersion(String guid, String version) {
 		EntityManager em = entityManagerService.getEntityManager();
-		ApplicationVersion appVersion = em.find(ApplicationVersion.class, id);
+		ApplicationVersion appVersion = em.find(ApplicationVersion.class, guid);
 		if (appVersion == null)
 			throw new ApplicationVersionNotFoundException();
 
@@ -223,9 +223,9 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public void removeApplicationVersion(int id) {
+	public void removeApplicationVersion(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
-		ApplicationVersion version = em.find(ApplicationVersion.class, id);
+		ApplicationVersion version = em.find(ApplicationVersion.class, guid);
 		if (version == null)
 			return;
 

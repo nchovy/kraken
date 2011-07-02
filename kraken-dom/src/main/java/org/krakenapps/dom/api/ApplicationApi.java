@@ -28,9 +28,9 @@ public interface ApplicationApi {
 
 	Vendor createVendor(String name);
 
-	void updateVendor(int id, String name);
+	void updateVendor(String guid, String name);
 
-	void removeVendor(int id);
+	void removeVendor(String guid);
 
 	Collection<Application> getApplications(String vendorName);
 	
@@ -38,15 +38,15 @@ public interface ApplicationApi {
 
 	Application createApplication(String vendorName, String name);
 
-	void updateApplication(int id, String name);
+	void updateApplication(String guid, String name);
 
-	void removeApplication(int id);
+	void removeApplication(String guid);
 	
 	Collection<ApplicationVersion> getApplicationVersions(String vendorName, String appName);
 	
 	ApplicationVersion createApplicationVersion(String vendorName, String appName, String version);
 
-	void updateApplicationVersion(int id, String version);
+	void updateApplicationVersion(String guid, String version);
 
-	void removeApplicationVersion(int id);
+	void removeApplicationVersion(String guid);
 }

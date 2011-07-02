@@ -27,8 +27,6 @@ import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -44,8 +42,7 @@ import org.krakenapps.msgbus.Marshalable;
 @Table(name = "dom_apps", uniqueConstraints = { @UniqueConstraint(columnNames = { "vendor_id", "name" }) })
 public class Application implements Marshalable {
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
+	private String guid;
 
 	@ManyToOne
 	@JoinColumn(name = "vendor_id", nullable = false)
@@ -60,6 +57,9 @@ public class Application implements Marshalable {
 	@Column(name = "updated_at", nullable = false)
 	private Date updateDateTime;
 
+	@OneToMany(mappedBy = "key.application", cascade = CascadeType.ALL)
+	private List<ApplicationMetadata> metadatas = new ArrayList<ApplicationMetadata>();
+
 	@OneToMany(mappedBy = "application", cascade = CascadeType.ALL)
 	private List<ApplicationVersion> applicationVersions = new ArrayList<ApplicationVersion>();
 
@@ -67,12 +67,12 @@ public class Application implements Marshalable {
 	@JoinTable(name = "dom_apps_to_groups", joinColumns = @JoinColumn(name = "app_id"), inverseJoinColumns = @JoinColumn(name = "group_id"))
 	private Set<ApplicationGroup> applicationGroups = new HashSet<ApplicationGroup>();
 
-	public int getId() {
-		return id;
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public Vendor getVendor() {
@@ -115,11 +115,19 @@ public class Application implements Marshalable {
 		this.applicationGroups = applicationGroups;
 	}
 
-	public List<ApplicationVersion> getApplicationVersions() {
+	public List<ApplicationMetadata> getMetadatas() {
+		return metadatas;
+	}
+
+	public void setMetadatas(List<ApplicationMetadata> metadatas) {
+		this.metadatas = metadatas;
+	}
+
+	public List<ApplicationVersion> getVersions() {
 		return applicationVersions;
 	}
 
-	public void setApplicationVersions(List<ApplicationVersion> applicationVersions) {
+	public void setVersions(List<ApplicationVersion> applicationVersions) {
 		this.applicationVersions = applicationVersions;
 	}
 
@@ -127,7 +135,7 @@ public class Application implements Marshalable {
 	public Map<String, Object> marshal() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
+		m.put("guid", guid);
 		m.put("vendor", vendor.getName());
 		m.put("name", name);
 		m.put("created_at", dateFormat.format(createDateTime));
