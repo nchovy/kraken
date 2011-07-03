@@ -62,8 +62,9 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void getApplications(Request req, Response resp) {
-		String vendorName = req.getString("vendor_name");
-		resp.put("apps", Marshaler.marshal(appApi.getApplications(vendorName)));
+		String vendorGuid = req.getString("vendor_guid");
+		Collection<Application> apps = appApi.getApplications(vendorGuid);
+		resp.put("apps", Marshaler.marshal(apps));
 	}
 
 	@MsgbusMethod

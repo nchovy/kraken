@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -18,6 +19,7 @@ public class ApplicationMetadata implements Marshalable {
 
 	private String value;
 
+	@Column(name = "updated_at", nullable = false)
 	private Date updateDateTime;
 
 	public ApplicationMetadataKey getKey() {

@@ -22,6 +22,7 @@ org.krakenapps.dom.model.WidgetConfig
 org.krakenapps.dom.model.Application
 org.krakenapps.dom.model.ApplicationGroup
 org.krakenapps.dom.model.ApplicationVersion
+org.krakenapps.dom.model.ApplicationMetadata
 org.krakenapps.dom.model.Timetable
 org.krakenapps.dom.model.Schedule
 org.krakenapps.dom.model.NetworkAddress

@@ -106,10 +106,12 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
-	public Collection<Application> getApplications(String vendorName) {
+	public Collection<Application> getApplications(String vendorGuid) {
 		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM Application a JOIN a.vendors v WHERE v.name = ?").setParameter(1, vendorName)
-				.getResultList();
+		if (vendorGuid == null)
+			return em.createQuery("FROM Application a").getResultList();
+
+		return em.createQuery("FROM Application a WHERE a.vendor.guid = ?").setParameter(1, vendorGuid).getResultList();
 	}
 
 	@Transactional
@@ -180,7 +182,8 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
-		return (Collection<ApplicationVersion>) em.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?")
+		return (Collection<ApplicationVersion>) em
+				.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?")
 				.setParameter(1, app.getGuid());
 	}
 

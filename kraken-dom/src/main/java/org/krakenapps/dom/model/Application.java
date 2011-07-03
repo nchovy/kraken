@@ -42,6 +42,7 @@ import org.krakenapps.msgbus.Marshalable;
 @Table(name = "dom_apps", uniqueConstraints = { @UniqueConstraint(columnNames = { "vendor_id", "name" }) })
 public class Application implements Marshalable {
 	@Id
+	@Column(length = 36)
 	private String guid;
 
 	@ManyToOne
