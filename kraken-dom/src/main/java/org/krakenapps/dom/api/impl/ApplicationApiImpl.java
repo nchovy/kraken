@@ -116,6 +116,21 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
+	public Application getApplication(String guid) {
+		EntityManager em = entityManagerService.getEntityManager();
+		if (guid == null)
+			return null;
+
+		try {
+			return (Application) em.createQuery("FROM Application a WHERE a.guid = ?").setParameter(1, guid)
+					.getSingleResult();
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+
+	@Transactional
+	@Override
 	public Application getApplication(String vendorName, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 

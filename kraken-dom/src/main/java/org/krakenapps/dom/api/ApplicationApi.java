@@ -34,6 +34,8 @@ public interface ApplicationApi {
 
 	Collection<Application> getApplications(String vendorName);
 	
+	Application getApplication(String guid);
+	
 	Application getApplication(String vendorName, String name);
 
 	Application createApplication(String vendorName, String name);
