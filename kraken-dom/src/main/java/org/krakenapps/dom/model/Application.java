@@ -50,6 +50,9 @@ public class Application implements Marshalable {
 	@JoinColumn(name = "vendor_id", nullable = true)
 	private Vendor vendor;
 
+	@Column(length = 20)
+	private String platform;
+
 	@Column(nullable = false, length = 60)
 	private String name;
 
@@ -91,6 +94,14 @@ public class Application implements Marshalable {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public String getPlatform() {
+		return platform;
+	}
+
+	public void setPlatform(String platform) {
+		this.platform = platform;
 	}
 
 	public Date getCreateDateTime() {
@@ -141,6 +152,7 @@ public class Application implements Marshalable {
 		m.put("vendor_guid", vendor.getGuid());
 		m.put("vendor_name", vendor.getName());
 		m.put("name", name);
+		m.put("platform", platform);
 		m.put("created_at", dateFormat.format(createDateTime));
 		m.put("updated_at", dateFormat.format(updateDateTime));
 		return m;

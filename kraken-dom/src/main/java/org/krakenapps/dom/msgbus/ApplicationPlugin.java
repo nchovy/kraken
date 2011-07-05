@@ -71,8 +71,9 @@ public class ApplicationPlugin {
 	public void createApplication(Request req, Response resp) {
 		String vendorName = req.getString("vendor_name");
 		String name = req.getString("name");
+		String platform = req.getString("platform");
 
-		Application app = appApi.createApplication(vendorName, name);
+		Application app = appApi.createApplication(vendorName, name, platform);
 		resp.put("guid", app.getGuid());
 	}
 

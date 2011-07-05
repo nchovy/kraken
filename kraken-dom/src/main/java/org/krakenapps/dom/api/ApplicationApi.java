@@ -31,25 +31,25 @@ public interface ApplicationApi {
 	void updateVendor(String guid, String name);
 
 	void removeVendor(String guid);
-	
+
 	Collection<Application> getApplications();
 
 	Collection<Application> getApplications(String vendorName);
-	
+
 	Application getApplication(String guid);
-	
+
 	Application getApplication(String vendorName, String name);
-	
-	Application createApplication(String name);
-	
-	Application createApplication(String vendorGuid, String name);
+
+	Application createApplication(String name, String platform);
+
+	Application createApplication(String vendorGuid, String name, String platform);
 
 	void updateApplication(String guid, String name);
 
 	void removeApplication(String guid);
-	
+
 	Collection<ApplicationVersion> getApplicationVersions(String vendorName, String appName);
-	
+
 	ApplicationVersion createApplicationVersion(String vendorName, String appName, String version);
 
 	void updateApplicationVersion(String guid, String version);

@@ -147,13 +147,13 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 	}
 
 	@Override
-	public Application createApplication(String name) {
-		return createApplication(null, name);
+	public Application createApplication(String name, String platform) {
+		return createApplication(null, name, platform);
 	}
 
 	@Transactional
 	@Override
-	public Application createApplication(String vendorGuid, String name) {
+	public Application createApplication(String vendorGuid, String name, String platform) {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		Vendor vendor = null;
@@ -163,6 +163,7 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		Application app = new Application();
 		app.setVendor(vendor);
 		app.setName(name);
+		app.setPlatform(platform);
 		app.setCreateDateTime(new Date());
 		app.setUpdateDateTime(new Date());
 
