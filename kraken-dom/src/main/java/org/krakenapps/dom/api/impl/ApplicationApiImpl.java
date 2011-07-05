@@ -53,14 +53,9 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 	@Transactional
 	@Override
-	public Vendor getVendor(String vendorName) {
+	public Vendor getVendor(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
-		try {
-			return (Vendor) em.createQuery("FROM Vendor v WHERE v.name = ?").setParameter(1, vendorName)
-					.getSingleResult();
-		} catch (NoResultException e) {
-			return null;
-		}
+		return em.find(Vendor.class, guid);
 	}
 
 	@Transactional
@@ -103,6 +98,11 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		em.remove(vendor);
 	}
 
+	@Override
+	public Collection<Application> getApplications() {
+		return getApplications(null);
+	}
+
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
@@ -121,12 +121,15 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		if (guid == null)
 			return null;
 
-		try {
-			return (Application) em.createQuery("FROM Application a WHERE a.guid = ?").setParameter(1, guid)
-					.getSingleResult();
-		} catch (NoResultException e) {
+		Application app = em.find(Application.class, guid);
+		if (app == null)
 			return null;
-		}
+		
+		// force loading
+		app.getMetadatas().size();
+		app.getVersions().size();
+		
+		return app;
 	}
 
 	@Transactional
@@ -143,14 +146,19 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		return null;
 	}
 
+	@Override
+	public Application createApplication(String name) {
+		return createApplication(null, name);
+	}
+
 	@Transactional
 	@Override
-	public Application createApplication(String vendorName, String name) {
+	public Application createApplication(String vendorGuid, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 
-		Vendor vendor = getVendor(vendorName);
-		if (vendor == null)
-			throw new VendorNotFoundException();
+		Vendor vendor = null;
+		if (vendorGuid != null)
+			vendor = getVendor(vendorGuid);
 
 		Application app = new Application();
 		app.setVendor(vendor);
@@ -198,8 +206,7 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 			throw new ApplicationNotFoundException();
 
 		return (Collection<ApplicationVersion>) em
-				.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?")
-				.setParameter(1, app.getGuid());
+				.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?").setParameter(1, app.getGuid());
 	}
 
 	@Transactional

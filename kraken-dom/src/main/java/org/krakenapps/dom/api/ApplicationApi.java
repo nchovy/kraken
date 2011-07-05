@@ -24,21 +24,25 @@ import org.krakenapps.dom.model.Vendor;
 public interface ApplicationApi {
 	Collection<Vendor> getVendors();
 
-	Vendor getVendor(String vendorName);
+	Vendor getVendor(String guid);
 
 	Vendor createVendor(String name);
 
 	void updateVendor(String guid, String name);
 
 	void removeVendor(String guid);
+	
+	Collection<Application> getApplications();
 
 	Collection<Application> getApplications(String vendorName);
 	
 	Application getApplication(String guid);
 	
 	Application getApplication(String vendorName, String name);
-
-	Application createApplication(String vendorName, String name);
+	
+	Application createApplication(String name);
+	
+	Application createApplication(String vendorGuid, String name);
 
 	void updateApplication(String guid, String name);
 

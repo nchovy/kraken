@@ -27,6 +27,7 @@ import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -45,8 +46,8 @@ public class Application implements Marshalable {
 	@Column(length = 36)
 	private String guid;
 
-	@ManyToOne
-	@JoinColumn(name = "vendor_id", nullable = false)
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "vendor_id", nullable = true)
 	private Vendor vendor;
 
 	@Column(nullable = false, length = 60)
@@ -137,7 +138,8 @@ public class Application implements Marshalable {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("guid", guid);
-		m.put("vendor", vendor.getName());
+		m.put("vendor_guid", vendor.getGuid());
+		m.put("vendor_name", vendor.getName());
 		m.put("name", name);
 		m.put("created_at", dateFormat.format(createDateTime));
 		m.put("updated_at", dateFormat.format(updateDateTime));
