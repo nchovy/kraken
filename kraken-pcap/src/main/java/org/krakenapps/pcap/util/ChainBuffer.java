@@ -678,6 +678,7 @@ public class ChainBuffer implements Buffer {
 			bufIndex += 1;
 			bufOffset = 0;
 		}
+		
 		baseIndex = bufIndex;
 		baseOffset = bufOffset;
 	}
@@ -734,7 +735,11 @@ public class ChainBuffer implements Buffer {
 		} 
 
 		if(bufIndex >= buffers.size()) {
-			clear();
+			bufIndex = baseIndex;
+			bufOffset = baseOffset;
+
+			markIndex = -1;
+			markOffset = -1;
 			return this;
 		}
 		
@@ -743,7 +748,11 @@ public class ChainBuffer implements Buffer {
 		buffers.remove(bufIndex);
 		buffers.add(bufIndex, newb);
 
-		clear();
+		bufIndex = baseIndex;
+		bufOffset = baseOffset;
+
+		markIndex = -1;
+		markOffset = -1;
 		return this;
 	}
 }

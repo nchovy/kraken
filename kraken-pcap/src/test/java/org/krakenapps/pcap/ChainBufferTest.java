@@ -2,7 +2,6 @@ package org.krakenapps.pcap;
 
 import static org.junit.Assert.*;
 
-import java.awt.image.BufferStrategy;
 import java.nio.BufferUnderflowException;
 import java.nio.InvalidMarkException;
 
@@ -1633,5 +1632,42 @@ public class ChainBufferTest {
 		
 		assertEquals(22, buffer.readableBytes());
 		assertEquals(1, buffer.get());
+	}
+	
+	@Test
+	public void flipTest12() { 
+		Buffer buffer = new ChainBuffer();
+		byte[] testArray = new byte[] { 1, 2 };
+		byte[] testArray2 = new byte[] { 3, 4, 5 };
+		byte[] testArray3 = new byte[] { 6, 7, 8, 9 };
+		byte[] testArray4 = new byte[] { 10, 11 };
+		byte[] testArray5 = new byte[] { 12, 13, 14 };
+		buffer.addLast(testArray);
+		buffer.addLast(testArray2);
+		buffer.addLast(testArray3);
+		buffer.addLast(testArray4);
+		buffer.addLast(testArray5);
+		
+		Buffer buffer2 = new ChainBuffer();
+		byte[] testArray6 = new byte[] { 101, 102, 103, 104 };
+		byte[] testArray7 = new byte[] { 105, 106, 107, 108, 109 };
+		byte[] testArray8 = new byte[] { 110, 111, 112 };
+		buffer2.addLast(testArray6);
+		buffer2.addLast(testArray7);
+		buffer2.addLast(testArray8);
+
+		buffer.addLast(buffer2);
+		
+		buffer.get();
+		buffer.get();
+		buffer.get();
+		buffer.get();
+		
+		buffer.discardReadBytes();
+		buffer.skip(22);
+		buffer.flip();
+		
+		assertEquals(22, buffer.readableBytes());
+		assertEquals(5, buffer.get());
 	}
 }
