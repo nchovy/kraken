@@ -44,8 +44,7 @@ import org.slf4j.LoggerFactory;
  * @author mindori
  */
 public class Pop3Decoder implements TcpProcessor {
-	private Logger logger = LoggerFactory
-			.getLogger(Pop3Decoder.class.getName());
+	private Logger logger = LoggerFactory.getLogger(Pop3Decoder.class.getName());
 
 	private Set<Pop3Processor> callbacks;
 	private Map<TcpSessionKey, Pop3Session> sessionMap;
@@ -66,18 +65,14 @@ public class Pop3Decoder implements TcpProcessor {
 	@Override
 	public void onEstablish(TcpSessionKey session) {
 		if (logger.isDebugEnabled())
-			logger.debug("-> POP3 Session Established: "
-					+ (int) session.getClientPort() + " -> "
-					+ (int) session.getServerPort());
+			logger.debug("-> POP3 Session Established: " + (int) session.getClientPort() + " -> " + (int) session.getServerPort());
 		sessionMap.put(session, new Pop3Session());
 	}
 
 	@Override
 	public void onFinish(TcpSessionKey session) {
 		if (logger.isDebugEnabled())
-			logger.debug("-> POP3 Session Closed: \n" + "Client Port: "
-					+ (int) session.getClientPort() + "\nServer Port: "
-					+ (int) session.getServerPort());
+			logger.debug("-> POP3 Session Closed: \n" + "Client Port: " + (int) session.getClientPort() + "\nServer Port: " + (int) session.getServerPort());
 		sessionMap.remove(session);
 	}
 
@@ -159,8 +154,7 @@ public class Pop3Decoder implements TcpProcessor {
 		case FIND_UIDL:
 		case FIND_LIST:
 			try {
-				int len = rxBuffer.bytesBefore(new byte[] { 0x0d, 0x0a, 0x2e,
-						0x0d, 0x0a });
+				int len = rxBuffer.bytesBefore(new byte[] { 0x0d, 0x0a, 0x2e, 0x0d, 0x0a });
 				if (len == 0) {
 					return;
 				}
@@ -205,8 +199,7 @@ public class Pop3Decoder implements TcpProcessor {
 					/* record start point of e-mail */
 					session.setRemarkStart(true);
 				}
-				int length = rxBuffer.bytesBefore(new byte[] { 0x0d, 0x0a,
-						0x2e, 0x0d, 0x0a });
+				int length = rxBuffer.bytesBefore(new byte[] { 0x0d, 0x0a, 0x2e, 0x0d, 0x0a });
 				if (length == 0) {
 					return;
 				}
@@ -242,17 +235,16 @@ public class Pop3Decoder implements TcpProcessor {
 		}
 	}
 
-	private void handleCommand(String command, Pop3Session session,
-			Buffer txBuffer) {
+	private void handleCommand(String command, Pop3Session session, Buffer txBuffer) {
 		if (command.equalsIgnoreCase("UIDL")) {
 			session.setState(Pop3State.FIND_UIDL);
 		} else if (command.equalsIgnoreCase("LIST")) {
 			session.setState(Pop3State.FIND_LIST);
-		} else if (command.substring(0, 3).equalsIgnoreCase("TOP")) {
+		} else if (command.length() > 4 && command.substring(0, 3).equalsIgnoreCase("TOP")) {
 			session.setState(Pop3State.FIND_TOP);
-		} else if (command.substring(0, 4).equalsIgnoreCase("RETR")) {
+		} else if (command.length() > 5 && command.substring(0, 4).equalsIgnoreCase("RETR")) {
 			session.setState(Pop3State.FIND_RETR);
-		} else if (command.substring(0, 4).equalsIgnoreCase("DELE")) {
+		} else if (command.length() > 5 && command.substring(0, 4).equalsIgnoreCase("DELE")) {
 			session.setState(Pop3State.FIND_DELE);
 		} else if (session.getState().compareTo(Pop3State.FIND_TOP) == 0) {
 			session.setState(Pop3State.NONE);
