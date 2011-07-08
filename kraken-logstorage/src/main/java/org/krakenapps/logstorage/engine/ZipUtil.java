@@ -25,8 +25,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+// unused
 public class ZipUtil {
-
 	public static void zip(File input, File output) throws FileNotFoundException, IOException {
 		byte[] block = new byte[16384];
 

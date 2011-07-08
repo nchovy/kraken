@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.logstorage.LogTableNotFoundException;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -45,7 +46,7 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 
 	// table managements
 	private AtomicInteger nextTableId;
-	private Properties tableNumbers;
+	private Properties tableProps;
 
 	private ConcurrentMap<String, LogTable> tableSchemas;
 	private ConcurrentMap<Integer, TableMetadata> metadataMap;
@@ -58,20 +59,26 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		loadTableMappings();
 	}
 
+	@Invalidate
+	public void stop() {
+		updateTableMappings();
+	}
+
 	private void loadTableMappings() {
 		int maxId = 0;
 
 		FileInputStream fis = null;
 		try {
 			if (!tableMappingFile.exists()) {
-				// avoid exception when parent path of tableMappingFile is not exists.
+				// avoid exception when parent path of tableMappingFile is not
+				// exists.
 				tableMappingFile.getParentFile().mkdirs();
 				new FileOutputStream(tableMappingFile).close();
 			}
 
 			fis = new FileInputStream(tableMappingFile);
-			tableNumbers = new Properties();
-			tableNumbers.load(fis);
+			tableProps = new Properties();
+			tableProps.load(fis);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -83,16 +90,16 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 				}
 		}
 
-		for (Object key : tableNumbers.keySet()) {
+		for (Object key : tableProps.keySet()) {
 			String tableName = key.toString();
 			if (!tableName.contains(".")) {
-				int id = Integer.valueOf(tableNumbers.getProperty(tableName));
+				int id = Integer.valueOf(tableProps.getProperty(tableName));
 				if (id > maxId)
 					maxId = id;
 
 				logger.trace("log storage: loading table [{}]", tableName);
 				tableSchemas.put(tableName, new LogTable(id, tableName));
-				TableMetadata tm = new TableMetadata(tableNumbers, tableName);
+				TableMetadata tm = new TableMetadata(tableProps, tableName);
 				metadataMap.put(id, tm);
 			}
 		}
@@ -134,9 +141,9 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 
 		int newId = nextTableId.incrementAndGet();
 
-		synchronized (tableNumbers) {
-			tableNumbers.put(tableName, Integer.toString(newId));
-			TableMetadata tm = new TableMetadata(tableNumbers, tableName);
+		synchronized (tableProps) {
+			tableProps.put(tableName, Integer.toString(newId));
+			TableMetadata tm = new TableMetadata(tableProps, tableName);
 			if (tableMetadata != null)
 				tm.putAll(tableMetadata);
 			metadataMap.put(newId, tm);
@@ -151,9 +158,9 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		FileOutputStream fos = null;
 
 		try {
-			synchronized (tableNumbers) {
+			synchronized (tableProps) {
 				fos = new FileOutputStream(tableMappingFile);
-				tableNumbers.store(fos, null);
+				tableProps.store(fos, null);
 			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -178,8 +185,8 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		TableMetadata oldMetadata = metadataMap.remove(old.getId());
 		oldMetadata.clear();
 
-		synchronized (tableNumbers) {
-			tableNumbers.remove(tableName);
+		synchronized (tableProps) {
+			tableProps.remove(tableName);
 			updateTableMappings();
 		}
 	}

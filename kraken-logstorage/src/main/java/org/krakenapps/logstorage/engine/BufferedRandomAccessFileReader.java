@@ -11,18 +11,22 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class BufferedRandomAccessFileReader implements DataInput {
 	private static final int BUFFER_SIZE = 8192;
+	private Logger logger = LoggerFactory.getLogger(BufferedRandomAccessFileReader.class);
 	private RandomAccessFile file;
 	private ByteBuffer buf;
 	private DataInputStream dataInputStream;
-	
+
 	private boolean isInvalidated = true;
 	private long bufStartPos = 0;
-	
+
 	private boolean isClosed = false;
-	
-	public BufferedRandomAccessFileReader(File path) throws FileNotFoundException { 
+
+	public BufferedRandomAccessFileReader(File path) throws FileNotFoundException {
 		file = new RandomAccessFile(path, "r");
 		buf = ByteBuffer.allocate(BUFFER_SIZE);
 		dataInputStream = new DataInputStream(new InputStream() {
@@ -36,7 +40,7 @@ public class BufferedRandomAccessFileReader implements DataInput {
 				}
 				return (int) buf.get() & 0xff;
 			}
-			
+
 			@Override
 			public synchronized int read(byte[] bytes, int off, int len) throws IOException {
 				if (len > buf.capacity()) {
@@ -47,7 +51,7 @@ public class BufferedRandomAccessFileReader implements DataInput {
 					bufStartPos += buf.position();
 					syncBuffer();
 					buf.get(bytes, off, len);
-					return len;					
+					return len;
 				} else {
 					len = Math.min(len, buf.remaining());
 					buf.get(bytes, off, len);
@@ -78,7 +82,7 @@ public class BufferedRandomAccessFileReader implements DataInput {
 		if (isInvalidated) {
 			syncBuffer();
 		}
-		
+
 		return dataInputStream.skipBytes(n);
 	}
 
@@ -176,14 +180,11 @@ public class BufferedRandomAccessFileReader implements DataInput {
 		if (isInvalidated) {
 			syncBuffer();
 		}
-		
+
 		return dataInputStream.readUTF();
 	}
 
 	public void seek(long pos) throws IOException {
-		if (pos >= file.length())
-			throw new IllegalArgumentException("pos >= file.length");
-		
 		if (pos > bufStartPos + buf.remaining()) {
 			buf.clear();
 			bufStartPos = pos;
@@ -199,7 +200,7 @@ public class BufferedRandomAccessFileReader implements DataInput {
 			if (buf.capacity() < BUFFER_SIZE * 2) {
 				buf = ByteBuffer.allocate(BUFFER_SIZE * 2);
 			}
-			
+
 			int read = file.read(buf.array());
 			if (read != -1) {
 				buf.limit(read);
@@ -210,13 +211,13 @@ public class BufferedRandomAccessFileReader implements DataInput {
 					buf.position(BUFFER_SIZE);
 				}
 			}
-			
+
 			isInvalidated = false;
 		} else {
-			buf.position((int)(pos - bufStartPos));
+			buf.position((int) (pos - bufStartPos));
 		}
 	}
-	
+
 	public long length() throws IOException {
 		return file.length();
 	}
@@ -225,34 +226,34 @@ public class BufferedRandomAccessFileReader implements DataInput {
 		invalidateBuffer();
 		return file.getFilePointer();
 	}
-	
+
 	public FileDescriptor getFD() throws IOException {
 		invalidateBuffer();
 		return file.getFD();
 	}
-	
+
 	public FileChannel getChannel() {
 		invalidateBuffer();
 		return file.getChannel();
 	}
-	
+
 	private void invalidateBuffer() {
 		isInvalidated = true;
 	}
-	
+
 	private void syncBuffer() throws IOException {
-		syncBuffer((int)buf.capacity());
+		syncBuffer((int) buf.capacity());
 	}
-	
+
 	private void syncBuffer(int bufSize) throws IOException {
 		long nextSeekPos = bufStartPos + buf.position();
 		file.seek(nextSeekPos);
-		bufStartPos = nextSeekPos; 
+		bufStartPos = nextSeekPos;
 		buf.clear();
 		if (buf.capacity() < bufSize) {
-			if (bufSize != buf.capacity()) { 
+			if (bufSize != buf.capacity()) {
 				buf = ByteBuffer.allocate(bufSize);
-				System.err.println(String.format("lsp: %d, size: %d", bufStartPos, bufSize));
+				logger.trace(String.format("kraken logstorage: lsp: %d, size: %d", bufStartPos, bufSize));
 			}
 		}
 		int read = file.read(buf.array());

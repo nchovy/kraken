@@ -21,9 +21,11 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.api.Script;
@@ -31,24 +33,31 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.logstorage.Log;
+import org.krakenapps.logstorage.LogQuery;
+import org.krakenapps.logstorage.LogQueryService;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.TableMetadata;
 import org.krakenapps.logstorage.criterion.EqExpression;
 import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.ConfigUtil;
+import org.krakenapps.logstorage.query.LogQueryCommand;
+import org.krakenapps.logstorage.query.LogQueryImpl;
 import org.osgi.service.prefs.PreferencesService;
 
 public class LogStorageScript implements Script {
 	private ScriptContext context;
 	private LogTableRegistry tableRegistry;
 	private LogStorage storage;
+	private LogQueryService logQueryService;
 	private PreferencesService prefsvc;
 
-	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive,
+	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, LogQueryService logQueryService,
 			PreferencesService prefsvc) {
 		this.tableRegistry = tableRegistry;
 		this.storage = archive;
+		this.logQueryService = logQueryService;
 		this.prefsvc = prefsvc;
 	}
 
@@ -238,8 +247,6 @@ public class LogStorageScript implements Script {
 			String line = null;
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-			String[] headers = null;
-
 			int count = 0;
 			while (count < loadLimit) {
 				line = br.readLine();
@@ -248,9 +255,9 @@ public class LogStorageScript implements Script {
 
 				if (line.startsWith("#")) {
 					if (line.startsWith("#Fields: ")) {
-						headers = line.replace("#Fields: ", "").split(" ");
+						TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(tableName));
+						tm.put("logformat", line.replace("#Fields: ", ""));
 					}
-
 					continue;
 				}
 
@@ -258,8 +265,7 @@ public class LogStorageScript implements Script {
 
 				Date date = dateFormat.parse(tokens[0] + " " + tokens[1]);
 				Map<String, Object> m = new HashMap<String, Object>();
-				for (int i = 0; i < tokens.length; i++)
-					m.put(headers[i], tokens[i]);
+				m.put("log", line);
 
 				Log log = new Log(tableName, date, m);
 				try {
@@ -280,7 +286,7 @@ public class LogStorageScript implements Script {
 		}
 
 		long milliseconds = new Date().getTime() - begin.getTime();
-		context.println(Long.toString(milliseconds));
+		context.println(Long.toString(milliseconds) + " ms");
 	}
 
 	@ScriptUsage(description = "benchmark table fullscan", arguments = {
@@ -330,6 +336,36 @@ public class LogStorageScript implements Script {
 
 		@Override
 		public void interrupt() {
+		}
+	}
+
+	public void createLogQuery(String[] args) {
+		LogQuery lq = logQueryService.createQuery(args[0]);
+		new Thread(lq).start();
+
+		while (!lq.isEnd())
+			;
+
+		List<Map<String, Object>> results = lq.getResult();
+		for (Map<String, Object> m : results)
+			context.println(m.toString());
+
+		logQueryService.removeQuery(lq.getId());
+	}
+
+	public void removeLogQuery(String[] args) {
+		logQueryService.removeQuery(Integer.parseInt(args[0]));
+		context.println("removed");
+	}
+
+	public void queries(String[] args) {
+		Collection<LogQuery> queries = logQueryService.getQueries();
+
+		for (LogQuery query : queries) {
+			context.println(String.format("[%d] %s", query.getId(), query.getQueryString()));
+			for (LogQueryCommand cmd : ((LogQueryImpl) query).getCommands()) {
+				context.println(String.format("    [%s] %s", cmd.getStatus(), cmd.getQueryString()));
+			}
 		}
 	}
 }

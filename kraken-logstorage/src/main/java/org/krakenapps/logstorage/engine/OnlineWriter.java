@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.krakenapps.logstorage.engine.v2.LogFileWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

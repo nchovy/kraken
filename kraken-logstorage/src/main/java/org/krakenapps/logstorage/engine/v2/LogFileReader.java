@@ -13,29 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine;
+package org.krakenapps.logstorage.engine.v2;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
+import org.krakenapps.logstorage.engine.InvalidLogFileHeaderException;
+import org.krakenapps.logstorage.engine.LogFileHeader;
+import org.krakenapps.logstorage.engine.LogRecord;
+import org.krakenapps.logstorage.engine.LogRecordCallback;
+
 public class LogFileReader {
 	private static final int INDEX_ITEM_SIZE = 16;
 
-	private BufferedRandomAccessFileReader indexFile;
-	private BufferedRandomAccessFileReader dataFile;
-	
-	private LogFileHeaderV1 indexFileHeader;
-	@SuppressWarnings("unused")
-	private LogFileHeaderV1 dataFileHeader;
+	private int indexBlockSize;
+	private int dataBlockSize;
+	private ZipFileReader indexFile;
+	private ZipFileReader dataFile;
+
+	private LogFileHeader indexFileHeader;
+	private LogFileHeader dataFileHeader;
 
 	public LogFileReader(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
-		this.indexFile = new BufferedRandomAccessFileReader(indexPath);
-		indexFileHeader = LogFileHeaderV1.extractHeader(indexFile);
-		this.dataFile = new BufferedRandomAccessFileReader(dataPath);
-		dataFileHeader = LogFileHeaderV1.extractHeader(dataFile);
+		RandomAccessFile index = new RandomAccessFile(indexPath, "r");
+		this.indexFileHeader = LogFileHeader.extractHeader(index);
+		this.indexBlockSize = getInt(indexFileHeader.getExtraData());
+		index.close();
+		RandomAccessFile data = new RandomAccessFile(dataPath, "r");
+		this.dataFileHeader = LogFileHeader.extractHeader(data);
+		this.dataBlockSize = getInt(dataFileHeader.getExtraData());
+		data.close();
+		this.indexFile = new ZipFileReader(indexPath, indexBlockSize);
+		this.dataFile = new ZipFileReader(dataPath, dataBlockSize);
+	}
+
+	private int getInt(byte[] b) {
+		int r = 0;
+		for (int i = 0; i < 4; i++) {
+			r <<= 8;
+			r |= b[i] & 0xff;
+		}
+		return r;
 	}
 
 	public LogRecord find(int id) throws IOException {
@@ -51,7 +73,7 @@ public class LogFileReader {
 
 		// read block
 		byte[] block = new byte[dataLen];
-		dataFile.readFully(block);
+		dataFile.read(block);
 
 		ByteBuffer bb = ByteBuffer.wrap(block);
 		return new LogRecord(date, key, bb);
@@ -92,13 +114,12 @@ public class LogFileReader {
 			return -1;
 
 		indexFile.seek(indexFileHeader.size() + indexPos * INDEX_ITEM_SIZE + 8);
-		//                              0011223344556677
+		// 0011223344556677
 		return indexFile.readLong() & 0x0000FFFFFFFFFFFFL;
 	}
 
 	public void traverse(Date from, Date to, Integer upperBound, Integer lowerBound, int limit,
-			LogRecordCallback callback)
-			throws IOException, InterruptedException {
+			LogRecordCallback callback) throws IOException, InterruptedException {
 		int matched = 0;
 
 		if (upperBound != null && lowerBound != null && upperBound < lowerBound)
@@ -147,15 +168,17 @@ public class LogFileReader {
 				continue;
 			}
 
-			// read data length  0011223344556677
-			long pos = ((tmp & 0x000000000000FFFFL) << 32) | (long) indexFile.readInt();
+			// read data length 001122334455667
+			long pos = ((tmp & 0x000000000000FFFFL) << 32) | indexFile.readInt();
 
+			if (pos == 0)
+				return;
 			dataFile.seek(pos + 12); // move after (key + date)
 			int dataLen = dataFile.readInt();
 
 			// read block
 			byte[] block = new byte[dataLen];
-			dataFile.readFully(block);
+			dataFile.read(block);
 
 			ByteBuffer bb = ByteBuffer.wrap(block, 0, dataLen);
 			if (callback.onLog(new LogRecord(date, key, bb)))

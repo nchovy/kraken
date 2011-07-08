@@ -24,15 +24,17 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-public class TableMetadata implements Map<String, String>{
+public class TableMetadata implements Map<String, String> {
+	private int id;
 	private String tableName;
 	private String keyPrefix;
-	private Properties source;
+	private Properties tableProps;
 
-	public TableMetadata(Properties tableNumbers, String tableName) {
-		this.source = tableNumbers;
+	public TableMetadata(Properties tableProps, String tableName) {
+		this.id = Integer.parseInt(tableProps.getProperty(tableName));
+		this.tableProps = tableProps;
 		this.tableName = tableName;
-		this.keyPrefix = tableName + ".";
+		this.keyPrefix = id + ".";
 	}
 
 	public String getTableName() {
@@ -55,7 +57,7 @@ public class TableMetadata implements Map<String, String>{
 
 	@Override
 	public boolean containsKey(Object key) {
-		return source.containsKey(getTableMetadataKey(key));
+		return tableProps.containsKey(getTableMetadataKey(key));
 	}
 
 	@Override
@@ -65,12 +67,12 @@ public class TableMetadata implements Map<String, String>{
 
 	@Override
 	public String get(Object key) {
-		return source.getProperty(getTableMetadataKey(key));
+		return tableProps.getProperty(getTableMetadataKey(key));
 	}
 
 	@Override
 	public String put(String key, String value) {
-		return (String) source.setProperty(getTableMetadataKey(key), value);
+		return (String) tableProps.setProperty(getTableMetadataKey(key), value);
 	}
 
 	private String getTableMetadataKey(Object key) {
@@ -79,33 +81,33 @@ public class TableMetadata implements Map<String, String>{
 
 	@Override
 	public String remove(Object key) {
-		return (String) source.remove(getTableMetadataKey(key));
+		return (String) tableProps.remove(getTableMetadataKey(key));
 	}
 
 	@Override
 	public void putAll(Map<? extends String, ? extends String> m) {
-		for (Entry<? extends String, ? extends String> entry: m.entrySet()) {
-			source.put(getTableMetadataKey(entry.getKey()), entry.getValue());
+		for (Entry<? extends String, ? extends String> entry : m.entrySet()) {
+			tableProps.put(getTableMetadataKey(entry.getKey()), entry.getValue());
 		}
 	}
 
 	@Override
 	public void clear() {
 		LinkedList<Object> candidates = new LinkedList<Object>();
-		for (Entry<Object, Object> entry: source.entrySet()) {
+		for (Entry<Object, Object> entry : tableProps.entrySet()) {
 			if (entry.getKey().toString().startsWith(keyPrefix)) {
 				candidates.add(entry.getKey());
 			}
 		}
 		for (Object obj : candidates) {
-			source.remove(obj);
+			tableProps.remove(obj);
 		}
 	}
 
 	@Override
 	public Set<String> keySet() {
 		Set<String> result = Collections.newSetFromMap(new HashMap<String, Boolean>());
-		for (Object key : source.keySet()) {
+		for (Object key : tableProps.keySet()) {
 			if (key.toString().startsWith(keyPrefix)) {
 				result.add(key.toString());
 			}
@@ -116,9 +118,9 @@ public class TableMetadata implements Map<String, String>{
 	@Override
 	public Collection<String> values() {
 		Collection<String> result = new LinkedList<String>();
-		for (Object key : source.keySet()) {
+		for (Object key : tableProps.keySet()) {
 			if (key.toString().startsWith(keyPrefix)) {
-				result.add(source.getProperty(key.toString()));
+				result.add(tableProps.getProperty(key.toString()));
 			}
 		}
 		return result;
@@ -127,12 +129,12 @@ public class TableMetadata implements Map<String, String>{
 	@Override
 	public Set<java.util.Map.Entry<String, String>> entrySet() {
 		Set<Entry<String, String>> result = Collections.newSetFromMap(new HashMap<Entry<String, String>, Boolean>());
-		for (Object key : source.keySet()) {
+		for (Object key : tableProps.keySet()) {
 			if (key.toString().startsWith(keyPrefix)) {
-				result.add(new SimpleEntry<String, String>(key.toString(), source.get(key).toString()));
+				result.add(new SimpleEntry<String, String>(key.toString(), tableProps.get(key).toString()));
 			}
 		}
 		return result;
 	}
-	
+
 }

@@ -47,6 +47,7 @@ import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.criterion.Criterion;
+import org.krakenapps.logstorage.engine.v2.LogFileReader;
 import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -184,8 +185,7 @@ public class LogStorageEngine implements LogStorage {
 		for (File f : tableDir.listFiles()) {
 			if (f.isFile() && (f.getName().endsWith(".idx") || f.getName().endsWith(".dat"))) {
 				if (!f.delete())
-					logger.info("log storage: cannot delete log data {} of table {}", f.getAbsolutePath(),
-							tableName);
+					logger.info("log storage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
 			}
 		}
 

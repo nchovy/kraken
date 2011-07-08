@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine;
+package org.krakenapps.logstorage.engine.v2;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -26,6 +25,7 @@ public class ZipFileWriter {
 	private RandomAccessFile f;
 	private int blockSize;
 	private ByteBuffer bb;
+	private long offset;
 	private ByteBuffer compressed;
 	private Deflater compresser;
 	private byte[] intbuf;
@@ -33,20 +33,32 @@ public class ZipFileWriter {
 	/**
 	 * @param blockSize
 	 *            compress data block size
-	 * @throws FileNotFoundException
+	 * @throws IOException
 	 */
-	public ZipFileWriter(File file, int blockSize) throws FileNotFoundException {
+	public ZipFileWriter(File file, int blockSize) throws IOException {
 		this.blockSize = blockSize;
 		this.bb = ByteBuffer.allocate(blockSize);
+		this.offset = 0;
 		this.compressed = ByteBuffer.allocate(blockSize);
 		this.compresser = new Deflater(1);
 		this.intbuf = new byte[4];
 
+		if (file.exists()) {
+			ZipFileReader r = new ZipFileReader(file, blockSize);
+			this.offset = r.length();
+			r.close();
+		}
+
 		f = new RandomAccessFile(file, "rw");
+		f.seek(f.length());
 	}
 
 	public int getBlockSize() {
 		return blockSize;
+	}
+
+	public void append(byte[] b) throws IOException {
+		append(b, 0, b.length);
 	}
 
 	public void append(byte[] b, int offset, int length) throws IOException {
@@ -58,10 +70,14 @@ public class ZipFileWriter {
 			// is flush needed?
 			if (len == free)
 				flush();
-			
+
 			offset += len;
 			length -= len;
 		} while (length > 0);
+	}
+
+	public long getFilePointer() {
+		return offset + bb.position();
 	}
 
 	public void flush() throws IOException {
@@ -73,6 +89,7 @@ public class ZipFileWriter {
 		prepareInt(written, intbuf);
 		f.write(intbuf);
 		f.write(compressed.array(), 0, written);
+		offset += bb.position();
 
 		// reset
 		bb.clear();

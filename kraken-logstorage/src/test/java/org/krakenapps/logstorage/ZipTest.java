@@ -23,8 +23,8 @@ import java.util.Date;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import org.krakenapps.logstorage.engine.ZipFileReader;
-import org.krakenapps.logstorage.engine.ZipFileWriter;
+import org.krakenapps.logstorage.engine.v2.ZipFileReader;
+import org.krakenapps.logstorage.engine.v2.ZipFileWriter;
 
 @Ignore
 public class ZipTest {
