@@ -39,7 +39,40 @@ public class ArpCache {
 					break;
 
 				String ip = scanner.next();
+				String type = null;
 				int hwType = Integer.valueOf(scanner.next().substring(2), 16);
+				switch (hwType) {
+				case 0:
+					type = "reserved";
+					break;
+				case 1:
+					type = "Ethernet";
+					break;
+				case 2:
+					type = "Experimental Ethernet";
+					break;
+				case 4:
+					type = "Token Ring";
+					break;
+				case 5:
+					type = "Chaos";
+					break;
+				case 6:
+					type = "IEEE 802";
+					break;
+				case 20:
+					type = "Token Ring";
+					break;
+				case 30:
+					type = "ARPSec";
+					break;
+				case 31:
+					type = "IPSec tunnel";
+					break;
+				default:
+					type = "the others";
+					break;
+				}
 				String flags = null;
 				switch (Integer.valueOf(scanner.next().substring(2), 16)) {
 				case 0x02:
@@ -58,7 +91,7 @@ public class ArpCache {
 				String mask = scanner.next();
 				String device = scanner.next();
 
-				ArpEntry entry = new ArpEntry(ip, hwType, flags, mac, mask, device);
+				ArpEntry entry = new ArpEntry(ip, type, flags, mac, mask, device);
 				entries.add(entry);
 			}
 

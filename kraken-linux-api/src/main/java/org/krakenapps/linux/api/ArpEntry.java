@@ -18,6 +18,7 @@ package org.krakenapps.linux.api;
 public class ArpEntry {
 	private String ip;
 	private int hwType;
+	private String hardware;
 	private String flags;
 	private String mac;
 	private String mask;
@@ -31,7 +32,16 @@ public class ArpEntry {
 		this.mask = mask;
 		this.device = device;
 	}
-
+	
+	public ArpEntry(String ip, String hardware, String flags, String mac, String mask, String device) {
+		this.ip = ip;
+		this.hardware = hardware;
+		this.flags = flags;
+		this.mac = mac;
+		this.mask = mask;
+		this.device = device;
+	}
+	
 	public String getIp() {
 		return ip;
 	}
@@ -40,6 +50,10 @@ public class ArpEntry {
 		return hwType;
 	}
 
+	public String getHardware() {
+		return hardware;
+	}
+	
 	public String getFlags() {
 		return flags;
 	}
@@ -97,5 +111,4 @@ public class ArpEntry {
 	public String toString() {
 		return String.format("device=%s, ip=%s, mac=%s", device, ip, mac);
 	}
-
 }

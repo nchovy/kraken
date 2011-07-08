@@ -27,6 +27,11 @@ public class RoutingTablePlugin {
 	}
 
 	@MsgbusMethod
+	public void getRoutingTableV6(Request req, Response resp) {
+		resp.put("routing_table", Marshaler.marshal(RoutingTable.getIpv6RoutingEntries()));
+	}
+	
+	@MsgbusMethod
 	public void addRoutingEntry(Request req, Response resp) {
 		RoutingEntry entry = parseRoutingEntry(req);
 		boolean isHost = req.getBoolean("is_host");

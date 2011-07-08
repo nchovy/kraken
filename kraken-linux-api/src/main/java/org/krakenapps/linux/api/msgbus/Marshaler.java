@@ -7,10 +7,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.krakenapps.linux.api.ArpEntry;
 import org.krakenapps.linux.api.DnsConfig;
 import org.krakenapps.linux.api.EthernetInterface;
 import org.krakenapps.linux.api.EthernetToolInformation;
+import org.krakenapps.linux.api.Ipv6NeighborEntry;
 import org.krakenapps.linux.api.RoutingEntry;
+import org.krakenapps.linux.api.RoutingEntryV6;
 import org.krakenapps.linux.api.DnsConfig.Sortlist;
 import org.krakenapps.linux.api.EthernetInterface.AddressBinding;
 
@@ -38,7 +41,7 @@ public class Marshaler {
 		m.put("netmask", sortlist.getNetmask() != null ? sortlist.getNetmask().getHostAddress() : null);
 		return m;
 	}
-
+	
 	public static Map<String, Object> marshal(RoutingEntry entry) {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("destination", entry.getDestination() != null ? entry.getDestination().getHostAddress() : null);
@@ -48,7 +51,20 @@ public class Marshaler {
 		m.put("metric", entry.getMetric());
 		m.put("ref", entry.getRef());
 		m.put("use", entry.getUse());
-		m.put("iface", entry.getIface());
+		m.put("interface", entry.getIface());
+		return m;
+	}
+	
+	public static Map<String, Object> marshal(RoutingEntryV6 entry) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("destination", entry.getDestination());
+		m.put("gateway", entry.getNextHop());
+		m.put("mask", entry.getMask());
+		m.put("flag", entry.getFlags());
+		m.put("metric", entry.getMetric());
+		m.put("ref", entry.getRef());
+		m.put("use", entry.getUse());
+		m.put("interface", entry.getIface());
 		return m;
 	}
 
@@ -95,6 +111,26 @@ public class Marshaler {
 		return m;
 	}
 
+	public static Map<String, Object> marshal(ArpEntry entry) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("ip", entry.getIp());
+		m.put("hw_type", entry.getHardware());
+		m.put("flags", entry.getFlags());
+		m.put("mac", entry.getMac());
+		m.put("mask", entry.getMask());
+		m.put("device", entry.getDevice());
+		return m;
+	}
+	
+	public static Map<String, Object> marshal(Ipv6NeighborEntry entry) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("ip", entry.getAddress());
+		m.put("mac", entry.getMac());
+		m.put("device", entry.getDevice());
+		m.put("state", entry.getState());
+		return m;
+	}
+	
 	public static List<Object> marshal(Collection<?> list) {
 		if (list == null)
 			return null;
@@ -106,8 +142,14 @@ public class Marshaler {
 				serializedObjects.add(marshal((DnsConfig) obj));
 			else if (obj instanceof RoutingEntry)
 				serializedObjects.add(marshal((RoutingEntry) obj));
+			else if (obj instanceof RoutingEntryV6)
+				serializedObjects.add(marshal((RoutingEntryV6) obj));
 			else if (obj instanceof AddressBinding)
 				serializedObjects.add(marshal((AddressBinding) obj));
+			else if (obj instanceof ArpEntry)
+				serializedObjects.add(marshal((ArpEntry) obj));
+			else if (obj instanceof Ipv6NeighborEntry)
+				serializedObjects.add(marshal((Ipv6NeighborEntry) obj));
 		}
 
 		return serializedObjects;

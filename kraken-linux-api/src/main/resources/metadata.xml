@@ -1,6 +1,8 @@
 <ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
+	<instance component="linux-arp-cache-plugin" />
+	<instance component="linux-ipv6-neighbor-cache-plugin" />
 	<instance component="linux-routing-table-plugin" />
 	<instance component="linux-dns-config-plugin" />
 	<instance component="linux-ethernet-interface-plugin" />
