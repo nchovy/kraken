@@ -30,3 +30,4 @@ org.krakenapps.dom.model.OrganizationUnit
 org.krakenapps.dom.model.User
 org.krakenapps.dom.model.LdapOrganizationalUnit
 org.krakenapps.dom.model.OrganizationParameter
+org.krakenapps.dom.model.UploadedFile

@@ -22,6 +22,7 @@
 	<instance component="dom-org-parameter-api" />
 	<instance component="dom-localization-api" />
 	<instance component="dom-push-api" />
+	<instance component="dom-file-upload-api" />
 
 	<instance component="dom-org-plugin" />
 	<instance component="dom-admin-plugin" />
@@ -43,6 +44,7 @@
 	<instance component="dom-org-unit-plugin" />
 	<instance component="dom-user-plugin" />
 	<instance component="dom-localization-plugin" />
+	<instance component="dom-file-upload-plugin" />
 
 	<instance component="dom-script-factory" />
 </ipojo>

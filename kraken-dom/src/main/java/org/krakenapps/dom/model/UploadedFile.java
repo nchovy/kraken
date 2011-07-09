@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems, Inc.
+ * Copyright 2010 NCHOVY
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,49 +15,45 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.io.File;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import org.krakenapps.msgbus.Marshalable;
 
 @Entity
-@Table(name = "dom_file_spaces")
-public class FileSpace implements Marshalable {
+@Table(name = "dom_uploaded_files")
+public class UploadedFile implements Marshalable {
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
 	private int id;
 
 	@ManyToOne
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
-	@Column(nullable = false, length = 255)
-	private String name;
+	@JoinColumn(name = "space_id", nullable = false)
+	private FileSpace fileSpace;
 
 	@ManyToOne
 	@JoinColumn(name = "owner_id", nullable = false)
 	private User owner;
 
+	@Column(length = 128, nullable = false)
+	private String fileName;
+
+	@Column(nullable = false)
+	private long fileSize;
+
+	@Column(length = 512, nullable = false)
+	private String path;
+
 	@Column(name = "created_at", nullable = false)
 	private Date createDateTime;
-
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "fileSpace")
-	private List<UploadedFile> uploadedFiles = new ArrayList<UploadedFile>();
 
 	public int getId() {
 		return id;
@@ -67,20 +63,12 @@ public class FileSpace implements Marshalable {
 		this.id = id;
 	}
 
-	public Organization getOrganization() {
-		return organization;
+	public FileSpace getFileSpace() {
+		return fileSpace;
 	}
 
-	public void setOrganization(Organization organization) {
-		this.organization = organization;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
+	public void setFileSpace(FileSpace fileSpace) {
+		this.fileSpace = fileSpace;
 	}
 
 	public User getOwner() {
@@ -91,6 +79,34 @@ public class FileSpace implements Marshalable {
 		this.owner = owner;
 	}
 
+	public String getFileName() {
+		return fileName;
+	}
+
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+
+	public long getFileSize() {
+		return fileSize;
+	}
+
+	public void setFileSize(long fileSize) {
+		this.fileSize = fileSize;
+	}
+
+	public String getPath() {
+		return path;
+	}
+
+	public void setPath(String path) {
+		this.path = path;
+	}
+
+	public File getFile() {
+		return new File(path);
+	}
+
 	public Date getCreateDateTime() {
 		return createDateTime;
 	}
@@ -99,21 +115,17 @@ public class FileSpace implements Marshalable {
 		this.createDateTime = createDateTime;
 	}
 
-	public List<UploadedFile> getUploadedFiles() {
-		return uploadedFiles;
-	}
-
-	public void setUploadedFiles(List<UploadedFile> uploadedFiles) {
-		this.uploadedFiles = uploadedFiles;
+	@Override
+	public String toString() {
+		return String.format("id [%d], filename [%s], size [%d], path [%s]", id, fileName, fileSize, path);
 	}
 
 	@Override
 	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("id", id);
-		m.put("name", name);
-		m.put("created_at", dateFormat.format(createDateTime));
+		m.put("file_name", fileName);
+		m.put("file_size", fileSize);
 		return m;
 	}
 }
