@@ -21,9 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,6 +31,7 @@ import javax.persistence.EntityManager;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.UploadCallback;
 import org.krakenapps.dom.api.UploadToken;
@@ -70,7 +69,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 	private File baseDir;
 	private File tempDir;
 
-	private ConcurrentMap<Integer, AtomicInteger> counters;
+	private AtomicInteger counter;
 	private ConcurrentMap<String, UploadItem> items;
 	private ConcurrentMap<String, Integer> downloadTokens;
 
@@ -83,38 +82,25 @@ public class FileUploadApiImpl implements FileUploadApi {
 		prefs = prefsvc.getSystemPreferences().node("upload");
 	}
 
+	@Validate
 	public void start() {
 		baseDir = new File(prefs.get(BASE_PATH, "data/kraken-dom/upload/"));
 		tempDir = new File(prefs.get(BASE_PATH, "data/kraken-dom/upload/temp"));
 		baseDir.mkdirs();
 		tempDir.mkdirs();
 
-		// load counters per space
-		counters = new ConcurrentHashMap<Integer, AtomicInteger>();
 		items = new ConcurrentHashMap<String, UploadItem>();
 		downloadTokens = new ConcurrentHashMap<String, Integer>();
-
-		counters.putAll(getMaxCounters());
+		counter = new AtomicInteger(getMaxCounter());
 	}
 
 	@Transactional
-	private Map<Integer, AtomicInteger> getMaxCounters() {
-		Map<Integer, AtomicInteger> m = new HashMap<Integer, AtomicInteger>();
+	private int getMaxCounter() {
 		EntityManager em = entityManagerService.getEntityManager();
-
-		@SuppressWarnings("unchecked")
-		List<Object> l = em.createQuery("SELECT f.space.id, MAX(f.id) FROM UploadedFile f").getResultList();
-
-		for (Object o : l) {
-			Object[] row = (Object[]) o;
-			Integer spaceId = (Integer) row[0];
-			int maxId = (Integer) row[1];
-
-			logger.debug("kraken dom: initialize file space [{}] max id [{}]", spaceId, maxId);
-			m.put(spaceId, new AtomicInteger(maxId));
-		}
-
-		return m;
+		Integer max = (Integer) em.createQuery("SELECT MAX(f.id) FROM UploadedFile f").getSingleResult();
+		if (max == null)
+			return 0;
+		return max;
 	}
 
 	public void stop() {
@@ -199,13 +185,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		if (token == null)
 			throw new IllegalArgumentException("upload token must be not null");
 
-		int spaceId = token.getSpaceId();
-
-		// add new counter if space does not exist
-		counters.putIfAbsent(spaceId, new AtomicInteger(0));
-
 		// get new resource id
-		AtomicInteger counter = counters.get(spaceId);
 		int nextId = counter.incrementAndGet();
 
 		// set upload item on waiting table

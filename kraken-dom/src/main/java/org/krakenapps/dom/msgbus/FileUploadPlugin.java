@@ -80,7 +80,7 @@ public class FileUploadPlugin {
 		String fileName = req.getString("file_name");
 		long fileSize = req.getInteger("file_size");
 
-		final String template = "watchcat file upload plugin: set upload info, session [{}], token [{}], space [{}], filename [{}], size [{}]";
+		final String template = "kraken dom: set upload info, session [{}], token [{}], space [{}], filename [{}], size [{}]";
 		logger.info(template, new Object[] { req.getSession().getId(), token, spaceId, fileName, fileSize });
 
 		UploadToken uploadToken = new UploadToken(token, req.getAdminId(), spaceId, fileName, fileSize);
@@ -112,7 +112,7 @@ public class FileUploadPlugin {
 	@MsgbusMethod(type = CallbackType.SessionClosed)
 	public void removeDownloadTokens(Session session) {
 		int sessionId = session.getId();
-		logger.info("watchcat file upload plugin: clearing download token for session {}", sessionId);
+		logger.info("kraken dom: clearing download token for session {}", sessionId);
 
 		String token = tokens.remove(sessionId);
 		if (token != null)
@@ -126,7 +126,7 @@ public class FileUploadPlugin {
 		try {
 			upload.deleteFile(req.getAdminId(), fileId);
 		} catch (Exception e) {
-			logger.error("watchcat file upload plugin: failed to delete file", e);
+			logger.error("kraken dom: failed to delete file", e);
 		}
 	}
 }
