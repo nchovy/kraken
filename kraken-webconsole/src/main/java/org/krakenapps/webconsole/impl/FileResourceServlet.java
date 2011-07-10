@@ -24,15 +24,15 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
-import org.krakenapps.webconsole.ResourceContext;
+import org.krakenapps.webconsole.ResourceServlet;
 
-@Component(name = "file-resource-context")
+@Component(name = "webconsole-file-resource-servlet")
 @Provides
-public class FileResourceContext extends ResourceContext {
+public class FileResourceServlet extends ResourceServlet {
 	private static final long serialVersionUID = 1L;
 	private File basePath;
 
-	public FileResourceContext(File basePath) {
+	public FileResourceServlet(File basePath) {
 		this.basePath = basePath;
 	}
 
@@ -47,6 +47,6 @@ public class FileResourceContext extends ResourceContext {
 
 	@Override
 	public String toString() {
-		return String.format("filesystem context: %s", basePath);
+		return String.format("filesystem resource: %s", basePath);
 	}
 }

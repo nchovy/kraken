@@ -169,7 +169,7 @@ public class WebSocketServerImpl implements WebSocketServer {
 
 	@Validate
 	public void start() {
-		staticResourceApi.register("/", new BundleResourceContext(bc.getBundle(), "/WEB-INF"));
+		staticResourceApi.register("/", new BundleResourceServlet(bc.getBundle(), "/WEB-INF"));
 		for (WebSocketServerContext ctx : getBindAddressConfig()) {
 			try {
 				if (ctx.isSsl())

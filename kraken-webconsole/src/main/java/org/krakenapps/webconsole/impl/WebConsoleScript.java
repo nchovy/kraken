@@ -132,7 +132,7 @@ public class WebConsoleScript implements Script {
 		String basePath = args[1];
 
 		try {
-			staticResourceApi.register(prefix, new FileResourceContext(new File(basePath)));
+			staticResourceApi.register(prefix, new FileResourceServlet(new File(basePath)));
 			context.println("context added");
 		} catch (Exception e) {
 			context.println("cannot register filesystem context: " + e.getMessage());

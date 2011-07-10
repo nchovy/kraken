@@ -166,7 +166,7 @@ public class BundleMetadataMonitor implements BundleListener {
 		if (prefix != null) {
 			URL url = bundle.getEntry("/WEB-INF");
 			if (url != null) {
-				staticResourceApi.register(prefix, new BundleResourceContext(bundle, "/WEB-INF"));
+				staticResourceApi.register(prefix, new BundleResourceServlet(bundle, "/WEB-INF"));
 				logger.info("kraken webconsole: prefix [{}] is mapped to bundle {}/WEB-INF", prefix, bundleId);
 			} else {
 				logger.warn("kraken webconsole: WEB-INF directory not found in bundle {}", bundleId);

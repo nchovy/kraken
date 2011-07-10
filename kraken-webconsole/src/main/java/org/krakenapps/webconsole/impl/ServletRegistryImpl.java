@@ -43,7 +43,7 @@ import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "servlet-registry")
+@Component(name = "webconsole-servlet-registry")
 @Provides
 public class ServletRegistryImpl implements ServletRegistry {
 	private static final long serialVersionUID = 1L;
@@ -163,7 +163,11 @@ public class ServletRegistryImpl implements ServletRegistry {
 	}
 
 	private String[] split(String path) {
-		path = path.substring(0, path.lastIndexOf("/"));
+		int queryPos = path.lastIndexOf("?");
+		if (queryPos > 0)
+			path = path.substring(0, queryPos);
+
+		// path = path.substring(0, path.lastIndexOf("/"));
 		String[] s = path.split("/");
 
 		int count = 0;

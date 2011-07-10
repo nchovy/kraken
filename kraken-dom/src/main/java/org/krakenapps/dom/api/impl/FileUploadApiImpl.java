@@ -222,7 +222,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		logger.trace("kraken dom: new upload post for token {}, resouce id {}", token, item.resourceId);
 
 		try {
-			File temp = File.createTempFile("krakenhttp-", null, tempDir);
+			File temp = File.createTempFile("dom-", null, tempDir);
 			os = new FileOutputStream(temp);
 			byte[] buffer = new byte[8096];
 
@@ -293,6 +293,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		}
 
 		UploadedFile file = new UploadedFile();
+		file.setId(item.resourceId);
 		file.setFileSpace(space);
 		file.setOwner(owner);
 		file.setFileName(token.getFileName());

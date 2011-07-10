@@ -22,20 +22,20 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
-import org.krakenapps.webconsole.ResourceContext;
+import org.krakenapps.webconsole.ResourceServlet;
 import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "bundle-resource-context")
+@Component(name = "webconsole-bundle-resource-servlet")
 @Provides
-public class BundleResourceContext extends ResourceContext {
+public class BundleResourceServlet extends ResourceServlet {
 	private static final long serialVersionUID = 1L;
-	private final Logger logger = LoggerFactory.getLogger(BundleResourceContext.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(BundleResourceServlet.class.getName());
 	private Bundle bundle;
 	private String basePath;
 
-	public BundleResourceContext(Bundle bundle, String basePath) {
+	public BundleResourceServlet(Bundle bundle, String basePath) {
 		this.bundle = bundle;
 		this.basePath = basePath;
 	}

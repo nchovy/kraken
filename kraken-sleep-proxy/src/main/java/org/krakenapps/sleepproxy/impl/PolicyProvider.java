@@ -25,7 +25,7 @@ import org.krakenapps.sleepproxy.ConfigStore;
 import org.krakenapps.sleepproxy.model.Agent;
 import org.krakenapps.sleepproxy.model.AgentGroup;
 import org.krakenapps.sleepproxy.model.SleepPolicy;
-import org.krakenapps.webconsole.ResourceContext;
+import org.krakenapps.webconsole.ResourceServlet;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "sleep-proxy-policy-provider")
 @JpaConfig(factory = "sleep-proxy")
-public class PolicyProvider extends ResourceContext {
+public class PolicyProvider extends ResourceServlet {
 	private static final long serialVersionUID = 1L;
 
 	private final Logger logger = LoggerFactory.getLogger(PolicyProvider.class.getName());

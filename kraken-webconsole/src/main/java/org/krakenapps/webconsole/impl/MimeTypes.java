@@ -24,168 +24,177 @@ public final class MimeTypes {
 
 	private final Map<String, String> extMap;
 
+	/**
+	 * binary as a default
+	 */
+	private final String octetstream = "application/octet-stream";
+
 	private MimeTypes() {
 		this.extMap = new HashMap<String, String>();
-		this.extMap.put("abs", "audio/x-mpeg");
-		this.extMap.put("ai", "application/postscript");
-		this.extMap.put("aif", "audio/x-aiff");
-		this.extMap.put("aifc", "audio/x-aiff");
-		this.extMap.put("aiff", "audio/x-aiff");
-		this.extMap.put("aim", "application/x-aim");
-		this.extMap.put("art", "image/x-jg");
-		this.extMap.put("asf", "video/x-ms-asf");
-		this.extMap.put("asx", "video/x-ms-asf");
-		this.extMap.put("au", "audio/basic");
-		this.extMap.put("avi", "video/x-msvideo");
-		this.extMap.put("avx", "video/x-rad-screenplay");
-		this.extMap.put("bcpio", "application/x-bcpio");
-		this.extMap.put("bin", "application/octet-stream");
-		this.extMap.put("bmp", "image/bmp");
-		this.extMap.put("body", "text/html");
-		this.extMap.put("cdf", "application/x-cdf");
-		this.extMap.put("cer", "application/x-x509-ca-cert");
-		this.extMap.put("class", "application/java");
-		this.extMap.put("cpio", "application/x-cpio");
-		this.extMap.put("csh", "application/x-csh");
-		this.extMap.put("css", "text/css");
-		this.extMap.put("dib", "image/bmp");
-		this.extMap.put("doc", "application/msword");
-		this.extMap.put("dtd", "application/xml-dtd");
-		this.extMap.put("dv", "video/x-dv");
-		this.extMap.put("dvi", "application/x-dvi");
-		this.extMap.put("eps", "application/postscript");
-		this.extMap.put("etx", "text/x-setext");
-		this.extMap.put("exe", "application/octet-stream");
-		this.extMap.put("gif", "image/gif");
-		this.extMap.put("gk", "application/octet-stream");
-		this.extMap.put("gtar", "application/x-gtar");
-		this.extMap.put("gz", "application/x-gzip");
-		this.extMap.put("hdf", "application/x-hdf");
-		this.extMap.put("hqx", "application/mac-binhex40");
-		this.extMap.put("htc", "text/x-component");
-		this.extMap.put("htm", "text/html");
-		this.extMap.put("html", "text/html");
-		this.extMap.put("hqx", "application/mac-binhex40");
-		this.extMap.put("ief", "image/ief");
-		this.extMap.put("jad", "text/vnd.sun.j2me.app-descriptor");
-		this.extMap.put("jar", "application/java-archive");
-		this.extMap.put("java", "text/plain");
-		this.extMap.put("jnlp", "application/x-java-jnlp-file");
-		this.extMap.put("jpe", "image/jpeg");
-		this.extMap.put("jpeg", "image/jpeg");
-		this.extMap.put("jpg", "image/jpeg");
-		this.extMap.put("js", "text/javascript");
-		this.extMap.put("kar", "audio/x-midi");
-		this.extMap.put("latex", "application/x-latex");
-		this.extMap.put("m3u", "audio/x-mpegurl");
-		this.extMap.put("mac", "image/x-macpaint");
-		this.extMap.put("man", "application/x-troff-man");
-		this.extMap.put("mathml", "application/mathml+xml");
-		this.extMap.put("me", "application/x-troff-me");
-		this.extMap.put("mid", "audio/x-midi");
-		this.extMap.put("midi", "audio/x-midi");
-		this.extMap.put("mif", "application/x-mif");
-		this.extMap.put("mov", "video/quicktime");
-		this.extMap.put("movie", "video/x-sgi-movie");
-		this.extMap.put("mp1", "audio/x-mpeg");
-		this.extMap.put("mp2", "audio/x-mpeg");
-		this.extMap.put("mp3", "audio/x-mpeg");
-		this.extMap.put("mpa", "audio/x-mpeg");
-		this.extMap.put("mpe", "video/mpeg");
-		this.extMap.put("mpeg", "video/mpeg");
-		this.extMap.put("mpega", "audio/x-mpeg");
-		this.extMap.put("mpg", "video/mpeg");
-		this.extMap.put("mpv2", "video/mpeg2");
-		this.extMap.put("ms", "application/x-wais-source");
-		this.extMap.put("nc", "application/x-netcdf");
-		this.extMap.put("oda", "application/oda");
-		this.extMap.put("ogg", "application/ogg");
-		this.extMap.put("pbm", "image/x-portable-bitmap");
-		this.extMap.put("pct", "image/pict");
-		this.extMap.put("pdf", "application/pdf");
-		this.extMap.put("pgm", "image/x-portable-graymap");
-		this.extMap.put("pic", "image/pict");
-		this.extMap.put("pict", "image/pict");
-		this.extMap.put("pls", "audio/x-scpls");
-		this.extMap.put("png", "image/png");
-		this.extMap.put("pnm", "image/x-portable-anymap");
-		this.extMap.put("pnt", "image/x-macpaint");
-		this.extMap.put("ppm", "image/x-portable-pixmap");
-		this.extMap.put("ppt", "application/powerpoint");
-		this.extMap.put("ps", "application/postscript");
-		this.extMap.put("psd", "image/x-photoshop");
-		this.extMap.put("qt", "video/quicktime");
-		this.extMap.put("qti", "image/x-quicktime");
-		this.extMap.put("qtif", "image/x-quicktime");
-		this.extMap.put("ras", "image/x-cmu-raster");
-		this.extMap.put("rdf", "application/rdf+xml");
-		this.extMap.put("rgb", "image/x-rgb");
-		this.extMap.put("rm", "application/vnd.rn-realmedia");
-		this.extMap.put("roff", "application/x-troff");
-		this.extMap.put("rtf", "application/rtf");
-		this.extMap.put("rtx", "text/richtext");
-		this.extMap.put("sh", "application/x-sh");
-		this.extMap.put("shar", "application/x-shar");
-		this.extMap.put("shtml", "text/x-server-parsed-html");
-		this.extMap.put("sit", "application/x-stuffit");
-		this.extMap.put("smf", "audio/x-midi");
-		this.extMap.put("snd", "audio/basic");
-		this.extMap.put("src", "application/x-wais-source");
-		this.extMap.put("sv4cpio", "application/x-sv4cpio");
-		this.extMap.put("sv4crc", "application/x-sv4crc");
-		this.extMap.put("svg", "image/svg+xml");
-		this.extMap.put("svgz", "image/svg+xml");
-		this.extMap.put("swf", "application/x-shockwave-flash");
-		this.extMap.put("t", "application/x-troff");
-		this.extMap.put("tar", "application/x-tar");
-		this.extMap.put("tcl", "application/x-tcl");
-		this.extMap.put("tex", "application/x-tex");
-		this.extMap.put("texi", "application/x-texinfo");
-		this.extMap.put("texinfo", "application/x-texinfo");
-		this.extMap.put("tif", "image/tiff");
-		this.extMap.put("tiff", "image/tiff");
-		this.extMap.put("tr", "application/x-troff");
-		this.extMap.put("tsv", "text/tab-separated-values");
-		this.extMap.put("txt", "text/plain");
-		this.extMap.put("ulw", "audio/basic");
-		this.extMap.put("ustar", "application/x-ustar");
-		this.extMap.put("xbm", "image/x-xbitmap");
-		this.extMap.put("xml", "text/xml");
-		this.extMap.put("xpm", "image/x-xpixmap");
-		this.extMap.put("xsl", "application/xml");
-		this.extMap.put("xslt", "application/xslt+xml");
-		this.extMap.put("xwd", "image/x-xwindowdump");
-		this.extMap.put("vsd", "application/x-visio");
-		this.extMap.put("vxml", "application/voicexml+xml");
-		this.extMap.put("wav", "audio/x-wav");
-		this.extMap.put("wbmp", "image/vnd.wap.wbmp");
-		this.extMap.put("wml", "text/vnd.wap.wml");
-		this.extMap.put("wmlc", "application/vnd.wap.wmlc");
-		this.extMap.put("wmls", "text/vnd.wap.wmls");
-		this.extMap.put("wmlscriptc", "application/vnd.wap.wmlscriptc");
-		this.extMap.put("wrl", "x-world/x-vrml");
-		this.extMap.put("xht", "application/xhtml+xml");
-		this.extMap.put("xhtml", "application/xhtml+xml");
-		this.extMap.put("xls", "application/vnd.ms-excel");
-		this.extMap.put("xul", "application/vnd.mozilla.xul+xml");
-		this.extMap.put("Z", "application/x-compress");
-		this.extMap.put("z", "application/x-compress");
-		this.extMap.put("zip", "application/zip");
+		set("abs", "audio/x-mpeg");
+		set("ai", "application/postscript");
+		set("aif", "audio/x-aiff");
+		set("aifc", "audio/x-aiff");
+		set("aiff", "audio/x-aiff");
+		set("aim", "application/x-aim");
+		set("art", "image/x-jg");
+		set("asf", "video/x-ms-asf");
+		set("asx", "video/x-ms-asf");
+		set("au", "audio/basic");
+		set("avi", "video/x-msvideo");
+		set("avx", "video/x-rad-screenplay");
+		set("bcpio", "application/x-bcpio");
+		set("bin", "application/octet-stream");
+		set("bmp", "image/bmp");
+		set("body", "text/html");
+		set("cdf", "application/x-cdf");
+		set("cer", "application/x-x509-ca-cert");
+		set("class", "application/java");
+		set("cpio", "application/x-cpio");
+		set("csh", "application/x-csh");
+		set("css", "text/css");
+		set("dib", "image/bmp");
+		set("doc", "application/msword");
+		set("dtd", "application/xml-dtd");
+		set("dv", "video/x-dv");
+		set("dvi", "application/x-dvi");
+		set("eps", "application/postscript");
+		set("etx", "text/x-setext");
+		set("exe", "application/octet-stream");
+		set("gif", "image/gif");
+		set("gk", "application/octet-stream");
+		set("gtar", "application/x-gtar");
+		set("gz", "application/x-gzip");
+		set("hdf", "application/x-hdf");
+		set("hqx", "application/mac-binhex40");
+		set("htc", "text/x-component");
+		set("htm", "text/html");
+		set("html", "text/html");
+		set("hqx", "application/mac-binhex40");
+		set("ief", "image/ief");
+		set("jad", "text/vnd.sun.j2me.app-descriptor");
+		set("jar", "application/java-archive");
+		set("java", "text/plain");
+		set("jnlp", "application/x-java-jnlp-file");
+		set("jpe", "image/jpeg");
+		set("jpeg", "image/jpeg");
+		set("jpg", "image/jpeg");
+		set("js", "text/javascript");
+		set("kar", "audio/x-midi");
+		set("latex", "application/x-latex");
+		set("m3u", "audio/x-mpegurl");
+		set("mac", "image/x-macpaint");
+		set("man", "application/x-troff-man");
+		set("mathml", "application/mathml+xml");
+		set("me", "application/x-troff-me");
+		set("mid", "audio/x-midi");
+		set("midi", "audio/x-midi");
+		set("mif", "application/x-mif");
+		set("mov", "video/quicktime");
+		set("movie", "video/x-sgi-movie");
+		set("mp1", "audio/x-mpeg");
+		set("mp2", "audio/x-mpeg");
+		set("mp3", "audio/x-mpeg");
+		set("mpa", "audio/x-mpeg");
+		set("mpe", "video/mpeg");
+		set("mpeg", "video/mpeg");
+		set("mpega", "audio/x-mpeg");
+		set("mpg", "video/mpeg");
+		set("mpv2", "video/mpeg2");
+		set("ms", "application/x-wais-source");
+		set("nc", "application/x-netcdf");
+		set("oda", "application/oda");
+		set("ogg", "application/ogg");
+		set("pbm", "image/x-portable-bitmap");
+		set("pct", "image/pict");
+		set("pdf", "application/pdf");
+		set("pgm", "image/x-portable-graymap");
+		set("pic", "image/pict");
+		set("pict", "image/pict");
+		set("pls", "audio/x-scpls");
+		set("png", "image/png");
+		set("pnm", "image/x-portable-anymap");
+		set("pnt", "image/x-macpaint");
+		set("ppm", "image/x-portable-pixmap");
+		set("ppt", "application/powerpoint");
+		set("ps", "application/postscript");
+		set("psd", "image/x-photoshop");
+		set("qt", "video/quicktime");
+		set("qti", "image/x-quicktime");
+		set("qtif", "image/x-quicktime");
+		set("ras", "image/x-cmu-raster");
+		set("rdf", "application/rdf+xml");
+		set("rgb", "image/x-rgb");
+		set("rm", "application/vnd.rn-realmedia");
+		set("roff", "application/x-troff");
+		set("rtf", "application/rtf");
+		set("rtx", "text/richtext");
+		set("sh", "application/x-sh");
+		set("shar", "application/x-shar");
+		set("shtml", "text/x-server-parsed-html");
+		set("sit", "application/x-stuffit");
+		set("smf", "audio/x-midi");
+		set("snd", "audio/basic");
+		set("src", "application/x-wais-source");
+		set("sv4cpio", "application/x-sv4cpio");
+		set("sv4crc", "application/x-sv4crc");
+		set("svg", "image/svg+xml");
+		set("svgz", "image/svg+xml");
+		set("swf", "application/x-shockwave-flash");
+		set("t", "application/x-troff");
+		set("tar", "application/x-tar");
+		set("tcl", "application/x-tcl");
+		set("tex", "application/x-tex");
+		set("texi", "application/x-texinfo");
+		set("texinfo", "application/x-texinfo");
+		set("tif", "image/tiff");
+		set("tiff", "image/tiff");
+		set("tr", "application/x-troff");
+		set("tsv", "text/tab-separated-values");
+		set("txt", "text/plain");
+		set("ulw", "audio/basic");
+		set("ustar", "application/x-ustar");
+		set("xbm", "image/x-xbitmap");
+		set("xml", "text/xml");
+		set("xpm", "image/x-xpixmap");
+		set("xsl", "application/xml");
+		set("xslt", "application/xslt+xml");
+		set("xwd", "image/x-xwindowdump");
+		set("vsd", "application/x-visio");
+		set("vxml", "application/voicexml+xml");
+		set("wav", "audio/x-wav");
+		set("wbmp", "image/vnd.wap.wbmp");
+		set("wml", "text/vnd.wap.wml");
+		set("wmlc", "application/vnd.wap.wmlc");
+		set("wmls", "text/vnd.wap.wmls");
+		set("wmlscriptc", "application/vnd.wap.wmlscriptc");
+		set("wrl", "x-world/x-vrml");
+		set("xht", "application/xhtml+xml");
+		set("xhtml", "application/xhtml+xml");
+		set("xls", "application/vnd.ms-excel");
+		set("xul", "application/vnd.mozilla.xul+xml");
+		set("Z", "application/x-compress");
+		set("z", "application/x-compress");
+		set("zip", "application/zip");
+	}
+	
+	private void set(String ext, String mime) {
+		this.extMap.put(ext, mime);
 	}
 
 	public String getByFile(String file) {
 		if (file == null) {
-			return null;
+			return octetstream;
 		}
 
 		int dot = file.lastIndexOf(".");
 		if (dot < 0) {
-			return null;
+			return octetstream;
 		}
 
 		String ext = file.substring(dot + 1);
 		if (ext.length() < 1) {
-			return null;
+			return octetstream;
 		}
 
 		return getByExtension(ext);
@@ -193,10 +202,14 @@ public final class MimeTypes {
 
 	public String getByExtension(String ext) {
 		if (ext == null) {
-			return null;
+			return octetstream;
 		}
 
-		return this.extMap.get(ext);
+		String mime = this.extMap.get(ext);
+		if (mime == null)
+			return octetstream;
+		
+		return mime;
 	}
 
 	public static MimeTypes instance() {

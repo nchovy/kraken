@@ -44,7 +44,7 @@ public class Response implements HttpServletResponse {
 	private ServletOutputStream os;
 	private PrintWriter writer;
 	private HttpResponseStatus status = HttpResponseStatus.OK;
-	private Map<String, Object> header = new HashMap<String, Object>();
+	private Map<String, Object> headers = new HashMap<String, Object>();
 	private Set<Cookie> cookies = new HashSet<Cookie>();
 	private boolean service;
 
@@ -94,11 +94,13 @@ public class Response implements HttpServletResponse {
 				else
 					cookie = String.format("%s; %s=%s", cookie, c.getName(), c.getValue());
 			}
+			
 			if (cookie != null)
-				header.put(HttpHeaders.Names.COOKIE, cookie);
+				headers.put(HttpHeaders.Names.COOKIE, cookie);
 
-			for (String name : header.keySet())
-				resp.setHeader(name, header.get(name));
+			for (String name : headers.keySet())
+				resp.setHeader(name, headers.get(name));
+			
 			resp.setContent(buf);
 			HttpHeaders.setContentLength(resp, buf.readableBytes());
 
@@ -111,7 +113,7 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public String getCharacterEncoding() {
-		String contentType = (String) header.get(HttpHeaders.Names.CONTENT_TYPE);
+		String contentType = (String) headers.get(HttpHeaders.Names.CONTENT_TYPE);
 		if (contentType == null || !contentType.contains("charset"))
 			return null;
 		for (String t : contentType.split(";")) {
@@ -133,12 +135,12 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public void setContentLength(int len) {
-		header.put(HttpHeaders.Names.CONTENT_LENGTH, len);
+		headers.put(HttpHeaders.Names.CONTENT_LENGTH, len);
 	}
 
 	@Override
 	public void setContentType(String type) {
-		header.put(HttpHeaders.Names.CONTENT_TYPE, type);
+		headers.put(HttpHeaders.Names.CONTENT_TYPE, type);
 	}
 
 	@Override
@@ -148,7 +150,7 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public boolean containsHeader(String name) {
-		return header.containsKey(name);
+		return headers.containsKey(name);
 	}
 
 	@Override
@@ -192,17 +194,17 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public void setDateHeader(String name, long date) {
-		header.put(name, date);
+		headers.put(name, date);
 	}
 
 	@Override
 	public void setHeader(String name, String value) {
-		header.put(name, value);
+		headers.put(name, value);
 	}
 
 	@Override
 	public void setIntHeader(String name, int value) {
-		header.put(name, value);
+		headers.put(name, value);
 	}
 
 	@Deprecated

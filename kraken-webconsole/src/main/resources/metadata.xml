@@ -1,7 +1,7 @@
 <ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
-	<instance component="servlet-registry" />
+	<instance component="webconsole-servlet-registry" />
 	<instance component="webconsole-package-api" />
 	<instance component="webconsole-program-api" />
 	<instance component="webconsole-server" />
@@ -12,6 +12,7 @@
 	<instance component="webconsole-thread-monitor-plugin" />
 	<instance component="webconsole-package-plugin" />
 	<instance component="webconsole-bundle-monitor" />
-	<instance component="bundle-resource-context" />
-	<instance component="file-resource-context" />
+	<instance component="webconsole-bundle-resource-servlet" />
+	<instance component="webconsole-file-resource-servlet" />
+	<instance component="webconsole-file-upload-servlet" />
 </ipojo>

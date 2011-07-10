@@ -80,14 +80,10 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 	}
 
 	private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
-		if (req.getMethod() != HttpMethod.GET) {
-			sendHttpResponse(ctx, req, new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
-			return;
-		}
-
 		// handshake request
 		String path = req.getUri();
-		if (path.equals(WEBSOCKET_PATH)
+		if (req.getMethod() == HttpMethod.GET 
+				&& path.equals(WEBSOCKET_PATH)
 				&& HttpHeaders.Values.UPGRADE.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.CONNECTION))
 				&& HttpHeaders.Values.WEBSOCKET.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.UPGRADE))) {
 

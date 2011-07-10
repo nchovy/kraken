@@ -8,7 +8,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public abstract class ResourceContext extends HttpServlet {
+public abstract class ResourceServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	protected abstract InputStream getInputStream(HttpServletRequest req);
