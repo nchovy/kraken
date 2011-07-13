@@ -17,8 +17,6 @@ package org.krakenapps.dom.api;
 
 import java.util.Collection;
 
-import org.krakenapps.dom.model.Organization;
-import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 
 public interface UserApi extends EntityEventProvider<User> {
@@ -27,12 +25,12 @@ public interface UserApi extends EntityEventProvider<User> {
 	UserExtensionProvider getExtensionProvider(String name);
 
 	Collection<User> getUsers();
-	
+
 	Collection<User> getUsers(int orgId, Collection<Integer> idList);
 
-	Collection<User> getUsers(Organization org);
+	Collection<User> getUsers(int orgId);
 
-	Collection<User> getUsers(OrganizationUnit ou, boolean includeChildren);
+	Collection<User> getUsers(int orgId, Integer orgUnitId, boolean includeChildren);
 
 	Collection<User> getUsers(String domainController);
 

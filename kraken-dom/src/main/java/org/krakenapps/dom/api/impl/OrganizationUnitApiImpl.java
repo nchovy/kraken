@@ -41,7 +41,7 @@ import org.krakenapps.jpa.handler.Transactional;
 public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> implements OrganizationUnitApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
-	
+
 	@Requires
 	private UserApi userApi;
 
@@ -77,7 +77,7 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 			parents.add(unit.getParent());
 			unit = unit.getParent();
 		}
-		
+
 		return parents;
 	}
 
@@ -119,11 +119,11 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 		OrganizationUnit ou = getOrganizationUnit(id);
 		if (ou == null)
 			throw new IllegalStateException("organization unit not found: " + id);
-		
-		Collection<User> users = userApi.getUsers(ou, true);
-		for (User user : users) 
+
+		Collection<User> users = userApi.getUsers(ou.getOrganization().getId(), ou.getId(), true);
+		for (User user : users)
 			userApi.removeUser(user.getId());
-		
+
 		// remove org unit
 		OrganizationUnit orgUnit = removeOrganizationUnitInternal(id);
 		fireEntityRemoved(orgUnit);

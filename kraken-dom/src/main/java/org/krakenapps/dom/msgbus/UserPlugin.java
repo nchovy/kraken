@@ -27,7 +27,6 @@ import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
-import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
@@ -67,11 +66,10 @@ public class UserPlugin {
 		Collection<User> users = null;
 		if (req.has("ou_id")) {
 			int orgUnitId = req.getInteger("ou_id");
-			OrganizationUnit ou = orgUnitApi.getOrganizationUnit(orgUnitId);
 			boolean incChildren = req.has("inc_children") ? req.getBoolean("inc_children") : false;
-			users = userApi.getUsers(ou, incChildren);
+			users = userApi.getUsers(req.getOrgId(), orgUnitId, incChildren);
 		} else
-			users = userApi.getUsers(organization);
+			users = userApi.getUsers(req.getOrgId());
 
 		resp.put("users", Marshaler.marshal(users));
 	}

@@ -31,7 +31,6 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
-import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
@@ -93,38 +92,40 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 			return new ArrayList<User>();
 
 		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM User u WHERE u.organization.id = :org AND u.id IN (:users)").setParameter("org",
-				orgId).setParameter("users", idList).getResultList();
+		return em.createQuery("FROM User u WHERE u.organization.id = :org AND u.id IN (:users)")
+				.setParameter("org", orgId).setParameter("users", idList).getResultList();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
-	public Collection<User> getUsers(Organization organization) {
+	public Collection<User> getUsers(int orgId) {
 		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM User u WHERE u.organization = ?").setParameter(1, organization).getResultList();
+		return em.createQuery("FROM User u WHERE u.organization.id = ?").setParameter(1, orgId).getResultList();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
-	public Collection<User> getUsers(OrganizationUnit ou, boolean includeChildren) {
+	public Collection<User> getUsers(int orgId, Integer orgUnitId, boolean includeChildren) {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (!includeChildren)
-			return em.createQuery("FROM User u WHERE u.organizationUnit = ?").setParameter(1, ou).getResultList();
+			return em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId)
+					.getResultList();
 		else
-			return getChildren(em, ou);
+			return getChildren(em, orgId, orgUnitId);
 	}
 
 	@SuppressWarnings("unchecked")
-	private Collection<User> getChildren(EntityManager em, OrganizationUnit ou) {
+	private Collection<User> getChildren(EntityManager em, int orgId, Integer orgUnitId) {
 		Collection<User> users = new ArrayList<User>();
-		Collection<OrganizationUnit> children = em.createQuery("FROM OrganizationUnit o WHERE o.parent = ?")
-				.setParameter(1, ou).getResultList();
+		Collection<OrganizationUnit> children = em.createQuery("FROM OrganizationUnit o WHERE o.parent.id = ?")
+				.setParameter(1, orgUnitId).getResultList();
 
-		users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit = ?").setParameter(1, ou).getResultList());
+		users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId)
+				.getResultList());
 		for (OrganizationUnit child : children)
-			users.addAll(getChildren(em, child));
+			users.addAll(getChildren(em, child.getOrganization().getId(), child.getId()));
 
 		return users;
 	}
