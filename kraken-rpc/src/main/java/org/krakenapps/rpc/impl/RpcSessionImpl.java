@@ -30,7 +30,7 @@ public class RpcSessionImpl implements RpcSession {
 	 * To cancel all blocking calls at close()
 	 */
 	private Set<Integer> blockingCalls;
-	
+
 	/**
 	 * event callbacks
 	 */
@@ -85,6 +85,9 @@ public class RpcSessionImpl implements RpcSession {
 
 		int msgId = conn.nextMessageId();
 		RpcMessage msg = RpcMessage.newCall(msgId, getId(), method, params);
+		if (logger.isTraceEnabled())
+			logger.trace("kraken-rpc: async call [id={}, session={}, method={}]",
+					new Object[] { msgId, getId(), method });
 
 		RpcAsyncResult result = new RpcAsyncResult(callback);
 		table.submit(msgId, result);
@@ -111,6 +114,10 @@ public class RpcSessionImpl implements RpcSession {
 		int msgId = conn.nextMessageId();
 		RpcMessage msg = RpcMessage.newCall(msgId, getId(), method, params);
 		conn.send(msg);
+		
+		if (logger.isTraceEnabled())
+			logger.trace("kraken-rpc: blocking call [id={}, session={}, method={}]",
+					new Object[] { msgId, getId(), method });
 
 		// TODO: response may be received before blocking, then response loss
 		// can be occurred.

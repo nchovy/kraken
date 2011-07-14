@@ -295,20 +295,22 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			RpcServiceBinding binding = conn.findServiceBinding(serviceName);
 
 			if (type.equals("rpc-call")) {
+				int newId = conn.nextMessageId();
 				try {
 					Object ret = call(binding, msg);
-					RpcMessage resp = RpcMessage
-							.newResponse(conn.nextMessageId(), session.getId(), id, methodName, ret);
+					RpcMessage resp = RpcMessage.newResponse(newId, session.getId(), id, methodName, ret);
 					channel.write(resp);
+
+					logger.trace("kraken-rpc: return for [id={}, ret={}, session={}, method={}]", new Object[] { newId,
+							id, session.getId(), methodName });
 				} catch (Throwable t) {
 					if (t.getCause() != null)
 						t = t.getCause();
 
 					cutStackTrace(t);
 
-					logger.trace("kraken-rpc: call [" + conn.getId() + ", " + methodName + "] throws exception", t);
-					RpcMessage error = RpcMessage.newException(conn.nextMessageId(), session.getId(), id,
-							t.getMessage());
+					logger.trace("kraken-rpc: throws exception for call [" + conn.getId() + ", " + methodName + "]", t);
+					RpcMessage error = RpcMessage.newException(newId, session.getId(), id, t.getMessage());
 					channel.write(error);
 				}
 			} else if (type.equals("rpc-post")) {
