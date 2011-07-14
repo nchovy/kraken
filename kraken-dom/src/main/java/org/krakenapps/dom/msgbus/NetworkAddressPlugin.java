@@ -62,7 +62,9 @@ public class NetworkAddressPlugin {
 			String address1 = req.getString("address1");
 			String address2 = req.getString("address2");
 
-			networkAddressApi.createNetworkAddress(organizationId, name, type, address1, address2);
+			NetworkAddress newAddr = networkAddressApi.createNetworkAddress(organizationId, name, type, address1, address2);
+			
+			resp.put("id", newAddr.getId());
 		} catch (IllegalStateException e) {
 			if (e.getMessage().startsWith("organization"))
 				throw new MsgbusException("dom", "org-not-found");

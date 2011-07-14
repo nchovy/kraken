@@ -63,7 +63,8 @@ public class TimetablePlugin {
 			int organizationId = req.getSession().getOrgId();
 			String name = req.getString("name");
 			List<Schedule> schedules = parseSchedules((Collection<Object>) req.get("schedules"));
-			timetableApi.createTimetable(organizationId, name, schedules);
+			Timetable newTime = timetableApi.createTimetable(organizationId, name, schedules);
+			resp.put("id", newTime.getId());
 		} catch (IllegalStateException e) {
 			if (e.getMessage().startsWith("duplicated"))
 				throw new MsgbusException("dom", "duplicated-timetable-name");
