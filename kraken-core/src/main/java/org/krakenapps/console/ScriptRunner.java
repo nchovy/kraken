@@ -118,7 +118,7 @@ public class ScriptRunner implements Runnable {
 		invokeScript(script);
 
 		if (isPromptEnabled)
-			context.print("kraken> ");
+			context.print(ShellSession.getPrompt());
 
 		context.setCurrentScript(null);
 	}

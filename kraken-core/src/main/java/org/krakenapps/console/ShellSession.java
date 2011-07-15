@@ -1,9 +1,9 @@
-
 package org.krakenapps.console;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
@@ -30,12 +30,24 @@ import org.slf4j.LoggerFactory;
 
 public class ShellSession {
 	public static final String KRAKEN_PROMPT = "kraken> ";
+	private static final String hostname;
+
 	final Logger logger = LoggerFactory.getLogger(ShellSession.class.getName());
 
 	private Map<String, Object> attributes;
 	private ScriptContextImpl sc;
 	private QuitHandler quit = null;
 	private String lastChar = null;
+
+	static {
+		String h = "unknown";
+		try {
+			h = InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException e) {
+		}
+
+		hostname = h;
+	}
 
 	public ShellSession(ScriptContextImpl scriptContext) {
 		this.attributes = new HashMap<String, Object>();
@@ -95,7 +107,7 @@ public class ShellSession {
 		ConsoleController controller = sc.getController();
 		if (message instanceof FunctionKeyEvent) {
 			FunctionKeyEvent ev = (FunctionKeyEvent) message;
-			
+
 			// suppress function key while logon
 			if (attributes.get("principal") == null && !ev.isPressed(KeyCode.BACKSPACE))
 				return;
@@ -295,8 +307,12 @@ public class ShellSession {
 		printPrompt();
 	}
 
+	public static String getPrompt() {
+		return "kraken@" + hostname + "> ";
+	}
+
 	public void printPrompt() {
-		sc.getOutputStream().print(KRAKEN_PROMPT);
+		sc.getOutputStream().print(getPrompt());
 	}
 
 	private void runScript(String line) throws InstantiationException, IllegalAccessException {

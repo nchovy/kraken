@@ -96,7 +96,7 @@ public class ConsoleController {
 				out.print(" ");
 			}
 			out.print("\r\n");
-			out.print(ShellSession.KRAKEN_PROMPT);
+			out.print(ShellSession.getPrompt());
 			String commonPrefix = extractCommonPrefix(terms);
 			String remainingCommonPrefix = commonPrefix.substring(input.length() - input.lastIndexOf('.') - 1);
 			String semiCompletedLine = input + remainingCommonPrefix;
@@ -183,11 +183,11 @@ public class ConsoleController {
 			return true;
 		} else if (event.isPressed(KeyCode.HOME) || event.isPressed(KeyCode.CTRL_A)) {
 			setCursorPos(0);
-			out.print(new MoveToCode(ShellSession.KRAKEN_PROMPT.length() + 1));
+			out.print(new MoveToCode(ShellSession.getPrompt().length() + 1));
 			return true;
 		} else if (event.isPressed(KeyCode.END) || event.isPressed(KeyCode.CTRL_E)) {
 			setCursorPos(dataList.size());
-			out.print(new MoveToCode(ShellSession.KRAKEN_PROMPT.length() + 1 + dataList.size()));
+			out.print(new MoveToCode(ShellSession.getPrompt().length() + 1 + dataList.size()));
 			return true;
 		}
 
@@ -262,7 +262,7 @@ public class ConsoleController {
 		ScriptOutputStream out = sc.getOutputStream();
 		out.print(new MoveToCode(0));
 		out.print(new EraseLineCode(Option.EntireLine));
-		out.print("kraken> ");
+		out.print(ShellSession.getPrompt());
 	}
 
 	private String peekLine() {
