@@ -27,9 +27,6 @@ public class CRLClient {
 	}
 
 	public boolean isRevoked(BigInteger serialNumber) {
-		if(crl == null) 
-			throw new NullPointerException();
-		
 		if(crl.getRevokedCertificate(serialNumber) == null)
 			return false;
 		else

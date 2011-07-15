@@ -36,4 +36,8 @@ public class SerialNumberGetter {
 			}
 		}
 	}
+	
+	public static BigInteger convertSerialNumber(String serialStr) { 
+		return new BigInteger(serialStr); 
+	}
 }
