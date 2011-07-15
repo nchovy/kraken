@@ -161,25 +161,25 @@ public class EncodingRule {
 			return (long) decodeLong(bb);
 		}
 
-		return null;
+		throw new UnsupportedTypeException("type: " + typeByte);
 	}
 
 	public static void encodeNull(ByteBuffer bb) {
 		bb.put(NULL_TYPE);
 	}
-	
+
 	public static void encodeNumber(ByteBuffer bb, Class<?> clazz, long value) {
 		if (clazz.equals(int.class)) {
-			encodeInt(bb, (int)value);
+			encodeInt(bb, (int) value);
 		} else if (clazz.equals(long.class)) {
 			encodeLong(bb, value);
 		} else if (clazz.equals(short.class)) {
-			encodeShort(bb, (short)value);
+			encodeShort(bb, (short) value);
 		} else {
 			throw new UnsupportedTypeException("invalid number type: " + clazz.getName());
 		}
 	}
-	
+
 	public static void encodeRawNumber(ByteBuffer bb, Class<?> clazz, long value) {
 		int len = lengthOfRawNumber(clazz, value);
 		for (int i = 0; i < len; ++i) {
@@ -188,7 +188,7 @@ public class EncodingRule {
 			bb.put(data);
 		}
 	}
-	
+
 	public static long decodeRawNumber(ByteBuffer bb) {
 		long value = 0L;
 
@@ -239,7 +239,7 @@ public class EncodingRule {
 
 		return (short) decodeRawNumber(bb);
 	}
-	
+
 	public static void encodeLong(ByteBuffer bb, long value) {
 		bb.put(ZINT64_TYPE);
 		long zvalue = (value << 1) ^ (value >> 63);
@@ -455,7 +455,7 @@ public class EncodingRule {
 	}
 
 	public static void encodeBlob(ByteBuffer bb, byte[] buffer) {
-		// 
+		//
 		bb.put(BLOB_TYPE);
 		encodeRawNumber(bb, int.class, buffer.length);
 		bb.put(buffer);
@@ -471,7 +471,7 @@ public class EncodingRule {
 		bb.get(blob);
 		return blob;
 	}
-	
+
 	public static int lengthOfLong(long value) {
 		long zvalue = (value << 1) ^ (value >> 63);
 		return 1 + lengthOfRawNumber(long.class, zvalue);
@@ -492,21 +492,21 @@ public class EncodingRule {
 
 	public static <T> int lengthOfNumber(Class<T> clazz, long value) {
 		if (clazz.equals(int.class)) {
-			return lengthOfInt((int)value);
+			return lengthOfInt((int) value);
 		} else if (clazz.equals(long.class)) {
 			return lengthOfLong(value);
 		} else if (clazz.equals(short.class)) {
-			return lengthOfShort((short)value);
+			return lengthOfShort((short) value);
 		} else {
 			throw new UnsupportedTypeException("invalid number type: " + clazz.getName());
 		}
 	}
-	
+
 	public static int lengthOfInt(int value) {
 		int zvalue = (value << 1) ^ (value >> 31);
 		return 1 + lengthOfRawNumber(int.class, zvalue);
 	}
-	
+
 	public static int lengthOfNull() {
 		return 1;
 	}
@@ -515,7 +515,7 @@ public class EncodingRule {
 		short zvalue = (short) ((value << 1) ^ (value >> 15));
 		return 1 + lengthOfRawNumber(short.class, zvalue);
 	}
-	
+
 	public static int lengthOfString(String value) {
 		byte[] buffer = null;
 		try {
