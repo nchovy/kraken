@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
@@ -146,6 +147,18 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		return em.find(User.class, id);
 	}
 
+	@Transactional
+	@Override
+	public User getUserByLoginName(String loginName) {
+		try {
+			EntityManager em = entityManagerService.getEntityManager();
+			return (User) em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, loginName)
+					.getSingleResult();
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+
 	@Override
 	public void createUser(User user) {
 		createUserInternal(user);
@@ -200,6 +213,16 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		User user = em.find(User.class, id);
 		em.remove(user);
 		return user;
+	}
+
+	@Override
+	public boolean verifyPassword(String id, String password) {
+		User user = getUserByLoginName(id);
+		if (user == null)
+			return false;
+		
+		String hash = hashPassword(password);
+		return user.getPassword().equals(hash);
 	}
 
 	@Override

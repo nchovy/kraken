@@ -35,12 +35,16 @@ public interface UserApi extends EntityEventProvider<User> {
 	Collection<User> getUsers(String domainController);
 
 	User getUser(int id);
+	
+	User getUserByLoginName(String loginName);
 
 	void createUser(User user);
 
 	void updateUser(User user);
 
 	void removeUser(int id);
+	
+	boolean verifyPassword(String id, String password);
 
 	String hashPassword(String text);
 }
