@@ -120,11 +120,17 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@SuppressWarnings("unchecked")
 	private Collection<User> getChildren(EntityManager em, int orgId, Integer orgUnitId) {
 		Collection<User> users = new ArrayList<User>();
-		Collection<OrganizationUnit> children = em.createQuery("FROM OrganizationUnit o WHERE o.parent.id = ?")
-				.setParameter(1, orgUnitId).getResultList();
+		Collection<OrganizationUnit> children = null;
+		if (orgUnitId != null) {
+			children = em.createQuery("FROM OrganizationUnit o WHERE o.parent.id = ?").setParameter(1, orgUnitId)
+					.getResultList();
+			users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId)
+					.getResultList());
+		} else {
+			children = em.createQuery("FROM OrganizationUnit o WHERE o.parent IS NULL").getResultList();
+			users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id IS NULL").getResultList());
+		}
 
-		users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId)
-				.getResultList());
 		for (OrganizationUnit child : children)
 			users.addAll(getChildren(em, child.getOrganization().getId(), child.getId()));
 
@@ -220,7 +226,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		User user = getUserByLoginName(id);
 		if (user == null)
 			return false;
-		
+
 		String hash = hashPassword(password);
 		return user.getPassword().equals(hash);
 	}
