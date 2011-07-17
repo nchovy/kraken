@@ -75,6 +75,15 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
+	public void getUser(Request req, Response resp) {
+		User user = userApi.getUser(req.getInteger("id"));
+		if (user == null)
+			resp.put("user", null);
+		else
+			resp.put("user", user.marshal());
+	}
+
+	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
 		User user = toUser(req);
