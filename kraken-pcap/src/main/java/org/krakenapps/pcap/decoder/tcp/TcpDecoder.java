@@ -1,62 +1,43 @@
-/*
- * Copyright 2010 NCHOVY
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.krakenapps.pcap.decoder.tcp;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.krakenapps.pcap.decoder.ip.Ipv4Packet;
 import org.krakenapps.pcap.decoder.ip.IpProcessor;
+import org.krakenapps.pcap.decoder.ip.Ipv4Packet;
 import org.krakenapps.pcap.decoder.ipv6.Ipv6Packet;
 import org.krakenapps.pcap.decoder.ipv6.Ipv6Processor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @author mindori
- */
 public class TcpDecoder implements IpProcessor, Ipv6Processor {
-	private static final int SYN_FLAG = 2;
-	private static final int SYN_ACK_FLAG = 18;
+	private TcpSegmentCallbacks segmentCallbacks;
+	private TcpProtocolMapper mapper;
+	private TcpSessionTable sessionTable;
+	private TcpFlagHandler flagHandler;
+
+	private TcpPacketHandler packetHandler;
+	private TcpSackHandler sackHandler;
 	private final Logger logger = LoggerFactory.getLogger(TcpDecoder.class.getName());
 
-	private final Map<TcpSessionKey, TcpSession> tcpSessionMap;
-	private final TcpPacketRepository repository;
-	private final TcpStateTransitMachine transitMachine;
-	private final TcpSegmentCallbacks segmentCallbacks;
-
 	public TcpDecoder(TcpProtocolMapper mapper) {
-		tcpSessionMap = new HashMap<TcpSessionKey, TcpSession>();
-		repository = new TcpPacketRepository(mapper);
-		transitMachine = new TcpStateTransitMachine(mapper, tcpSessionMap);
+		this.mapper = mapper;
 		segmentCallbacks = new TcpSegmentCallbacks();
-	}
-	
-	public Collection<TcpSession> getCurrentSessions() {
-		return new ArrayList<TcpSession>(tcpSessionMap.values());
-	}
+		sessionTable = new TcpSessionTable(mapper);
+		flagHandler = new TcpFlagHandler(mapper);
 
-	public void setProtocolMapper(TcpProtocolMapper mapper) {
-		transitMachine.setProtocolMapper(mapper);
+		packetHandler = new TcpPacketHandler();
+		sackHandler = new TcpSackHandler();
 	}
 
 	public TcpProtocolMapper getProtocolMapper() {
-		return transitMachine.getProtocolMapper();
+		return mapper;
+	}
+
+	public void dispatchNewTcpSegment(TcpSessionImpl session, TcpPacket segment) {
+	}
+
+	public Collection<TcpSessionImpl> getCurrentSessions() {
+		return sessionTable.getCurrentSessions();
 	}
 
 	public void registerSegmentCallback(TcpSegmentCallback callback) {
@@ -67,21 +48,13 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 		segmentCallbacks.unregister(callback);
 	}
 
-	public void dispatchNewTcpSegment(TcpSession session, TcpPacket segment) {
-		TcpPacket newTcp = new TcpPacket(segment);
-		segmentCallbacks.fireReceiveCallbacks(session, newTcp);
-	}
-
 	public void process(Ipv4Packet packet) {
 		TcpPacket newTcp = TcpPacket.parse(packet);
-		
-		if (newTcp.isJumbo()) {
-			TcpSessionImpl session = (TcpSessionImpl) tcpSessionMap.get(newTcp.getSessionKey());
-			if (session != null) {
-				session.deallocateTxBuffer();
-				session.deallocateRxBuffer();
-				tcpSessionMap.remove(session.getKey());
 
+		if (newTcp.isJumbo()) {
+			TcpSessionImpl session = sessionTable.getSession(newTcp.getSessionKey());
+			if (session != null) {
+				sessionTable.abnormalClose(session.getKey());
 				logger.error("session terminate: find jumbo packet ");
 			}
 		} else {
@@ -95,12 +68,9 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 		TcpPacket newTcp = TcpPacket.parse(packet);
 
 		if (newTcp.isJumbo()) {
-			TcpSessionImpl session = (TcpSessionImpl) tcpSessionMap.get(newTcp.getSessionKey());
+			TcpSessionImpl session = sessionTable.getSession(newTcp.getSessionKey());
 			if (session != null) {
-				session.deallocateTxBuffer();
-				session.deallocateRxBuffer();
-				tcpSessionMap.remove(session.getKey());
-
+				sessionTable.abnormalClose(session.getKey());
 				logger.error("session terminate: find jumbo packet ");
 			}
 		} else {
@@ -109,77 +79,77 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 	}
 
 	private void handle(TcpPacket newTcp) {
-		TcpSessionImpl session = (TcpSessionImpl) repository.storePacket(tcpSessionMap, newTcp);
-		if (session == null) {
-			dispatchNewTcpSegment(null, newTcp);
+		/* get session */
+		TcpSessionImpl session = sessionTable.getSession(newTcp.getSessionKey());
+		flagHandler.handle(sessionTable, session, newTcp);
+		session = sessionTable.getSession(newTcp.getSessionKey());
+
+		dispatchNewTcpSegment(session, newTcp);
+
+		if (newTcp.isGarbage() || session == null) {
+			System.out.println("{NULL Session}");
 			return;
 		}
 
 		newTcp.setDirection(session);
+		TcpDirection direction = newTcp.getDirection();
 
-		if ((newTcp.getFlags() == SYN_FLAG) || (newTcp.getFlags() == SYN_ACK_FLAG))
-			branchWithOptions(newTcp, session);
-		else {
-			if (newTcp.getDirection() == TcpDirection.ToServer)
-				branch(session.getSourceOption(), newTcp, session);
-			else
-				branch(session.getDestinationOption(), newTcp, session);
-		}
-
-		if (logger.isDebugEnabled())
-			logger.debug(newTcp.toString());
-	}
-
-	private void branchWithOptions(TcpPacket newTcp, TcpSession session) {
-		// Normal or SACK
-		if (newTcp.getOptions() == null)
-			transitMachine.transitState(this, newTcp, (TcpSessionImpl) session);
-		else
-			findSackScanOptions(newTcp, (TcpSessionImpl) session, 0);
-	}
-
-	private void findSackScanOptions(TcpPacket newTcp, TcpSessionImpl session, int offset) {
-		if (newTcp.getOptions().length > offset) {
-			switch (newTcp.getOptions()[offset]) {
-			case 0:
-			case 1:
-				findSackScanOptions(newTcp, session, offset + 1);
-				break;
-			case 2:
-				findSackScanOptions(newTcp, session, offset + 4);
-				break;
-			case 3:
-			case 14:
-				findSackScanOptions(newTcp, session, offset + 3);
-				break;
-			case 8:
-				findSackScanOptions(newTcp, session, offset + 10);
-				break;
-			case 4:
-				if (newTcp.getDirection() == TcpDirection.ToServer)
-					session.setDestStreamOption(TcpStreamOption.SACK);
+		/* find and set SACK option */
+		int flags = newTcp.getFlags();
+		if (flags == TcpFlag.SYN || flags == (TcpFlag.SYN + TcpFlag.ACK)) {
+			if (isSack(newTcp)) {
+				if (direction == TcpDirection.ToServer)
+					session.setClientStreamOption(TcpStreamOption.SACK);
 				else
-					session.setSrcStreamOption(TcpStreamOption.SACK);
-
-				if (logger.isDebugEnabled())
-					logger.debug("tcp S/ACK permitted.");
-
-				transitMachine.transitStateSACK(this, newTcp, session);
-				break;
-			default:
-				transitMachine.transitState(this, newTcp, session);
-				break;
+					session.setServerStreamOption(TcpStreamOption.SACK);
 			}
-		} else {
-			transitMachine.transitState(this, newTcp, session);
 		}
+
+		/* handle TCP segment */
+		TcpStreamOption streamOption;
+		if (direction == TcpDirection.ToServer)
+			streamOption = session.getServerStreamOption();
+		else
+			streamOption = session.getClientStreamOption();
+
+		if (streamOption == TcpStreamOption.SACK)
+			sackHandler.handle(sessionTable, session, newTcp);
+		else
+			packetHandler.handle(sessionTable, session, newTcp);
 	}
 
-	private void branch(TcpStreamOption options, TcpPacket newTcp, TcpSessionImpl session) {
-		if (options == TcpStreamOption.SACK) {
-			transitMachine.transitStateSACK(this, newTcp, session);
-		} else {
-			transitMachine.transitState(this, newTcp, session);
+	private boolean isSack(TcpPacket packet) {
+		if (packet.getOptions() == null)
+			return false;
+		else {
+			byte[] options = packet.getOptions();
+			int offset = 0;
+
+			while (offset < options.length) {
+				switch (options[offset]) {
+				/* skip 1 byte option */
+				case 0x00:
+				case 0x01:
+					offset++;
+					continue;
+					/* skip 4 bytes option(MSS) */
+				case 0x02:
+					offset += 4;
+					continue;
+					/* skip 3 bytes option */
+				case 0x03:
+				case 0x0e:
+					offset += 3;
+					continue;
+					/* skip 10 bytes option(TimeStamps) */
+				case 0x08:
+					offset += 10;
+					continue;
+				case 0x04:
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

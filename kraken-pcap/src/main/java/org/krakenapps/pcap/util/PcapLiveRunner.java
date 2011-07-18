@@ -45,7 +45,8 @@ import org.slf4j.LoggerFactory;
  * @author delmitz
  */
 public class PcapLiveRunner implements Runnable {
-	private final Logger logger = LoggerFactory.getLogger(PcapLiveRunner.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(PcapLiveRunner.class
+			.getName());
 	private volatile boolean stop = false;
 	private PcapDevice device;
 
@@ -66,7 +67,7 @@ public class PcapLiveRunner implements Runnable {
 		ipv6 = new Ipv6Decoder();
 		icmp = new IcmpDecoder();
 		icmpv6 = new Icmpv6Decoder();
-		// tcp = new TcpDecoder(new TcpPortProtocolMapper());
+		tcp = new TcpDecoder(new TcpPortProtocolMapper());
 		udp = new UdpDecoder(new UdpPortProtocolMapper());
 
 		eth.register(EthernetType.IPV4, ip);
@@ -75,10 +76,10 @@ public class PcapLiveRunner implements Runnable {
 
 		ip.register(InternetProtocol.ICMP, icmp);
 		ip.register(InternetProtocol.UDP, udp);
-		// ip.register(InternetProtocol.TCP, tcp);
+		ip.register(InternetProtocol.TCP, tcp);
 
 		ipv6.register(InternetProtocol.ICMPV6, icmpv6);
-		// ipv6.register(InternetProtocol.TCP, tcp);
+		ipv6.register(InternetProtocol.TCP, tcp);
 		ipv6.register(InternetProtocol.UDP, udp);
 	}
 
@@ -110,7 +111,8 @@ public class PcapLiveRunner implements Runnable {
 		PcapDeviceMetadata metadata = device.getMetadata();
 		MacAddress macAddress = metadata.getMacAddress();
 		String desc = metadata.getDescription();
-		logger.trace("kraken-pcap: live runner mac={}, desc={} stopped", macAddress, desc);
+		logger.trace("kraken-pcap: live runner mac={}, desc={} stopped",
+				macAddress, desc);
 	}
 
 	public void runOnce() throws IOException {

@@ -32,16 +32,6 @@ public class WaitQueue {
 		queue = new ArrayList<TcpPacket>(capacity);
 	}
 
-	public WaitQueue(WaitQueue other) {
-		// copy constructor
-		queue = new ArrayList<TcpPacket>(other.getQueue().size());
-		queue.addAll(other.getQueue());
-	}
-
-	public List<TcpPacket> getQueue() {
-		return queue;
-	}
-
 	public void enqueue(TcpPacket element) {
 		queue.add(element);
 	}

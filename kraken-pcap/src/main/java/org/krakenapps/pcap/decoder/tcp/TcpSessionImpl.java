@@ -1,222 +1,144 @@
-/*
- * Copyright 2010 NCHOVY
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.krakenapps.pcap.decoder.tcp;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.pcap.Protocol;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.krakenapps.pcap.util.Buffer;
+import org.krakenapps.pcap.util.ChainBuffer;
 
-/**
- * @author mindori
- */
 public class TcpSessionImpl implements TcpSession {
-	// tx : Server side, rx : Client side
-	private final Logger logger = LoggerFactory.getLogger(TcpSessionImpl.class.getName());
-
 	private static AtomicInteger LAST_ID = new AtomicInteger(1);
 	private int id;
 
-	private TcpStreamOption srcStreamOption;
-	private TcpStreamOption destStreamOption;
+	private TcpSessionKey key;
 
-	private TcpSessionKeyImpl key;
+	private TcpHost client;
+	private TcpHost server;
 
-	private int srcFirstSeq;
-	private int destFirstSeq;
+	private int clientFirstSeq;
+	private int serverFirstSeq;
 
-	private int srcLastAck = -1;
-	private int destLastAck = -1;
+	private TcpStreamOption clientStreamOption;
+	private TcpStreamOption serverStreamOption;
 
-	private int recentSrcSeq = -1;
-	private int recentSrcAck = -1;
-	private int recentSrcDataLength = -1;
-	private int recentSrcFlags = -1;
-
-	private int recentDestSeq = -1;
-	private int recentDestAck = -1;
-	private int recentDestDataLength = -1;
-	private int recentDestFlags = -1;
+	private int clientFlags;
+	private int serverFlags;
 
 	private TcpState clientState;
 	private TcpState serverState;
 
-	private boolean isEstablished;
-	private boolean isReceiveData = false;
+	private boolean isRegisterProtocol;
+	private Protocol protocol;
 
-	private List<TcpPacket> packetList;
+	private Buffer clientSent;
+	private Buffer serverSent;
 
-	private WaitQueue txWaitQueue;
-	private WaitQueue rxWaitQueue;
+	private WaitQueue clientQueue;
+	private WaitQueue serverQueue;
 
-	private SegmentBuffer txBuffer;
-	private SegmentBuffer rxBuffer;
+	private ApplicationLayerMapper l7Mapper;
 
 	private int packetCountAfterFin = 0;
-
 	private int firstFinSeq = -1;
 	private int firstFinAck = -1;
 
-	private Protocol protocol;
-
 	public TcpSessionImpl(TcpProtocolMapper mapper) {
 		id = LAST_ID.getAndIncrement();
-		srcStreamOption = TcpStreamOption.NORMAL;
-		destStreamOption = TcpStreamOption.NORMAL;
 		key = null;
-		srcFirstSeq = -1;
-		destFirstSeq = -1;
+
+		clientStreamOption = TcpStreamOption.NORMAL;
+		serverStreamOption = TcpStreamOption.NORMAL;
+
 		clientState = TcpState.LISTEN;
 		serverState = TcpState.LISTEN;
-		packetList = new ArrayList<TcpPacket>();
-		txWaitQueue = new WaitQueue();
-		rxWaitQueue = new WaitQueue();
-		txBuffer = new SegmentBuffer(mapper);
-		rxBuffer = new SegmentBuffer(mapper);
+
+		clientSent = new ChainBuffer();
+		serverSent = new ChainBuffer();
+
+		clientQueue = new WaitQueue();
+		serverQueue = new WaitQueue();
+
+		l7Mapper = new ApplicationLayerMapper(mapper);
 	}
 
-	@Override
 	public int getId() {
 		return id;
 	}
 
-	public boolean isEstablished() {
-		return isEstablished;
-	}
-
-	public void setEstablished(boolean isEstablished) {
-		this.isEstablished = isEstablished;
-	}
-
-	public boolean isReceiveData() {
-		return isReceiveData;
-	}
-
-	public void setReceiveData(boolean isReceiveData) {
-		this.isReceiveData = isReceiveData;
-	}
-
-	public TcpStreamOption getSourceOption() {
-		return srcStreamOption;
-	}
-
-	public void setSrcStreamOption(TcpStreamOption srcStreamOption) {
-		this.srcStreamOption = srcStreamOption;
-	}
-
-	public TcpStreamOption getDestinationOption() {
-		return destStreamOption;
-	}
-
-	public void setDestStreamOption(TcpStreamOption destStreamOption) {
-		this.destStreamOption = destStreamOption;
-	}
-
-	@Override
 	public TcpSessionKey getKey() {
 		return key;
 	}
 
-	public void setTcpSessionKey(TcpSessionKeyImpl key) {
+	public void setKey(TcpSessionKey key) {
 		this.key = key;
 	}
 
-	public int getSrcFirstSeq() {
-		return srcFirstSeq;
+	public TcpHost getClient() {
+		return client;
 	}
 
-	public void setSrcFirstSeq(int firstSeq) {
-		srcFirstSeq = firstSeq;
+	public void createClient(TcpPacket packet) {
+		client = new TcpHost(packet);
 	}
 
-	public int getDestFirstSeq() {
-		return destFirstSeq;
+	public TcpHost getServer() {
+		return server;
 	}
 
-	public void setDestFirstSeq(int firstSeq) {
-		destFirstSeq = firstSeq;
+	public void createServer(TcpPacket packet) {
+		server = new TcpHost(packet);
 	}
 
-	public int getSrcLastAck() {
-		return srcLastAck;
+	/* constraint: one-time called */
+	public void setClientFirstSeq(int clientFirstSeq) {
+		this.clientFirstSeq = clientFirstSeq;
 	}
 
-	public void setSrcLastAck(int srcLastAck) {
-		this.srcLastAck = srcLastAck;
+	public int retRelativeClientSeq(int sequenceNumber) {
+		return (sequenceNumber - clientFirstSeq);
 	}
 
-	public int getDestLastAck() {
-		return destLastAck;
+	/* constraint: one-time called */
+	public void setServerFirstSeq(int serverFirstSeq) {
+		this.serverFirstSeq = serverFirstSeq;
 	}
 
-	public void setDestLastAck(int destLastAck) {
-		this.destLastAck = destLastAck;
+	public int retRelativeServerSeq(int sequenceNumber) {
+		return (sequenceNumber - serverFirstSeq);
 	}
 
-	public int getRecentSrcSeq() {
-		return recentSrcSeq;
+	public TcpStreamOption getClientStreamOption() {
+		return clientStreamOption;
 	}
 
-	public int getRecentSrcAck() {
-		return recentSrcAck;
+	public void setClientStreamOption(TcpStreamOption clientStreamOption) {
+		this.clientStreamOption = clientStreamOption;
 	}
 
-	public int getRecentSrcDataLength() {
-		return recentSrcDataLength;
+	public TcpStreamOption getServerStreamOption() {
+		return serverStreamOption;
 	}
 
-	public int getRecentSrcFlags() {
-		return recentSrcFlags;
+	public void setServerStreamOption(TcpStreamOption serverStreamOption) {
+		this.serverStreamOption = serverStreamOption;
 	}
 
-	public void setRecentSrc(int seq, int ack, int dataLen, int flags) {
-		recentSrcSeq = seq;
-		recentSrcAck = ack;
-		recentSrcDataLength = dataLen;
-		recentSrcFlags = flags;
+	public int getClientFlags() {
+		return clientFlags;
 	}
 
-	public int getRecentDestSeq() {
-		return recentDestSeq;
+	public void setClientFlags(int clientFlags) {
+		this.clientFlags = clientFlags;
 	}
 
-	public int getRecentDestAck() {
-		return recentDestAck;
+	public int getServerFlags() {
+		return serverFlags;
 	}
 
-	public int getRecentDestDataLength() {
-		return recentDestDataLength;
+	public void setServerFlags(int serverFlags) {
+		this.serverFlags = serverFlags;
 	}
 
-	public int getRecentDestFlags() {
-		return recentDestFlags;
-	}
-
-	public void setRecentDest(int seq, int ack, int dataLen, int flags) {
-		recentDestSeq = seq;
-		recentDestAck = ack;
-		recentDestDataLength = dataLen;
-		recentDestFlags = flags;
-	}
-
-	@Override
 	public TcpState getClientState() {
 		return clientState;
 	}
@@ -225,7 +147,6 @@ public class TcpSessionImpl implements TcpSession {
 		this.clientState = clientState;
 	}
 
-	@Override
 	public TcpState getServerState() {
 		return serverState;
 	}
@@ -234,29 +155,57 @@ public class TcpSessionImpl implements TcpSession {
 		this.serverState = serverState;
 	}
 
-	public int retRelativeSrcSeq(int sequenceNumber) {
-		return (sequenceNumber - srcFirstSeq);
+	public boolean isRegisterProtocol() {
+		return isRegisterProtocol;
 	}
 
-	public int retRelativeDestSeq(int sequenceNumber) {
-		return (sequenceNumber - destFirstSeq);
+	public void setRegisterProtocol(boolean isRegisterProtocol) {
+		this.isRegisterProtocol = isRegisterProtocol;
 	}
 
-	public List<TcpPacket> getPacketList() {
-		return packetList;
+	public void registerProtocol(Protocol protocol) {
+		this.protocol = protocol;
 	}
 
-	public void addPacket(TcpPacket packet) {
-		packetList.add(packet);
+	public void unregisterProtocol(Protocol protocol) {
+		if (this.protocol == protocol)
+			this.protocol = null;
 	}
 
-	public void removePacket(TcpPacket packet) {
-		if (packetList.contains(packet))
-			packetList.remove(packet);
+	public Protocol getProtocol() {
+		return protocol;
 	}
 
-	public void clearPacketList() {
-		packetList.removeAll(packetList);
+	public void storeToClientSent(Buffer data) {
+		clientSent.addLast(data);
+	}
+
+	public void storeToServerSent(Buffer data) {
+		serverSent.addLast(data);
+	}
+
+	public void pushToClient(Buffer data) { 
+		l7Mapper.sendToApplicationLayer(protocol, key, TcpDirection.ToClient, data);
+	}
+	
+	public void pushToServer(Buffer data) { 
+		l7Mapper.sendToApplicationLayer(protocol, key, TcpDirection.ToServer, data);
+	}
+
+	public void pushToClientSack(Buffer data) {
+		l7Mapper.sendToApplicationLayer(protocol, key, TcpDirection.ToServer, data);
+	}
+
+	public void pushToServerSack(Buffer data) {
+		l7Mapper.sendToApplicationLayer(protocol, key, TcpDirection.ToClient, data);
+	}
+
+	public WaitQueue getClientQueue() {
+		return clientQueue;
+	}
+
+	public WaitQueue getServerQueue() {
+		return serverQueue;
 	}
 
 	public int getPacketCountAfterFin() {
@@ -283,58 +232,33 @@ public class TcpSessionImpl implements TcpSession {
 		this.firstFinAck = firstFinAck;
 	}
 
-	public WaitQueue getTxWaitQueue() {
-		return txWaitQueue;
+	public void doEstablish(TcpSessionTable sessionTable, TcpSessionImpl session, TcpPacket packet, TcpStateUpdater stateUpdater) {
+		sessionTable.doEstablish(session, packet, stateUpdater);
 	}
 
-	public WaitQueue getRxWaitQueue() {
-		return rxWaitQueue;
+	public void close(TcpSessionTable sessionTable, TcpSessionImpl session, TcpPacket packet) {
+		sessionTable.close(packet);
 	}
 
-	public SegmentBuffer getTxBuffer() {
-		return txBuffer;
-	}
+	public void setRelativeNumbers(TcpPacket packet) {
+		switch (packet.getFlags()) {
+		case TcpFlag.SYN:
+			packet.setRelativeSeq(0);
+			break;
+		case TcpFlag.SYN + TcpFlag.ACK:
+			packet.setRelativeSeq(0);
+			packet.setRelativeAck(1);
+			break;
+		default:
+			if (packet.getDirection() == TcpDirection.ToServer) {
+				packet.setRelativeSeq(retRelativeClientSeq(packet.getSeq()));
+				packet.setRelativeAck(retRelativeServerSeq(packet.getAck()));
 
-	public SegmentBuffer getRxBuffer() {
-		return rxBuffer;
-	}
-
-	public void deallocateTxBuffer() {
-		txBuffer = null;
-	}
-
-	public void deallocateRxBuffer() {
-		rxBuffer = null;
-	}
-
-	@Override
-	public void registerProtocol(Protocol protocol) {
-		this.protocol = protocol;
-	}
-
-	@Override
-	public void unregisterProtocol(Protocol protocol) {
-		if (this.protocol == protocol)
-			this.protocol = null;
-	}
-
-	@Override
-	public Protocol getProtocol() {
-		return protocol;
-	}
-
-	@Override
-	public String toString() {
-		InetSocketAddress clientAddress = new InetSocketAddress(key.getClientIp(), key.getClientPort());
-		InetSocketAddress serverAddress = new InetSocketAddress(key.getServerIp(), key.getServerPort());
-
-		return String.format("[%s (%s) => %s (%s)] rx=%d (%d), tx=%d (%d)", clientAddress, clientState, serverAddress,
-				serverState, recentDestSeq, recentDestAck, recentSrcSeq, recentSrcAck);
-	}
-
-	public void printState() {
-		System.out.println("Client state: " + clientState + "\n" + "Server state: " + serverState);
-		if (logger.isDebugEnabled())
-			logger.debug("Client state: " + clientState + "\n" + "Server state: " + serverState);
+			} else {
+				packet.setRelativeSeq(retRelativeServerSeq(packet.getSeq()));
+				packet.setRelativeAck(retRelativeClientSeq(packet.getAck()));
+			}
+			break;
+		}
 	}
 }

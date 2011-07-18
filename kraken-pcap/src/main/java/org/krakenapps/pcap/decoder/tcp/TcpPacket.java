@@ -68,6 +68,8 @@ public class TcpPacket implements TcpSegment, Injectable {
 	private int dataLength;
 
 	private boolean isJumbo = false;
+	private boolean isGarbage = false;
+	private int reassembledLength = 0;
 
 	private TcpPacket() {
 	}
@@ -111,7 +113,7 @@ public class TcpPacket implements TcpSegment, Injectable {
 
 		return parse(p, source, destination, tcpLength, data);
 	}
-
+	
 	public static TcpPacket parse(Ipv6Packet p) throws BufferUnderflowException {
 		InetAddress source = p.getSourceAddress();
 		InetAddress destination = p.getDestinationAddress();
@@ -121,8 +123,7 @@ public class TcpPacket implements TcpSegment, Injectable {
 		return parse(p, source, destination, tcpLength, data);
 	}
 
-	private static TcpPacket parse(IpPacket p, InetAddress source, InetAddress destination, int tcpLength, Buffer data)
-			throws BufferUnderflowException {
+	private static TcpPacket parse(IpPacket p, InetAddress source, InetAddress destination, int tcpLength, Buffer data) throws BufferUnderflowException {
 		TcpPacket s = new TcpPacket();
 
 		s.ipPacket = p;
@@ -131,6 +132,7 @@ public class TcpPacket implements TcpSegment, Injectable {
 		s.destinationAddr = destination;
 		s.srcPort = data.getUnsignedShort();
 		s.dstPort = data.getUnsignedShort();
+
 		s.sessionKey = new TcpSessionKeyImpl(s.sourceAddr, s.destinationAddr, s.srcPort, s.dstPort);
 
 		s.seq = data.getInt();
@@ -144,7 +146,7 @@ public class TcpPacket implements TcpSegment, Injectable {
 
 		return s;
 	}
-
+	
 	private void parseDataOffsetAndFlags(Buffer dataBuffer) {
 		byte dataOffsetAndReserved = dataBuffer.get();
 		byte reservedAndFlags = dataBuffer.get();
@@ -344,6 +346,15 @@ public class TcpPacket implements TcpSegment, Injectable {
 		}
 	}
 
+	public void setDirection(TcpSessionImpl session) {
+		if (session.getKey().getClientPort() == srcPort) {
+			direction = TcpDirection.ToServer;
+		} else {
+			direction = TcpDirection.ToClient;
+			this.sessionKey.flip();
+		}
+	}
+
 	public int getDataLength() {
 		return dataLength;
 	}
@@ -352,22 +363,30 @@ public class TcpPacket implements TcpSegment, Injectable {
 		return isJumbo;
 	}
 
+	public boolean isGarbage() {
+		return isGarbage;
+	}
+
+	public void setGarbage(boolean isGarbage) {
+		this.isGarbage = isGarbage;
+	}
+
+	public int getReassembledLength() {
+		return reassembledLength;
+	}
+
+	public void setReassembledLength(int reassembledLength) {
+		this.reassembledLength = reassembledLength;
+	}
+
 	@Override
 	public String toString() {
 		if (getRelativeSeq() == -1 && getRelativeAck() == -1)
-			return String.format("tcp {%s:%d > %s:%d - %s window: %d, urgent: %d}", sourceAddr.getHostAddress(),
-					getSourcePort(), destinationAddr.getHostAddress(), getDestinationPort(), getFlagSymbol(flags),
-					window, urgentPointer);
+			return String.format("tcp {%s:%d > %s:%d - %s window: %d, urgent: %d}", sourceAddr.getHostAddress(), getSourcePort(), destinationAddr.getHostAddress(), getDestinationPort(), getFlagSymbol(flags), window, urgentPointer);
 		else if (getRelativeAck() == -1)
-			return String.format("tcp {%s:%d > %s:%d - %s seq: %d, window: %d, urgent: %d}",
-					sourceAddr.getHostAddress(), getSourcePort(), destinationAddr.getHostAddress(),
-					getDestinationPort(), getFlagSymbol(flags), getRelativeSeq(), window,
-					urgentPointer);
+			return String.format("tcp {%s:%d > %s:%d - %s seq: %d, window: %d, urgent: %d}", sourceAddr.getHostAddress(), getSourcePort(), destinationAddr.getHostAddress(), getDestinationPort(), getFlagSymbol(flags), getRelativeSeq(), window, urgentPointer);
 		else
-			return String.format("tcp {%s:%d > %s:%d - %s seq: %d, ack: %d, window: %d, urgent: %d}",
-					sourceAddr.getHostAddress(), getSourcePort(), destinationAddr.getHostAddress(),
-					getDestinationPort(), getFlagSymbol(flags), getRelativeSeq(), getRelativeAck(),
-					window, urgentPointer);
+			return String.format("tcp {%s:%d > %s:%d - %s seq: %d, ack: %d, window: %d, urgent: %d}", sourceAddr.getHostAddress(), getSourcePort(), destinationAddr.getHostAddress(), getDestinationPort(), getFlagSymbol(flags), getRelativeSeq(), getRelativeAck(), window, urgentPointer);
 	}
 
 	private String getFlagSymbol(int flags) {
@@ -500,7 +519,7 @@ public class TcpPacket implements TcpSegment, Injectable {
 			this.data = data;
 			return this;
 		}
-		
+
 		public Builder data(PacketBuilder builder) {
 			this.nextBuilder = builder;
 			return this;
