@@ -1,5 +1,13 @@
 (type: regex; id: NCHOVY-2011-0001; msg: Tech Shop Technote 7 SQL Injection Vulnerability; path: board.php; var: category; regex: \D+; )
 
+;elxis_2009.2_electra_rev2631
+;Download script : http://www.elxis-downloads.com/downloads/elxis-cms/272.html  
+(type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(index.php); path: /elxis-cms/index.php; var: mosConfig_absolute_path; reference: http://www.exploit-db.com/exploits/15939/; )
+(type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(index2.php); path: /elxis-cms/index2.php; var: mosConfig_absolute_path; reference: http://www.exploit-db.com/exploits/15939/; )
+(type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(administrator/index.php); path: /elxis-cms/administrator/index.php; var: str_replace; reference: http://www.exploit-db.com/exploits/15939/; )
+(type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(administrator/index2.php); path: /elxis-cms/administrator/index2.php; var: str_replace; reference: http://www.exploit-db.com/exploits/15939/; )
+(type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(administrator/index2.php); path: /elxis-cms/administrator/index2.php; var: mosConfig_absolute_path; reference: http://www.exploit-db.com/exploits/15939/; )
+
 ; Joomla Component
 (type: lfi; id: NCHOVY-2010-0001; msg: Joomla Component com_ckforms Multiple Vulnerabilities; path: index.php; var: controller; var: option; value: com_ckforms; reference: http://www.exploit-db.com/exploits/11785/; )
 (type: lfi; id: NCHOVY-2010-0002; msg: Joomla Component (com_dcnews) Local File Inclusion Vulnerability; path: index.php; var: controller; var: option; value: com_dcnews; reference: http://www.exploit-db.com/exploits/15440/; )
@@ -112,4 +120,3 @@
 (type: rfi; id: NCHOVY-2005-0001; msg: Zeroboard <= 4.1pl5 RFI exploit; path: /skin/zero_vote/error.php; var: dir; reference: http://www.securityfocus.com/archive/1/387076; cve: CVE-2005-0380; )
 
 (type: regex; id: NCHOVY-2005-0002; msg: Zeroboard 4.1 preg_replace Remote nobody Shell Exploit; path: /bbs/view.php; var: keyword; regex: \/[^\/]*e[^\/]*$; reference: http://www.exploit-db.com/exploits/15890/; )
-
