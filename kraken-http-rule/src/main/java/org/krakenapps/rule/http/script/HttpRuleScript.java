@@ -73,10 +73,18 @@ public class HttpRuleScript implements Script {
 		} else {
 			requestRules = engine.getRequestRules();
 		}
+		
+		if (requestRules == null) {
+			context.println("No rules found");
+			return;
+		}
 
 		for (HttpRequestRule r : requestRules) {
 			context.println(r.toString());
 		}
+		
+		context.println("---------------");
+		context.println("Total " + requestRules.size() + " rules");
 	}
 
 	@ScriptUsage(description = "import rule file", arguments = { @ScriptArgument(name = "file path", type = "string", description = "rule file path") })
