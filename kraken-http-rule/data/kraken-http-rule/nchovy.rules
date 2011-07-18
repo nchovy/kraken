@@ -1,12 +1,20 @@
 (type: regex; id: NCHOVY-2011-0001; msg: Tech Shop Technote 7 SQL Injection Vulnerability; path: board.php; var: category; regex: \D+; )
 
 ;elxis_2009.2_electra_rev2631
-;Download script : http://www.elxis-downloads.com/downloads/elxis-cms/272.html  
 (type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(index.php); path: /elxis-cms/index.php; var: mosConfig_absolute_path; reference: http://www.exploit-db.com/exploits/15939/; )
 (type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(index2.php); path: /elxis-cms/index2.php; var: mosConfig_absolute_path; reference: http://www.exploit-db.com/exploits/15939/; )
 (type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(administrator/index.php); path: /elxis-cms/administrator/index.php; var: str_replace; reference: http://www.exploit-db.com/exploits/15939/; )
 (type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(administrator/index2.php); path: /elxis-cms/administrator/index2.php; var: str_replace; reference: http://www.exploit-db.com/exploits/15939/; )
 (type: rfi; id: NCHOVY-2011-0002; msg: elxis_2009.2_electra_rev2631 multiple Remote File Include(administrator/index2.php); path: /elxis-cms/administrator/index2.php; var: mosConfig_absolute_path; reference: http://www.exploit-db.com/exploits/15939/; )
+
+(type: lfi; id: NCHOVY-2011-0003; msg: Sahana Agasti <= 0.6.5 Multiple Vulnerabilities; path: /sahana-0.6.5/www/stream.php; var: stream_type; reference: http://www.exploit-db.com/exploits/15942/;)
+(type: lfi; id: NCHOVY-2011-0004; msg: Joomla Captcha Plugin <= 4.5.1 Local File Disclosure Vulnerability; path: plugins/system/captcha/playcode.php; var: lng; reference: http://www.exploit-db.com/exploits/15958/;)
+(type: regex; id: NCHOVY-2011-0005; msg: TinyBB 1.2 SQLi Vulnerability; path: index.php; var: page; value: profile; var:id; regex: '+; reference: http://www.exploit-db.com/exploits/15961/; cve: CVE-2011-0443; )
+(type: lfi; id: NCHOVY-2011-0006; msg: PodCast Generator 1.3 language.php LFI; path: language.php; var: scriptlang ; reference: http://www.exploit-db.com/exploits/16109/; )
+(type: lfi; id: NCHOVY-2011-0007; msg: PodCast Generator 1.3 episode.php LFI; path: episode.php; var: name ; http://www.exploit-db.com/exploits/16109/; )
+(type: lfi; id: NCHOVY-2011-0008; msg: Raja Natarajan GUestbook 1.0 Local File Inclusion Exploit ; path: guestbook/add.php; var: lang; reference: http://www.exploit-db.com/exploits/16094/; )
+(type: lfi; id: NCHOVY-2011-0009; msg: MultiCMS Local File Inclusion Vulnerability; path: index.php; var: lng; reference: http://www.exploit-db.com/exploits/16074/; )
+(type: rfi; id: NCHOVY-2011-0010; msg: Froxlor v 0.9.15 Remote file include vulnerbility ; path: /customer_ftp.php; var: id; reference: http://www.exploit-db.com/exploits/16051/;)
 
 ; Joomla Component
 (type: lfi; id: NCHOVY-2010-0001; msg: Joomla Component com_ckforms Multiple Vulnerabilities; path: index.php; var: controller; var: option; value: com_ckforms; reference: http://www.exploit-db.com/exploits/11785/; )
