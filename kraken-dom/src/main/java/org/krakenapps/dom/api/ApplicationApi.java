@@ -16,6 +16,7 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.krakenapps.dom.model.Application;
 import org.krakenapps.dom.model.ApplicationVersion;
@@ -34,17 +35,17 @@ public interface ApplicationApi {
 
 	Collection<Application> getApplications();
 
-	Collection<Application> getApplications(String vendorName);
+	Collection<Application> getApplications(String vendorGuid);
 
 	Application getApplication(String guid);
 
 	Application getApplication(String vendorName, String name);
 
-	Application createApplication(String name, String platform);
+	Application createApplication(String name, String platform, Map<String, String> props);
 
-	Application createApplication(String vendorGuid, String name, String platform);
+	Application createApplication(String vendorGuid, String name, String platform, Map<String, String> props);
 
-	void updateApplication(String guid, String name);
+	void updateApplication(String guid, String name, Map<String, String> props);
 
 	void removeApplication(String guid);
 

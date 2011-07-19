@@ -17,7 +17,7 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
 import java.util.Date;
-
+import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 
@@ -30,6 +30,8 @@ import org.krakenapps.dom.exception.ApplicationNotFoundException;
 import org.krakenapps.dom.exception.ApplicationVersionNotFoundException;
 import org.krakenapps.dom.exception.VendorNotFoundException;
 import org.krakenapps.dom.model.Application;
+import org.krakenapps.dom.model.ApplicationMetadata;
+import org.krakenapps.dom.model.ApplicationMetadataKey;
 import org.krakenapps.dom.model.ApplicationVersion;
 import org.krakenapps.dom.model.Vendor;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
@@ -124,11 +126,11 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		Application app = em.find(Application.class, guid);
 		if (app == null)
 			return null;
-		
+
 		// force loading
 		app.getMetadatas().size();
 		app.getVersions().size();
-		
+
 		return app;
 	}
 
@@ -147,13 +149,13 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 	}
 
 	@Override
-	public Application createApplication(String name, String platform) {
-		return createApplication(null, name, platform);
+	public Application createApplication(String name, String platform, Map<String, String> props) {
+		return createApplication(null, name, platform, props);
 	}
 
 	@Transactional
 	@Override
-	public Application createApplication(String vendorGuid, String name, String platform) {
+	public Application createApplication(String vendorGuid, String name, String platform, Map<String, String> props) {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		Vendor vendor = null;
@@ -169,12 +171,14 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 		em.persist(app);
 
+		setAppMetadatas(em, app, props);
+
 		return app;
 	}
 
 	@Transactional
 	@Override
-	public void updateApplication(String guid, String name) {
+	public void updateApplication(String guid, String name, Map<String, String> props) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Application app = em.find(Application.class, guid);
 		if (app == null)
@@ -184,6 +188,28 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		app.setUpdateDateTime(new Date());
 
 		em.merge(app);
+
+		for (ApplicationMetadata d : app.getMetadatas()) {
+			em.remove(d);
+		}
+		
+		app.getMetadatas().clear();
+		setAppMetadatas(em, app, props);
+
+		em.merge(app);
+	}
+
+	private void setAppMetadatas(EntityManager em, Application app, Map<String, String> props) {
+		for (String propName : props.keySet()) {
+			ApplicationMetadata m = new ApplicationMetadata();
+			ApplicationMetadataKey key = new ApplicationMetadataKey();
+			key.setApplication(app);
+			key.setName(propName);
+			m.setKey(key);
+			m.setValue(props.get(propName));
+
+			em.persist(m);
+		}
 	}
 
 	@Transactional
@@ -257,5 +283,4 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 
 		em.remove(version);
 	}
-
 }

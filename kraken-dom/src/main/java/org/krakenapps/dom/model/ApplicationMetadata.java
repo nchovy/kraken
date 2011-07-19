@@ -1,10 +1,8 @@
 package org.krakenapps.dom.model;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -18,9 +16,6 @@ public class ApplicationMetadata implements Marshalable {
 	private ApplicationMetadataKey key;
 
 	private String value;
-
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
 
 	public ApplicationMetadataKey getKey() {
 		return key;
@@ -36,14 +31,6 @@ public class ApplicationMetadata implements Marshalable {
 
 	public void setValue(String value) {
 		this.value = value;
-	}
-
-	public Date getUpdateDateTime() {
-		return updateDateTime;
-	}
-
-	public void setUpdateDateTime(Date updateDateTime) {
-		this.updateDateTime = updateDateTime;
 	}
 
 	@Override

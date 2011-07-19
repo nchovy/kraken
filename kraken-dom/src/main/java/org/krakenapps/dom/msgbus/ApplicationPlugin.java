@@ -16,6 +16,7 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -67,22 +68,26 @@ public class ApplicationPlugin {
 		resp.put("apps", Marshaler.marshal(apps));
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
 		String vendorName = req.getString("vendor_name");
 		String name = req.getString("name");
 		String platform = req.getString("platform");
+		Map<String, String> props = (Map<String, String>) req.get("metadata"); 
 
-		Application app = appApi.createApplication(vendorName, name, platform);
+		Application app = appApi.createApplication(vendorName, name, platform, props);
 		resp.put("guid", app.getGuid());
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void updateApplication(Request req, Response resp) {
 		String guid = req.getString("guid");
 		String name = req.getString("name");
+		Map<String, String> props = (Map<String, String>) req.get("metadata");
 
-		appApi.updateApplication(guid, name);
+		appApi.updateApplication(guid, name, props);
 	}
 
 	@MsgbusMethod

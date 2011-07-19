@@ -43,10 +43,10 @@ public class UploadedFile implements Marshalable {
 	@JoinColumn(name = "owner_id", nullable = false)
 	private User owner;
 
-	@Column(length = 128, nullable = false)
+	@Column(name = "file_name", length = 128, nullable = false)
 	private String fileName;
 
-	@Column(nullable = false)
+	@Column(name = "file_size", nullable = false)
 	private long fileSize;
 
 	@Column(length = 512, nullable = false)
