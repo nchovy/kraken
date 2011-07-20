@@ -67,6 +67,7 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 	public Vendor createVendor(String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Vendor vendor = new Vendor();
+		vendor.setGuid(UUID.randomUUID().toString());
 		vendor.setName(name);
 		vendor.setCreateDateTime(new Date());
 		vendor.setUpdateDateTime(new Date());
