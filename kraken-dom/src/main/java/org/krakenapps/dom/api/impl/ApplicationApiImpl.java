@@ -18,6 +18,8 @@ package org.krakenapps.dom.api.impl;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
+
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 
@@ -163,6 +165,7 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 			vendor = getVendor(vendorGuid);
 
 		Application app = new Application();
+		app.setGuid(UUID.randomUUID().toString());
 		app.setVendor(vendor);
 		app.setName(name);
 		app.setPlatform(platform);

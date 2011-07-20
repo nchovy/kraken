@@ -97,12 +97,12 @@ public class ApplicationPlugin {
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
-		String vendorName = req.getString("vendor_name");
+		String vendorGuid = req.getString("vendor_guid");
 		String name = req.getString("name");
 		String platform = req.getString("platform");
 		Map<String, String> props = (Map<String, String>) req.get("metadata");
 
-		Application app = appApi.createApplication(vendorName, name, platform, props);
+		Application app = appApi.createApplication(vendorGuid, name, platform, props);
 		resp.put("guid", app.getGuid());
 	}
 
