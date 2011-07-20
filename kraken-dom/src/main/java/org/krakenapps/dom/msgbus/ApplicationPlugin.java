@@ -16,12 +16,15 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.model.Application;
+import org.krakenapps.dom.model.ApplicationMetadata;
 import org.krakenapps.dom.model.Vendor;
 import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
@@ -68,13 +71,36 @@ public class ApplicationPlugin {
 		resp.put("apps", Marshaler.marshal(apps));
 	}
 
+	@MsgbusMethod
+	public void getApplication(Request req, Response resp) {
+		String guid = req.getString("guid");
+		Application app = appApi.getApplication(guid);
+		if (app == null) {
+			resp.put("app", null);
+			return;
+		}
+
+		Map<String, Object> m = app.marshal();
+		m.put("metadata", marshal(app.getMetadatas()));
+
+		resp.put("app", m);
+	}
+
+	private Map<String, String> marshal(List<ApplicationMetadata> l) {
+		Map<String, String> m = new HashMap<String, String>();
+		for (ApplicationMetadata meta : l)
+			m.put(meta.getKey().getName(), meta.getValue());
+
+		return m;
+	}
+
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
 		String vendorName = req.getString("vendor_name");
 		String name = req.getString("name");
 		String platform = req.getString("platform");
-		Map<String, String> props = (Map<String, String>) req.get("metadata"); 
+		Map<String, String> props = (Map<String, String>) req.get("metadata");
 
 		Application app = appApi.createApplication(vendorName, name, platform, props);
 		resp.put("guid", app.getGuid());
