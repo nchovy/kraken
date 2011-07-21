@@ -69,7 +69,7 @@ public class LoginPlugin {
 		session.unsetProperty("nonce");
 		session.setProperty("org_id", admin.getUser().getOrganization().getId());
 		session.setProperty("admin_id", admin.getId());
-		session.setProperty("lang", admin.getLang());
+		session.setProperty("locale", admin.getLang());
 	}
 
 	@SuppressWarnings("unchecked")
