@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public class EncodingRule {
 	public static final byte NULL_TYPE = 0;
@@ -381,18 +382,48 @@ public class EncodingRule {
 	public static void encodeMap(ByteBuffer bb, Map<String, Object> map) {
 		bb.put(MAP_TYPE);
 
-		int length = 0;
-		for (String key : map.keySet()) {
-			length += lengthOfString(key);
-			length += lengthOf(map.get(key));
-		}
-
+		int length = preencodeMap(map);
 		encodeRawNumber(bb, int.class, length);
 
 		for (String key : map.keySet()) {
-			encodeString(bb, key);
-			encode(bb, map.get(key));
+			EncodedString k = EncodedString.getEncodedString(key);
+			bb.put(STRING_TYPE);
+			encodeRawNumber(bb, int.class, k.value.length);
+			bb.put(k.value);
+
+			Object value = map.get(key);
+			if (value instanceof String) {
+				EncodedString v = EncodedString.getEncodedString((String) value);
+				bb.put(STRING_TYPE);
+				encodeRawNumber(bb, int.class, v.value.length);
+				bb.put(v.value);
+			} else
+				encode(bb, value);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static int preencodeMap(Map<String, Object> map) {
+		int length = 0;
+
+		for (String key : map.keySet()) {
+			EncodedString k = EncodedString.getEncodedString(key);
+			length += k.length();
+
+			Object value = map.get(key);
+			if (value instanceof String)
+				length += EncodedString.getEncodedString((String) value).length();
+			else if (value instanceof Map)
+				length += preencodeMap((Map<String, Object>) value);
+			else if (value instanceof List)
+				length += preencodeArray((List<?>) value);
+			else if (value instanceof Object[])
+				length += preencodeArray((Object[]) value);
+			else
+				length += lengthOf(value);
+		}
+
+		return length;
 	}
 
 	public static Map<String, Object> decodeMap(ByteBuffer bb) {
@@ -420,20 +451,46 @@ public class EncodingRule {
 	public static void encodeArray(ByteBuffer bb, List<?> array) {
 		bb.put(ARRAY_TYPE);
 
-		int length = 0;
-		for (Object obj : array) {
-			length += lengthOf(obj);
-		}
-
+		int length = preencodeArray(array);
 		encodeRawNumber(bb, int.class, length);
 
 		for (Object obj : array) {
-			encode(bb, obj);
+			if (obj instanceof String) {
+				EncodedString es = EncodedString.getEncodedString((String) obj);
+				bb.put(STRING_TYPE);
+				encodeRawNumber(bb, int.class, es.value.length);
+				bb.put(es.value);
+			} else
+				encode(bb, obj);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static int preencodeArray(List<?> array) {
+		int length = 0;
+
+		for (Object object : array) {
+			if (object instanceof String)
+				length += EncodedString.getEncodedString((String) object).length();
+			else if (object instanceof Map)
+				length += preencodeMap((Map<String, Object>) object);
+			else if (object instanceof List)
+				length += preencodeArray((List<?>) object);
+			else if (object instanceof Object[])
+				length += preencodeArray((Object[]) object);
+			else
+				length += lengthOf(object);
+		}
+
+		return length;
 	}
 
 	public static void encodeArray(ByteBuffer bb, Object[] array) {
 		encodeArray(bb, Arrays.asList(array));
+	}
+
+	private static int preencodeArray(Object[] array) {
+		return preencodeArray(Arrays.asList(array));
 	}
 
 	public static Object[] decodeArray(ByteBuffer bb) {
@@ -566,6 +623,35 @@ public class EncodingRule {
 
 	public static int lengthOfBlob(byte[] value) {
 		return 1 + lengthOfRawNumber(int.class, value.length) + value.length;
+	}
+
+	private static class EncodedString {
+		private static Map<String, EncodedString> cache = new WeakHashMap<String, EncodedString>();
+		private byte[] value;
+		private int rawNumberLength;
+
+		public static EncodedString getEncodedString(String value) {
+			EncodedString es = cache.get(value);
+
+			if (es == null) {
+				es = new EncodedString(value);
+				cache.put(new String(value), es);
+			}
+
+			return es;
+		}
+
+		private EncodedString(String value) {
+			try {
+				this.value = value.getBytes("utf-8");
+				this.rawNumberLength = lengthOfRawNumber(int.class, this.value.length);
+			} catch (UnsupportedEncodingException e) {
+			}
+		}
+
+		private int length() {
+			return 1 + rawNumberLength + value.length;
+		}
 	}
 
 }
