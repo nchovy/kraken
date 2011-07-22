@@ -18,12 +18,18 @@ package org.krakenapps.ldap;
 public class LdapProfile {
 	private String name;
 	private String dc;
+	private int port;
 	private String account;
 	private String password;
 
 	public LdapProfile(String name, String dc, String account, String password) {
+		this(name, dc, 389, account, password);
+	}
+
+	public LdapProfile(String name, String dc, int port, String account, String password) {
 		this.name = name;
 		this.dc = dc;
+		this.port = port;
 		this.account = account;
 		this.password = password;
 	}
@@ -36,6 +42,10 @@ public class LdapProfile {
 		return dc;
 	}
 
+	public int getPort() {
+		return port;
+	}
+
 	public String getAccount() {
 		return account;
 	}
@@ -46,6 +56,6 @@ public class LdapProfile {
 
 	@Override
 	public String toString() {
-		return String.format("name=%s, dc=%s, account=%s", name, dc, account);
+		return String.format("name=%s, dc=%s, port=%d, account=%s", name, dc, port, account);
 	}
 }

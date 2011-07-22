@@ -132,7 +132,7 @@ public class JLdapService implements LdapService {
 
 		LDAPConnection lc = new LDAPConnection();
 		try {
-			lc.connect(profile.getDc(), LDAPConnection.DEFAULT_PORT);
+			lc.connect(profile.getDc(), profile.getPort());
 
 			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
 			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
