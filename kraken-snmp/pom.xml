@@ -10,13 +10,7 @@
 	<artifactId>kraken-snmp</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken SNMP</name>
-	<version>1.0.0</version>
-	<repositories>
-		<repository>
-			<id>navi</id>
-			<url>http://krakenapps.org/mvn</url>
-		</repository>
-	</repositories>
+	<version>1.2.0</version>
 	<build>
 		<plugins>
 			<plugin>
@@ -29,7 +23,11 @@
 						<Bundle-SymbolicName>org.krakenapps.snmp</Bundle-SymbolicName>
 						<Export-Package>org.krakenapps.snmp</Export-Package>
 						<Private-Package>org.krakenapps.snmp.impl</Private-Package>
-						<Import-Package>*</Import-Package>
+						<Import-Package>
+							org.krakenapps.filter;resolution:=optional,
+							org.krakenapps.filter.exception;resolution:=optional,
+							*
+						</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -61,7 +59,7 @@
 		<dependency>
 			<groupId>org.snmp4j</groupId>
 			<artifactId>snmp4j</artifactId>
-			<version>1.9.3d</version>
+			<version>1.11.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>

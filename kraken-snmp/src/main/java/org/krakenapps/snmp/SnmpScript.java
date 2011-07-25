@@ -1,3 +1,18 @@
+/*
+ * Copyright 2010 NCHOVY
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.snmp;
 
 import java.io.IOException;
@@ -22,11 +37,23 @@ import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 public class SnmpScript implements Script {
+	private SnmpTrapService trap;
 	private ScriptContext context;
+
+	public SnmpScript(SnmpTrapService trap) {
+		this.trap = trap;
+	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void trapbindings(String[] args) {
+		context.println("Trap Bindings");
+		context.println("---------------");
+		for (String name : trap.getBindingNames())
+			context.println(name + " => " + trap.getBinding(name));
 	}
 
 	public void get(String[] args) {
@@ -41,7 +68,6 @@ public class SnmpScript implements Script {
 		if (version.equals("2c")) {
 			getV2(host, port, community, oid);
 		}
-
 	}
 
 	private static HashMap<String, Integer> methodMap = new HashMap<String, Integer>();
@@ -124,7 +150,7 @@ public class SnmpScript implements Script {
 					break;
 				}
 			}
-			
+
 			for (VariableBinding vb : results) {
 				context.println(vb.toString());
 			}
