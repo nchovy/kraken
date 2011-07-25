@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -114,7 +115,10 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 				}
 			}
 		} catch (IOException e) {
-			logger.info("kraken radius: io error", e);
+			if (e instanceof SocketException && e.getMessage().equals("socket closed"))
+				logger.trace("kraken radius: socket closed");
+			else
+				logger.info("kraken radius: io error", e);
 		} finally {
 			logger.info("kraken radius: virtual server [bind={}] stopped", bindAddress);
 		}
