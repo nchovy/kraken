@@ -18,23 +18,20 @@ import org.krakenapps.ansicode.ClearScreenCode.Option;
 import org.krakenapps.ansicode.SetColorCode.Color;
 import org.krakenapps.api.FunctionKeyEvent;
 import org.krakenapps.api.FunctionKeyEventListener;
-import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.WindowSizeEventListener;
 import org.krakenapps.api.FunctionKeyEvent.KeyCode;
 
-public class EditorScript implements Script {
+public class Editor {
 	private ScriptContext context;
-
-	@Override
-	public void setScriptContext(ScriptContext context) {
-		this.context = context;
-	}
-
 	private int lineno;
 	private int x = 0;
 	private int y = 0;
 	private List<String> lines;
+
+	public Editor(ScriptContext context) {
+		this.context = context;
+	}
 
 	private class EditorSizeChangedCallback implements WindowSizeEventListener {
 
@@ -51,8 +48,8 @@ public class EditorScript implements Script {
 
 	}
 
-	public void open(String[] args) throws IOException {
-		lines = readFile(args[0]);
+	public void open(File f) throws IOException {
+		lines = readFile(f);
 
 		EditorSizeChangedCallback sizeCallback = new EditorSizeChangedCallback();
 		FunctionKeyEventListener callback = new FunctionKeyEventListener() {
@@ -207,8 +204,7 @@ public class EditorScript implements Script {
 		context.print(new MoveToCode(x + 1, y + 2));
 	}
 
-	private List<String> readFile(String path) throws FileNotFoundException, IOException {
-		File f = new File(path);
+	private List<String> readFile(File f) throws FileNotFoundException, IOException {
 		FileInputStream is = new FileInputStream(f);
 		BufferedReader br = new BufferedReader(new InputStreamReader(is));
 		List<String> lines = new ArrayList<String>();

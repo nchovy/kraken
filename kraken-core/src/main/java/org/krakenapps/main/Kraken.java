@@ -62,8 +62,7 @@ import org.krakenapps.logger.KrakenLogService;
 import org.krakenapps.logger.LogCleaner;
 import org.krakenapps.logger.LoggerScriptFactory;
 import org.krakenapps.pkg.PackageScriptFactory;
-import org.krakenapps.script.EditorScriptFactory;
-import org.krakenapps.script.HelpScriptFactory;
+import org.krakenapps.script.CoreScriptFactory;
 import org.krakenapps.script.HistoryScriptFactory;
 import org.krakenapps.script.OsgiScriptFactory;
 import org.krakenapps.script.OutputOnlyScriptContext;
@@ -180,7 +179,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * 
 	 * @throws Exception
 	 */
-	@SuppressWarnings({ "unchecked" })
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void boot(StartOptions startOptions) throws Exception {
 		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
 		String dir = jarPath.getParentFile().getAbsolutePath();
@@ -356,7 +355,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 *            the bundle context
 	 */
 	private void registerScripts(BundleContext context) {
-		registerScriptFactory(context, HelpScriptFactory.class, "help");
+		registerScriptFactory(context, CoreScriptFactory.class, "core");
 		registerScriptFactory(context, BundleScriptFactory.class, "bundle");
 		registerScriptFactory(context, LoggerScriptFactory.class, "logger");
 		registerScriptFactory(context, OsgiScriptFactory.class, "osgi");
@@ -368,7 +367,6 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(context, RegistryScriptFactory.class, "registry");
 		registerScriptFactory(context, KeyStoreScriptFactory.class, "keystore");
 		registerScriptFactory(context, AccountScriptFactory.class, "account");
-		registerScriptFactory(context, EditorScriptFactory.class, "editor");
 		registerScriptFactory(context, SunPerfScriptFactory.class, "sunperf");
 	}
 

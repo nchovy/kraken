@@ -188,4 +188,7 @@ public class OutputOnlyScriptContext implements ScriptContext {
 
 	}
 
+	@Override
+	public void quit() {
+	}
 }

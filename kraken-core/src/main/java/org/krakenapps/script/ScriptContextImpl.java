@@ -33,6 +33,7 @@ import org.krakenapps.api.WindowSizeEventListener;
 import org.krakenapps.console.ConsoleAutoComplete;
 import org.krakenapps.console.ConsoleController;
 import org.krakenapps.console.ConsoleHistoryManager;
+import org.krakenapps.console.QuitHandler;
 import org.krakenapps.main.Kraken;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
@@ -50,10 +51,15 @@ public class ScriptContextImpl implements ScriptContext {
 	private ScriptSession session;
 	private ConsoleController controller;
 	private ConsoleHistoryManager history;
+	private QuitHandler quit;
 
 	private Set<WindowSizeEventListener> callbacks = new HashSet<WindowSizeEventListener>();
 
 	public ScriptContextImpl(BundleContext bc) {
+		this(bc, null);
+	}
+
+	public ScriptContextImpl(BundleContext bc, QuitHandler quit) {
 		this.bc = bc;
 		this.properties = new Properties();
 		this.controller = new ConsoleController(this, new ConsoleAutoComplete(Kraken.getContext()));
@@ -61,6 +67,7 @@ public class ScriptContextImpl implements ScriptContext {
 		this.controller.setArrowKeyHandler(history);
 		this.session = new ScriptSessionImpl(history);
 		this.session.setProperty("dir", new File(System.getProperty("user.dir")));
+		this.quit = quit;
 	}
 
 	@Override
@@ -273,6 +280,14 @@ public class ScriptContextImpl implements ScriptContext {
 		@Override
 		public void run() {
 			callback.sizeChanged(width, height);
+		}
+	}
+
+	@Override
+	public void quit() {
+		if (quit != null) {
+			quit.onQuit();
+			quit = null;
 		}
 	}
 }

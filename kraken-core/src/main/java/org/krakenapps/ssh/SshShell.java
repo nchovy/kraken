@@ -47,9 +47,8 @@ public class SshShell implements Command, Runnable, QuitHandler {
 	private ScriptContextImpl context;
 
 	public SshShell() {
-		context = new ScriptContextImpl(Kraken.getContext());
+		context = new ScriptContextImpl(Kraken.getContext(), this);
 		session = new ShellSession(context);
-		session.setQuitHandler(this);
 		tsm = new TelnetStateMachine(new MessageReceiver(session), context);
 	}
 
