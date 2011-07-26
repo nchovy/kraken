@@ -21,6 +21,8 @@ import org.krakenapps.ansicode.AnsiEscapeCode;
 
 public interface ScriptContext {
 	AccountManager getAccountManager();
+	
+	void quit();
 
 	int getWidth();
 
