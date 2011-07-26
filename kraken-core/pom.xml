@@ -14,10 +14,15 @@
 	<repositories>
 		<repository>
 			<id>krakenapps</id>
-			<url>http://krakenapps.org/mvn</url>
+			<url>http://download.krakenapps.org/</url>
 		</repository>
 	</repositories>
 	<dependencies>
+		<dependency>
+			<groupId>jsch</groupId>
+			<artifactId>jsch</artifactId>
+			<version>0.1.44</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.sshd</groupId>
 			<artifactId>sshd-core</artifactId>
