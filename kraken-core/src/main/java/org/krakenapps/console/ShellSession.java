@@ -1,9 +1,14 @@
 package org.krakenapps.console;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
@@ -23,6 +28,7 @@ import org.krakenapps.api.ScriptOutputStream;
 import org.krakenapps.api.ScriptSession;
 import org.krakenapps.api.FunctionKeyEvent.KeyCode;
 import org.krakenapps.main.Kraken;
+import org.krakenapps.pkg.HttpWagon;
 import org.krakenapps.script.ScriptContextImpl;
 import org.osgi.framework.BundleException;
 import org.slf4j.Logger;
@@ -197,6 +203,140 @@ public class ShellSession {
 
 	private boolean handleEmbeddedCommands(ScriptOutputStream out, String line) throws IOException {
 		line = line.trim();
+
+		int space = line.indexOf(' ');
+		if (space < 0)
+			space = line.length();
+
+		String command = line.substring(0, space).trim();
+
+		if (command.equals("wget")) {
+			File dir = (File) sc.getSession().getProperty("dir");
+			String[] tokens = line.split(" ");
+
+			URL url = new URL(tokens[1]);
+			FileOutputStream os = null;
+			try {
+				byte[] b = HttpWagon.download(url);
+				File f = new File(dir, url.getFile());
+				os = new FileOutputStream(f);
+				os.write(b);
+				out.println("downloaded " + f.getAbsolutePath());
+			} catch (Exception e) {
+				out.println(e.getMessage());
+			} finally {
+				if (os != null)
+					os.close();
+			}
+
+			printPrompt();
+			return true;
+		}
+
+		if (command.equals("pwd")) {
+			File dir = (File) sc.getSession().getProperty("dir");
+			out.println(dir.getAbsolutePath());
+			printPrompt();
+			return true;
+		}
+
+		if (command.equals("cp")) {
+			File dir = (File) sc.getSession().getProperty("dir");
+			String[] tokens = line.split(" ");
+
+			File from = new File(dir, tokens[1]);
+			File to = new File(dir, tokens[2]);
+
+			if (!from.exists())
+				out.println("cp: cannot stat '" + from.getName() + "': No such file or directory");
+			else {
+				FileChannel inChannel = new FileInputStream(from).getChannel();
+				FileChannel outChannel = new FileOutputStream(to).getChannel();
+
+				try {
+					inChannel.transferTo(0, inChannel.size(), outChannel);
+				} catch (IOException e) {
+					out.println(e.getMessage());
+				} finally {
+					inChannel.close();
+					outChannel.close();
+				}
+			}
+
+			printPrompt();
+			return true;
+		}
+
+		if (command.equals("rm")) {
+			File dir = (File) sc.getSession().getProperty("dir");
+			String[] tokens = line.split(" ");
+
+			int i = 0;
+			for (String token : tokens) {
+				if (i++ == 0)
+					continue;
+
+				File f = new File(dir, token);
+				if (!f.exists())
+					out.println("rm: cannot remove '" + token + "': No such file or directory");
+				else
+					f.delete();
+			}
+
+			printPrompt();
+			return true;
+		}
+
+		if (command.equals("mv")) {
+			File dir = (File) sc.getSession().getProperty("dir");
+			String[] tokens = line.split(" ");
+
+			File from = new File(dir, tokens[1]);
+			File to = new File(dir, tokens[2]);
+
+			if (from.equals(to))
+				out.println("mv: '" + from.getName() + "' and '" + to.getName() + "' are the same file");
+			else if (!from.exists())
+				out.println("mv: cannot stat '" + from.getName() + "': No such file or directory");
+			else
+				from.renameTo(to);
+			
+			printPrompt();
+			return true;
+		}
+
+		if (command.equals("ls")) {
+			File dir = (File) sc.getSession().getProperty("dir");
+			for (File f : dir.listFiles()) {
+				out.println(formatFileInfo(f));
+			}
+
+			printPrompt();
+			return true;
+		}
+
+		if (command.equals("cd")) {
+			String[] tokens = line.split(" ");
+			File dir = (File) sc.getSession().getProperty("dir");
+
+			File newDir = null;
+			if (tokens[1].equals("..")) {
+				if (dir.getParentFile() != null)
+					newDir = dir.getParentFile();
+				else
+					newDir = dir;
+			} else
+				newDir = new File(dir, tokens[1]);
+
+			if (!(newDir.exists() && newDir.isDirectory()))
+				out.println("No such file or directory");
+			else
+				sc.getSession().setProperty("dir", newDir);
+
+			printPrompt();
+			return true;
+		}
+
 		if (line.equals("date")) {
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 			out.println(dateFormat.format(new Date()));
@@ -287,6 +427,17 @@ public class ShellSession {
 		}
 
 		return false;
+	}
+
+	private String formatFileInfo(File f) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String lastModified = dateFormat.format(new Date(f.lastModified()));
+		String dir = f.isDirectory() ? "<DIR>" : "";
+		char r = f.canRead() ? 'r' : '-';
+		char w = f.canWrite() ? 'w' : '-';
+		char x = f.canExecute() ? 'x' : '-';
+
+		return String.format("%c%c%c %10d\t%s\t%s\t%s", r, w, x, f.length(), lastModified, dir, f.getName());
 	}
 
 	private void changeColor(ScriptOutputStream out, String code) {

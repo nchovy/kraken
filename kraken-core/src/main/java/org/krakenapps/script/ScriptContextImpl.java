@@ -15,6 +15,7 @@
  */
 package org.krakenapps.script;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -59,6 +60,7 @@ public class ScriptContextImpl implements ScriptContext {
 		this.history = new ConsoleHistoryManager(controller);
 		this.controller.setArrowKeyHandler(history);
 		this.session = new ScriptSessionImpl(history);
+		this.session.setProperty("dir", new File(System.getProperty("user.dir")));
 	}
 
 	@Override
