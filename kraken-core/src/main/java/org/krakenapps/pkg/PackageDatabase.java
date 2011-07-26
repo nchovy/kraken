@@ -45,7 +45,7 @@ public class PackageDatabase {
 		PackageRepository[] DEFAULT_REPOSITORIES = null;
 		try {
 			DEFAULT_REPOSITORIES = new PackageRepository[] { PackageRepository.create("krakenapps", new URL(
-					"http://krakenapps.org/mvn/kraken/")) };
+					"http://download.krakenapps.org/mvn/kraken/")) };
 		} catch (MalformedURLException e) {
 		}
 
