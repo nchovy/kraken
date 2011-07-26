@@ -129,7 +129,7 @@
 			<id>krakenapps</id>
 			<name>KrakenApps Maven Repository</name>
 			<layout>default</layout>
-			<url>http://krakenapps.org/mvn</url>
+			<url>http://download.krakenapps.org/</url>
 			<snapshots>
 				<enabled>true</enabled>
 			</snapshots>
