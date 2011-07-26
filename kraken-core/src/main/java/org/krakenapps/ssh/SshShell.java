@@ -98,7 +98,7 @@ public class SshShell implements Command, Runnable, QuitHandler {
 	@Override
 	public void run() {
 		session.printBanner();
-		session.printPrompt();
+		context.printPrompt();
 		try {
 			for (;;) {
 				byte b = (byte) in.read();

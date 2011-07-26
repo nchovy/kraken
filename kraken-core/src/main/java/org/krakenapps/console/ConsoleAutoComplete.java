@@ -43,6 +43,7 @@ public class ConsoleAutoComplete {
 			addScriptMethods(prefix, terms);
 		} else {
 			addScriptAliases(prefix, terms);
+			addScriptMethods("core." + prefix, terms);
 		}
 
 		Collections.sort(terms);

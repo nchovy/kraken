@@ -137,6 +137,11 @@ public class ScriptContextImpl implements ScriptContext {
 	}
 
 	@Override
+	public void printPrompt() {
+		getOutputStream().print(getSession().getPrompt());
+	}
+
+	@Override
 	public void print(String value) {
 		if (value == null)
 			return;
@@ -288,6 +293,7 @@ public class ScriptContextImpl implements ScriptContext {
 		if (quit != null) {
 			quit.onQuit();
 			quit = null;
-		}
+		} else
+			throw new RuntimeException("quit");
 	}
 }

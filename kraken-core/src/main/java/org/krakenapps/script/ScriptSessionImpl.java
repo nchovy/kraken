@@ -15,6 +15,9 @@
  */
 package org.krakenapps.script;
 
+import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,12 +27,30 @@ import org.krakenapps.api.ScriptSession;
 import org.krakenapps.console.ConsoleHistoryManager;
 
 public class ScriptSessionImpl implements ScriptSession {
+	private static final String hostname;
+
 	private ConcurrentMap<String, Object> properties;
 	private ConsoleHistoryManager history;
+
+	static {
+		String h = "unknown";
+		try {
+			h = InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException e) {
+		}
+
+		hostname = h;
+	}
 
 	public ScriptSessionImpl(ConsoleHistoryManager history) {
 		this.properties = new ConcurrentHashMap<String, Object>();
 		this.history = history;
+	}
+
+	@Override
+	public String getPrompt() {
+		File dir = (File) getProperty("dir");
+		return "kraken@" + hostname + " " + dir.getName() + "> ";
 	}
 
 	@Override

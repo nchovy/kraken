@@ -41,15 +41,17 @@ public class ScriptRunner implements Runnable {
 
 	public ScriptRunner(ScriptContext context, String line) {
 		String[] tokens = tokenize(line);
-		//line.split("\\s");
 		String[] commandTokens = tokens[0].split("\\.");
+		String alias = null;
 		if (commandTokens.length != 2) {
-			throw new NullPointerException("command token length is invalid");
+			alias = "core";
+			this.methodName = commandTokens[0];
+		} else {
+			alias = commandTokens[0];
+			this.methodName = commandTokens[1];
 		}
 
-		String alias = commandTokens[0];
 		this.context = context;
-		this.methodName = commandTokens[1];
 		this.args = getArguments(tokens);
 
 		ServiceReference[] refs = null;
@@ -118,7 +120,7 @@ public class ScriptRunner implements Runnable {
 		invokeScript(script);
 
 		if (isPromptEnabled)
-			context.print(ShellSession.getPrompt());
+			context.printPrompt();
 
 		context.setCurrentScript(null);
 	}

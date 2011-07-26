@@ -49,7 +49,7 @@ public class CoreScript implements Script {
 
 		File dir = (File) context.getSession().getProperty("dir");
 
-		URL url = new URL(args[1]);
+		URL url = new URL(args[0]);
 		FileOutputStream os = null;
 		try {
 			byte[] b = HttpWagon.download(url);
@@ -77,8 +77,8 @@ public class CoreScript implements Script {
 	public void cp(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
-		File from = new File(dir, args[1]);
-		File to = new File(dir, args[2]);
+		File from = new File(dir, args[0]);
+		File to = new File(dir, args[1]);
 
 		if (!from.exists())
 			context.println("cp: cannot stat '" + from.getName() + "': No such file or directory");
@@ -100,11 +100,7 @@ public class CoreScript implements Script {
 	public void rm(String[] args) {
 		File dir = (File) context.getSession().getProperty("dir");
 
-		int i = 0;
 		for (String token : args) {
-			if (i++ == 0)
-				continue;
-
 			File f = new File(dir, token);
 			if (!f.exists())
 				context.println("rm: cannot remove '" + token + "': No such file or directory");
@@ -116,8 +112,8 @@ public class CoreScript implements Script {
 	public void mv(String[] args) {
 		File dir = (File) context.getSession().getProperty("dir");
 
-		File from = new File(dir, args[1]);
-		File to = new File(dir, args[2]);
+		File from = new File(dir, args[0]);
+		File to = new File(dir, args[1]);
 
 		if (from.equals(to))
 			context.println("mv: '" + from.getName() + "' and '" + to.getName() + "' are the same file");
@@ -138,13 +134,13 @@ public class CoreScript implements Script {
 		File dir = (File) context.getSession().getProperty("dir");
 
 		File newDir = null;
-		if (args[1].equals("..")) {
+		if (args[0].equals("..")) {
 			if (dir.getParentFile() != null)
 				newDir = dir.getParentFile();
 			else
 				newDir = dir;
 		} else
-			newDir = new File(dir, args[1]);
+			newDir = new File(dir, args[0]);
 
 		if (!(newDir.exists() && newDir.isDirectory()))
 			context.println("No such file or directory");
@@ -186,7 +182,7 @@ public class CoreScript implements Script {
 		if (args.length < 2)
 			return;
 
-		String code = args[1];
+		String code = args[0];
 		if (code.length() != 2)
 			return;
 
@@ -195,14 +191,6 @@ public class CoreScript implements Script {
 
 	public void guid(String[] args) {
 		context.println(UUID.randomUUID().toString());
-	}
-
-	public void exit(String[] args) {
-		context.quit();
-	}
-
-	public void quit(String[] args) {
-		context.quit();
 	}
 
 	public void shutdown(String[] args) {

@@ -30,4 +30,6 @@ public interface ScriptSession {
 	void unsetProperty(String key);
 	
 	Collection<String> getCommandHistory();
+	
+	String getPrompt();
 }

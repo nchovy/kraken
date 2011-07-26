@@ -90,6 +90,10 @@ public class OutputOnlyScriptContext implements ScriptContext {
 	}
 
 	@Override
+	public void printPrompt() {
+	}
+
+	@Override
 	public void println() {
 		if (logger == null)
 			return;

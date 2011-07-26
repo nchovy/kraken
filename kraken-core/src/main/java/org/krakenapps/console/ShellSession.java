@@ -1,8 +1,6 @@
 package org.krakenapps.console;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,23 +17,12 @@ import org.slf4j.LoggerFactory;
 
 public class ShellSession {
 	public static final String KRAKEN_PROMPT = "kraken> ";
-	private static final String hostname;
 
 	final Logger logger = LoggerFactory.getLogger(ShellSession.class.getName());
 
 	private Map<String, Object> attributes;
 	private ScriptContextImpl sc;
 	private String lastChar = null;
-
-	static {
-		String h = "unknown";
-		try {
-			h = InetAddress.getLocalHost().getHostName();
-		} catch (UnknownHostException e) {
-		}
-
-		hostname = h;
-	}
 
 	public ShellSession(ScriptContextImpl scriptContext) {
 		this.attributes = new HashMap<String, Object>();
@@ -50,7 +37,8 @@ public class ShellSession {
 		sc.getOutputStream().println(Kraken.BANNER);
 	}
 
-	public void handleMessage(Object message) throws InterruptedException, IOException {
+	public void handleMessage(Object message) throws InterruptedException,
+			IOException {
 		if (ignoreLF(message))
 			return;
 
@@ -87,13 +75,15 @@ public class ShellSession {
 		}
 	}
 
-	private void processShell(Object message) throws InterruptedException, IOException {
+	private void processShell(Object message) throws InterruptedException,
+			IOException {
 		ConsoleController controller = sc.getController();
 		if (message instanceof FunctionKeyEvent) {
 			FunctionKeyEvent ev = (FunctionKeyEvent) message;
 
 			// suppress function key while logon
-			if (attributes.get("principal") == null && !ev.isPressed(KeyCode.BACKSPACE))
+			if (attributes.get("principal") == null
+					&& !ev.isPressed(KeyCode.BACKSPACE))
 				return;
 
 			controller.onFunctionKeyPressed(ev);
@@ -127,7 +117,7 @@ public class ShellSession {
 					out.print("\r\n");
 
 					printBanner();
-					printPrompt();
+					sc.printPrompt();
 					return;
 				} else {
 					out.print("\r\nAccess denied\r\n");
@@ -139,7 +129,7 @@ public class ShellSession {
 		}
 
 		if (line.trim().length() == 0) {
-			printPrompt();
+			sc.printPrompt();
 			return;
 		}
 
@@ -162,35 +152,33 @@ public class ShellSession {
 			out.print("syntax error.\r\n");
 		}
 
-		printPrompt();
+		sc.printPrompt();
 	}
 
 	public void setPrincipal(String name) {
 		attributes.put("principal", name);
 	}
 
-	private boolean handleEmbeddedCommands(ScriptOutputStream out, String line) throws IOException {
+	private boolean handleEmbeddedCommands(ScriptOutputStream out, String line)
+			throws IOException {
 		line = line.trim();
+
+		if ((line.equals("quit") || line.equals("exit")))
+			sc.quit();
 
 		// putty send only CR at ssh mode when you hit enter.
 		if (line.equals("\r") || line.equals("\r\n")) {
-			printPrompt();
+			sc.printPrompt();
 			return true;
 		}
 
 		return false;
 	}
 
-	public static String getPrompt() {
-		return "kraken@" + hostname + "> ";
-	}
-
-	public void printPrompt() {
-		sc.getOutputStream().print(getPrompt());
-	}
-
-	private void runScript(String line) throws InstantiationException, IllegalAccessException {
-		Thread t = new Thread(new ScriptRunner(sc, line), "Kraken Script Runner");
+	private void runScript(String line) throws InstantiationException,
+			IllegalAccessException {
+		Thread t = new Thread(new ScriptRunner(sc, line),
+				"Kraken Script Runner");
 		t.start();
 	}
 }
