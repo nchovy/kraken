@@ -204,11 +204,14 @@ public class SyslogReceiver extends ActiveFilter implements SyslogServer {
 			String text = new String(packet.getData(), 0, packet.getLength(), charsetName);
 			int facility = -1;
 			int severity = -1;
-			if (text.charAt(0) == '<' && text.charAt(4) == '>') {
-				int pri = Integer.valueOf(text.substring(1, 4));
+
+			int brace = text.indexOf('>');
+
+			if (text.charAt(0) == '<' && brace > 0 && brace <= 5) {
+				int pri = Integer.valueOf(text.substring(1, brace));
 				facility = pri / 8;
 				severity = pri % 8;
-				text = text.substring(5);
+				text = text.substring(brace + 1);
 			}
 			b.set("facility", facility);
 			b.set("severity", severity);
