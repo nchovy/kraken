@@ -27,9 +27,11 @@ public class PerfScript implements Script {
 		Runtime rt = Runtime.getRuntime();
 		long free = rt.freeMemory();
 		long total = rt.totalMemory();
+		long used = total - free;
 		long max = rt.maxMemory();
 
 		context.println("-------------------------");
+		context.println("Used memory: " + formatNumber(used) + " bytes");
 		context.println("Free memory: " + formatNumber(free) + " bytes");
 		context.println("Total memory: " + formatNumber(total) + " bytes");
 		context.println("Maximum memory: " + formatNumber(max) + " bytes");
