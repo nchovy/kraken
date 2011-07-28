@@ -17,10 +17,10 @@ package org.krakenapps.webconsole.impl;
 
 import java.io.File;
 import java.net.InetSocketAddress;
-import java.util.Properties;
 
 import javax.servlet.http.HttpServlet;
 
+import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -29,6 +29,7 @@ import org.krakenapps.webconsole.Program;
 import org.krakenapps.webconsole.ProgramApi;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
+import org.krakenapps.webconsole.WebSocketServerParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,11 +40,14 @@ public class WebConsoleScript implements Script {
 	private ScriptContext context;
 	private WebSocketServer server;
 	private ProgramApi programApi;
+	private KeyStoreManager keyStoreManager;
 
-	public WebConsoleScript(WebSocketServer server, ServletRegistry staticResourceApi, ProgramApi programApi) {
+	public WebConsoleScript(WebSocketServer server, ServletRegistry staticResourceApi, ProgramApi programApi,
+			KeyStoreManager keyStoreManager) {
 		this.server = server;
 		this.staticResourceApi = staticResourceApi;
 		this.programApi = programApi;
+		this.keyStoreManager = keyStoreManager;
 	}
 
 	@Override
@@ -55,14 +59,12 @@ public class WebConsoleScript implements Script {
 	public void bindings(String[] args) {
 		context.println("Port Bindings");
 		context.println("---------------------");
-		for (InetSocketAddress binding : server.getBindings()) {
+		for (InetSocketAddress binding : server.getListenAddresses()) {
 			String metadata = "";
 
-			Properties p = server.getProperties(binding);
-			boolean https = (Boolean) p.get("https");
-			if (https == true) {
-				metadata = " => https: key [" + p.getProperty("key_alias") + "] trust [" + p.getProperty("trust_alias")
-						+ "]";
+			WebSocketServerParams p = server.getParameters(binding);
+			if (p.isSsl()) {
+				metadata = " => https: key [" + p.getKeyAlias() + "] trust [" + p.getTrustAlias() + "]";
 			}
 
 			context.println(binding + metadata);
@@ -73,7 +75,8 @@ public class WebConsoleScript implements Script {
 	public void open(String[] args) {
 		try {
 			int port = Integer.valueOf(args[0]);
-			server.open(new InetSocketAddress(port));
+			WebSocketServerParams params = new WebSocketServerParams(new InetSocketAddress(port));
+			server.open(params);
 			context.println("opened http server");
 		} catch (Exception e) {
 			context.println(e.getMessage());
@@ -90,8 +93,9 @@ public class WebConsoleScript implements Script {
 			int port = Integer.valueOf(args[0]);
 			String keyAlias = args[1];
 			String trustAlias = args[2];
-
-			server.openSsl(new InetSocketAddress(port), keyAlias, trustAlias);
+			WebSocketServerParams params = new WebSocketServerParams(new InetSocketAddress(port), keyStoreManager,
+					keyAlias, trustAlias);
+			server.open(params);
 			context.println("opened https server");
 		} catch (Exception e) {
 			context.println(e.getMessage());

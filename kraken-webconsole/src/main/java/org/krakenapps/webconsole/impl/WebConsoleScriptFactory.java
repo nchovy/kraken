@@ -19,6 +19,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
+import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.webconsole.ProgramApi;
@@ -40,10 +41,13 @@ public class WebConsoleScriptFactory implements ScriptFactory {
 	
 	@Requires
 	private ProgramApi programApi;
+	
+	@Requires
+	private KeyStoreManager keyStoreManager;
 
 	@Override
 	public Script createScript() {
-		return new WebConsoleScript(server, staticResourceApi, programApi);
+		return new WebConsoleScript(server, staticResourceApi, programApi, keyStoreManager);
 	}
 
 }

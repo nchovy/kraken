@@ -17,18 +17,15 @@ package org.krakenapps.webconsole;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.Properties;
 
 public interface WebSocketServer {
-	Collection<InetSocketAddress> getBindings();
+	Collection<InetSocketAddress> getListenAddresses();
 
-	void open(InetSocketAddress binding);
+	WebSocketServerParams getParameters(InetSocketAddress listen);
 
-	void openSsl(InetSocketAddress binding, String keyAlias, String trustAlias);
-	
-	Properties getProperties(InetSocketAddress binding);
+	void open(WebSocketServerParams params);
 
-	void close(InetSocketAddress binding);
+	void close(InetSocketAddress listen);
 
 	void closeAll();
 }

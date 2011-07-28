@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
@@ -39,6 +38,7 @@ import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
+import org.krakenapps.webconsole.WebSocketServerParams;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
@@ -74,68 +74,32 @@ public class WebSocketServerImpl implements WebSocketServer {
 	}
 
 	@Override
-	public Collection<InetSocketAddress> getBindings() {
+	public Collection<InetSocketAddress> getListenAddresses() {
 		return listeners.keySet();
 	}
 
 	@Override
-	public void open(InetSocketAddress address) {
+	public void open(WebSocketServerParams params) {
 		// Configure the server.
 		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
 				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
 		// Set up the event pipeline factory.
-		WebSocketServerContext ctx = new WebSocketServerContext(address);
-		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(msgbus, staticResourceApi, ctx));
+		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(msgbus, staticResourceApi, params));
 
 		// Bind and start to accept incoming connections.
-		Channel listener = bootstrap.bind(address);
-		listeners.put(address, listener);
+		InetSocketAddress addr = params.getListenAddress();
+		Channel listener = bootstrap.bind(addr);
+		listeners.put(addr, listener);
 
-		setBindAddressConfig(new WebSocketServerContext(address));
-		logger.info("kraken webconsole: {} opened", address);
+		setBindAddressConfig(params);
+		logger.info("kraken webconsole: {} ({}) opened", addr, params.isSsl() ? "https" : "http");
 	}
 
 	@Override
-	public void openSsl(InetSocketAddress address, String keyAlias, String trustAlias) {
-		// Configure the server.
-		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
-
-		// Set up the event pipeline factory.
+	public WebSocketServerParams getParameters(InetSocketAddress listen) {
 		try {
-			WebSocketServerContext ctx = new WebSocketServerContext(address, keyStoreManager, keyAlias, trustAlias);
-			bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(msgbus, staticResourceApi, ctx));
-
-			// Bind and start to accept incoming connections.
-			Channel listener = bootstrap.bind(address);
-			listeners.put(address, listener);
-
-			setBindAddressConfig(ctx);
-			logger.info("kraken webconsole: {} (https) opened", address);
-		} catch (NoSuchAlgorithmException e) {
-			logger.error("kraken webconsole: no such algorithm", e);
-			throw new RuntimeException(e);
-		} catch (UnrecoverableKeyException e) {
-			logger.error("kraken webconsole: unrecoverable key", e);
-			throw new RuntimeException(e);
-		} catch (KeyStoreException e) {
-			logger.error("kraken webconsole: keystore error", e);
-			throw new RuntimeException(e);
-		}
-	}
-
-	@Override
-	public Properties getProperties(InetSocketAddress binding) {
-		Properties p = new Properties();
-		try {
-			WebSocketServerContext ctx = getWebSocketServerContext(getContextKey(binding));
-			p.put("https", ctx.isSsl());
-			if (ctx.isSsl()) {
-				p.put("key_alias", ctx.getKeyAlias());
-				p.put("trust_alias", ctx.getTrustAlias());
-			}
-			return p;
+			return getWebSocketServerParams(getContextKey(listen));
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -170,12 +134,9 @@ public class WebSocketServerImpl implements WebSocketServer {
 	@Validate
 	public void start() {
 		staticResourceApi.register("/", new BundleResourceServlet(bc.getBundle(), "/WEB-INF"));
-		for (WebSocketServerContext ctx : getBindAddressConfig()) {
+		for (WebSocketServerParams params : getBindAddressConfig()) {
 			try {
-				if (ctx.isSsl())
-					openSsl(ctx.getBindingAddress(), ctx.getKeyAlias(), ctx.getTrustAlias());
-				else
-					open(ctx.getBindingAddress());
+				open(params);
 			} catch (Exception e) {
 				logger.error("kraken webconsole: cannot open server", e);
 			}
@@ -194,14 +155,14 @@ public class WebSocketServerImpl implements WebSocketServer {
 		return prefsvc.getSystemPreferences().node("bindings");
 	}
 
-	private List<WebSocketServerContext> getBindAddressConfig() {
-		List<WebSocketServerContext> contexts = new ArrayList<WebSocketServerContext>();
+	private List<WebSocketServerParams> getBindAddressConfig() {
+		List<WebSocketServerParams> contexts = new ArrayList<WebSocketServerParams>();
 		try {
 			Preferences p = getConfig();
 			for (String name : p.childrenNames()) {
-				logger.trace("kraken webconsole: binding [{}] found", name);
+				logger.trace("kraken webconsole: listen addr [{}] found", name);
 
-				WebSocketServerContext ctx = getWebSocketServerContext(name);
+				WebSocketServerParams ctx = getWebSocketServerParams(name);
 				contexts.add(ctx);
 			}
 		} catch (BackingStoreException e) {
@@ -213,35 +174,35 @@ public class WebSocketServerImpl implements WebSocketServer {
 
 	}
 
-	private WebSocketServerContext getWebSocketServerContext(String binding) throws KeyStoreException,
+	private WebSocketServerParams getWebSocketServerParams(String binding) throws KeyStoreException,
 			NoSuchAlgorithmException, UnrecoverableKeyException {
 		Preferences p = getConfig();
 		Preferences props = p.node(binding);
 
 		String[] tokens = binding.split(":");
-		InetSocketAddress bindingAddress = null;
+		InetSocketAddress listenAddress = null;
 		if (tokens.length == 1) {
-			bindingAddress = new InetSocketAddress(Integer.valueOf(tokens[0]));
+			listenAddress = new InetSocketAddress(Integer.valueOf(tokens[0]));
 		} else if (tokens.length == 2) {
-			bindingAddress = new InetSocketAddress(tokens[0], Integer.valueOf(tokens[1]));
+			listenAddress = new InetSocketAddress(tokens[0], Integer.valueOf(tokens[1]));
 		}
 
 		boolean isSsl = props.getBoolean("https", false);
 		String keyAlias = props.get("key_alias", null);
 		String trustAlias = props.get("trust_alias", null);
-		WebSocketServerContext ctx = null;
+		WebSocketServerParams ctx = null;
 
 		if (isSsl)
-			ctx = new WebSocketServerContext(bindingAddress, keyStoreManager, keyAlias, trustAlias);
+			ctx = new WebSocketServerParams(listenAddress, keyStoreManager, keyAlias, trustAlias);
 		else
-			ctx = new WebSocketServerContext(bindingAddress);
+			ctx = new WebSocketServerParams(listenAddress);
 		return ctx;
 	}
 
-	private void setBindAddressConfig(WebSocketServerContext ctx) {
+	private void setBindAddressConfig(WebSocketServerParams ctx) {
 		try {
 			Preferences bindings = getConfig();
-			String name = getContextKey(ctx.getBindingAddress());
+			String name = getContextKey(ctx.getListenAddress());
 			Preferences props = bindings.node(name);
 			props.putBoolean("https", ctx.isSsl());
 

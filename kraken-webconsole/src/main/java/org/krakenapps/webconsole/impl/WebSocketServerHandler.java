@@ -16,6 +16,7 @@
 package org.krakenapps.webconsole.impl;
 
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
@@ -82,8 +83,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 	private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
 		// handshake request
 		String path = req.getUri();
-		if (req.getMethod() == HttpMethod.GET 
-				&& path.equals(WEBSOCKET_PATH)
+		if (req.getMethod() == HttpMethod.GET && path.equals(WEBSOCKET_PATH)
 				&& HttpHeaders.Values.UPGRADE.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.CONNECTION))
 				&& HttpHeaders.Values.WEBSOCKET.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.UPGRADE))) {
 
@@ -183,7 +183,9 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 				"An existing connection was forcibly closed by the remote host");
 
 		if (e.getCause() instanceof IOException && trace.contains(e.getCause().getMessage())) {
-			logger.trace("kraken webconsole: websocket transport error", e.getCause());
+			logger.trace("kraken webconsole: websocket reset", e.getCause());
+		} else if (e.getCause() instanceof ClosedChannelException) {
+			logger.trace("kraken webconsole: websocket closed", e.getCause());
 		} else {
 			logger.error("kraken webconsole: websocket transport error", e.getCause());
 			e.getChannel().close();

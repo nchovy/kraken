@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.webconsole.impl;
+package org.krakenapps.webconsole;
 
 import java.net.InetSocketAddress;
 import java.security.KeyManagementException;
@@ -30,22 +30,23 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.krakenapps.api.KeyStoreManager;
 
-public class WebSocketServerContext {
-	private InetSocketAddress binding;
+public class WebSocketServerParams {
+	private InetSocketAddress listen;
 	private SSLContext sslContext;
 	private TrustManagerFactory tmf;
 	private KeyManagerFactory kmf;
 	private boolean isSsl;
 	private String keyAlias;
 	private String trustAlias;
+	private int maxContentLength = Integer.MAX_VALUE; // default 2G
 
-	public WebSocketServerContext(InetSocketAddress binding) {
-		this.binding = binding;
+	public WebSocketServerParams(InetSocketAddress listen) {
+		this.listen = listen;
 	}
 
-	public WebSocketServerContext(InetSocketAddress binding, KeyStoreManager keyStoreManager, String keyAlias, String trustAlias)
-			throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
-		this.binding = binding;
+	public WebSocketServerParams(InetSocketAddress listen, KeyStoreManager keyStoreManager, String keyAlias,
+			String trustAlias) throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+		this.listen = listen;
 
 		TrustManagerFactory tmf = keyStoreManager.getTrustManagerFactory(trustAlias, "SunX509");
 		KeyManagerFactory kmf = keyStoreManager.getKeyManagerFactory(keyAlias, "SunX509");
@@ -72,9 +73,9 @@ public class WebSocketServerContext {
 			throw new RuntimeException(e);
 		}
 	}
-	
-	public InetSocketAddress getBindingAddress() {
-		return binding;
+
+	public InetSocketAddress getListenAddress() {
+		return listen;
 	}
 
 	public boolean isSsl() {
@@ -99,5 +100,13 @@ public class WebSocketServerContext {
 
 	public String getTrustAlias() {
 		return trustAlias;
+	}
+
+	public int getMaxContentLength() {
+		return maxContentLength;
+	}
+
+	public void setMaxContentLength(int maxContentLength) {
+		this.maxContentLength = maxContentLength;
 	}
 }

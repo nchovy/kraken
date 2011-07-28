@@ -26,30 +26,31 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.webconsole.ServletRegistry;
+import org.krakenapps.webconsole.WebSocketServerParams;
 
 public class WebSocketServerPipelineFactory implements ChannelPipelineFactory {
 	private MessageBus msgbus;
 	private ServletRegistry staticResourceApi;
-	private WebSocketServerContext ctx;
+	private WebSocketServerParams params;
 
 	public WebSocketServerPipelineFactory(MessageBus msgbus, ServletRegistry staticResourceApi,
-			WebSocketServerContext ctx) {
+			WebSocketServerParams params) {
 		this.msgbus = msgbus;
 		this.staticResourceApi = staticResourceApi;
-		this.ctx = ctx;
+		this.params = params;
 	}
 
 	@Override
 	public ChannelPipeline getPipeline() throws Exception {
 		ChannelPipeline pipeline = Channels.pipeline();
-		if (ctx.isSsl()) {
-			SSLEngine engine = ctx.getSslContext().createSSLEngine();
+		if (params.isSsl()) {
+			SSLEngine engine = params.getSslContext().createSSLEngine();
 			engine.setUseClientMode(false);
 			pipeline.addLast("ssl", new SslHandler(engine));
 		}
 
 		pipeline.addLast("decoder", new HttpRequestDecoder());
-		pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
+		pipeline.addLast("aggregator", new HttpChunkAggregator(params.getMaxContentLength()));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
 		pipeline.addLast("handler", new WebSocketServerHandler(msgbus, staticResourceApi));
 		return pipeline;

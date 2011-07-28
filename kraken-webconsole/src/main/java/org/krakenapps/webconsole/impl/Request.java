@@ -64,7 +64,8 @@ public class Request implements HttpServletRequest {
 				parameters.put(name, value);
 			}
 		}
-		this.is = new RequestInputStream(new ByteArrayInputStream(req.getContent().array()));
+		this.is = new RequestInputStream(new ByteArrayInputStream(req.getContent().array(), 0, req.getContent()
+				.readableBytes()));
 		List<String> cs = req.getHeaders(HttpHeaders.Names.COOKIE);
 		this.cookies = new Cookie[cs.size()];
 		for (int i = 0; i < cs.size(); i++) {
