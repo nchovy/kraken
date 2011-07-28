@@ -100,7 +100,7 @@ public class PolicyProvider extends ResourceServlet {
 		String logAddr = syslogIp + ":" + syslogPort;
 		String heartbeatInterval = cs.get(ConfigKey.HeartbeatInterval, "60");
 
-		int port = server.getBindings().iterator().next().getPort();
+		int port = server.getListenAddresses().iterator().next().getPort();
 		String url = cs.get(ConfigKey.PolicyUrl, "http://" + syslogIp + ":" + port + "/ksp/policy");
 
 		String content = "[policy]\n" + "url = " + url + "\n" + "interval = " + interval + "\n" + "[power]\n"
