@@ -249,7 +249,10 @@ public class FileUploadApiImpl implements FileUploadApi {
 				try {
 					if (item.callback != null)
 						item.callback.onUploadFile(item.token, null);
-					logger.info("kraken dom: upload failure {} {}", item.token.getSpaceId(), item.token.getFileName());
+					
+					logger.info("kraken dom: upload failure {} {}, expected {} != uploaded {}",
+							new Object[] { item.token.getSpaceId(), item.token.getFileName(), item.token.getFileSize(),
+									totalReadBytes });
 				} catch (Exception e) {
 					logger.warn("kraken dom: upload callback should not throw any exception", e);
 				}
