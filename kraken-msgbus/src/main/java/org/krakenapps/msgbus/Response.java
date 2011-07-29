@@ -59,6 +59,9 @@ public class Response implements Map<String, Object> {
 	}
 
 	private Object convert(Object value) {
+		if (value == null)
+			return null;
+
 		if (value instanceof Date) {
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 			return sdf.format((Date) value);
