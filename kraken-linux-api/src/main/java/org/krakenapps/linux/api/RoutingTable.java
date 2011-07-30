@@ -19,7 +19,7 @@ public class RoutingTable {
 		try {
 			String line = null;
 
-			p = Runtime.getRuntime().exec("route -ee");
+			p = Runtime.getRuntime().exec("route -een");
 			br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
 			br.readLine(); // ignore header line
