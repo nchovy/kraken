@@ -271,7 +271,7 @@ public class PackageManagerService implements PackageManager {
 			jar = new JarFile(file);
 			Attributes attrs = jar.getManifest().getMainAttributes();
 			// metadata can be added followed by semicolon (e.g. ;singleton)
-			return attrs.getValue("Bundle-SymbolicName").split(";")[0];
+			return attrs.getValue("Bundle-SymbolicName").split(";")[0].trim();
 		} catch (IOException e) {
 			logger.error("package manager: symbolic name not found", e);
 			return null;
