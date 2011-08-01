@@ -29,7 +29,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 public class EncodingRule {
 	public static final byte NULL_TYPE = 0;
@@ -48,12 +47,18 @@ public class EncodingRule {
 	public static final byte ZINT16_TYPE = 12;
 	public static final byte ZINT32_TYPE = 13;
 	public static final byte ZINT64_TYPE = 14;
+	public static final byte FLOAT_TYPE = 15;
+	public static final byte DOUBLE_TYPE = 16;
 
 	private EncodingRule() {
 	}
 
-	@SuppressWarnings("unchecked")
 	public static void encode(ByteBuffer bb, Object value) {
+		encode(bb, value, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static void encode(ByteBuffer bb, Object value, CustomCodec cc) {
 		if (value == null) {
 			encodeNull(bb);
 		} else if (value instanceof String) {
@@ -71,24 +76,40 @@ public class EncodingRule {
 		} else if (value instanceof Inet6Address) {
 			encodeIp6(bb, (Inet6Address) value);
 		} else if (value instanceof Map<?, ?>) {
-			encodeMap(bb, (Map<String, Object>) value);
+			encodeMap(bb, (Map<String, Object>) value, cc);
 		} else if (value instanceof List<?>) {
-			encodeArray(bb, (List<?>) value);
+			encodeArray(bb, (List<?>) value, cc);
 		} else if (value.getClass().isArray()) {
 			if (value.getClass().getName().equals("[B")) {
 				encodeBlob(bb, (byte[]) value);
 			} else {
-				encodeArray(bb, (Object[]) value);
+				encodeArray(bb, (Object[]) value, cc);
 			}
 		} else if (value instanceof Boolean) {
 			encodeBoolean(bb, (Boolean) value);
+		} else if (value instanceof Float) {
+			encodeFloat(bb, (Float) value);
+		} else if (value instanceof Double) {
+			encodeDouble(bb, (Double) value);
 		} else {
-			throw new UnsupportedTypeException(value.toString());
+			if (cc != null)
+				cc.encode(bb, value);
+			else
+				throw new UnsupportedTypeException(value.getClass().getName());
 		}
 	}
 
-	@SuppressWarnings("unchecked")
+	@Deprecated
+	public static int length(Object value) {
+		return lengthOf(value);
+	}
+
 	public static int lengthOf(Object value) {
+		return lengthOf(value, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static int lengthOf(Object value, CustomCodec cc) {
 		if (value == null) {
 			return lengthOfNull();
 		} else if (value instanceof String) {
@@ -106,28 +127,34 @@ public class EncodingRule {
 		} else if (value instanceof Inet6Address) {
 			return lengthOfIp6((Inet6Address) value);
 		} else if (value instanceof Map<?, ?>) {
-			return lengthOfMap((Map<String, Object>) value);
+			return lengthOfMap((Map<String, Object>) value, cc);
 		} else if (value instanceof List<?>) {
-			return lengthOfArray((List<?>) value);
+			return lengthOfArray((List<?>) value, cc);
 		} else if (value.getClass().isArray()) {
 			if (value.getClass().getName().equals("[B")) {
 				return lengthOfBlob((byte[]) value);
 			} else {
-				return lengthOfArray((Object[]) value);
+				return lengthOfArray((Object[]) value, cc);
 			}
 		} else if (value instanceof Boolean) {
 			return lengthOfBoolean((Boolean) value);
-		} else {// not supported.
-			throw new UnsupportedTypeException(value.toString());
+		} else if (value instanceof Float) {
+			return lengthOfFloat((Float) value);
+		} else if (value instanceof Double) {
+			return lengthOfDouble((Double) value);
+		} else {
+			if (cc != null)
+				return cc.lengthOf(value);
+			else
+				throw new UnsupportedTypeException(value.getClass().getName());
 		}
 	}
 
-	@Deprecated
-	public static int length(Object value) {
-		return lengthOf(value);
+	public static Object decode(ByteBuffer bb) {
+		return decode(bb, null);
 	}
 
-	public static Object decode(ByteBuffer bb) {
+	public static Object decode(ByteBuffer bb, CustomCodec cc) {
 		int typeByte = bb.get(bb.position());
 		switch (typeByte) {
 		case NULL_TYPE: {
@@ -149,9 +176,9 @@ public class EncodingRule {
 		case IP6_TYPE:
 			return decodeIp6(bb);
 		case MAP_TYPE:
-			return decodeMap(bb);
+			return decodeMap(bb, cc);
 		case ARRAY_TYPE:
-			return decodeArray(bb);
+			return decodeArray(bb, cc);
 		case BOOLEAN_TYPE:
 			return decodeBoolean(bb);
 		case ZINT32_TYPE:
@@ -160,9 +187,16 @@ public class EncodingRule {
 			return (short) decodeShort(bb);
 		case ZINT64_TYPE:
 			return (long) decodeLong(bb);
+		case FLOAT_TYPE:
+			return (float) decodeFloat(bb);
+		case DOUBLE_TYPE:
+			return (double) decodeDouble(bb);
 		}
 
-		throw new UnsupportedTypeException("type: " + typeByte);
+		if (cc != null)
+			return cc.decode(bb);
+		else
+			throw new UnsupportedTypeException("type: " + typeByte);
 	}
 
 	public static void encodeNull(ByteBuffer bb) {
@@ -380,53 +414,61 @@ public class EncodingRule {
 	}
 
 	public static void encodeMap(ByteBuffer bb, Map<String, Object> map) {
+		encodeMap(bb, map, null);
+	}
+
+	public static void encodeMap(ByteBuffer bb, Map<String, Object> map, CustomCodec cc) {
 		bb.put(MAP_TYPE);
 
-		int length = preencodeMap(map);
+		int length = preencodeMap(map, cc);
 		encodeRawNumber(bb, int.class, length);
 
 		for (String key : map.keySet()) {
-			EncodedString k = EncodedString.getEncodedString(key);
+			EncodedStringCache k = EncodedStringCache.getEncodedString(key);
 			bb.put(STRING_TYPE);
-			encodeRawNumber(bb, int.class, k.value.length);
-			bb.put(k.value);
+			encodeRawNumber(bb, int.class, k.value().length);
+			bb.put(k.value());
 
 			Object value = map.get(key);
 			if (value instanceof String) {
-				EncodedString v = EncodedString.getEncodedString((String) value);
+				EncodedStringCache v = EncodedStringCache.getEncodedString((String) value);
 				bb.put(STRING_TYPE);
-				encodeRawNumber(bb, int.class, v.value.length);
-				bb.put(v.value);
+				encodeRawNumber(bb, int.class, v.value().length);
+				bb.put(v.value());
 			} else
-				encode(bb, value);
+				encode(bb, value, cc);
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private static int preencodeMap(Map<String, Object> map) {
+	private static int preencodeMap(Map<String, Object> map, CustomCodec cc) {
 		int length = 0;
 
 		for (String key : map.keySet()) {
-			EncodedString k = EncodedString.getEncodedString(key);
+			EncodedStringCache k = EncodedStringCache.getEncodedString(key);
 			length += k.length();
 
 			Object value = map.get(key);
 			if (value instanceof String)
-				length += EncodedString.getEncodedString((String) value).length();
+				length += EncodedStringCache.getEncodedString((String) value).length();
 			else if (value instanceof Map)
-				length += preencodeMap((Map<String, Object>) value);
+				length += preencodeMap((Map<String, Object>) value, cc);
 			else if (value instanceof List)
-				length += preencodeArray((List<?>) value);
+				length += preencodeArray((List<?>) value, cc);
 			else if (value instanceof Object[])
-				length += preencodeArray((Object[]) value);
+				length += preencodeArray((Object[]) value, cc);
 			else
-				length += lengthOf(value);
+				length += lengthOf(value, cc);
 		}
 
 		return length;
 	}
 
 	public static Map<String, Object> decodeMap(ByteBuffer bb) {
+		return decodeMap(bb, null);
+	}
+
+	public static Map<String, Object> decodeMap(ByteBuffer bb, CustomCodec cc) {
 		byte type = bb.get();
 		if (type != MAP_TYPE)
 			throw new TypeMismatchException(MAP_TYPE, type, bb.position() - 1);
@@ -438,7 +480,7 @@ public class EncodingRule {
 		while (length > 0) {
 			int before = bb.remaining();
 			String key = decodeString(bb);
-			Object value = decode(bb);
+			Object value = decode(bb, cc);
 			int after = bb.remaining();
 
 			m.put(key, value);
@@ -449,51 +491,63 @@ public class EncodingRule {
 	}
 
 	public static void encodeArray(ByteBuffer bb, List<?> array) {
+		encodeArray(bb, array, null);
+	}
+
+	public static void encodeArray(ByteBuffer bb, List<?> array, CustomCodec cc) {
 		bb.put(ARRAY_TYPE);
 
-		int length = preencodeArray(array);
+		int length = preencodeArray(array, cc);
 		encodeRawNumber(bb, int.class, length);
 
 		for (Object obj : array) {
 			if (obj instanceof String) {
-				EncodedString es = EncodedString.getEncodedString((String) obj);
+				EncodedStringCache es = EncodedStringCache.getEncodedString((String) obj);
 				bb.put(STRING_TYPE);
-				encodeRawNumber(bb, int.class, es.value.length);
-				bb.put(es.value);
+				encodeRawNumber(bb, int.class, es.value().length);
+				bb.put(es.value());
 			} else
-				encode(bb, obj);
+				encode(bb, obj, cc);
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private static int preencodeArray(List<?> array) {
+	private static int preencodeArray(List<?> array, CustomCodec cc) {
 		int length = 0;
 
 		for (Object object : array) {
 			if (object instanceof String)
-				length += EncodedString.getEncodedString((String) object).length();
+				length += EncodedStringCache.getEncodedString((String) object).length();
 			else if (object instanceof Map)
-				length += preencodeMap((Map<String, Object>) object);
+				length += preencodeMap((Map<String, Object>) object, cc);
 			else if (object instanceof List)
-				length += preencodeArray((List<?>) object);
+				length += preencodeArray((List<?>) object, cc);
 			else if (object instanceof Object[])
-				length += preencodeArray((Object[]) object);
+				length += preencodeArray((Object[]) object, cc);
 			else
-				length += lengthOf(object);
+				length += lengthOf(object, cc);
 		}
 
 		return length;
 	}
 
 	public static void encodeArray(ByteBuffer bb, Object[] array) {
-		encodeArray(bb, Arrays.asList(array));
+		encodeArray(bb, array, null);
 	}
 
-	private static int preencodeArray(Object[] array) {
-		return preencodeArray(Arrays.asList(array));
+	public static void encodeArray(ByteBuffer bb, Object[] array, CustomCodec cc) {
+		encodeArray(bb, Arrays.asList(array), cc);
+	}
+
+	private static int preencodeArray(Object[] array, CustomCodec cc) {
+		return preencodeArray(Arrays.asList(array), cc);
 	}
 
 	public static Object[] decodeArray(ByteBuffer bb) {
+		return decodeArray(bb, null);
+	}
+
+	public static Object[] decodeArray(ByteBuffer bb, CustomCodec cc) {
 		byte type = bb.get();
 		if (type != ARRAY_TYPE)
 			throw new TypeMismatchException(ARRAY_TYPE, type, bb.position() - 1);
@@ -503,7 +557,7 @@ public class EncodingRule {
 		ArrayList<Object> l = new ArrayList<Object>();
 		while (length > 0) {
 			int before = bb.remaining();
-			l.add(decode(bb));
+			l.add(decode(bb, cc));
 			int after = bb.remaining();
 			length -= before - after;
 		}
@@ -512,7 +566,6 @@ public class EncodingRule {
 	}
 
 	public static void encodeBlob(ByteBuffer bb, byte[] buffer) {
-		//
 		bb.put(BLOB_TYPE);
 		encodeRawNumber(bb, int.class, buffer.length);
 		bb.put(buffer);
@@ -527,6 +580,58 @@ public class EncodingRule {
 		byte[] blob = new byte[length];
 		bb.get(blob);
 		return blob;
+	}
+
+	public static void encodeFloat(ByteBuffer bb, float value) {
+		bb.put(FLOAT_TYPE);
+		int v = Float.floatToIntBits(value);
+		byte[] b = new byte[4];
+		for (int i = 3; i >= 0; i--) {
+			b[i] = (byte) (v & 0xFF);
+			v >>= 8;
+		}
+		bb.put(b);
+	}
+
+	public static float decodeFloat(ByteBuffer bb) {
+		byte type = bb.get();
+		if (type != FLOAT_TYPE)
+			throw new TypeMismatchException(FLOAT_TYPE, type, bb.position() - 1);
+
+		byte[] b = new byte[4];
+		bb.get(b);
+		int v = 0;
+		for (int i = 0; i < 4; i++) {
+			v <<= 8;
+			v |= b[i] & 0xFF;
+		}
+		return Float.intBitsToFloat(v);
+	}
+
+	public static void encodeDouble(ByteBuffer bb, double value) {
+		bb.put(DOUBLE_TYPE);
+		long v = Double.doubleToLongBits(value);
+		byte[] b = new byte[8];
+		for (int i = 7; i >= 0; i--) {
+			b[i] = (byte) (v & 0xFF);
+			v >>= 8;
+		}
+		bb.put(b);
+	}
+
+	public static double decodeDouble(ByteBuffer bb) {
+		byte type = bb.get();
+		if (type != DOUBLE_TYPE)
+			throw new TypeMismatchException(DOUBLE_TYPE, type, bb.position() - 1);
+
+		byte[] b = new byte[8];
+		bb.get(b);
+		long v = 0;
+		for (int i = 0; i < 8; i++) {
+			v <<= 8;
+			v |= b[i] & 0xFF;
+		}
+		return Double.longBitsToDouble(v);
 	}
 
 	public static int lengthOfLong(long value) {
@@ -601,57 +706,47 @@ public class EncodingRule {
 	}
 
 	public static int lengthOfMap(Map<String, Object> value) {
+		return lengthOfMap(value, null);
+	}
+
+	public static int lengthOfMap(Map<String, Object> value, CustomCodec cc) {
 		int contentLength = 0;
 		for (String key : value.keySet()) {
 			contentLength += lengthOfString(key);
-			contentLength += lengthOf(value.get(key));
+			contentLength += lengthOf(value.get(key), cc);
 		}
 		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
 	}
 
 	public static int lengthOfArray(List<?> value) {
+		return lengthOfArray(value, null);
+	}
+
+	public static int lengthOfArray(List<?> value, CustomCodec cc) {
 		int contentLength = 0;
 		for (Object obj : value) {
-			contentLength += lengthOf(obj);
+			contentLength += lengthOf(obj, cc);
 		}
 		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
 	}
 
 	public static int lengthOfArray(Object[] value) {
-		return lengthOfArray(Arrays.asList(value));
+		return lengthOfArray(value, null);
+	}
+
+	public static int lengthOfArray(Object[] value, CustomCodec cc) {
+		return lengthOfArray(Arrays.asList(value), cc);
 	}
 
 	public static int lengthOfBlob(byte[] value) {
 		return 1 + lengthOfRawNumber(int.class, value.length) + value.length;
 	}
 
-	private static class EncodedString {
-		private static Map<String, EncodedString> cache = new WeakHashMap<String, EncodedString>();
-		private byte[] value;
-		private int rawNumberLength;
-
-		public static EncodedString getEncodedString(String value) {
-			EncodedString es = cache.get(value);
-
-			if (es == null) {
-				es = new EncodedString(value);
-				cache.put(new String(value), es);
-			}
-
-			return es;
-		}
-
-		private EncodedString(String value) {
-			try {
-				this.value = value.getBytes("utf-8");
-				this.rawNumberLength = lengthOfRawNumber(int.class, this.value.length);
-			} catch (UnsupportedEncodingException e) {
-			}
-		}
-
-		private int length() {
-			return 1 + rawNumberLength + value.length;
-		}
+	public static int lengthOfFloat(float value) {
+		return 1 + 4;
 	}
 
+	public static int lengthOfDouble(double value) {
+		return 1 + 8;
+	}
 }

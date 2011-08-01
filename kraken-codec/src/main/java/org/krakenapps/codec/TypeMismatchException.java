@@ -39,4 +39,10 @@ public class TypeMismatchException extends RuntimeException {
 	public int getPosition() {
 		return position;
 	}
+
+	@Override
+	public String toString() {
+		return super.toString() + " [expectedType=" + expectedType + ", actualType=" + actualType + ", position="
+				+ position + "]";
+	}
 }
