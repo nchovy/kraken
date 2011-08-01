@@ -78,7 +78,7 @@ public class Archive {
 			return new Date(time * 1000);
 		}
 
-		public long getTime() {
+		public long getTimeInSec() {
 			return time;
 		}
 
@@ -340,7 +340,7 @@ public class Archive {
 	}
 
 	private long getLastUpdate() {
-		return rows[rowsIndex(0)].getTime();
+		return rows[rowsIndex(0)].getTimeInSec();
 	}
 
 	public void commitCdp(long t) {
@@ -495,7 +495,7 @@ public class Archive {
 		long k = getCdpIndex(lastUpdate) - getCdpIndex(t) + bias;
 
 		if (0 <= k && k < rowsSize) {
-			assert (rows[rowsIndex((int) k)].getTime() == t);
+			assert (rows[rowsIndex((int) k)].getTimeInSec() == t);
 			return rows[rowsIndex((int) k)];
 		} else {
 			return null;

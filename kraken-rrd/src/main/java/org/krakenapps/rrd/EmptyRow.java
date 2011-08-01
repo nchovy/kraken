@@ -20,7 +20,7 @@ public class EmptyRow implements FetchResult.Row {
 	}
 
 	@Override
-	public long getTime() {
+	public long getTimeInSec() {
 		return time;
 	}
 

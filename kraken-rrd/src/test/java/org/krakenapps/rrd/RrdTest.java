@@ -520,7 +520,7 @@ public class RrdTest {
 
 			for (int i = 0; i < resultData.size(); ++i) {
 				FetchResult.Row row = result.getRows().get(i);
-				assertTrue(row.getTime() == resultData.get(i).time);
+				assertTrue(row.getTimeInSec() == resultData.get(i).time);
 				assertTrue(RrdRawImpl.doubleListEqual(row.getColumns(), resultData
 						.get(i).columns));
 			}

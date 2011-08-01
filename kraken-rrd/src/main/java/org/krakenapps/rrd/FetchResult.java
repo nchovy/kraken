@@ -6,7 +6,7 @@ public interface FetchResult {
 	public interface Row 
 	{
 		Date getDate();
-		long getTime();
+		long getTimeInSec();
 		double[] getColumns();
 		double getColumn(int columnIndex);
 	}
