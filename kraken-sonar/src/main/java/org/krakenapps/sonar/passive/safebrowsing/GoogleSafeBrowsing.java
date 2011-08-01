@@ -42,7 +42,7 @@ public class GoogleSafeBrowsing implements SafeBrowsing {
 	List<String> blackList;
 
 	public GoogleSafeBrowsing() {
-		GSB_DATA_ROOT = "data/safebrowsing/";
+		GSB_DATA_ROOT = System.getProperty("kraken.data.dir") + "/safebrowsing/";
 		IOManager.PrepareDataPath(GSB_DATA_ROOT);
 	}
 	public GoogleSafeBrowsing(String path) {

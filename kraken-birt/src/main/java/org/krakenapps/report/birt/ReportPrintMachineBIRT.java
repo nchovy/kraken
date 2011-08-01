@@ -36,7 +36,7 @@ import org.osgi.service.prefs.PreferencesService;
 @Component(name = "birt-report-print-machine")
 @Provides
 public class ReportPrintMachineBIRT implements ReportPrintMachine {
-	private static final String DEFAULT_BIRT_PATH = "data/kraken-birt";
+	private static final String DEFAULT_BIRT_PATH = System.getProperty("kraken.data.dir") + "/kraken-birt";
 	private static final String DATA_SRC = "dataSrc";
 	private static final String DATA_SRC_NAME = "dataSrc";
 	private static final String BIRT_PATH_KEY = "home";
@@ -87,7 +87,7 @@ public class ReportPrintMachineBIRT implements ReportPrintMachine {
 
 		return setUp(enginePath, logPath, resourcePath);
 	}
-	
+
 	public boolean setUp(String enginePath, String logPath, String resourcePath) {
 		config.setEngineHome(enginePath);
 		config.setLogConfig(logPath, Level.FINE);
@@ -95,7 +95,8 @@ public class ReportPrintMachineBIRT implements ReportPrintMachine {
 
 		try {
 			Platform.startup(config);
-			IReportEngineFactory factory = (IReportEngineFactory) Platform.createFactoryObject(IReportEngineFactory.EXTENSION_REPORT_ENGINE_FACTORY);
+			IReportEngineFactory factory = (IReportEngineFactory) Platform
+					.createFactoryObject(IReportEngineFactory.EXTENSION_REPORT_ENGINE_FACTORY);
 			engine = factory.createReportEngine(config);
 			engine.changeLogLevel(Level.ALL);
 
@@ -206,7 +207,8 @@ public class ReportPrintMachineBIRT implements ReportPrintMachine {
 
 		try {
 			Platform.startup(engine.config);
-			IReportEngineFactory factory = (IReportEngineFactory) Platform.createFactoryObject(IReportEngineFactory.EXTENSION_REPORT_ENGINE_FACTORY);
+			IReportEngineFactory factory = (IReportEngineFactory) Platform
+					.createFactoryObject(IReportEngineFactory.EXTENSION_REPORT_ENGINE_FACTORY);
 			engine.engine = factory.createReportEngine(engine.config);
 			engine.engine.changeLogLevel(Level.ALL);
 

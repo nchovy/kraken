@@ -76,8 +76,7 @@ public class BundleScript implements Script {
 	}
 
 	public void downloadroot(String[] args) {
-		String datadir = System.getProperty("kraken.data.dir");
-		String path = new File(datadir, "download").getAbsolutePath().replaceAll("\\\\", "/");
+		String path = new File(System.getProperty("kraken.download.dir")).getAbsolutePath().replaceAll("\\\\", "/");
 		context.println(path);
 	}
 

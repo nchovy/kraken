@@ -112,7 +112,7 @@ public class FluxDatabaseImpl implements FluxDatabase {
 	@Override
 	public Collection<FluxDomain> loadFluxDomains() {
 		List<FluxDomain> fluxDomains = new LinkedList<FluxDomain>();
-		File base = new File("./data/kraken-fluxmon/");
+		File base = new File(System.getProperty("kraken.data.dir"), "kraken-fluxmon/");
 		base.mkdirs();
 
 		for (File f : base.listFiles()) {
@@ -137,7 +137,7 @@ public class FluxDatabaseImpl implements FluxDatabase {
 				line = br.readLine();
 				if (line == null)
 					break;
-				
+
 				String[] tokens = line.split(",");
 
 				InetAddress address = InetAddress.getByName(tokens[0]);
@@ -170,7 +170,7 @@ public class FluxDatabaseImpl implements FluxDatabase {
 
 	@Override
 	public void updateFluxDomain(FluxDomain domain) {
-		File base = new File("./data/kraken-fluxmon/");
+		File base = new File(System.getProperty("kraken.data.dir"), "kraken-fluxmon/");
 		base.mkdirs();
 
 		SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
@@ -210,7 +210,7 @@ public class FluxDatabaseImpl implements FluxDatabase {
 
 	@Override
 	public void purgeFluxDomain(FluxDomain domain) {
-		File base = new File("./data/kraken-fluxmon/");
+		File base = new File(System.getProperty("kraken.data.dir"), "kraken-fluxmon/");
 		base.mkdirs();
 	}
 

@@ -31,7 +31,6 @@ import java.util.regex.Pattern;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.filemon.FileMonitorEventListener;
 import org.krakenapps.filemon.FileMonitorService;
@@ -272,9 +271,7 @@ public class DefaultFileMonitorService implements FileMonitorService {
 	}
 
 	private File getBaseDirectory() {
-		String path = ScriptFactory.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-		File parent = new File(path).getParentFile();
-		File dir = new File(parent, "data/kraken-filemon/");
+		File dir = new File(System.getProperty("kraken.data.dir"), "kraken-filemon/");
 		dir.mkdirs();
 		return dir;
 	}

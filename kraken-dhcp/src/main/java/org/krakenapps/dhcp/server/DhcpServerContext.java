@@ -85,7 +85,7 @@ class DhcpServerContext {
 		socket = new DatagramSocket(67);
 
 		System.setProperty("derby.system.home", System.getProperty("user.dir"));
-		new File("data/kraken-dhcp").mkdirs();
+		new File(System.getProperty("kraken.data.dir"), "kraken-dhcp").mkdirs();
 		conn = DhcpDatabase.newConnection();
 	}
 

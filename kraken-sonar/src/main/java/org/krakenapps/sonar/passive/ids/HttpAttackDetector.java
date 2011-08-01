@@ -40,7 +40,7 @@ public class HttpAttackDetector extends DefaultHttpProcessor {
 	private InjectionChecker injectionChecker;
 	private GoogleSafeBrowsing gsb;
 
-	final String DATA_PATH = "data/kraken-sonar/ids-rules/http/";
+	final String DATA_PATH = System.getProperty("kraken.data.dir") + "/kraken-sonar/ids-rules/http/";
 
 	@Validate
 	public void start() {

@@ -175,15 +175,25 @@ public class Kraken implements BundleActivator, SignalHandler {
 
 	/**
 	 * Boot felix framework up.
-	 * @param startOptions 
+	 * 
+	 * @param startOptions
 	 * 
 	 * @throws Exception
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void boot(StartOptions startOptions) throws Exception {
 		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-		String dir = jarPath.getParentFile().getAbsolutePath();
-		System.setProperty("kraken.data.dir", dir);
+		File dir = jarPath.getParentFile();
+		System.setProperty("kraken.dir", dir.getAbsolutePath());
+
+		if (System.getProperty("kraken.data.dir") == null)
+			System.setProperty("kraken.data.dir", new File(dir, "data").getAbsolutePath());
+		if (System.getProperty("kraken.log.dir") == null)
+			System.setProperty("kraken.log.dir", new File(dir, "log").getAbsolutePath());
+		if (System.getProperty("kraken.cache.dir") == null)
+			System.setProperty("kraken.cache.dir", new File(dir, "cache").getAbsolutePath());
+		if (System.getProperty("kraken.download.dir") == null)
+			System.setProperty("kraken.download.dir", new File(dir, "download").getAbsolutePath());
 
 		setLogger();
 
@@ -196,7 +206,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		configMap.put(FelixConstants.LOG_LEVEL_PROP, "3"); // INFO
 		configMap.put(FelixConstants.SYSTEMBUNDLE_ACTIVATORS_PROP, activators);
 		configMap.put(Constants.FRAMEWORK_SYSTEMPACKAGES, getSystemPackages());
-		configMap.put(Constants.FRAMEWORK_STORAGE, new File(dir, "cache").getAbsolutePath());
+		configMap.put(Constants.FRAMEWORK_STORAGE, new File(System.getProperty("kraken.cache.dir")).getAbsolutePath());
 
 		configMap.put(Constants.FRAMEWORK_BOOTDELEGATION,
 				"org.eclipse.tptp.martini,com.jprofiler.*,com.jprofiler.agent.*");
@@ -448,7 +458,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 			System.out.println(String.format("[%s]  INFO (Kraken) - Default logging enabled. "
 					+ "Configure log4j.properties file for custom logging.", dateFormat.format(new Date())));
 
-			String logPath = new File(System.getProperty("kraken.data.dir"), "log/kraken.log").getAbsolutePath();
+			String logPath = new File(System.getProperty("kraken.log.dir"), "kraken.log").getAbsolutePath();
 			rootLogger.setLevel(Level.DEBUG);
 			PatternLayout layout = new PatternLayout("[%d] %5p (%c{1}) - %m%n");
 			rootLogger.addAppender(new ConsoleAppender(layout));

@@ -39,7 +39,7 @@ public class GeoIpServiceImpl implements GeoIpService {
 	private static final String LOCATION_CSV = "geoip_locs.csv";
 	private static final String GEOIP_LOCS_IDX = "geoip_locs.idx";
 	private static final String GEOIP_BLOCKS_BIN = "geoip_blocks.bin";
-	private static final File base = new File("data/kraken-geoip/");
+	private static final File base = new File(System.getProperty("kraken.data.dir"), "kraken-geoip/");
 
 	@Override
 	public GeoIpLocation locate(InetAddress address) {

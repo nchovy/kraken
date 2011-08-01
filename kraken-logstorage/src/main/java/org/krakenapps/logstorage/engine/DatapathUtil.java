@@ -20,7 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class DatapathUtil {
-	private static final File logDir = new File("data/kraken-logstorage/log");
+	private static final File logDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/log");
 
 	public static File getIndexFile(int tableId, Date day) {
 		String dateText = getDayText(day);

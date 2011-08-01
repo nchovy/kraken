@@ -262,7 +262,7 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	private String getDownloadRoot() {
-		return new File(System.getProperty("kraken.data.dir"), "download").getAbsolutePath();
+		return new File(System.getProperty("kraken.download.dir")).getAbsolutePath();
 	}
 
 	private String getBundleSymbolicName(File file) {

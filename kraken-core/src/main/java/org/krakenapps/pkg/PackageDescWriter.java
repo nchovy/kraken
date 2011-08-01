@@ -40,7 +40,7 @@ public class PackageDescWriter {
 		for (Bundle bundle : bc.getBundles()) {
 			if (bundle.getBundleId() == 0)
 				continue;
-			
+
 			sb.append(bundle.getSymbolicName() + "\t" + bundle.getVersion());
 			sb.append("\n");
 		}
@@ -51,10 +51,10 @@ public class PackageDescWriter {
 		for (Bundle bundle : bc.getBundles()) {
 			if (bundle.getBundleId() == 0)
 				continue;
-			
+
 			if (bundle.getState() != Bundle.ACTIVE)
 				continue;
-			
+
 			sb.append(bundle.getSymbolicName());
 			sb.append("\n");
 		}
@@ -65,16 +65,16 @@ public class PackageDescWriter {
 		for (Bundle bundle : bc.getBundles()) {
 			if (bundle.getBundleId() == 0)
 				continue;
-			
+
 			String location = bundle.getLocation();
 
 			// remove root path
 			if (!location.contains(getDownloadRoot()))
 				continue;
-			
+
 			location = location.replace("file://", "").replace(getDownloadRoot(), "");
 			List<String> tokens = new ArrayList<String>(Arrays.asList(location.split("/")));
-			
+
 			// remove jar name
 			tokens.remove(tokens.size() - 1);
 
@@ -87,7 +87,7 @@ public class PackageDescWriter {
 			for (String t : tokens) {
 				if (t.isEmpty())
 					continue;
-				
+
 				if (i != 0)
 					groupId += ".";
 
@@ -107,7 +107,7 @@ public class PackageDescWriter {
 	}
 
 	private String getDownloadRoot() {
-		String path = new File(System.getProperty("kraken.data.dir"), "download").getAbsolutePath();
+		String path = new File(System.getProperty("kraken.download.dir")).getAbsolutePath();
 		return path.replaceAll("\\\\", "/");
 	}
 }

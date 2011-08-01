@@ -31,7 +31,7 @@ public class LogCleaner implements Runnable {
 	public void run() {
 		try {
 			while (true) {
-				File logDir = new File(System.getProperty("kraken.data.dir"), "log");
+				File logDir = new File(System.getProperty("kraken.log.dir"));
 				File[] logFiles = logDir.listFiles(new FilenameFilter() {
 					@Override
 					public boolean accept(File dir, String name) {

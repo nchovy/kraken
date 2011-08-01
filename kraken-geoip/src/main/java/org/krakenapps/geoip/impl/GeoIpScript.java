@@ -71,7 +71,7 @@ public class GeoIpScript implements Script {
 
 	public void install(String[] args) {
 		ZipFile zip = null;
-		File base = new File("data/kraken-geoip/");
+		File base = new File(System.getProperty("kraken.data.dir"), "kraken-geoip/");
 		base.mkdirs();
 
 		File file = new File(base, "geoip_city.zip");

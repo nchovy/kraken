@@ -70,8 +70,10 @@ public class FileUploadServlet extends HttpServlet implements FileUploadService 
 	}
 
 	public void start() {
-		baseDir = new File(prefs.get(BASE_PATH, "data/kraken-http/upload/"));
-		tempDir = new File(prefs.get(BASE_PATH, "data/kraken-http/upload/temp"));
+		baseDir = new File(prefs.get(BASE_PATH,
+				new File(System.getProperty("kraken.data.dir"), "kraken-http/upload/").getAbsolutePath()));
+		tempDir = new File(prefs.get(BASE_PATH,
+				new File(System.getProperty("kraken.data.dir"), "kraken-http/upload/").getAbsolutePath()));
 		baseDir.mkdirs();
 		tempDir.mkdirs();
 
@@ -324,8 +326,8 @@ public class FileUploadServlet extends HttpServlet implements FileUploadService 
 			File f = new File(spaceDir, Integer.toString(resourceId));
 			if (!f.delete())
 				throw new IllegalStateException(String.format(
-						"failed to delete uploaded file: space %s, resource %d, path %s", spaceId, resourceId, f
-								.getAbsolutePath()));
+						"failed to delete uploaded file: space %s, resource %d, path %s", spaceId, resourceId,
+						f.getAbsolutePath()));
 		} catch (BackingStoreException e) {
 			logger.error("kraken-http: delete file failed", e);
 		}
@@ -413,8 +415,8 @@ public class FileUploadServlet extends HttpServlet implements FileUploadService 
 		Cookie[] cookies = req.getCookies();
 		if (cookies != null) {
 			for (Cookie cookie : cookies) {
-				logger.trace("kraken-http: checking all cookie for download, {} = {}", cookie.getName(), cookie
-						.getValue());
+				logger.trace("kraken-http: checking all cookie for download, {} = {}", cookie.getName(),
+						cookie.getValue());
 				if (cookie.getName().equals("kraken_session"))
 					return cookie.getValue();
 			}
@@ -427,8 +429,8 @@ public class FileUploadServlet extends HttpServlet implements FileUploadService 
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
 		String token = req.getHeader("X-Upload-Token");
 		if (token == null) {
-			logger.warn("kraken-http: upload token header not found for [{}:{}] stream", req.getRemoteAddr(), req
-					.getRemotePort());
+			logger.warn("kraken-http: upload token header not found for [{}:{}] stream", req.getRemoteAddr(),
+					req.getRemotePort());
 			return;
 		}
 

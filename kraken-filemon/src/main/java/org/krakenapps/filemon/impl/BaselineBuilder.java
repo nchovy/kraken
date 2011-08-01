@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.codec.EncodingRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +84,7 @@ public class BaselineBuilder {
 			headers.put("file_count", files.size());
 			headers.put("includes", marshalPaths());
 			headers.put("excludes", marshalExcludes());
-			
+
 			int len = EncodingRule.lengthOf(headers);
 			ByteBuffer b = ByteBuffer.allocate(len);
 			EncodingRule.encode(b, headers);
@@ -138,9 +137,7 @@ public class BaselineBuilder {
 	}
 
 	private File getBaseDirectory() {
-		String path = ScriptFactory.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-		File parent = new File(path).getParentFile();
-		File dir = new File(parent, "data/kraken-filemon/");
+		File dir = new File(System.getProperty("kraken.data.dir"), "kraken-filemon/");
 		dir.mkdirs();
 		return dir;
 	}

@@ -51,7 +51,7 @@ public class CertificateAuthorityScript implements Script {
 
 	private CertificateAuthority x509cert;
 	private ScriptContext context;
-	private File home = new File("data/kraken-ca/CA/");
+	private File home = new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
 
 	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
 			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
@@ -228,7 +228,7 @@ public class CertificateAuthorityScript implements Script {
 			context.println(cert.toString());
 
 			// save pfx or p12 file
-			File pfxBase = new File("data/kraken-ca/CA/", caCN);
+			File pfxBase = new File(home, caCN);
 			pfxBase.mkdirs();
 			File f = new File(pfxBase, cn + ".pfx");
 

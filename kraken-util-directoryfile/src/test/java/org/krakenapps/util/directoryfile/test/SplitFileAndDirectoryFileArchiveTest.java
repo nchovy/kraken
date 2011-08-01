@@ -17,15 +17,17 @@ import org.krakenapps.util.directoryfile.SplitDirectoryFileOutputStream;
 public class SplitFileAndDirectoryFileArchiveTest {
 	@Test
 	public void testSplitDirectoryFileOutputStream() throws IOException {
-		File base = new File("data\\test\\ds\\ttt");
+		File base = new File(System.getProperty("kraken.data.dir"), "test\\ds\\ttt");
 		DirectoryFileArchive dfa = DirectoryFileArchive.open(base.getAbsolutePath());
-		SplitDirectoryFileOutputStream stream = new SplitDirectoryFileOutputStream(1024768, dfa, new File(base, "numbers.dat"));
-	
+		SplitDirectoryFileOutputStream stream = new SplitDirectoryFileOutputStream(1024768, dfa, new File(base,
+				"numbers.dat"));
+
 		ArrayList<Integer> numbers = new ArrayList<Integer>(NUMBER_COUNT);
 		writeRandomNumbers(numbers, stream);
 		stream.close();
 
-		SplitDirectoryFileInputStream sfis = new SplitDirectoryFileInputStream(1024768, dfa, new File(base, "numbers.dat"));
+		SplitDirectoryFileInputStream sfis = new SplitDirectoryFileInputStream(1024768, dfa, new File(base,
+				"numbers.dat"));
 		ByteBuffer buf = ByteBuffer.allocate(8192);
 		buf.limit(0);
 		for (int i = 0; i < NUMBER_COUNT; ++i) {
@@ -35,7 +37,7 @@ public class SplitFileAndDirectoryFileArchiveTest {
 				int read = sfis.read(buf.array(), remaining, buf.capacity() - remaining);
 				buf.limit(remaining + read);
 			}
-			assertEquals((int)numbers.get(i), buf.getInt());
+			assertEquals((int) numbers.get(i), buf.getInt());
 		}
 		sfis.close();
 		dfa.close();
@@ -43,7 +45,7 @@ public class SplitFileAndDirectoryFileArchiveTest {
 	}
 
 	private final int NUMBER_COUNT = 1024768;
-	
+
 	private void writeRandomNumbers(List<Integer> numbers, SplitDirectoryFileOutputStream sfos) throws IOException {
 		Random r = new Random();
 		ByteBuffer buf = ByteBuffer.allocate(8192);
