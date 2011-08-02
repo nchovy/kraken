@@ -228,6 +228,11 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 			return false;
 
 		String hash = hashPassword(password);
+
+		// null check
+		if (user.getPassword() == null || hash == null)
+			return password == hash;
+
 		return user.getPassword().equals(hash);
 	}
 
