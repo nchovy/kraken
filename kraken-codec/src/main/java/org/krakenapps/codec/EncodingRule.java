@@ -179,6 +179,8 @@ public class EncodingRule {
 			return decodeMap(bb, cc);
 		case ARRAY_TYPE:
 			return decodeArray(bb, cc);
+		case BLOB_TYPE:
+			return decodeBlob(bb);
 		case BOOLEAN_TYPE:
 			return decodeBoolean(bb);
 		case ZINT32_TYPE:
