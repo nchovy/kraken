@@ -12,7 +12,7 @@
 	<artifactId>kraken-http</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken HTTP</name>
-	<version>1.7.0</version>
+	<version>1.8.0</version>
 	<build>
 		<plugins>
 			<plugin>
