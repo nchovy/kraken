@@ -214,7 +214,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	}
 
 	private String getDownloadRoot() {
-		return new File(System.getProperty("kraken.data.dir"), "download").getAbsolutePath().replaceAll("\\\\", "/");
+		return new File(System.getProperty("kraken.download.dir")).getAbsolutePath().replaceAll("\\\\", "/");
 	}
 
 	/*
