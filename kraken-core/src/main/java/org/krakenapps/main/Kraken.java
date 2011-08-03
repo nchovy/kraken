@@ -182,18 +182,21 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void boot(StartOptions startOptions) throws Exception {
-		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-		File dir = jarPath.getParentFile();
-		System.setProperty("kraken.dir", dir.getAbsolutePath());
+		if (System.getProperty("kraken.dir") == null) {
+			File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+			File dir = jarPath.getParentFile();
+			System.setProperty("kraken.dir", dir.getAbsolutePath());
+		}
 
+		String krakenDir = System.getProperty("kraken.dir");
 		if (System.getProperty("kraken.data.dir") == null)
-			System.setProperty("kraken.data.dir", new File(dir, "data").getAbsolutePath());
+			System.setProperty("kraken.data.dir", new File(krakenDir, "data").getAbsolutePath());
 		if (System.getProperty("kraken.log.dir") == null)
-			System.setProperty("kraken.log.dir", new File(dir, "log").getAbsolutePath());
+			System.setProperty("kraken.log.dir", new File(krakenDir, "log").getAbsolutePath());
 		if (System.getProperty("kraken.cache.dir") == null)
-			System.setProperty("kraken.cache.dir", new File(dir, "cache").getAbsolutePath());
+			System.setProperty("kraken.cache.dir", new File(krakenDir, "cache").getAbsolutePath());
 		if (System.getProperty("kraken.download.dir") == null)
-			System.setProperty("kraken.download.dir", new File(dir, "download").getAbsolutePath());
+			System.setProperty("kraken.download.dir", new File(krakenDir, "download").getAbsolutePath());
 
 		setLogger();
 
