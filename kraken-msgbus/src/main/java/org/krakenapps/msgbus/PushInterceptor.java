@@ -1,4 +1,4 @@
-package org.krakenapps.dom.api;
+package org.krakenapps.msgbus;
 
 import java.util.Map;
 

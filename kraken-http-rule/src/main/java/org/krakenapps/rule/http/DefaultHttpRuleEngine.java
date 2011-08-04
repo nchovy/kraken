@@ -96,9 +96,7 @@ public class DefaultHttpRuleEngine implements HttpRuleEngine {
 
 	@Override
 	public void reload() {
-		File base = new File(Script.class.getProtectionDomain().getCodeSource().getLocation().getPath())
-				.getParentFile();
-		File dir = new File(base, "data/kraken-http-rule");
+		File dir = new File(System.getProperty("kraken.data.dir"), "kraken-http-rule");
 		dir.mkdirs();
 
 		AhoCorasickSearch s = new AhoCorasickSearch();

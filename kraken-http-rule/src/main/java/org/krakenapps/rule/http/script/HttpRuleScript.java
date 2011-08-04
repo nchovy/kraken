@@ -73,7 +73,7 @@ public class HttpRuleScript implements Script {
 		} else {
 			requestRules = engine.getRequestRules();
 		}
-		
+
 		if (requestRules == null) {
 			context.println("No rules found");
 			return;
@@ -82,7 +82,7 @@ public class HttpRuleScript implements Script {
 		for (HttpRequestRule r : requestRules) {
 			context.println(r.toString());
 		}
-		
+
 		context.println("---------------");
 		context.println("Total " + requestRules.size() + " rules");
 	}
@@ -103,12 +103,12 @@ public class HttpRuleScript implements Script {
 				String filename = source.getName();
 				int ext = filename.contains(".") ? filename.lastIndexOf(".") : filename.length();
 
-				newPath.append("data/kraken-http-rule/");
+				newPath.append("kraken-http-rule/");
 				newPath.append(filename.substring(0, ext));
 				if (i > 0)
 					newPath.append(" (" + i + ")");
 				newPath.append(filename.substring(ext));
-				destination = new File(newPath.toString());
+				destination = new File(System.getProperty("kraken.data.dir"), newPath.toString());
 				if (!destination.exists())
 					break;
 			}

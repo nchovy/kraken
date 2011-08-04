@@ -21,7 +21,6 @@
 	<instance component="dom-ldap-org-unit-api" />
 	<instance component="dom-org-parameter-api" />
 	<instance component="dom-localization-api" />
-	<instance component="dom-push-api" />
 	<instance component="dom-file-upload-api" />
 
 	<instance component="dom-org-plugin" />
@@ -36,7 +35,6 @@
 	<instance component="dom-datasource-plugin" />
 	<instance component="dom-fileupload-plugin" />
 	<instance component="dom-sentry-plugin" />
-	<instance component="dom-push-plugin" />
 	<instance component="dom-admin-setting-plugin" />
 	<instance component="dom-permission-plugin" />
 	<instance component="dom-timetable-plugin" />

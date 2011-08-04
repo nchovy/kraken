@@ -6,5 +6,7 @@
 
 	<instance component="msgbus" />
 	<instance component="msgbus-resource-api" />
+	<instance component="msgbus-push-api" />
+	<instance component="msgbus-push-plugin" />
 	<instance component="msgbus-script-factory" />
 </ipojo>
