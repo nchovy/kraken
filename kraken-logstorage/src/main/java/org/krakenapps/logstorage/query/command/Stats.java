@@ -5,23 +5,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.krakenapps.logstorage.query.LogQueryCommand;
+import org.krakenapps.logstorage.LogQueryCommand;
 
 public class Stats extends LogQueryCommand {
-	private List<String> keyFields;
+	private List<String> clauses;
 	private Function[] values;
 	private Map<List<Object>, List<Function>> result = new HashMap<List<Object>, List<Function>>();
 
-	public Stats(List<String> keyFields, Function[] values) {
-		this.keyFields = keyFields;
+	public Stats(List<String> clause, Function[] values) {
+		this.clauses = clause;
 		this.values = values;
 	}
 
 	@Override
 	public void push(Map<String, Object> m) {
 		List<Object> key = new ArrayList<Object>();
-		for (String keyField : keyFields)
-			key.add(m.get(keyField));
+		for (String clause : clauses)
+			key.add(getData(clause, m));
 
 		if (!result.containsKey(key)) {
 			List<Function> fs = new ArrayList<Function>();
@@ -40,8 +40,8 @@ public class Stats extends LogQueryCommand {
 		for (List<Object> key : result.keySet()) {
 			Map<String, Object> m = new HashMap<String, Object>();
 
-			for (int i = 0; i < keyFields.size(); i++)
-				m.put(keyFields.get(i), key.get(i));
+			for (int i = 0; i < clauses.size(); i++)
+				m.put(clauses.get(i), key.get(i));
 
 			List<Function> fs = result.get(key);
 			for (int i = 0; i < values.length; i++)

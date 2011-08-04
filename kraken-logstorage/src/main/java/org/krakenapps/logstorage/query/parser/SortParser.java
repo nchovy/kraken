@@ -1,14 +1,27 @@
 package org.krakenapps.logstorage.query.parser;
 
+import static org.krakenapps.bnf.Syntax.*;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
+import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logstorage.query.StringPlaceholder;
 import org.krakenapps.logstorage.query.command.Sort;
 import org.krakenapps.logstorage.query.command.Sort.SortField;
 
-public class SortParser implements Parser {
+public class SortParser implements QueryParser {
+	@Override
+	public void addSyntax(Syntax syntax) {
+		syntax.add("sort", new SortParser(), k("sort"), option(uint()), ref("sort_field"));
+		syntax.add("sort_field", new SortParser.SortFieldParser(),
+				repeat(rule(option(choice(t("+"), t("-"))), new StringPlaceholder(','))));
+		syntax.addRoot("sort");
+	}
+
 	@Override
 	public Object parse(Binding b) {
 		Integer count = null;
@@ -23,7 +36,11 @@ public class SortParser implements Parser {
 				fields = (SortField[]) c.getValue();
 		}
 
-		return new Sort(count, fields);
+		try {
+			return new Sort(count, fields);
+		} catch (IOException e) {
+			return null;
+		}
 	}
 
 	public static class SortFieldParser implements Parser {

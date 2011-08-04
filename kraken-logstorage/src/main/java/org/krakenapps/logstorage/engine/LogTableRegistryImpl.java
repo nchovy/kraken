@@ -42,7 +42,8 @@ import org.slf4j.LoggerFactory;
 public class LogTableRegistryImpl implements LogTableRegistry {
 	private final Logger logger = LoggerFactory.getLogger(LogTableRegistryImpl.class.getName());
 
-	private static final File tableMappingFile = new File("data/kraken-logstorage/tables");
+	private static final File tableMappingFile = new File(System.getProperty("kraken.data.dir"),
+			"kraken-logstorage/tables");
 
 	// table managements
 	private AtomicInteger nextTableId;

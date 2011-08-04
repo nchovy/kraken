@@ -5,4 +5,5 @@
 	<instance component="logstorage-script-factory" />
 	<instance component="logstorage-table-registry" />
 	<instance component="log-query-service" />
+	<instance component="log-query-plugin" />
 </ipojo>

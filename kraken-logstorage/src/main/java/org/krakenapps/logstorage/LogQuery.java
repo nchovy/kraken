@@ -3,6 +3,8 @@ package org.krakenapps.logstorage;
 import java.util.List;
 import java.util.Map;
 
+import org.krakenapps.logstorage.query.FileBufferList;
+
 public interface LogQuery extends Runnable {
 	int getId();
 
@@ -12,5 +14,13 @@ public interface LogQuery extends Runnable {
 
 	void cancel();
 
-	List<Map<String, Object>> getResult();
+	FileBufferList<Map<String, Object>> getResult();
+
+	List<Map<String, Object>> getResult(int offset, int limit);
+
+	List<LogQueryCommand> getCommands();
+
+	void registerCallback(LogQueryCallback callback);
+
+	void unregisterCallback(LogQueryCallback callback);
 }

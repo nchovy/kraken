@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.krakenapps.logstorage.engine.v2.LogFileWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +35,10 @@ public class OnlineWriter {
 	private LogFileWriter writer;
 
 	public OnlineWriter(int tableId, Date day, int maxLogBuffering) throws IOException {
+		this(tableId, day, maxLogBuffering, null);
+	}
+
+	public OnlineWriter(int tableId, Date day, int maxLogBuffering, String defaultLogVersion) throws IOException {
 		this.tableId = tableId;
 		this.day = day;
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);
@@ -44,7 +47,7 @@ public class OnlineWriter {
 		indexPath.getParentFile().mkdirs();
 		dataPath.getParentFile().mkdirs();
 
-		writer = new LogFileWriter(indexPath, dataPath, maxLogBuffering);
+		writer = LogFileWriter.getLogFileWriter(indexPath, dataPath, defaultLogVersion);
 		nextId = new AtomicInteger(writer.getLastKey());
 	}
 

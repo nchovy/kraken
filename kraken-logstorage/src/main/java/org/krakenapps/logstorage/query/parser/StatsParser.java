@@ -1,25 +1,38 @@
 package org.krakenapps.logstorage.query.parser;
 
+import static org.krakenapps.bnf.Syntax.*;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
+import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logstorage.query.StringPlaceholder;
 import org.krakenapps.logstorage.query.command.Function;
 import org.krakenapps.logstorage.query.command.Stats;
 
-public class StatsParser implements Parser {
+public class StatsParser implements QueryParser {
+	@Override
+	public void addSyntax(Syntax syntax) {
+		syntax.add("stats", new StatsParser(), k("stats"), option(k("allnum"), t("="), choice(k("true"), k("false"))),
+				option(k("delim"), t("="), choice(k("true"), k("false"))), ref("function"),
+				option(k("by"), ref("stats_field")));
+		syntax.add("stats_field", new StatsParser.StatsFieldParser(), new StringPlaceholder(','),
+				option(ref("stats_field")));
+		syntax.addRoot("stats");
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
 		List<String> keyFields = new ArrayList<String>();
 		Function[] func = null;
-		for (int i = 1; i < b.getChildren().length; i++) {
+		for (int i = 2; i < b.getChildren().length; i++) {
 			Object v = b.getChildren()[i].getValue();
 			Binding[] c = b.getChildren()[i].getChildren();
 
-			// TODO allnum, delim
 			if (v instanceof List)
 				func = ((List<Function>) v).toArray(new Function[0]);
 			else if (v == null && c[0].getValue().equals("by"))
@@ -27,43 +40,6 @@ public class StatsParser implements Parser {
 		}
 
 		return new Stats(keyFields, func);
-	}
-
-	public static class StatsFunctionParser implements Parser {
-		@Override
-		public Object parse(Binding b) {
-			List<Function> fs = new ArrayList<Function>();
-
-			parse(b, fs);
-
-			return fs;
-		}
-
-		@SuppressWarnings("unchecked")
-		private void parse(Binding b, List<Function> fs) {
-			if (b.getValue() != null)
-				fs.add((Function) b.getValue());
-			else {
-				boolean as = false;
-				for (Binding c : b.getChildren()) {
-					if (c.getValue() != null) {
-						if (c.getValue() instanceof Collection)
-							fs.addAll((List<? extends Function>) c.getValue());
-						else if (c.getValue() instanceof Function) {
-							fs.add((Function) c.getValue());
-						} else if (c.getValue() instanceof String) {
-							if (c.getValue().equals("as"))
-								as = true;
-							else if (as) {
-								fs.get(fs.size() - 1).setKeyName((String) c.getValue());
-								as = false;
-							}
-						}
-					} else
-						parse(c, fs);
-				}
-			}
-		}
 	}
 
 	public static class StatsFieldParser implements Parser {

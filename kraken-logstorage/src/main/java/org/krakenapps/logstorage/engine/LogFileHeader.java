@@ -41,7 +41,8 @@ public class LogFileHeader {
 	}
 
 	public void setExtraData(byte[] e) {
-		extraData = e;
+		extraData = Arrays.copyOf(e, e.length);
+		updateHeaderSize();
 	}
 
 	private int getAlignedHeaderSize() {
@@ -51,7 +52,7 @@ public class LogFileHeader {
 		return (ALIGNED_HEADER_SIZE_BASE + extraDataLength - 1 + 4) / 4 * 4;
 	}
 
-	public void updateHeaderSize() {
+	private void updateHeaderSize() {
 		headerSize = (short) getAlignedHeaderSize();
 	}
 

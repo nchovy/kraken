@@ -26,29 +26,55 @@ public abstract class Function {
 		mapping.put("min", Min.class);
 		mapping.put("mean", Average.class);
 		mapping.put("mode", Mode.class);
+		mapping.put("range", Range.class);
+		mapping.put("sum", Sum.class);
+		mapping.put("sumsq", SumSquare.class);
+		mapping.put("values", Values.class);
 	}
 
 	private String name;
+	private Integer suffix;
 	private String keyName;
 	private String target;
+	private EvaledField evaled;
+	private Map<String, Class<? extends Function>> extClass;
 
-	public static Function getFunction(String name, String target) {
-		return getFunction(name, null, target);
+	private Function() {
 	}
 
-	public static Function getFunction(String name, String keyName, String target) {
+	public static Function getFunction(String name, String target) {
+		return getFunction(name, target, null, null);
+	}
+
+	public static Function getFunction(String name, String target, String keyName) {
+		return getFunction(name, target, keyName, null);
+	}
+
+	public static Function getFunction(String name, String target, Map<String, Class<? extends Function>> extClass) {
+		return getFunction(name, target, null, extClass);
+	}
+
+	public static Function getFunction(String name, String target, String keyName,
+			Map<String, Class<? extends Function>> extClass) {
 		if (name == null)
 			return null;
 
-		Class<? extends Function> cls = mapping.get(name.toLowerCase());
+		String functionName = name.split("[0-9]+$")[0];
+		Class<? extends Function> cls = mapping.get(functionName.toLowerCase());
+		if (cls == null && extClass != null)
+			cls = extClass.get(functionName.toLowerCase());
+
 		if (cls == null)
 			return null;
 
 		try {
 			Function f = cls.newInstance();
 			f.name = name;
+			if (!functionName.equals(name))
+				f.suffix = Integer.parseInt(name.substring(functionName.length()));
 			f.keyName = keyName;
 			f.target = target;
+			f.extClass = extClass;
 			return f;
 		} catch (Exception e) {
 			logger.error("kraken logstorage: failed create function.", e);
@@ -59,6 +85,10 @@ public abstract class Function {
 
 	public String getName() {
 		return name;
+	}
+
+	public Integer getSuffix() {
+		return suffix;
 	}
 
 	public String getKeyName() {
@@ -75,12 +105,20 @@ public abstract class Function {
 
 	@Override
 	public Function clone() {
-		return getFunction(name, keyName, target);
+		return getFunction(name, target, keyName, extClass);
 	}
 
 	public void put(Map<String, Object> row) {
-		if (row.containsKey(target))
-			put(row.get(target));
+		if (evaled != null) {
+			if (!evaled.eval(row))
+				return;
+		}
+
+		if (row.containsKey(target)) {
+			Object value = row.get(target);
+			if (value != null)
+				put(value);
+		}
 	}
 
 	abstract protected void put(Object obj);
@@ -97,6 +135,12 @@ public abstract class Function {
 			return keyName;
 	}
 
+	private class EvaledField {
+		public boolean eval(Map<String, Object> row) {
+			return false;
+		}
+	}
+
 	protected static class Average extends Function {
 		private Double d;
 		private int count;
@@ -104,13 +148,29 @@ public abstract class Function {
 		@Override
 		protected void put(Object obj) {
 			try {
-				double t = Double.parseDouble((String) obj);
+				double t = Double.parseDouble(obj.toString());
 				if (d == null)
 					d = 0.;
 				d += t;
 			} catch (NumberFormatException e) {
 			}
 			count++;
+		}
+
+		public Double getD() {
+			return d;
+		}
+
+		public void setD(Double d) {
+			this.d = d;
+		}
+
+		public int getCount() {
+			return count;
+		}
+
+		public void setCount(int count) {
+			this.count = count;
 		}
 
 		@Override
@@ -134,6 +194,10 @@ public abstract class Function {
 			result++;
 		}
 
+		public void setResult(int result) {
+			this.result = result;
+		}
+
 		@Override
 		public Object getResult() {
 			return result;
@@ -146,7 +210,7 @@ public abstract class Function {
 
 	protected static class DistinctCount extends Function {
 		private ObjectComparator comp = new ObjectComparator();
-		private java.util.List<Object> objs = new ArrayList<Object>();
+		protected java.util.List<Object> objs = new ArrayList<Object>();
 
 		@Override
 		protected void put(Object obj) {
@@ -165,6 +229,14 @@ public abstract class Function {
 					r = m;
 			}
 			objs.add((l + r) / 2, obj);
+		}
+
+		public java.util.List<Object> getObjs() {
+			return objs;
+		}
+
+		public void setObjs(java.util.List<Object> objs) {
+			this.objs = objs;
 		}
 
 		@Override
@@ -187,6 +259,14 @@ public abstract class Function {
 				first = obj;
 		}
 
+		public Object getFirst() {
+			return first;
+		}
+
+		public void setFirst(Object first) {
+			this.first = first;
+		}
+
 		@Override
 		public Object getResult() {
 			return first;
@@ -206,6 +286,14 @@ public abstract class Function {
 			last = obj;
 		}
 
+		public Object getLast() {
+			return last;
+		}
+
+		public void setLast(Object last) {
+			this.last = last;
+		}
+
 		@Override
 		public Object getResult() {
 			return last;
@@ -223,6 +311,14 @@ public abstract class Function {
 		@Override
 		protected void put(Object obj) {
 			objs.add(obj);
+		}
+
+		public java.util.List<Object> getObjs() {
+			return objs;
+		}
+
+		public void setObjs(java.util.List<Object> objs) {
+			this.objs = objs;
 		}
 
 		@Override
@@ -246,6 +342,14 @@ public abstract class Function {
 				max = obj;
 		}
 
+		public Object getMax() {
+			return max;
+		}
+
+		public void setMax(Object max) {
+			this.max = max;
+		}
+
 		@Override
 		public Object getResult() {
 			return max;
@@ -265,6 +369,14 @@ public abstract class Function {
 		protected void put(Object obj) {
 			if (min == null || (comp.compare(min, obj) > 0 && obj != null))
 				min = obj;
+		}
+
+		public Object getMin() {
+			return min;
+		}
+
+		public void setMin(Object min) {
+			this.min = min;
 		}
 
 		@Override
@@ -287,6 +399,34 @@ public abstract class Function {
 		@Override
 		protected void put(Object obj) {
 			list.add(obj);
+		}
+
+		public java.util.List<Object> getList() {
+			return list;
+		}
+
+		public void setList(java.util.List<Object> list) {
+			this.list = list;
+		}
+
+		public int getMaxCount() {
+			return maxCount;
+		}
+
+		public void setMaxCount(int maxCount) {
+			this.maxCount = maxCount;
+		}
+
+		public int getNowCount() {
+			return nowCount;
+		}
+
+		public void setNowCount(int nowCount) {
+			this.nowCount = nowCount;
+		}
+
+		public void setResult(Object result) {
+			this.result = result;
 		}
 
 		@Override
@@ -319,6 +459,128 @@ public abstract class Function {
 		public void clean() {
 			list = null;
 			result = null;
+		}
+	}
+
+	protected static class Range extends Function {
+		private Double min;
+		private Double max;
+
+		@Override
+		protected void put(Object obj) {
+			try {
+				Double cur = Double.parseDouble(obj.toString());
+				if (min == null || cur < min)
+					min = cur;
+				if (max == null || cur > max)
+					max = cur;
+			} catch (NumberFormatException e) {
+			}
+		}
+
+		public Double getMin() {
+			return min;
+		}
+
+		public void setMin(Double min) {
+			this.min = min;
+		}
+
+		public Double getMax() {
+			return max;
+		}
+
+		public void setMax(Double max) {
+			this.max = max;
+		}
+
+		@Override
+		public Object getResult() {
+			if (min == null || max == null)
+				return null;
+			else
+				return max - min;
+		}
+
+		@Override
+		public void clean() {
+			min = null;
+			max = null;
+		}
+	}
+
+	protected static class Sum extends Function {
+		private Double sum;
+
+		@Override
+		protected void put(Object obj) {
+			try {
+				Double cur = Double.parseDouble(obj.toString());
+				if (sum == null)
+					sum = cur;
+				else
+					sum += cur;
+			} catch (NumberFormatException e) {
+			}
+		}
+
+		public Double getSum() {
+			return sum;
+		}
+
+		public void setSum(Double sum) {
+			this.sum = sum;
+		}
+
+		@Override
+		public Object getResult() {
+			return sum;
+		}
+
+		@Override
+		public void clean() {
+			sum = null;
+		}
+	}
+
+	protected static class SumSquare extends Function {
+		private Double sum;
+
+		@Override
+		protected void put(Object obj) {
+			try {
+				Double cur = Double.parseDouble((String) obj);
+				if (sum == null)
+					sum = cur * cur;
+				else
+					sum += cur * cur;
+			} catch (NumberFormatException e) {
+			}
+		}
+
+		public Double getSum() {
+			return sum;
+		}
+
+		public void setSum(Double sum) {
+			this.sum = sum;
+		}
+
+		@Override
+		public Object getResult() {
+			return sum;
+		}
+
+		@Override
+		public void clean() {
+			sum = null;
+		}
+	}
+
+	protected static class Values extends DistinctCount {
+		@Override
+		public Object getResult() {
+			return objs;
 		}
 	}
 }

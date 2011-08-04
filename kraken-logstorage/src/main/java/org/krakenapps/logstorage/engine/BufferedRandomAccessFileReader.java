@@ -205,7 +205,6 @@ public class BufferedRandomAccessFileReader implements DataInput {
 			if (read != -1) {
 				buf.limit(read);
 				if (seekPos == 0) {
-
 					buf.position((int) pos);
 				} else {
 					buf.position(BUFFER_SIZE);

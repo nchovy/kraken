@@ -1,6 +1,7 @@
 package org.krakenapps.logstorage.query;
 
 import java.util.Comparator;
+import java.util.Date;
 
 public class ObjectComparator implements Comparator<Object> {
 	@Override
@@ -12,14 +13,21 @@ public class ObjectComparator implements Comparator<Object> {
 			return 1;
 
 		if (!o1.equals(o2)) {
-			int result = 0;
+			if (!o1.getClass().equals(o2.getClass()))
+				return 0;
 
-			if (o1 instanceof String && o2 instanceof String)
-				result = ((String) o1).compareTo((String) o2);
-			else if (o1 instanceof Integer && o2 instanceof Integer)
-				result = (((Integer) o1) - ((Integer) o2));
-
-			return result;
+			if (o1 instanceof String)
+				return ((String) o1).compareTo((String) o2);
+			else if (o1 instanceof Short)
+				return ((Short) o1).compareTo((Short) o2);
+			else if (o1 instanceof Integer)
+				return ((Integer) o1).compareTo((Integer) o2);
+			else if (o1 instanceof Long)
+				return ((Long) o1).compareTo((Long) o2);
+			else if (o1 instanceof Double)
+				return ((Double) o1).compareTo((Double) o2);
+			else if (o1 instanceof Date)
+				return ((Date) o1).compareTo((Date) o2);
 		}
 
 		return 0;

@@ -18,6 +18,7 @@ package org.krakenapps.logstorage.engine;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -47,7 +48,8 @@ import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.criterion.Criterion;
-import org.krakenapps.logstorage.engine.v2.LogFileReader;
+import org.krakenapps.logstorage.engine.v1.LogFileReaderV1;
+import org.krakenapps.logstorage.engine.v2.LogFileReaderV2;
 import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,7 +199,8 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	private File getTableDirectory(int tableId) {
-		File tableDir = new File("data/kraken-logstorage/log", Integer.toString(tableId));
+		File tableDir = new File(new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/log"),
+				Integer.toString(tableId));
 		return tableDir;
 	}
 
@@ -310,7 +313,7 @@ public class LogStorageEngine implements LogStorage {
 
 		LogFileReader reader = null;
 		try {
-			reader = new LogFileReader(indexPath, dataPath);
+			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 			LogRecord logdata = reader.find(id);
 			if (logdata == null) {
 				if (logger.isTraceEnabled()) {
@@ -393,7 +396,7 @@ public class LogStorageEngine implements LogStorage {
 				logger.trace("log storage: searching table {}, date={}", tableName, DateUtil.getDayText(day));
 
 			int needed = limit - found;
-			if (needed <= 0)
+			if (limit != 0 && needed <= 0)
 				break;
 
 			found += searchTablet(tableName, day, from, to, offset, needed, pred, callback);
@@ -422,7 +425,15 @@ public class LogStorageEngine implements LogStorage {
 		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, pred, callback);
 
 		try {
-			reader = new LogFileReader(indexPath, dataPath);
+			RandomAccessFile headerReader = new RandomAccessFile(indexPath, "r");
+			LogFileHeader header = LogFileHeader.extractHeader(headerReader);
+			headerReader.close();
+
+			if (header.version() == 1)
+				reader = new LogFileReaderV1(indexPath, dataPath);
+			else if (header.version() == 2)
+				reader = new LogFileReaderV2(indexPath, dataPath);
+
 			reader.traverse(from, to, limit, c);
 		} catch (InterruptedException e) {
 			throw e;
@@ -468,11 +479,8 @@ public class LogStorageEngine implements LogStorage {
 			if (d.before(from) || d.after(to))
 				return false;
 
-			if (pred != null && pred.match(log)) {
+			if (pred == null || pred.match(log))
 				return onMatch(log);
-			} else if (pred == null) {
-				return onMatch(log);
-			}
 
 			return false;
 		}
@@ -507,6 +515,8 @@ public class LogStorageEngine implements LogStorage {
 		try {
 			int maxBuffering = getIntParameter(Constants.LogMaxBuffering, DEFAULT_MAX_LOG_BUFFERING);
 			OnlineWriter oldWriter = onlineWriters.get(key);
+			String defaultLogVersion = tableRegistry.getTableMetadata(tableId).get("logversion");
+
 			if (oldWriter != null) {
 				synchronized (oldWriter) {
 					if (!oldWriter.isOpen() && !oldWriter.isClosed()) { // closing
@@ -519,7 +529,7 @@ public class LogStorageEngine implements LogStorage {
 						while (onlineWriters.get(key) == oldWriter) {
 							Thread.yield();
 						}
-						OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering);
+						OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering, defaultLogVersion);
 						OnlineWriter consensus = onlineWriters.putIfAbsent(key, newWriter);
 						if (consensus == null)
 							online = newWriter;
@@ -532,7 +542,7 @@ public class LogStorageEngine implements LogStorage {
 						while (onlineWriters.get(key) == oldWriter) {
 							Thread.yield();
 						}
-						OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering);
+						OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering, defaultLogVersion);
 						OnlineWriter consensus = onlineWriters.putIfAbsent(key, newWriter);
 						if (consensus == null)
 							online = newWriter;
@@ -546,7 +556,7 @@ public class LogStorageEngine implements LogStorage {
 					}
 				}
 			} else {
-				OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering);
+				OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering, defaultLogVersion);
 				OnlineWriter consensus = onlineWriters.putIfAbsent(key, newWriter);
 				if (consensus == null)
 					online = newWriter;

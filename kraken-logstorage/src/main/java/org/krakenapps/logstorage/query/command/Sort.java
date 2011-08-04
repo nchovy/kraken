@@ -1,35 +1,36 @@
 package org.krakenapps.logstorage.query.command;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.io.IOException;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 
-import org.krakenapps.logstorage.query.LogQueryCommand;
+import org.krakenapps.logstorage.LogQueryCommand;
+import org.krakenapps.logstorage.query.ObjectComparator;
+import org.krakenapps.logstorage.query.FileBufferList;
 
 public class Sort extends LogQueryCommand {
 	private Integer count;
 	private SortField[] fields;
-	private List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+	private FileBufferList<Map<String, Object>> buf;
 	private boolean reverse;
 
-	public Sort(SortField[] fields) {
+	public Sort(SortField[] fields) throws IOException {
 		this(null, fields, false);
 	}
 
-	public Sort(Integer count, SortField[] fields) {
+	public Sort(Integer count, SortField[] fields) throws IOException {
 		this(count, fields, false);
 	}
 
-	public Sort(SortField[] fields, boolean reverse) {
+	public Sort(SortField[] fields, boolean reverse) throws IOException {
 		this(null, fields, reverse);
 	}
 
-	public Sort(Integer count, SortField[] fields, boolean reverse) {
+	public Sort(Integer count, SortField[] fields, boolean reverse) throws IOException {
 		this.count = count;
 		this.fields = fields;
 		this.reverse = reverse;
+		this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
 	}
 
 	public Integer getCount() {
@@ -46,32 +47,36 @@ public class Sort extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
-		result.add(m);
+		buf.add(m);
 	}
 
 	@Override
 	public void eof() {
-		Collections.sort(result, new DefaultComparator());
+		if (count == null) {
+			write(buf);
+		} else {
+			for (Map<String, Object> m : buf) {
+				if (--count < 0)
+					break;
+				write(m);
+			}
 
-		if (count == null)
-			count = result.size();
+			buf.close();
 
-		for (Map<String, Object> m : result) {
-			if (count-- <= 0)
-				break;
-			write(m);
+			buf = null;
 		}
 
-		result = null;
 		super.eof();
 	}
 
 	private class DefaultComparator implements Comparator<Map<String, Object>> {
+		private ObjectComparator cmp = new ObjectComparator();
+
 		@Override
 		public int compare(Map<String, Object> m1, Map<String, Object> m2) {
 			for (SortField field : fields) {
-				Object o1 = m1.get(field.name);
-				Object o2 = m2.get(field.name);
+				Object o1 = getData(field.name, m1);
+				Object o2 = getData(field.name, m2);
 
 				if (o1 == null && o2 == null)
 					continue;
@@ -79,12 +84,7 @@ public class Sort extends LogQueryCommand {
 					return 1;
 
 				if (!o1.equals(o2)) {
-					int result = 0;
-
-					if (o1 instanceof String && o2 instanceof String)
-						result = ((String) o1).compareTo((String) o2);
-					else if (o1 instanceof Integer && o2 instanceof Integer)
-						result = (((Integer) o1) - ((Integer) o2));
+					int result = cmp.compare(o1, o2);
 
 					if (!field.asc)
 						result *= -1;
@@ -94,6 +94,7 @@ public class Sort extends LogQueryCommand {
 					return result;
 				}
 			}
+
 			return 0;
 		}
 	}
