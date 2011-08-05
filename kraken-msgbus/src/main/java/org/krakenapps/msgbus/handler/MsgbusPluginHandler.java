@@ -1,7 +1,6 @@
 package org.krakenapps.msgbus.handler;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,7 +40,7 @@ public class MsgbusPluginHandler extends PrimitiveHandler implements MessageHand
 	@SuppressWarnings("rawtypes")
 	@Override
 	public void configure(Element metadata, Dictionary config) throws ConfigurationException {
-		logger.info("msgbus handler: configuring component instance [{}]", config.get("instance.name"));
+		logger.trace("msgbus handler: configuring component instance [{}]", config.get("instance.name"));
 		injectMessageBus();
 		registerHandlerMethods();
 	}
