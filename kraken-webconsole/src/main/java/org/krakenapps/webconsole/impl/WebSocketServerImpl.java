@@ -36,6 +36,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.msgbus.MessageBus;
+import org.krakenapps.webconsole.BundleResourceServlet;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.krakenapps.webconsole.WebSocketServerParams;

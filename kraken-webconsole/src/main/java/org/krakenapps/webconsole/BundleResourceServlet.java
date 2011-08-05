@@ -13,40 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.webconsole.impl;
+package org.krakenapps.webconsole;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.net.URL;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
-import org.krakenapps.webconsole.ResourceServlet;
+import org.osgi.framework.Bundle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Component(name = "webconsole-file-resource-servlet")
+@Component(name = "webconsole-bundle-resource-servlet")
 @Provides
-public class FileResourceServlet extends ResourceServlet {
+public class BundleResourceServlet extends ResourceServlet {
 	private static final long serialVersionUID = 1L;
-	private File basePath;
+	private final Logger logger = LoggerFactory.getLogger(BundleResourceServlet.class.getName());
+	private Bundle bundle;
+	private String basePath;
 
-	public FileResourceServlet(File basePath) {
+	public BundleResourceServlet(Bundle bundle, String basePath) {
+		this.bundle = bundle;
 		this.basePath = basePath;
 	}
 
 	@Override
 	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
-			return new FileInputStream(new File(basePath, req.getPathInfo()));
-		} catch (FileNotFoundException e) {
+			URL url = bundle.getEntry(basePath + req.getPathInfo());
+			return url.openStream();
+		} catch (Exception e) {
+			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(),
+					req.getRequestURI());
 			return null;
 		}
 	}
 
 	@Override
 	public String toString() {
-		return String.format("filesystem resource: %s", basePath);
+		return bundle.getEntry("/").toString();
 	}
+
 }

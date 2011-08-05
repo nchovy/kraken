@@ -25,6 +25,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.webconsole.BundleResourceServlet;
 import org.krakenapps.webconsole.PackageApi;
 import org.krakenapps.webconsole.ProgramApi;
 import org.krakenapps.webconsole.ServletRegistry;
@@ -73,10 +74,19 @@ public class BundleMetadataMonitor implements BundleListener {
 		Bundle bundle = ev.getBundle();
 		int type = ev.getType();
 
-		if (ev.getType() == BundleEvent.STARTED) {
-			loadProgramMetadata(bundle);
-		} else if (type == BundleEvent.STOPPED) {
-			unloadProgramMetadata(bundle);
+		try {
+			if (ev.getType() == BundleEvent.STARTED) {
+				loadProgramMetadata(bundle);
+			} else if (type == BundleEvent.STOPPED) {
+				unloadProgramMetadata(bundle);
+			}
+		} catch (IllegalStateException e) {
+			if (e.getMessage() != null && e.getMessage().contains("bundle is uninstalled"))
+				return;
+			
+			logger.error("kraken webconsole: cannot handle program metadata", e);
+		} catch (Exception e) {
+			logger.error("kraken webconsole: cannot handle program metadata", e);
 		}
 	}
 
@@ -135,18 +145,17 @@ public class BundleMetadataMonitor implements BundleListener {
 			}
 		}
 
-		
 		registerStaticResource(bundleId, p);
 
 		packageApi.register(packageId);
 		packageApi.localize(packageId, locale, packageLabel);
-		
+
 		String prefix = p.getProperty("prefix");
 		if (prefix == null)
 			prefix = "";
 		else if (!prefix.endsWith("/"))
 			prefix += "/";
-		
+
 		for (Object k : p.keySet()) {
 			String key = k.toString();
 			if (key.startsWith("program.") && !key.endsWith(".label")) {

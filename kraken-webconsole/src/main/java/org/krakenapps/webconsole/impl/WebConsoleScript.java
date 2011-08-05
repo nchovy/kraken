@@ -25,6 +25,7 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.webconsole.FileResourceServlet;
 import org.krakenapps.webconsole.Program;
 import org.krakenapps.webconsole.ProgramApi;
 import org.krakenapps.webconsole.ServletRegistry;
