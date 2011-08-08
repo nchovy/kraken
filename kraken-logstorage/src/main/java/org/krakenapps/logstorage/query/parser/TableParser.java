@@ -2,6 +2,8 @@ package org.krakenapps.logstorage.query.parser;
 
 import static org.krakenapps.bnf.Syntax.*;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
@@ -24,6 +26,7 @@ public class TableParser implements QueryParser {
 		Map<String, String> options = (Map<String, String>) b.getChildren()[1].getValue();
 		String tableName = (String) b.getChildren()[2].getValue();
 		Date from = null;
+		Date to = null;
 		int limit = 0;
 
 		if (options.containsKey("duration")) {
@@ -32,10 +35,15 @@ public class TableParser implements QueryParser {
 			from = getDuration(value, duration.substring(duration.length() - 1));
 		}
 
+		if (options.containsKey("from"))
+			from = getDate(options.get("from"));
+		if (options.containsKey("to"))
+			to = getDate(options.get("to"));
+
 		if (options.containsKey("limit"))
 			limit = Integer.parseInt(options.get("limit"));
 
-		return new Table(tableName, limit, from, null);
+		return new Table(tableName, limit, from, to);
 	}
 
 	private Date getDuration(int value, String field) {
@@ -54,5 +62,37 @@ public class TableParser implements QueryParser {
 		else if (field.equals("mon"))
 			c.add(Calendar.MONTH, -value);
 		return c.getTime();
+	}
+
+	private Date getDate(String value) {
+		String type1 = "yyyy";
+		String type2 = "yyyyMM";
+		String type3 = "yyyyMMdd";
+		String type4 = "yyyyMMddHH";
+		String type5 = "yyyyMMddHHmm";
+		String type6 = "yyyyMMddHHmmss";
+
+		SimpleDateFormat sdf = null;
+		if (value.length() == 4)
+			sdf = new SimpleDateFormat(type1);
+		else if (value.length() == 6)
+			sdf = new SimpleDateFormat(type2);
+		else if (value.length() == 8)
+			sdf = new SimpleDateFormat(type3);
+		else if (value.length() == 10)
+			sdf = new SimpleDateFormat(type4);
+		else if (value.length() == 12)
+			sdf = new SimpleDateFormat(type5);
+		else if (value.length() == 14)
+			sdf = new SimpleDateFormat(type6);
+
+		if (sdf == null)
+			throw new IllegalArgumentException();
+
+		try {
+			return sdf.parse(value);
+		} catch (ParseException e) {
+			return null;
+		}
 	}
 }

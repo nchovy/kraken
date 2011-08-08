@@ -12,7 +12,7 @@ import org.krakenapps.logstorage.query.StringPlaceholder;
 public class OptionParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("option", this, option(new StringPlaceholder('='), new StringPlaceholder(), option(ref("option"))));
+		syntax.add("option", this, option(new StringPlaceholder(':'), new StringPlaceholder(), option(ref("option"))));
 	}
 
 	@SuppressWarnings("unchecked")
