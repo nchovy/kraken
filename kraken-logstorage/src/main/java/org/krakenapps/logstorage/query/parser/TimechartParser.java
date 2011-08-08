@@ -3,6 +3,7 @@ package org.krakenapps.logstorage.query.parser;
 import static org.krakenapps.bnf.Syntax.*;
 
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
@@ -15,44 +16,36 @@ import org.krakenapps.logstorage.query.command.Timechart.Span;
 public class TimechartParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("timechart", new TimechartParser(), k("timechart"),
-				option(k("span"), k("="), uint(), choice(k("s"), k("m"), k("h"), k("d"), k("w"))),
-				ref("timechart_function"), k("by"), new StringPlaceholder());
+		syntax.add("timechart", new TimechartParser(), k("timechart"), ref("option"), ref("timechart_function"),
+				k("by"), new StringPlaceholder());
 		syntax.add("timechart_function", new FunctionParser(), new FunctionPlaceholder(Timechart.func),
-				option(k("as"), new StringPlaceholder()), option(t(",")), option(ref("timechart_function")));
+				option(k("as"), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function")));
 		syntax.addRoot("timechart");
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
-		Function[] func = null;
-		String clause = (String) b.getChildren()[b.getChildren().length - 1].getValue();
+		Function[] func = ((List<Function>) b.getChildren()[2].getValue()).toArray(new Function[0]);
+		String clause = (String) b.getChildren()[4].getValue();
+		Map<String, String> option = (Map<String, String>) b.getChildren()[1].getValue();
 		Span field = null;
 		Integer amount = null;
 
-		for (int i = 1; i < b.getChildren().length - 2; i++) {
-			Object v = b.getChildren()[i].getValue();
-			Binding[] c = b.getChildren()[i].getChildren();
-
-			// TODO allnum, delim
-			if (v instanceof List)
-				func = ((List<Function>) v).toArray(new Function[0]);
-			else if (v == null && c[0].getValue().equals("span")) {
-				amount = (Integer) c[c.length - 2].getValue();
-				String f = (String) c[c.length - 1].getValue();
-				if (f.equals("s"))
-					field = Span.Second;
-				else if (f.equals("m"))
-					field = Span.Minute;
-				else if (f.equals("h"))
-					field = Span.Hour;
-				else if (f.equals("d"))
-					field = Span.Day;
-				else if (f.equals("w"))
-					field = Span.Week;
-			} else if (v == null && c[0].getValue().equals("by"))
-				clause = (String) c[1].getValue();
+		if (option.containsKey("span")) {
+			String value = option.get("span");
+			char f = value.charAt(value.length() - 1);
+			if (f == 's')
+				field = Span.Second;
+			else if (f == 'm')
+				field = Span.Minute;
+			else if (f == 'h')
+				field = Span.Hour;
+			else if (f == 'd')
+				field = Span.Day;
+			else if (f == 'w')
+				field = Span.Week;
+			amount = Integer.parseInt(value.substring(0, value.length() - 1));
 		}
 
 		if (field == null)

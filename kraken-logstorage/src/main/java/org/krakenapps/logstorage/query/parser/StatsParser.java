@@ -16,10 +16,8 @@ import org.krakenapps.logstorage.query.command.Stats;
 public class StatsParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("stats", new StatsParser(), k("stats"), option(k("allnum"), t("="), choice(k("true"), k("false"))),
-				option(k("delim"), t("="), choice(k("true"), k("false"))), ref("function"),
-				option(k("by"), ref("stats_field")));
-		syntax.add("stats_field", new StatsParser.StatsFieldParser(), new StringPlaceholder(','),
+		syntax.add("stats", this, k("stats"), ref("option"), ref("function"), option(k("by"), ref("stats_field")));
+		syntax.add("stats_field", new StatsFieldParser(), new StringPlaceholder(new char[] { ' ', ',' }),
 				option(ref("stats_field")));
 		syntax.addRoot("stats");
 	}
@@ -27,28 +25,22 @@ public class StatsParser implements QueryParser {
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
-		List<String> keyFields = new ArrayList<String>();
-		Function[] func = null;
-		for (int i = 2; i < b.getChildren().length; i++) {
-			Object v = b.getChildren()[i].getValue();
-			Binding[] c = b.getChildren()[i].getChildren();
+		List<String> keyFields = null;
+		Function[] func = ((List<Function>) b.getChildren()[2].getValue()).toArray(new Function[0]);
 
-			if (v instanceof List)
-				func = ((List<Function>) v).toArray(new Function[0]);
-			else if (v == null && c[0].getValue().equals("by"))
-				keyFields = (List<String>) c[1].getValue();
-		}
+		if (b.getChildren().length < 4)
+			keyFields = new ArrayList<String>();
+		else
+			keyFields = (List<String>) b.getChildren()[3].getChildren()[1].getValue();
 
 		return new Stats(keyFields, func);
 	}
 
-	public static class StatsFieldParser implements Parser {
+	public class StatsFieldParser implements Parser {
 		@Override
 		public Object parse(Binding b) {
 			List<String> fields = new ArrayList<String>();
-
 			parse(b, fields);
-
 			return fields;
 		}
 

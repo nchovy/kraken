@@ -15,7 +15,6 @@ public class FunctionPlaceholder implements Placeholder {
 	private Map<String, Class<? extends Function>> func;
 
 	public FunctionPlaceholder() {
-		this(null);
 	}
 
 	public FunctionPlaceholder(Map<String, Class<? extends Function>> func) {

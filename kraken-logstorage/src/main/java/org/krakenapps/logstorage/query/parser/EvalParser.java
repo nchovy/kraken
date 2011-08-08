@@ -4,6 +4,7 @@ import static org.krakenapps.bnf.Syntax.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
@@ -15,29 +16,26 @@ import org.krakenapps.logstorage.query.command.Eval.Term.Operator;
 public class EvalParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add(
-				"eval",
-				new EvalParser(),
-				k("eval"),
-				option(k("limit"), k("="), uint()),
-				repeat(rule(new StringPlaceholder(), choice(k("="), k("!="), k(">"), k("<"), k(">="), k("<=")),
-						new StringPlaceholder())));
+		// @formatter:off
+		syntax.add("eval", this, k("eval"), ref("option"), repeat(rule(new StringPlaceholder(), 
+				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<=")), 
+				new StringPlaceholder(new char[] { ' ', ',' }))));
+		// @formatter:on
 		syntax.addRoot("eval");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
-		Binding[] c = b.getChildren();
+		Map<String, String> option = (Map<String, String>) b.getChildren()[1].getValue();
 		Integer limit = null;
-		int begin = 1;
 
-		if (c[1].getChildren()[0].getValue().equals("limit")) {
-			limit = (Integer) c[1].getChildren()[2].getValue();
-			begin = 2;
-		}
+		if (option.containsKey("limit"))
+			limit = Integer.parseInt(option.get("limit"));
 
 		List<Term> terms = new ArrayList<Eval.Term>();
-		for (int i = begin; i < c.length; i++) {
+		Binding[] c = b.getChildren();
+		for (int i = 2; i < c.length; i++) {
 			Binding[] v = c[i].getChildren();
 			Term term = new Term();
 
@@ -48,7 +46,7 @@ public class EvalParser implements QueryParser {
 				term.setLh(lh.substring(1, lh.length() - 1));
 			}
 
-			if (v[1].getValue().equals("="))
+			if (v[1].getValue().equals("=="))
 				term.setOperator(Operator.Eq);
 			else if (v[1].getValue().equals("!="))
 				term.setOperator(Operator.Neq);

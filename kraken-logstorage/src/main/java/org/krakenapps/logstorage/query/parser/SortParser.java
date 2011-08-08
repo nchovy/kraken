@@ -5,6 +5,7 @@ import static org.krakenapps.bnf.Syntax.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
@@ -16,25 +17,21 @@ import org.krakenapps.logstorage.query.command.Sort.SortField;
 public class SortParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("sort", new SortParser(), k("sort"), option(uint()), ref("sort_field"));
+		syntax.add("sort", this, k("sort"), ref("option"), ref("sort_field"));
 		syntax.add("sort_field", new SortParser.SortFieldParser(),
-				repeat(rule(option(choice(t("+"), t("-"))), new StringPlaceholder(','))));
+				repeat(rule(option(choice(t("+"), t("-"))), new StringPlaceholder(new char[] { ' ', ',' }))));
 		syntax.addRoot("sort");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
+		Map<String, String> option = (Map<String, String>) b.getChildren()[1].getValue();
 		Integer count = null;
-		SortField[] fields = null;
+		SortField[] fields = (SortField[]) b.getChildren()[2].getValue();
 
-		for (int i = 1; i < b.getChildren().length; i++) {
-			Binding c = b.getChildren()[i];
-
-			if (c.getValue() instanceof Integer)
-				count = (Integer) c.getValue();
-			else if (c.getValue() instanceof SortField[])
-				fields = (SortField[]) c.getValue();
-		}
+		if (option.containsKey("limit"))
+			count = Integer.parseInt(option.get("limit"));
 
 		try {
 			return new Sort(count, fields);
@@ -47,9 +44,7 @@ public class SortParser implements QueryParser {
 		@Override
 		public Object parse(Binding b) {
 			List<SortField> fields = new ArrayList<SortField>();
-
 			parse(b, fields);
-
 			String lastName = fields.get(fields.size() - 1).getName();
 			if (lastName.equalsIgnoreCase("d") || lastName.equalsIgnoreCase("desc")) {
 				fields.remove(fields.size() - 1);

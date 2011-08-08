@@ -15,16 +15,14 @@ import org.krakenapps.logstorage.query.command.Function;
 public class FunctionParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("function", new FunctionParser(), new FunctionPlaceholder(),
-				option(k("as"), new StringPlaceholder()), option(t(",")), option(ref("function")));
+		syntax.add("function", this, new FunctionPlaceholder(),
+				option(k("as"), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("function")));
 	}
 
 	@Override
 	public Object parse(Binding b) {
 		List<Function> fs = new ArrayList<Function>();
-
 		parse(b, fs);
-
 		return fs;
 	}
 

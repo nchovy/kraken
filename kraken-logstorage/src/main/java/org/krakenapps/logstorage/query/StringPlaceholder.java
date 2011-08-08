@@ -2,6 +2,8 @@ package org.krakenapps.logstorage.query;
 
 import java.nio.BufferUnderflowException;
 import java.text.ParseException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.ParserContext;
@@ -11,13 +13,19 @@ import org.krakenapps.bnf.StringUtil;
 
 public class StringPlaceholder implements Placeholder {
 	private StringBuilder sb;
-	private Character end;
+	private Set<Character> end = new HashSet<Character>();
 
 	public StringPlaceholder() {
+		this(' ');
 	}
 
 	public StringPlaceholder(char end) {
-		this.end = end;
+		this.end.add(end);
+	}
+
+	public StringPlaceholder(char[] end) {
+		for (char c : end)
+			this.end.add(c);
 	}
 
 	@Override
@@ -34,9 +42,6 @@ public class StringPlaceholder implements Placeholder {
 
 		String token = sb.toString();
 
-		if (end != null && i < text.length() && text.charAt(i) == end.charValue())
-			i++;
-
 		// remove trailing spaces
 		i = StringUtil.skipSpaces(text, i);
 		return new Result(new Binding(this, token), i);
@@ -45,7 +50,7 @@ public class StringPlaceholder implements Placeholder {
 	private int findEnd(String text, int position) throws ParseException {
 		int i = position;
 		boolean quote = false;
-		StringBuilder q = new StringBuilder();
+		StringBuilder q = null;
 
 		while (i < text.length()) {
 			char c = text.charAt(i++);
@@ -60,9 +65,7 @@ public class StringPlaceholder implements Placeholder {
 				} else
 					q.append(c);
 			} else {
-				if (c == ' ')
-					break;
-				else if (end != null && c == end.charValue())
+				if (end.contains(c))
 					break;
 				else if (c == '"') {
 					quote = !quote;

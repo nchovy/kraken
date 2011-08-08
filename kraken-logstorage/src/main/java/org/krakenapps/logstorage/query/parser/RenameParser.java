@@ -10,7 +10,7 @@ import org.krakenapps.logstorage.query.command.Rename;
 public class RenameParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("rename", new RenameParser(), k("rename"), new StringPlaceholder(), k("as"), new StringPlaceholder());
+		syntax.add("rename", this, k("rename"), new StringPlaceholder(), k("as"), new StringPlaceholder());
 		syntax.addRoot("rename");
 	}
 

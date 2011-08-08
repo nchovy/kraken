@@ -18,7 +18,6 @@ package org.krakenapps.logstorage.engine;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -48,8 +47,6 @@ import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.criterion.Criterion;
-import org.krakenapps.logstorage.engine.v1.LogFileReaderV1;
-import org.krakenapps.logstorage.engine.v2.LogFileReaderV2;
 import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -425,15 +422,7 @@ public class LogStorageEngine implements LogStorage {
 		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, pred, callback);
 
 		try {
-			RandomAccessFile headerReader = new RandomAccessFile(indexPath, "r");
-			LogFileHeader header = LogFileHeader.extractHeader(headerReader);
-			headerReader.close();
-
-			if (header.version() == 1)
-				reader = new LogFileReaderV1(indexPath, dataPath);
-			else if (header.version() == 2)
-				reader = new LogFileReaderV2(indexPath, dataPath);
-
+			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 			reader.traverse(from, to, limit, c);
 		} catch (InterruptedException e) {
 			throw e;

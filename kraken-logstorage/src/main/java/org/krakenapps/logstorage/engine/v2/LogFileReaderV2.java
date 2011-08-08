@@ -193,6 +193,7 @@ public class LogFileReaderV2 extends LogFileReader {
 			indexFile.read(buf, 0, header.compressedLength);
 			decompresser.setInput(buf, 0, header.compressedLength);
 			try {
+				indexBuffer.limit(header.origLength);
 				decompresser.inflate(indexBuffer.array());
 				decompresser.reset();
 			} catch (DataFormatException e) {
@@ -227,6 +228,7 @@ public class LogFileReaderV2 extends LogFileReader {
 			dataFile.read(buf, 0, header.compressedLength);
 			decompresser.setInput(buf, 0, header.compressedLength);
 			try {
+				dataBuffer.limit(header.origLength);
 				decompresser.inflate(dataBuffer.array());
 				decompresser.reset();
 			} catch (DataFormatException e) {

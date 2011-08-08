@@ -93,6 +93,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 		long length = indexFile.length();
 		long pos = indexFileHeader.size();
 		while (pos < length) {
+			indexFile.seek(pos);
 			lastBlockHeaderFp = pos;
 
 			// ignore start date

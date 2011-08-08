@@ -4,6 +4,7 @@ import static org.krakenapps.bnf.Syntax.*;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
@@ -13,47 +14,45 @@ import org.krakenapps.logstorage.query.command.Table;
 public class TableParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("table", new TableParser(), k("table"), new StringPlaceholder(), option(uint()),
-				option(k("duration"), k("="), uint(), choice(k("s"), k("m"), k("h"), k("d"), k("w"), k("mon"))));
+		syntax.add("table", new TableParser(), k("table"), ref("option"), new StringPlaceholder(), option(uint()));
 		syntax.addRoot("table");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
-		String tableName = (String) b.getChildren()[1].getValue();
+		Map<String, String> options = (Map<String, String>) b.getChildren()[1].getValue();
+		String tableName = (String) b.getChildren()[2].getValue();
+		Date from = null;
+		int limit = 0;
 
-		if (b.getChildren().length == 3) {
-			if (b.getChildren()[2].getValue() != null)
-				return new Table(tableName, (Integer) b.getChildren()[2].getValue());
-			else {
-				int value = (Integer) b.getChildren()[2].getChildren()[2].getValue();
-				String field = (String) b.getChildren()[2].getChildren()[3].getValue();
-				return new Table(tableName, getDuration(value, field), null);
-			}
-		} else if (b.getChildren().length == 4) {
-			int value = (Integer) b.getChildren()[3].getChildren()[2].getValue();
-			String field = (String) b.getChildren()[3].getChildren()[3].getValue();
-			return new Table(tableName, (Integer) b.getChildren()[2].getValue(), getDuration(value, field), null);
+		if (options.containsKey("duration")) {
+			String duration = options.get("duration");
+			int value = Integer.parseInt(duration.substring(0, duration.length() - 1));
+			from = getDuration(value, duration.substring(duration.length() - 1));
 		}
 
-		return new Table(tableName);
+		if (options.containsKey("limit"))
+			limit = Integer.parseInt(options.get("limit"));
+
+		return new Table(tableName, limit, from, null);
 	}
 
 	private Date getDuration(int value, String field) {
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(System.currentTimeMillis());
 		if (field.equals("s"))
-			c.add(-value, Calendar.SECOND);
+			c.add(Calendar.SECOND, -value);
 		else if (field.equals("m"))
-			c.add(-value, Calendar.MINUTE);
+			c.add(Calendar.MINUTE, -value);
 		else if (field.equals("h"))
-			c.add(-value, Calendar.HOUR_OF_DAY);
+			c.add(Calendar.HOUR_OF_DAY, -value);
 		else if (field.equals("d"))
-			c.add(-value, Calendar.DAY_OF_MONTH);
+			c.add(Calendar.DAY_OF_MONTH, -value);
 		else if (field.equals("w"))
-			c.add(-value, Calendar.WEEK_OF_YEAR);
+			c.add(Calendar.WEEK_OF_YEAR, -value);
 		else if (field.equals("mon"))
-			c.add(-value, Calendar.MONTH);
+			c.add(Calendar.MONTH, -value);
 		return c.getTime();
 	}
 }

@@ -105,6 +105,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 		long length = indexFile.length() - 4;
 		long pos = indexFileHeader.size();
 		while (pos < length) {
+			indexFile.seek(pos);
 			// ignore start date
 			read6Byte(indexFile);
 			long endTime = read6Byte(indexFile);
@@ -118,11 +119,21 @@ public class LogFileWriterV2 extends LogFileWriter {
 		if (count > 0) {
 			indexFile.seek(length);
 			lastKey = indexFile.readInt();
-		} else
-			length += 4;
+			indexFile.seek(length);
+
+			// read data file offset
+			length = dataFile.length();
+			pos = dataFileHeader.size();
+			while (pos < length) {
+				dataFile.seek(pos);
+				dataFileOffset += dataFile.readInt();
+				pos += 8 + dataFile.readInt();
+			}
+		} else {
+			indexFile.seek(length + 4);
+		}
 
 		// move to end
-		indexFile.seek(length);
 		dataFile.seek(dataFile.length());
 	}
 
@@ -147,6 +158,8 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 	@Override
 	public void write(LogRecord data) throws IOException {
+		logger.trace("kraken logstorage: write new log: id {}, time {}", data.getId(), data.getDate().toString());
+
 		// check validity
 		int newKey = data.getId();
 		if (newKey <= lastKey)
