@@ -38,7 +38,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		LogQuery lq = queries.get(id);
 		if (lq != null)
 			lq.cancel();
-		lq.getResult().close();
+		((FileBufferList<Map<String, Object>>) lq.getResult()).close();
 		queries.remove(id);
 	}
 

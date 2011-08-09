@@ -92,13 +92,15 @@ public class LogStorageScript implements Script {
 		storage.stop();
 	}
 
-	@ScriptUsage(description = "create new table", arguments = { @ScriptArgument(name = "name", type = "string", description = "log table name") })
+	@ScriptUsage(description = "create new table", arguments = { @ScriptArgument(name = "name", type = "string",
+			description = "log table name") })
 	public void createTable(String[] args) {
 		storage.createTable(args[0]);
 		context.println("table created");
 	}
 
-	@ScriptUsage(description = "drop log table", arguments = { @ScriptArgument(name = "name", type = "string", description = "log table name") })
+	@ScriptUsage(description = "drop log table", arguments = { @ScriptArgument(name = "name", type = "string",
+			description = "log table name") })
 	public void dropTable(String[] args) {
 		try {
 			storage.dropTable(args[0]);
@@ -366,10 +368,10 @@ public class LogStorageScript implements Script {
 			}
 		}
 
-		FileBufferList<Map<String, Object>> results = lq.getResult();
+		List<Map<String, Object>> results = lq.getResult();
 		for (Map<String, Object> m : results)
 			printMap(m);
-		results.close();
+		((FileBufferList<Map<String, Object>>) results).close();
 
 		logQueryService.removeQuery(lq.getId());
 		context.println((System.currentTimeMillis() - begin) + " ms");
