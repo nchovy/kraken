@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -98,6 +99,10 @@ public class OnlineWriter {
 		synchronized (this) {
 			writer.write(logs);
 		}
+	}
+
+	public List<LogRecord> getCache() {
+		return writer.getCache();
 	}
 
 	public void flush() throws IOException {

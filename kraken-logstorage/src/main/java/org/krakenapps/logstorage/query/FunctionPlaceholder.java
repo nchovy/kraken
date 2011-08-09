@@ -62,6 +62,9 @@ public class FunctionPlaceholder implements Placeholder {
 		String target = sb.toString();
 
 		i = StringUtil.skipSpaces(text, ++i);
+		if (i < text.length() && text.charAt(i) == ',')
+			i++;
+
 		Function f = Function.getFunction(name, target, func);
 		if (f == null)
 			throw new ParseException("unknown function", begin);

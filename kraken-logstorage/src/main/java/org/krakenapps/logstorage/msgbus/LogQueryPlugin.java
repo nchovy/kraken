@@ -79,7 +79,6 @@ public class LogQueryPlugin {
 		private int limit;
 
 		private LogQueryCallbackImpl(int orgId, LogQuery query, int offset, int limit) {
-			super();
 			this.orgId = orgId;
 			this.query = query;
 			this.offset = offset;

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.krakenapps.logstorage.engine.v1.LogFileWriterV1;
 import org.krakenapps.logstorage.engine.v2.LogFileWriterV2;
@@ -51,6 +52,8 @@ public abstract class LogFileWriter {
 	public abstract void write(LogRecord data) throws IOException;
 
 	public abstract void write(Collection<LogRecord> data) throws IOException;
+
+	public abstract List<LogRecord> getCache();
 
 	public abstract void flush() throws IOException;
 

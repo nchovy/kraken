@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.krakenapps.logstorage.LogQuery;
 import org.krakenapps.logstorage.LogQueryCallback;
 import org.krakenapps.logstorage.LogQueryCommand;
+import org.krakenapps.logstorage.LogQueryService;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.LogQueryCommand.Status;
@@ -26,13 +27,13 @@ public class LogQueryImpl implements LogQuery {
 	private Result result;
 	private List<LogQueryCallback> callbacks = new ArrayList<LogQueryCallback>();
 
-	public LogQueryImpl(LogStorage logStorage, LogTableRegistry tableRegistry, String query) {
+	public LogQueryImpl(LogQueryService service, LogStorage logStorage, LogTableRegistry tableRegistry, String query) {
 		this.queryString = query;
 
 		for (String q : queryString.split("\\|")) {
 			q = q.trim();
 			try {
-				commands.add(LogQueryCommand.createCommand(logStorage, tableRegistry, q));
+				commands.add(LogQueryCommand.createCommand(service, logStorage, tableRegistry, q));
 			} catch (ParseException e) {
 				throw new IllegalArgumentException("invalid query command: " + q);
 			}
@@ -54,6 +55,7 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void run() {
+		logger.trace("kraken logstorage: run query => {}", queryString);
 		if (commands.size() > 0)
 			commands.get(0).start();
 	}

@@ -60,7 +60,7 @@ public class LogStorageEngine implements LogStorage {
 
 	private static final int DEFAULT_MAX_IDLE_TIME = 10000;
 	private static final int DEFAULT_MAX_LOG_BUFFERING = 10000;
-	private static final int DEFAULT_LOG_FLUSH_INTERVAL = 5000;
+	private static final int DEFAULT_LOG_FLUSH_INTERVAL = 3600000;
 
 	private LogStorageStatus status = LogStorageStatus.Closed;
 
@@ -334,7 +334,9 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	private Log convert(String tableName, LogRecord logdata) {
+		int pos = logdata.getData().position();
 		Map<String, Object> m = EncodingRule.decodeMap(logdata.getData());
+		logdata.getData().position(pos);
 		return new Log(tableName, logdata.getDate(), logdata.getId(), m);
 	}
 
@@ -420,6 +422,19 @@ public class LogStorageEngine implements LogStorage {
 		File dataPath = DatapathUtil.getDataFile(tableId, day);
 		LogFileReader reader = null;
 		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, pred, callback);
+
+		OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
+		List<LogRecord> cache = onlineWriter.getCache();
+		if (cache != null) {
+			Collections.reverse(cache);
+			for (LogRecord logData : cache) {
+				if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
+					c.onLog(logData);
+					if (--limit == 0)
+						return c.matched;
+				}
+			}
+		}
 
 		try {
 			reader = LogFileReader.getLogFileReader(indexPath, dataPath);

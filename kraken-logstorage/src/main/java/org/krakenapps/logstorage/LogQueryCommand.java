@@ -8,8 +8,10 @@ import java.util.Map;
 import org.krakenapps.bnf.Syntax;
 
 import org.krakenapps.logstorage.query.FileBufferList;
+import org.krakenapps.logstorage.query.command.Lookup;
 import org.krakenapps.logstorage.query.command.Table;
 import org.krakenapps.logstorage.query.parser.EvalParser;
+import org.krakenapps.logstorage.query.parser.LookupParser;
 import org.krakenapps.logstorage.query.parser.OptionParser;
 import org.krakenapps.logstorage.query.parser.QueryParser;
 import org.krakenapps.logstorage.query.parser.RenameParser;
@@ -36,8 +38,8 @@ public abstract class LogQueryCommand {
 
 	static {
 		List<Class<? extends QueryParser>> parsers = Arrays.asList(EvalParser.class, FunctionParser.class,
-				OptionParser.class, RenameParser.class, SortParser.class, StatsParser.class, TableParser.class,
-				TimechartParser.class);
+				LookupParser.class, OptionParser.class, RenameParser.class, SortParser.class, StatsParser.class,
+				TableParser.class, TimechartParser.class);
 
 		for (Class<? extends QueryParser> parser : parsers) {
 			try {
@@ -48,8 +50,8 @@ public abstract class LogQueryCommand {
 		}
 	}
 
-	public static LogQueryCommand createCommand(LogStorage logStorage, LogTableRegistry tableRegistry, String query)
-			throws ParseException {
+	public static LogQueryCommand createCommand(LogQueryService service, LogStorage logStorage,
+			LogTableRegistry tableRegistry, String query) throws ParseException {
 		LogQueryCommand token = (LogQueryCommand) syntax.eval(query);
 		token.query = query;
 		if (token instanceof Table) {
@@ -57,6 +59,8 @@ public abstract class LogQueryCommand {
 			TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(((Table) token).getTableName()));
 			if (tm.get("logformat") != null)
 				((Table) token).setDataHeader(tm.get("logformat").split(" "));
+		} else if (token instanceof Lookup) {
+			((Lookup) token).setLogQueryService(service);
 		}
 
 		return token;

@@ -10,4 +10,10 @@ public interface LogQueryService {
 	Collection<LogQuery> getQueries();
 
 	LogQuery getQuery(int id);
+
+	void addLookupHandler(String name, LookupHandler handler);
+
+	LookupHandler getLookupHandler(String name);
+
+	void removeLookupHandler(String name);
 }

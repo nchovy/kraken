@@ -19,8 +19,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.zip.Deflater;
 
 import org.krakenapps.logstorage.engine.InvalidLogFileHeaderException;
@@ -56,10 +58,13 @@ public class LogFileWriterV2 extends LogFileWriter {
 	private long blockLogCount;
 	private long dataFileOffset;
 
+	private int lastFlushed;
 	private ByteBuffer indexBuffer;
 	private ByteBuffer dataBuffer;
 	private ByteBuffer compressed;
 	private Deflater compresser;
+
+	private List<LogRecord> cached = new ArrayList<LogRecord>();
 
 	public LogFileWriterV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this(indexPath, dataPath, DEFAULT_BLOCK_SIZE);
@@ -166,7 +171,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 			throw new IllegalArgumentException("invalid key: " + newKey + ", last key was " + lastKey);
 
 		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime()) || indexBuffer.remaining() < 16)
-			flushIndex();
+			flush();
 
 		// add to buffer
 		prepareInt(data.getId(), intbuf);
@@ -181,7 +186,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 		blockLogCount++;
 
 		if (dataBuffer.remaining() < 16 + data.getData().remaining())
-			flushData();
+			flush();
 
 		prepareInt(data.getId(), intbuf);
 		dataBuffer.put(intbuf);
@@ -204,6 +209,8 @@ public class LogFileWriterV2 extends LogFileWriter {
 		lastTime = (lastTime < time) ? time : lastTime;
 
 		count++;
+
+		cached.add(data);
 	}
 
 	@Override
@@ -218,14 +225,23 @@ public class LogFileWriterV2 extends LogFileWriter {
 	}
 
 	@Override
-	public void flush() throws IOException {
-		flushIndex();
-		flushData();
+	public List<LogRecord> getCache() {
+		return cached;
 	}
 
-	private void flushIndex() throws IOException {
+	@Override
+	public void flush() throws IOException {
 		if (indexBuffer.position() == 0)
 			return;
+
+		logger.trace("kraken logstorage: flush index");
+
+		for (int i = 0; i < cached.size(); i++) {
+			LogRecord data = cached.get(i);
+			if (data.getId() > lastFlushed)
+				break;
+			cached.remove(i--);
+		}
 
 		indexBuffer.flip();
 
@@ -264,11 +280,17 @@ public class LogFileWriterV2 extends LogFileWriter {
 		blockStartLogTime = null;
 		blockEndLogTime = null;
 		blockLogCount = 0;
+
+		lastFlushed = lastKey;
+
+		flushData();
 	}
 
 	private void flushData() throws IOException {
 		if (dataBuffer.position() == 0)
 			return;
+
+		logger.trace("kraken logstorage: flush data");
 
 		dataBuffer.flip();
 		dataFileOffset += dataBuffer.limit();

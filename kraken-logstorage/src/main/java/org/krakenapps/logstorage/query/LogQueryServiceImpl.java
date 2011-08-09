@@ -11,6 +11,7 @@ import org.krakenapps.logstorage.LogQuery;
 import org.krakenapps.logstorage.LogQueryService;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.LookupHandler;
 
 @Component(name = "log-query-service")
 @Provides
@@ -23,9 +24,11 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
 
+	private Map<String, LookupHandler> lookupHandlers = new HashMap<String, LookupHandler>();
+
 	@Override
 	public LogQuery createQuery(String query) {
-		LogQuery lq = new LogQueryImpl(logStorage, tableRegistry, query);
+		LogQuery lq = new LogQueryImpl(this, logStorage, tableRegistry, query);
 		queries.put(lq.getId(), lq);
 		return lq;
 	}
@@ -35,6 +38,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		LogQuery lq = queries.get(id);
 		if (lq != null)
 			lq.cancel();
+		lq.getResult().close();
 		queries.remove(id);
 	}
 
@@ -46,5 +50,20 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Override
 	public LogQuery getQuery(int id) {
 		return queries.get(id);
+	}
+
+	@Override
+	public void addLookupHandler(String name, LookupHandler handler) {
+		lookupHandlers.put(name, handler);
+	}
+
+	@Override
+	public LookupHandler getLookupHandler(String name) {
+		return lookupHandlers.get(name);
+	}
+
+	@Override
+	public void removeLookupHandler(String name) {
+		lookupHandlers.remove(name);
 	}
 }

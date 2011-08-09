@@ -180,6 +180,11 @@ public class LogFileWriterV1 extends LogFileWriter {
 	}
 
 	@Override
+	public List<LogRecord> getCache() {
+		return bufferedLogs;
+	}
+
+	@Override
 	public void flush() throws IOException {
 		List<LogRecord> b = bufferedLogs;
 		bufferedLogs = new ArrayList<LogRecord>(maxLogBuffering * 2);
