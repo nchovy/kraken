@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import org.apache.mina.core.filterchain.IoFilter.NextFilter;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.filter.codec.ProtocolDecoderOutput;
+import org.apache.sshd.common.SshException;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
@@ -82,7 +83,7 @@ public class SshShell implements Command, Runnable, QuitHandler {
 		int width = Integer.parseInt(env.getEnv().get(Environment.ENV_COLUMNS));
 		int height = Integer.parseInt(env.getEnv().get(Environment.ENV_LINES));
 		context.setWindowSize(width, height);
-		
+
 		String username = env.getEnv().get(Environment.ENV_USER);
 		session.setPrincipal(username);
 
@@ -180,6 +181,9 @@ public class SshShell implements Command, Runnable, QuitHandler {
 				out.flush();
 			} catch (IOException e) {
 				logger.error("kraken core: print error", e);
+				if (e instanceof SshException && e.getMessage().equals("Already closed")) {
+					throw new IllegalStateException("SSH: Already Closed");
+				}
 			}
 			return this;
 		}
