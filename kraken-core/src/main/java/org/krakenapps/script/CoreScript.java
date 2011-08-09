@@ -99,7 +99,10 @@ public class CoreScript implements Script {
 		FileOutputStream os = null;
 		try {
 			byte[] b = HttpWagon.download(url);
-			File f = new File(dir, url.getFile());
+			String fileStr = url.getFile();
+			if (fileStr.indexOf('/') != -1)
+				fileStr = fileStr.substring(fileStr.lastIndexOf('/') + 1);
+			File f = new File(dir, fileStr);
 			os = new FileOutputStream(f);
 			os.write(b);
 
