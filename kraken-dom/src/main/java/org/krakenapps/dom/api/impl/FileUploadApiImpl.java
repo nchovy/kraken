@@ -84,8 +84,10 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 	@Validate
 	public void start() {
-		baseDir = new File(prefs.get(BASE_PATH, "data/kraken-dom/upload/"));
-		tempDir = new File(prefs.get(BASE_PATH, "data/kraken-dom/upload/temp"));
+		baseDir = new File(prefs.get(BASE_PATH,
+				new File(System.getProperty("kraken.data.dir"), "kraken-http/upload/").getAbsolutePath()));
+		tempDir = new File(prefs.get(BASE_PATH,
+				new File(System.getProperty("kraken.data.dir"), "kraken-http/upload/").getAbsolutePath()));
 		baseDir.mkdirs();
 		tempDir.mkdirs();
 
@@ -249,7 +251,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 				try {
 					if (item.callback != null)
 						item.callback.onUploadFile(item.token, null);
-					
+
 					logger.info("kraken dom: upload failure {} {}, expected {} != uploaded {}",
 							new Object[] { item.token.getSpaceId(), item.token.getFileName(), item.token.getFileSize(),
 									totalReadBytes });
