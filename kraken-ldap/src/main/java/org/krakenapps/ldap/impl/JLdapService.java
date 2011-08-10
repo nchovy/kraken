@@ -228,6 +228,9 @@ public class JLdapService implements LdapService {
 
 			// try bind
 			String dn = entry.getAttribute("distinguishedName").getStringValue();
+			if (password == null || password.isEmpty())
+				return false;
+			
 			lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
 			return true;
 		} catch (Exception e) {
