@@ -17,11 +17,18 @@ package org.krakenapps.logger;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.impl.KrakenLoggerFactory;
+import org.slf4j.impl.StaticLoggerBinder;
 
 public class LoggerScriptFactory implements ScriptFactory {
 	public LoggerScriptFactory() {
-	}
+		// temporary hard coded some logger default settings
+		KrakenLoggerFactory loggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton().getLoggerFactory();
 
+		loggerFactory.setLogLevel("org.apache.sshd.server.session.ServerSession", "info", false);
+	}
+	
 	@Override
 	public Script createScript() {
 		return new LoggerScript();
