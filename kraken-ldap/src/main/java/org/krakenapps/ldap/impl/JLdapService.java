@@ -15,6 +15,9 @@
  */
 package org.krakenapps.ldap.impl;
 
+import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,6 +45,7 @@ import com.novell.ldap.LDAPEntry;
 import com.novell.ldap.LDAPException;
 import com.novell.ldap.LDAPReferralException;
 import com.novell.ldap.LDAPSearchResults;
+import com.novell.ldap.LDAPSocketFactory;
 
 @Component(name = "ldap-service")
 @Provides
@@ -201,8 +205,6 @@ public class JLdapService implements LdapService {
 
 		return ous;
 	}
-	
-	
 
 	@Override
 	public boolean verifyPassword(LdapProfile profile, String account, String password) {
@@ -211,11 +213,13 @@ public class JLdapService implements LdapService {
 
 	@Override
 	public boolean verifyPassword(LdapProfile profile, String account, String password, int timeout) {
+		if (password == null || password.isEmpty())
+			return false;
+
+		LDAPConnection.setSocketFactory(new JLdapSocketFactory(timeout));
 		LDAPConnection lc = new LDAPConnection();
+
 		try {
-			if (timeout > 0)
-				lc.setSocketTimeOut(timeout);
-			
 			lc.connect(profile.getDc(), profile.getPort());
 
 			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
@@ -228,9 +232,6 @@ public class JLdapService implements LdapService {
 
 			// try bind
 			String dn = entry.getAttribute("distinguishedName").getStringValue();
-			if (password == null || password.isEmpty())
-				return false;
-			
 			lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
 			return true;
 		} catch (Exception e) {
@@ -244,7 +245,6 @@ public class JLdapService implements LdapService {
 				}
 		}
 	}
-
 
 	private String buildBaseDN(String domain) {
 		StringTokenizer t = new StringTokenizer(domain, ".");
@@ -343,5 +343,20 @@ public class JLdapService implements LdapService {
 	private String getString(LDAPAttributeSet attrs, String attrName) {
 		LDAPAttribute attr = attrs.getAttribute(attrName);
 		return (attr == null) ? null : attr.getStringValue();
+	}
+
+	private static class JLdapSocketFactory implements LDAPSocketFactory {
+		private int timeout;
+
+		public JLdapSocketFactory(int timeout) {
+			this.timeout = timeout;
+		}
+
+		@Override
+		public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
+			Socket socket = new Socket(host, port);
+			socket.setSoTimeout(timeout);
+			return socket;
+		}
 	}
 }
