@@ -21,6 +21,7 @@ public class UploadToken {
 	private int spaceId;
 	private String fileName;
 	private long fileSize;
+	private Object userData;
 
 	public UploadToken(String token, int userId, int spaceId, String fileName, long fileSize) {
 		this.token = token;
@@ -75,5 +76,22 @@ public class UploadToken {
 	 */
 	public long getFileSize() {
 		return fileSize;
+	}
+
+	/**
+	 * @return user data
+	 */
+	public Object getUserData() {
+		return userData;
+	}
+
+	/**
+	 * Set user data
+	 * 
+	 * @param userData
+	 *            the user data
+	 */
+	public void setUserData(Object userData) {
+		this.userData = userData;
 	}
 }

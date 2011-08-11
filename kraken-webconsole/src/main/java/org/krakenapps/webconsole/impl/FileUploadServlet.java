@@ -18,6 +18,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.model.UploadedFile;
+import org.krakenapps.webconsole.MimeTypes;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +71,7 @@ public class FileUploadServlet extends HttpServlet {
 			if (token == null)
 				throw new IllegalStateException("download token not found");
 			
-			f = upload.getFile(token, resourceId);
+			f = upload.getFileMetadata(resourceId, token);
 			is = new FileInputStream(f.getFile());
 			os = resp.getOutputStream();
 			logger.trace("kraken webconsole: open downstream for {}", f.getFile().getAbsolutePath());

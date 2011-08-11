@@ -123,17 +123,27 @@ public interface FileUploadApi {
 	/**
 	 * Get file metadata using download token, space id and resource id.
 	 * 
+	 * @param resourceId
+	 *            the resource id that you obtained before using setUploadToken
 	 * @param token
 	 *            the download token
 	 * @param spaceId
 	 *            the space id as you notified through upload token
-	 * @param resourceId
-	 *            the resource id that you obtained before using setUploadToken
+	 * 
 	 * @return the uploaded file metadata
 	 * @throws IOException
 	 *             when file open failed
 	 */
-	UploadedFile getFile(String token, int resourceId) throws IOException;
+	UploadedFile getFileMetadata(int resourceId, String token) throws IOException;
+
+	/**
+	 * Get file metadata for internal use
+	 * 
+	 * @param resourceId
+	 * @param token
+	 * @return the file metadata
+	 */
+	UploadedFile getFileMetadata(int resourceId);
 
 	/**
 	 * Delete uploaded file from space.
@@ -145,4 +155,12 @@ public interface FileUploadApi {
 	 * 
 	 */
 	void deleteFile(int userId, int resourceId);
+
+	/**
+	 * Delete uploaded file for internal use
+	 * 
+	 * @param resourceId
+	 *            the resource id
+	 */
+	void deleteFile(int resourceId);
 }

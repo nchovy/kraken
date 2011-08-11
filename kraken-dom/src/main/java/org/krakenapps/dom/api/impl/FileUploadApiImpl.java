@@ -315,9 +315,8 @@ public class FileUploadApiImpl implements FileUploadApi {
 		logger.trace("kraken dom: user file uploaded, space {}, name {}", token.getSpaceId(), token.getFileName());
 	}
 
-	@Transactional
 	@Override
-	public UploadedFile getFile(String token, int resourceId) throws IOException {
+	public UploadedFile getFileMetadata(int resourceId, String token) throws IOException {
 		Integer userId = downloadTokens.get(token);
 		if (userId == null)
 			throw new IllegalStateException("download token not found: " + token);
@@ -326,14 +325,21 @@ public class FileUploadApiImpl implements FileUploadApi {
 		if (user == null)
 			throw new IllegalStateException("user not found: " + userId);
 
+		UploadedFile f = getFileMetadata(resourceId);
+		if (f.getOwner().getOrganization().getId() != userId)
+			throw new SecurityException("access denied for token [" + token + "], user [" + userId + "], file ["
+					+ resourceId + "]");
+
+		return f;
+	}
+
+	@Transactional
+	@Override
+	public UploadedFile getFileMetadata(int resourceId) {
 		EntityManager em = entityManagerService.getEntityManager();
 		UploadedFile f = em.find(UploadedFile.class, resourceId);
 		if (f == null)
 			throw new IllegalStateException("resource not found: " + resourceId);
-
-		if (f.getOwner().getOrganization().getId() != userId)
-			throw new SecurityException("access denied for token [" + token + "], user [" + userId + "], file ["
-					+ resourceId + "]");
 
 		return f;
 	}
@@ -348,6 +354,28 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 		if (file.getOwner().getId() != userId)
 			throw new SecurityException("cannot delete other's file: " + resourceId);
+
+		em.remove(file);
+
+		// remove physical file
+		int spaceId = file.getFileSpace().getId();
+		File spaceDir = new File(baseDir, Integer.toString(spaceId));
+		spaceDir.mkdirs();
+
+		File f = new File(spaceDir, Integer.toString(resourceId));
+		if (!f.delete())
+			throw new IllegalStateException(String.format(
+					"failed to delete uploaded file: space %d, resource %d, path %s", spaceId, resourceId,
+					f.getAbsolutePath()));
+	}
+
+	@Transactional
+	@Override
+	public void deleteFile(int resourceId) {
+		EntityManager em = entityManagerService.getEntityManager();
+		UploadedFile file = em.find(UploadedFile.class, resourceId);
+		if (file == null)
+			return;
 
 		em.remove(file);
 
