@@ -182,6 +182,9 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 		PDU command = e.getPDU();
 		if (command == null)
 			return;
+		
+		if (logger.isTraceEnabled())
+			logger.trace("kraken snmp: trap [{}]", e.toString());
 
 		InetSocketAddress remote = toInetSocketAddress(e.getPeerAddress());
 		InetSocketAddress local = toInetSocketAddress(e.getTransportMapping().getListenAddress());
@@ -189,7 +192,7 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 		SnmpTrap trap = new SnmpTrap();
 		trap.setRemoteAddress(remote);
 		trap.setLocalAddress(local);
-
+		
 		if (command instanceof PDUv1) {
 			PDUv1 v1 = (PDUv1) command;
 			trap.setEnterpriseOid(v1.getEnterprise().toString());
