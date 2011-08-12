@@ -31,8 +31,14 @@ public class TableParser implements QueryParser {
 
 		if (options.containsKey("duration")) {
 			String duration = options.get("duration");
-			int value = Integer.parseInt(duration.substring(0, duration.length() - 1));
-			from = getDuration(value, duration.substring(duration.length() - 1));
+			int i;
+			for (i = 0; i < duration.length(); i++) {
+				char c = duration.charAt(i);
+				if (!('0' <= c && c <= '9'))
+					break;
+			}
+			int value = Integer.parseInt(duration.substring(0, i));
+			from = getDuration(value, duration.substring(i));
 		}
 
 		if (options.containsKey("from"))
@@ -49,17 +55,17 @@ public class TableParser implements QueryParser {
 	private Date getDuration(int value, String field) {
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(System.currentTimeMillis());
-		if (field.equals("s"))
+		if (field.equalsIgnoreCase("s"))
 			c.add(Calendar.SECOND, -value);
-		else if (field.equals("m"))
+		else if (field.equalsIgnoreCase("m"))
 			c.add(Calendar.MINUTE, -value);
-		else if (field.equals("h"))
+		else if (field.equalsIgnoreCase("h"))
 			c.add(Calendar.HOUR_OF_DAY, -value);
-		else if (field.equals("d"))
+		else if (field.equalsIgnoreCase("d"))
 			c.add(Calendar.DAY_OF_MONTH, -value);
-		else if (field.equals("w"))
+		else if (field.equalsIgnoreCase("w"))
 			c.add(Calendar.WEEK_OF_YEAR, -value);
-		else if (field.equals("mon"))
+		else if (field.equalsIgnoreCase("mon"))
 			c.add(Calendar.MONTH, -value);
 		return c.getTime();
 	}

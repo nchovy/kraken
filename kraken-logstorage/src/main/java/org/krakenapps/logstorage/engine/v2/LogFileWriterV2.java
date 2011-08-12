@@ -199,7 +199,9 @@ public class LogFileWriterV2 extends LogFileWriter {
 			dataBuffer.put(b.array());
 		} else {
 			byte[] array = new byte[b.remaining()];
+			int pos = b.position();
 			b.get(array);
+			b.position(pos);
 			dataBuffer.put(array);
 		}
 

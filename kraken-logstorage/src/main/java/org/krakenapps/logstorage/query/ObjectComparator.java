@@ -8,13 +8,14 @@ public class ObjectComparator implements Comparator<Object> {
 	public int compare(Object o1, Object o2) {
 		if (o1 == null && o2 == null)
 			return 0;
-
 		else if (o1 == null && o2 != null)
 			return 1;
+		else if (o1 != null && o2 == null)
+			return -1;
 
 		if (!o1.equals(o2)) {
 			if (!o1.getClass().equals(o2.getClass()))
-				return 0;
+				return o1.toString().compareTo(o2.toString());
 
 			if (o1 instanceof String)
 				return ((String) o1).compareTo((String) o2);

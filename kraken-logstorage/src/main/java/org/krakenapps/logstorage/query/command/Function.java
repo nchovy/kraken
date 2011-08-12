@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.krakenapps.logstorage.query.ObjectComparator;
+import org.krakenapps.logstorage.query.command.Function.EvaledField.EvalType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +74,41 @@ public abstract class Function {
 			if (!functionName.equals(name))
 				f.suffix = Integer.parseInt(name.substring(functionName.length()));
 			f.keyName = keyName;
+			if (target.startsWith("eval(") && target.endsWith(")")) {
+				String evalString = target.substring(5, target.length() - 1);
+				EvalType type = null;
+				String lh = null;
+				String operator = null;
+				String rh = null;
+				int index = 0;
+
+				if (evalString.contains("+")) {
+					index = evalString.indexOf("+");
+					type = EvalType.Arithmetic;
+					operator = "+";
+				} else if (evalString.contains("-")) {
+					index = evalString.indexOf("-");
+					type = EvalType.Arithmetic;
+					operator = "-";
+				} else if (evalString.contains("*")) {
+					index = evalString.indexOf("*");
+					type = EvalType.Arithmetic;
+					operator = "*";
+				} else if (evalString.contains("/")) {
+					index = evalString.indexOf("/");
+					type = EvalType.Arithmetic;
+					operator = "/";
+				} else if (evalString.contains("%")) {
+					index = evalString.indexOf("%");
+					type = EvalType.Arithmetic;
+					operator = "%";
+				}
+
+				lh = evalString.substring(0, index);
+				rh = evalString.substring(index + 1);
+
+				f.evaled = new EvaledField(type, lh, operator, rh);
+			}
 			f.target = target;
 			f.extClass = extClass;
 			return f;
@@ -109,16 +145,15 @@ public abstract class Function {
 	}
 
 	public void put(Map<String, Object> row) {
-		if (evaled != null) {
-			if (!evaled.eval(row))
-				return;
-		}
+		Object value = null;
 
-		if (row.containsKey(target)) {
-			Object value = row.get(target);
-			if (value != null)
-				put(value);
-		}
+		if (evaled != null)
+			value = evaled.eval(row);
+		else
+			value = row.get(target);
+
+		if (value != null)
+			put(value);
 	}
 
 	abstract protected void put(Object obj);
@@ -135,9 +170,46 @@ public abstract class Function {
 			return keyName;
 	}
 
-	private class EvaledField {
-		public boolean eval(Map<String, Object> row) {
-			return false;
+	public static class EvaledField {
+		public static enum EvalType {
+			Arithmetic, Boolean
+		}
+
+		private EvalType type;
+		private String lh;
+		private String operator;
+		private String rh;
+
+		public EvaledField(EvalType type, String lh, String operator, String rh) {
+			this.type = type;
+			this.lh = lh;
+			this.operator = operator;
+			this.rh = rh;
+		}
+
+		public Object eval(Map<String, Object> row) {
+			Object l = row.get(lh);
+			if (type == EvalType.Arithmetic) {
+				Object r = row.get(rh);
+
+				if (l == null && r == null)
+					return null;
+
+				if (operator.equals("+"))
+					return NumberUtil.add(l, r);
+				else if (operator.equals("-"))
+					return NumberUtil.sub(l, r);
+				else if (operator.equals("*"))
+					return NumberUtil.mul(l, r);
+				else if (operator.equals("/"))
+					return NumberUtil.div(l, r);
+				else if (operator.equals("%"))
+					return NumberUtil.mod(l, r);
+			} else if (type == EvalType.Boolean) {
+				Object r = rh;
+			}
+
+			return null;
 		}
 	}
 
@@ -147,13 +219,7 @@ public abstract class Function {
 
 		@Override
 		protected void put(Object obj) {
-			try {
-				double t = Double.parseDouble(obj.toString());
-				if (d == null)
-					d = 0.;
-				d += t;
-			} catch (NumberFormatException e) {
-			}
+			d = NumberUtil.add(d, obj).doubleValue();
 			count++;
 		}
 
@@ -187,7 +253,7 @@ public abstract class Function {
 	}
 
 	protected static class Count extends Function {
-		private int result = 0;
+		private long result = 0;
 
 		@Override
 		protected void put(Object obj) {
@@ -463,43 +529,37 @@ public abstract class Function {
 	}
 
 	protected static class Range extends Function {
-		private Double min;
-		private Double max;
+		private Number min;
+		private Number max;
 
 		@Override
 		protected void put(Object obj) {
-			try {
-				Double cur = Double.parseDouble(obj.toString());
-				if (min == null || cur < min)
-					min = cur;
-				if (max == null || cur > max)
-					max = cur;
-			} catch (NumberFormatException e) {
-			}
+			min = NumberUtil.min(min, obj);
+			max = NumberUtil.max(max, obj);
 		}
 
-		public Double getMin() {
+		public Number getMin() {
 			return min;
 		}
 
-		public void setMin(Double min) {
+		public void setMin(Number min) {
 			this.min = min;
 		}
 
-		public Double getMax() {
+		public Number getMax() {
 			return max;
 		}
 
-		public void setMax(Double max) {
+		public void setMax(Number max) {
 			this.max = max;
 		}
 
 		@Override
 		public Object getResult() {
-			if (min == null || max == null)
+			if (max == null && min == null)
 				return null;
-			else
-				return max - min;
+
+			return NumberUtil.sub(max, min);
 		}
 
 		@Override
@@ -510,25 +570,18 @@ public abstract class Function {
 	}
 
 	protected static class Sum extends Function {
-		private Double sum;
+		private Number sum;
 
 		@Override
 		protected void put(Object obj) {
-			try {
-				Double cur = Double.parseDouble(obj.toString());
-				if (sum == null)
-					sum = cur;
-				else
-					sum += cur;
-			} catch (NumberFormatException e) {
-			}
+			sum = NumberUtil.add(sum, obj);
 		}
 
-		public Double getSum() {
+		public Number getSum() {
 			return sum;
 		}
 
-		public void setSum(Double sum) {
+		public void setSum(Number sum) {
 			this.sum = sum;
 		}
 
@@ -544,25 +597,18 @@ public abstract class Function {
 	}
 
 	protected static class SumSquare extends Function {
-		private Double sum;
+		private Number sum;
 
 		@Override
 		protected void put(Object obj) {
-			try {
-				Double cur = Double.parseDouble((String) obj);
-				if (sum == null)
-					sum = cur * cur;
-				else
-					sum += cur * cur;
-			} catch (NumberFormatException e) {
-			}
+			sum = NumberUtil.add(sum, NumberUtil.mul(obj, obj));
 		}
 
-		public Double getSum() {
+		public Number getSum() {
 			return sum;
 		}
 
-		public void setSum(Double sum) {
+		public void setSum(Number sum) {
 			this.sum = sum;
 		}
 

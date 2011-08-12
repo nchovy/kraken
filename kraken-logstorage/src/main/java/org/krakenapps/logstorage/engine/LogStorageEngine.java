@@ -491,7 +491,7 @@ public class LogStorageEngine implements LogStorage {
 
 		private boolean onMatch(Log log) throws InterruptedException {
 			if (callback.isInterrupted())
-				throw new InterruptedException("interuptted log traverse");
+				throw new InterruptedException("interrupted log traverse");
 
 			matched++;
 

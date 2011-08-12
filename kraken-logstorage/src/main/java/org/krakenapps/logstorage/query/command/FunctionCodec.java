@@ -162,8 +162,8 @@ public class FunctionCodec implements CustomCodec {
 			((Function.Mode) func).setMaxCount((Integer) EncodingRule.decode(bb));
 			((Function.Mode) func).setNowCount((Integer) EncodingRule.decode(bb));
 		} else if (code == 137) {
-			((Function.Range) func).setMax((Double) EncodingRule.decode(bb));
-			((Function.Range) func).setMin((Double) EncodingRule.decode(bb));
+			((Function.Range) func).setMax((Number) EncodingRule.decode(bb));
+			((Function.Range) func).setMin((Number) EncodingRule.decode(bb));
 		} else if (code == 138) {
 			((Function.Sum) func).setSum((Double) EncodingRule.decode(bb));
 		} else if (code == 139) {

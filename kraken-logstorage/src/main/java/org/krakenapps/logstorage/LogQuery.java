@@ -2,6 +2,7 @@ package org.krakenapps.logstorage;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface LogQuery extends Runnable {
 	int getId();
@@ -18,7 +19,13 @@ public interface LogQuery extends Runnable {
 
 	List<LogQueryCommand> getCommands();
 
-	void registerCallback(LogQueryCallback callback);
+	void registerQueryCallback(LogQueryCallback callback);
 
-	void unregisterCallback(LogQueryCallback callback);
+	void unregisterQueryCallback(LogQueryCallback callback);
+
+	Set<LogTimelineCallback> getTimelineCallbacks();
+
+	void registerTimelineCallback(LogTimelineCallback callback);
+
+	void unregisterTimelineCallback(LogTimelineCallback callback);
 }

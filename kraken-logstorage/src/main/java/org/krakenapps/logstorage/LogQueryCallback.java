@@ -5,5 +5,11 @@ import java.util.Map;
 import org.krakenapps.logstorage.query.FileBufferList;
 
 public interface LogQueryCallback {
-	void callback(FileBufferList<Map<String, Object>> result);
+	int offset();
+
+	int limit();
+
+	void pageLoadedCallback(FileBufferList<Map<String, Object>> result);
+
+	void eofCallback();
 }

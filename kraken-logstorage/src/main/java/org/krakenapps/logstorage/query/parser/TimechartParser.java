@@ -34,18 +34,28 @@ public class TimechartParser implements QueryParser {
 
 		if (option.containsKey("span")) {
 			String value = option.get("span");
-			char f = value.charAt(value.length() - 1);
-			if (f == 's')
+			int i;
+			for (i = 0; i < value.length(); i++) {
+				char c = value.charAt(i);
+				if (!('0' <= c && c <= '9'))
+					break;
+			}
+			String f = value.substring(i);
+			if (f.equalsIgnoreCase("s"))
 				field = Span.Second;
-			else if (f == 'm')
+			else if (f.equalsIgnoreCase("m"))
 				field = Span.Minute;
-			else if (f == 'h')
+			else if (f.equalsIgnoreCase("h"))
 				field = Span.Hour;
-			else if (f == 'd')
+			else if (f.equalsIgnoreCase("d"))
 				field = Span.Day;
-			else if (f == 'w')
+			else if (f.equalsIgnoreCase("w"))
 				field = Span.Week;
-			amount = Integer.parseInt(value.substring(0, value.length() - 1));
+			else if (f.equalsIgnoreCase("mon"))
+				field = Span.Month;
+			else if (f.equalsIgnoreCase("y"))
+				field = Span.Year;
+			amount = Integer.parseInt(value.substring(0, i));
 		}
 
 		if (field == null)

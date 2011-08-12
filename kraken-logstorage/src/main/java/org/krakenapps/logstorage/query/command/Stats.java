@@ -10,7 +10,7 @@ import org.krakenapps.logstorage.LogQueryCommand;
 public class Stats extends LogQueryCommand {
 	private List<String> clauses;
 	private Function[] values;
-	private Map<List<Object>, List<Function>> result = new HashMap<List<Object>, List<Function>>();
+	private Map<List<Object>, List<Function>> result;
 
 	public Stats(List<String> clause, Function[] values) {
 		this.clauses = clause;
@@ -19,6 +19,9 @@ public class Stats extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
+		if (result == null)
+			result = new HashMap<List<Object>, List<Function>>();
+
 		List<Object> key = new ArrayList<Object>();
 		for (String clause : clauses)
 			key.add(getData(clause, m));
@@ -37,17 +40,19 @@ public class Stats extends LogQueryCommand {
 
 	@Override
 	public void eof() {
-		for (List<Object> key : result.keySet()) {
-			Map<String, Object> m = new HashMap<String, Object>();
+		if (result != null) {
+			for (List<Object> key : result.keySet()) {
+				Map<String, Object> m = new HashMap<String, Object>();
 
-			for (int i = 0; i < clauses.size(); i++)
-				m.put(clauses.get(i), key.get(i));
+				for (int i = 0; i < clauses.size(); i++)
+					m.put(clauses.get(i), key.get(i));
 
-			List<Function> fs = result.get(key);
-			for (int i = 0; i < values.length; i++)
-				m.put(values[i].toString(), fs.get(i).getResult());
+				List<Function> fs = result.get(key);
+				for (int i = 0; i < values.length; i++)
+					m.put(values[i].toString(), fs.get(i).getResult());
 
-			write(m);
+				write(m);
+			}
 		}
 		result = null;
 		for (Function f : values)

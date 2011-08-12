@@ -11,6 +11,7 @@ import org.krakenapps.logstorage.query.FileBufferList;
 import org.krakenapps.logstorage.query.command.Lookup;
 import org.krakenapps.logstorage.query.command.Table;
 import org.krakenapps.logstorage.query.parser.EvalParser;
+import org.krakenapps.logstorage.query.parser.FieldsParser;
 import org.krakenapps.logstorage.query.parser.LookupParser;
 import org.krakenapps.logstorage.query.parser.OptionParser;
 import org.krakenapps.logstorage.query.parser.QueryParser;
@@ -31,15 +32,16 @@ public abstract class LogQueryCommand {
 
 	private static Logger logger = LoggerFactory.getLogger(LogQueryCommand.class);
 	private static Syntax syntax = new Syntax();
-	private String query;
+	private String queryString;
+	protected LogQuery logQuery;
 	protected String[] header;
 	protected LogQueryCommand next;
 	protected volatile Status status = Status.Waiting;
 
 	static {
-		List<Class<? extends QueryParser>> parsers = Arrays.asList(EvalParser.class, FunctionParser.class,
-				LookupParser.class, OptionParser.class, RenameParser.class, SortParser.class, StatsParser.class,
-				TableParser.class, TimechartParser.class);
+		List<Class<? extends QueryParser>> parsers = Arrays.asList(EvalParser.class, FieldsParser.class,
+				FunctionParser.class, LookupParser.class, OptionParser.class, RenameParser.class, SortParser.class,
+				StatsParser.class, TableParser.class, TimechartParser.class);
 
 		for (Class<? extends QueryParser> parser : parsers) {
 			try {
@@ -50,10 +52,12 @@ public abstract class LogQueryCommand {
 		}
 	}
 
-	public static LogQueryCommand createCommand(LogQueryService service, LogStorage logStorage,
+	public static LogQueryCommand createCommand(LogQueryService service, LogQuery logQuery, LogStorage logStorage,
 			LogTableRegistry tableRegistry, String query) throws ParseException {
 		LogQueryCommand token = (LogQueryCommand) syntax.eval(query);
-		token.query = query;
+		token.queryString = query;
+		token.logQuery = logQuery;
+
 		if (token instanceof Table) {
 			((Table) token).setStorage(logStorage);
 			TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(((Table) token).getTableName()));
@@ -67,7 +71,7 @@ public abstract class LogQueryCommand {
 	}
 
 	public String getQueryString() {
-		return query;
+		return queryString;
 	}
 
 	public String[] getDataHeader() {
@@ -128,19 +132,21 @@ public abstract class LogQueryCommand {
 	public abstract void push(Map<String, Object> m);
 
 	public void push(FileBufferList<Map<String, Object>> buf) {
-		for (Map<String, Object> m : buf)
-			push(m);
-		buf.close();
+		if (buf != null) {
+			for (Map<String, Object> m : buf)
+				push(m);
+			buf.close();
+		}
 	}
 
-	protected void write(Map<String, Object> m) {
+	protected final void write(Map<String, Object> m) {
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;
 			next.push(m);
 		}
 	}
 
-	protected void write(FileBufferList<Map<String, Object>> buf) {
+	protected final void write(FileBufferList<Map<String, Object>> buf) {
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;
 			next.push(buf);
@@ -151,7 +157,11 @@ public abstract class LogQueryCommand {
 
 	public void eof() {
 		status = Status.End;
-		if (next != null)
+		if (next != null && next.status != Status.End)
 			next.eof();
+		if (logQuery != null) {
+			if (logQuery.getCommands().get(0).status != Status.End)
+				logQuery.getCommands().get(0).eof();
+		}
 	}
 }

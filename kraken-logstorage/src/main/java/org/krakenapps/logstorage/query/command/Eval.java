@@ -22,16 +22,15 @@ public class Eval extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
-		if (limit != null && limit == 0)
-			return;
-
 		for (Term term : terms) {
-			if (!term.eval(m))
+			if (!term.eval(this, m))
 				return;
 		}
 
-		if (limit != null)
-			limit--;
+		if (limit != null && --limit == 0) {
+			eof();
+			return;
+		}
 
 		write(m);
 	}
@@ -48,9 +47,9 @@ public class Eval extends LogQueryCommand {
 		private Object rh;
 		private boolean isRhString = true;
 
-		public boolean eval(Map<String, Object> m) {
-			Object l = isLhString ? lh : m.get(lh);
-			Object r = isRhString ? rh : m.get(rh);
+		public boolean eval(Eval eval, Map<String, Object> m) {
+			Object l = isLhString ? lh : eval.getData(lh.toString(), m);
+			Object r = isRhString ? rh : eval.getData(rh.toString(), m);
 
 			try {
 				int cmp = comp.compare(l, r);

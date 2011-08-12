@@ -1,6 +1,10 @@
 package org.krakenapps.logstorage.msgbus;
 
+import java.nio.BufferOverflowException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +14,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.logstorage.LogQuery;
 import org.krakenapps.logstorage.LogQueryCallback;
 import org.krakenapps.logstorage.LogQueryService;
+import org.krakenapps.logstorage.LogTimelineCallback;
 import org.krakenapps.logstorage.query.FileBufferList;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Request;
@@ -65,11 +70,20 @@ public class LogQueryPlugin {
 		int id = req.getInteger("id");
 		int offset = req.getInteger("offset");
 		int limit = req.getInteger("limit");
+		Integer timelineLimit = req.getInteger("timeline_limit");
 
 		LogQuery query = service.getQuery(id);
-		LogQueryCallback callback = new LogQueryCallbackImpl(req.getOrgId(), query, offset, limit);
-		query.registerCallback(callback);
-		new Thread(query, "Log Query " + id).start();
+		if (query != null) {
+			LogQueryCallback queryCallback = new LogQueryCallbackImpl(req.getOrgId(), query, offset, limit);
+			query.registerQueryCallback(queryCallback);
+			if (timelineLimit != null) {
+				LogTimelineCallback timelineCallback = new LogTimelineCallbackImpl(req.getOrgId(),
+						timelineLimit.intValue());
+				query.registerTimelineCallback(timelineCallback);
+			}
+
+			new Thread(query, "Log Query " + id).start();
+		}
 	}
 
 	private class LogQueryCallbackImpl implements LogQueryCallback {
@@ -86,9 +100,72 @@ public class LogQueryPlugin {
 		}
 
 		@Override
-		public void callback(FileBufferList<Map<String, Object>> result) {
-			pushApi.push(orgId, "logstorage-query", getResultData(query.getId(), offset, limit));
-			query.unregisterCallback(this);
+		public int offset() {
+			return offset;
+		}
+
+		@Override
+		public int limit() {
+			return limit;
+		}
+
+		@Override
+		public void pageLoadedCallback(FileBufferList<Map<String, Object>> result) {
+			Map<String, Object> m = getResultData(query.getId(), offset, limit);
+			m.put("id", query.getId());
+			m.put("type", "page_loaded");
+			pushApi.push(orgId, "logstorage-query", m);
+		}
+
+		@Override
+		public void eofCallback() {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("id", query.getId());
+			m.put("type", "eof");
+			m.put("total_count", query.getResult().size());
+			pushApi.push(orgId, "logstorage-query", m);
+			query.unregisterQueryCallback(this);
+		}
+	}
+
+	private class LogTimelineCallbackImpl implements LogTimelineCallback {
+		private int orgId;
+		private int limit;
+
+		public LogTimelineCallbackImpl(int orgId, int limit) {
+			this.orgId = orgId;
+			this.limit = limit;
+		}
+
+		@Override
+		public int limit() {
+			return limit;
+		}
+
+		@Override
+		public void callback(int spanField, int spanAmount, Map<Date, Integer> timeline) {
+			if (timeline.size() > limit)
+				throw new BufferOverflowException();
+
+			String fieldName = "";
+			if (spanField == Calendar.MINUTE)
+				fieldName = "Minute";
+			else if (spanField == Calendar.HOUR_OF_DAY)
+				fieldName = "Hour";
+			else if (spanField == Calendar.DAY_OF_MONTH)
+				fieldName = "Day";
+			else if (spanField == Calendar.MONTH)
+				fieldName = "Month";
+
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("span_field", fieldName);
+			m.put("span_amount", spanAmount);
+			Map<String, Object> t = new HashMap<String, Object>();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			for (Date key : timeline.keySet())
+				t.put(sdf.format(key), timeline.get(key));
+			m.put("timeline", t);
+			pushApi.push(orgId, "logstorage-query-timeline", m);
 		}
 	}
 
@@ -106,7 +183,7 @@ public class LogQueryPlugin {
 		Map<String, Object> m = new HashMap<String, Object>();
 
 		m.put("result", query.getResult(offset, limit));
-		m.put("total_counts", query.getResult().size());
+		m.put("count", query.getResult().size());
 
 		return m;
 	}

@@ -19,17 +19,21 @@ import java.util.Queue;
 
 import org.krakenapps.codec.CustomCodec;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.UnsupportedTypeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileBufferList<E> implements List<E> {
 	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/query/");
 	private static int BYTEBUFFER_CAPACITY = 655360; // 640KB
+	private Logger logger = LoggerFactory.getLogger(FileBufferList.class);
 	private List<E> cache = new ArrayList<E>();
 	private int cacheSize;
 
 	private File file;
 	private RandomAccessFile raf;
 	private Comparator<E> comparator;
-	private int size = 0;
+	private volatile int size = 0;
 	private ByteBuffer bb = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
 	private CustomCodec cc;
 
@@ -175,9 +179,11 @@ public class FileBufferList<E> implements List<E> {
 			E e = (E) EncodingRule.decode(bb, cc);
 			bb.clear();
 			return e;
+		} catch (UnsupportedTypeException e) {
+			logger.error("kraken logstorage: invalid access file {}, index {}", file.getName(), index);
 		} catch (IOException e) {
-			return null;
 		}
+		return null;
 	}
 
 	@Override

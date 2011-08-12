@@ -40,20 +40,24 @@ public class Timechart extends LogQueryCommand {
 	}
 
 	public Timechart(Span spanField, int spanAmount, Function[] values, String clause) {
-		try {
-			this.data = new FileBufferMap<Date, Object[]>(new FunctionCodec());
-			this.amount = new HashMap<Date, Long>();
-			this.spanField = spanField;
-			this.spanAmount = spanAmount;
-			this.values = values;
-			this.clause = clause;
-		} catch (IOException e) {
-		}
+		this.spanField = spanField;
+		this.spanAmount = spanAmount;
+		this.values = values;
+		this.clause = clause;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void push(Map<String, Object> m) {
+		if (data == null) {
+			try {
+				this.data = new FileBufferMap<Date, Object[]>(new FunctionCodec());
+			} catch (IOException e) {
+			}
+		}
+		if (amount == null)
+			this.amount = new HashMap<Date, Long>();
+
 		Date row = getKey((Date) m.get("_time"));
 		if (!data.containsKey(row)) {
 			Object[] v = new Object[values.length];
@@ -95,30 +99,32 @@ public class Timechart extends LogQueryCommand {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
-		List<Date> sortedKey = new ArrayList<Date>(data.keySet());
-		Collections.sort(sortedKey);
-		for (Date key : sortedKey) {
-			Object[] values = data.get(key);
+		if (data != null) {
+			List<Date> sortedKey = new ArrayList<Date>(data.keySet());
+			Collections.sort(sortedKey);
+			for (Date key : sortedKey) {
+				Object[] values = data.get(key);
 
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("_time", key);
-			if (values.length == 1) {
-				for (String k : ((Map<String, Function>) values[0]).keySet()) {
-					Function v = ((Map<String, Function>) values[0]).get(k);
-					m.put(k, v.getResult());
-				}
-			} else {
-				for (Object value : values) {
-					for (String k : ((Map<String, Function>) value).keySet()) {
-						Function v = ((Map<String, Function>) value).get(k);
-						m.put(v.toString() + ":" + k, v.getResult());
+				Map<String, Object> m = new HashMap<String, Object>();
+				m.put("_time", key);
+				if (values.length == 1) {
+					for (String k : ((Map<String, Function>) values[0]).keySet()) {
+						Function v = ((Map<String, Function>) values[0]).get(k);
+						m.put(k, v.getResult());
+					}
+				} else {
+					for (Object value : values) {
+						for (String k : ((Map<String, Function>) value).keySet()) {
+							Function v = ((Map<String, Function>) value).get(k);
+							m.put(v.toString() + ":" + k, v.getResult());
+						}
 					}
 				}
+				write(m);
 			}
-			write(m);
+			data.close();
+			data = null;
 		}
-		data.close();
-		data = null;
 		amount = null;
 
 		super.eof();

@@ -30,7 +30,6 @@ public class Sort extends LogQueryCommand {
 		this.count = count;
 		this.fields = fields;
 		this.reverse = reverse;
-		this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
 	}
 
 	public Integer getCount() {
@@ -47,6 +46,12 @@ public class Sort extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
+		if (buf == null) {
+			try {
+				this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
+			} catch (IOException e) {
+			}
+		}
 		buf.add(m);
 	}
 
@@ -55,14 +60,14 @@ public class Sort extends LogQueryCommand {
 		if (count == null) {
 			write(buf);
 		} else {
-			for (Map<String, Object> m : buf) {
-				if (--count < 0)
-					break;
-				write(m);
+			if (buf != null) {
+				for (Map<String, Object> m : buf) {
+					if (--count < 0)
+						break;
+					write(m);
+				}
+				buf.close();
 			}
-
-			buf.close();
-
 			buf = null;
 		}
 

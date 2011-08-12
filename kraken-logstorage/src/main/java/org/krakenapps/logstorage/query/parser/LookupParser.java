@@ -23,12 +23,12 @@ public class LookupParser implements QueryParser {
 		String tableName = (String) b.getChildren()[2].getValue();
 		LookupField src = (LookupField) b.getChildren()[3].getValue();
 		LookupField dst = (LookupField) b.getChildren()[5].getValue();
-		return new Lookup(tableName, src.table, src.local, dst.table, dst.local);
+		return new Lookup(tableName, src.first, src.second, dst.first, dst.second);
 	}
 
 	private class LookupField {
-		private String local;
-		private String table;
+		private String first;
+		private String second;
 	}
 
 	public class LookupFieldParser implements Parser {
@@ -36,11 +36,11 @@ public class LookupParser implements QueryParser {
 		public Object parse(Binding b) {
 			LookupField field = new LookupField();
 			if (b.getValue() != null) {
-				field.local = (String) b.getValue();
-				field.table = (String) b.getValue();
+				field.first = (String) b.getValue();
+				field.second = (String) b.getValue();
 			} else {
-				field.local = (String) b.getChildren()[0].getValue();
-				field.table = (String) b.getChildren()[1].getChildren()[1].getValue();
+				field.first = (String) b.getChildren()[0].getValue();
+				field.second = (String) b.getChildren()[1].getChildren()[1].getValue();
 			}
 			return field;
 		}

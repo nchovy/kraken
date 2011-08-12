@@ -12,7 +12,6 @@ import org.krakenapps.bnf.Result;
 import org.krakenapps.bnf.StringUtil;
 
 public class StringPlaceholder implements Placeholder {
-	private StringBuilder sb;
 	private Set<Character> end = new HashSet<Character>();
 
 	public StringPlaceholder() {
@@ -30,7 +29,7 @@ public class StringPlaceholder implements Placeholder {
 
 	@Override
 	public Result eval(String text, int position, ParserContext ctx) throws ParseException {
-		sb = new StringBuilder();
+		StringBuilder sb = new StringBuilder();
 		int i = StringUtil.skipSpaces(text, position);
 
 		int begin = i;
@@ -38,7 +37,7 @@ public class StringPlaceholder implements Placeholder {
 		if (text.length() <= begin)
 			throw new BufferUnderflowException();
 
-		i = findEnd(text, i);
+		i = findEnd(sb, text, i);
 
 		String token = sb.toString();
 
@@ -47,7 +46,7 @@ public class StringPlaceholder implements Placeholder {
 		return new Result(new Binding(this, token), i);
 	}
 
-	private int findEnd(String text, int position) throws ParseException {
+	private int findEnd(StringBuilder sb, String text, int position) throws ParseException {
 		int i = position;
 		boolean quote = false;
 		StringBuilder q = null;
