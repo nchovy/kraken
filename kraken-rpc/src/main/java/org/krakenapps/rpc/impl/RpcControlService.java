@@ -37,6 +37,11 @@ public class RpcControlService extends SimpleRpcService {
 	public void sessionRequested(RpcSessionEvent e) {
 		logger.debug("kraken-rpc: rpc-control session requested");
 	}
+	
+	@RpcMethod(name = "ping")
+	public int ping(int value) {
+		return value;
+	}
 
 	@RpcMethod(name = "peering-request")
 	public Object[] handlePeeringRequest(String peerGuid) {
