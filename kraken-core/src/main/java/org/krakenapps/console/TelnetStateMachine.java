@@ -31,7 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TelnetStateMachine {
-	private final Logger logger = LoggerFactory.getLogger(TelnetStateMachine.class.getName());
+	private final Logger logger = LoggerFactory
+			.getLogger(TelnetStateMachine.class.getName());
 	private CharsetDecoder charsetDecoder;
 	private IoBuffer temp;
 	private int trailingByteCount = 0;
@@ -96,7 +97,9 @@ public class TelnetStateMachine {
 				short height = negoBuffer.getShort();
 
 				context.setWindowSize(width, height);
-				logger.trace("kraken-core: changed negotiate about window size: [{}, {}]", width, height);
+				logger.trace(
+						"kraken-core: changed negotiate about window size: [{}, {}]",
+						width, height);
 			}
 
 			negoBuffer.clear();
@@ -149,11 +152,14 @@ public class TelnetStateMachine {
 			ansiPriorChar = '\0';
 			state = State.Data;
 			break;
+		default:
+			state = State.Data;
 		}
 	}
 
 	private void handleOption(byte b) {
-		TelnetCommandHandler handler = TelnetCommandHandlerFactory.create(commandCode);
+		TelnetCommandHandler handler = TelnetCommandHandlerFactory
+				.create(commandCode);
 		handler.execute(new byte[] { b });
 
 		if (b == 0x1f) {
@@ -183,7 +189,8 @@ public class TelnetStateMachine {
 				} else
 					state = State.Option;
 			} else {
-				TelnetCommandHandler handler = TelnetCommandHandlerFactory.create(commandCode);
+				TelnetCommandHandler handler = TelnetCommandHandlerFactory
+						.create(commandCode);
 				handler.execute(new byte[] {});
 				state = State.Data;
 			}
@@ -239,16 +246,36 @@ public class TelnetStateMachine {
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_E));
 		else if (ch == (char) 6)
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_F));
+		else if (ch == (char) 7)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_G));
+		else if (ch == (char) 12)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_L));
 		else if (ch == (char) 14)
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_N));
+		else if (ch == (char) 15)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_O));
 		else if (ch == (char) 16)
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_P));
+		else if (ch == (char) 17)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_Q));
 		else if (ch == (char) 18)
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_R));
+		else if (ch == (char) 19)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_S));
+		else if (ch == (char) 20)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_T));
 		else if (ch == (char) 21)
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_U));
 		else if (ch == (char) 22)
 			out.write(new FunctionKeyEvent(KeyCode.CTRL_V));
+		else if (ch == (char) 23)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_W));
+		else if (ch == (char) 24)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_X));
+		else if (ch == (char) 25)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_Y));
+		else if (ch == (char) 26)
+			out.write(new FunctionKeyEvent(KeyCode.CTRL_Z));
 		else if (ch == (char) 127 || ch == (char) 8)
 			out.write(new FunctionKeyEvent(KeyCode.BACKSPACE));
 		else
@@ -279,8 +306,10 @@ public class TelnetStateMachine {
 	}
 
 	private boolean isOptionCommand(byte commandCode) {
-		return commandCode == TelnetCommand.SB || commandCode == TelnetCommand.Will
-				|| commandCode == TelnetCommand.Wont || commandCode == TelnetCommand.Do
+		return commandCode == TelnetCommand.SB
+				|| commandCode == TelnetCommand.Will
+				|| commandCode == TelnetCommand.Wont
+				|| commandCode == TelnetCommand.Do
 				|| commandCode == TelnetCommand.Dont;
 	}
 }
