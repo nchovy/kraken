@@ -19,9 +19,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.nio.charset.Charset;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.krakenapps.ansicode.ClearScreenCode;
@@ -39,6 +41,7 @@ import org.krakenapps.api.FunctionKeyEvent.KeyCode;
 
 public class Editor {
 	private ScriptContext context;
+	private boolean dirty;
 	private int lineno;
 	private int x = 0;
 	private int y = 0;
@@ -63,7 +66,7 @@ public class Editor {
 
 	}
 
-	public void open(File f) throws IOException {
+	public void open(final File f) throws IOException {
 		lines = readFile(f);
 
 		EditorSizeChangedCallback sizeCallback = new EditorSizeChangedCallback();
@@ -77,7 +80,7 @@ public class Editor {
 					if (c == KeyCode.CTRL_C || c == KeyCode.CTRL_D)
 						return;
 
-					int maxHeight = context.getHeight() - 3;
+					int maxHeight = getMaxHeight();
 
 					// page down
 					if (c == KeyCode.HOME || c == KeyCode.CTRL_A) {
@@ -141,6 +144,31 @@ public class Editor {
 							x--;
 						renderStatus();
 						moveTo();
+					} else if (c == KeyCode.BACKSPACE) {
+						if (x > 0) {
+							x--;
+
+							String line = lines.get(lineno);
+							String newLine = line.substring(0, x) + line.substring(x + 1);
+							updateCurrentLine(lineno, newLine);
+						}
+					} else if (c == KeyCode.CTRL_S) {
+						FileOutputStream fos = null;
+						try {
+							fos = new FileOutputStream(f);
+							Charset utf8 = Charset.forName("utf-8");
+							for (String line : lines) {
+								fos.write(line.getBytes(utf8));
+								fos.write("\n".getBytes());
+							}
+
+							dirty = false;
+						} finally {
+							if (fos != null)
+								fos.close();
+
+							renderStatus();
+						}
 					} else {
 						render();
 					}
@@ -156,8 +184,50 @@ public class Editor {
 
 			render();
 
+			// char input loop
 			while (true) {
-				context.read();
+				char c = context.read();
+
+				if (c == '\r' || c == '\n') {
+					String line = getCurrentLine();
+					String left = line.substring(0, x);
+					String right = line.substring(x);
+
+					// scroll down and redraw title and status
+					context.print(new SetColorCode(Color.Black, Color.White));
+					context.print(new ScrollCode(false));
+
+					renderTitle();
+					renderStatus();
+
+					// cut right part off
+					updateCurrentLine(lineno, left);
+
+					if (y < getMaxHeight())
+						y++;
+
+					// set position and insert new line
+					x = 0;
+					lineno++;
+					lines.add(lineno, right);
+
+					// redraw from 0 to new line after scrolling
+					moveTo(0, 0);
+					for (int i = 0; i <= lineno; i++) {
+						moveTo(0, i);
+						context.print(new EraseLineCode(EraseLineCode.Option.EntireLine));
+						context.print(lines.get(lineno - (lineno - i)));
+					}
+
+					// locate cursor
+					moveTo();
+				} else {
+					String line = getCurrentLine();
+					String newLine = line.substring(0, x) + c + line.substring(x);
+					x++;
+
+					updateCurrentLine(lineno, newLine);
+				}
 			}
 		} catch (InterruptedException e) {
 
@@ -170,6 +240,37 @@ public class Editor {
 			context.print(new ClearScreenCode(Option.EntireScreen));
 			context.turnEchoOn();
 		}
+	}
+
+	private int getMaxHeight() {
+		int maxHeight = context.getHeight() - 3;
+		return maxHeight;
+	}
+
+	private String getCurrentLine() {
+		if (lines.size() > lineno)
+			return lines.get(lineno);
+		else {
+			lines.add(lineno, "");
+			return "";
+		}
+	}
+
+	/**
+	 * update line data, redraw, and locate cursor
+	 */
+	private void updateCurrentLine(int no, String newLine) {
+		dirty = true;
+
+		if (lines.size() > lineno)
+			lines.remove(lineno);
+
+		lines.add(lineno, newLine);
+		context.print(new EraseLineCode(EraseLineCode.Option.EntireLine));
+		context.print(new MoveToCode(0));
+		context.print(newLine);
+		renderStatus();
+		moveTo();
 	}
 
 	private void render() throws FileNotFoundException, IOException {
@@ -201,35 +302,52 @@ public class Editor {
 		// title
 		context.print(new MoveToCode(1, 1));
 		context.print(new SetColorCode(Color.Blue, Color.White, false));
-		context.print(new EraseLineCode(org.krakenapps.ansicode.EraseLineCode.Option.EntireLine));
+		context.print(new EraseLineCode(EraseLineCode.Option.EntireLine));
 		context.print("Kraken Editor");
 		context.print(new SetColorCode(Color.Black, Color.White, false));
 	}
 
 	private void renderStatus() {
+		String dirtyStatus = dirty ? "[*]" : "[ ]";
+
 		// status
 		context.print(new MoveToCode(1, context.getHeight()));
 		context.print(new SetColorCode(Color.Blue, Color.White, false));
-		context.print(new EraseLineCode(org.krakenapps.ansicode.EraseLineCode.Option.EntireLine));
-		context.print("Column: " + (x + 1) + ", Line: " + (lineno + 1));
+		context.print(new EraseLineCode(EraseLineCode.Option.EntireLine));
+		context.print(dirtyStatus + " Column: " + (x + 1) + ", Line: " + (lineno + 1));
 		context.print(new SetColorCode(Color.Black, Color.White, false));
+		moveTo();
+	}
+
+	private void moveTo(int x, int y) {
+		context.print(new MoveToCode(x + 1, y + 2));
 	}
 
 	private void moveTo() {
 		context.print(new MoveToCode(x + 1, y + 2));
 	}
 
-	private List<String> readFile(File f) throws FileNotFoundException, IOException {
-		FileInputStream is = new FileInputStream(f);
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		List<String> lines = new ArrayList<String>();
+	private List<String> readFile(File f) {
+		List<String> lines = new LinkedList<String>();
+		FileInputStream is = null;
+		try {
+			is = new FileInputStream(f);
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
-		while (true) {
-			String line = br.readLine();
-			if (line == null)
-				break;
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
 
-			lines.add(line);
+				lines.add(line);
+			}
+		} catch (IOException e) {
+		} finally {
+			if (is != null)
+				try {
+					is.close();
+				} catch (IOException e) {
+				}
 		}
 
 		return lines;
