@@ -58,7 +58,7 @@ public class Request {
 		SimpleDateFormat f2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		String value = getString(key);
 
-		if (has(key)) {
+		if (has(key) && value != null) {
 			try {
 				return f1.parse(value);
 			} catch (ParseException e) {
