@@ -24,6 +24,7 @@ import org.krakenapps.logstorage.query.ObjectComparator;
 
 public class Eval extends LogQueryCommand {
 	private Integer limit;
+	private Integer count;
 	private List<Term> terms;
 
 	public Eval(List<Term> terms) {
@@ -36,18 +37,24 @@ public class Eval extends LogQueryCommand {
 	}
 
 	@Override
+	public void init() {
+		super.init();
+		count = 0;
+	}
+
+	@Override
 	public void push(Map<String, Object> m) {
 		for (Term term : terms) {
 			if (!term.eval(this, m))
 				return;
 		}
 
-		if (limit != null && --limit == 0) {
+		write(m);
+
+		if (limit != null && ++count == limit) {
 			eof();
 			return;
 		}
-
-		write(m);
 	}
 
 	public static class Term {

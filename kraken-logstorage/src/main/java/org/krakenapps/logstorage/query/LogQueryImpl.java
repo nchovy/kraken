@@ -43,6 +43,7 @@ public class LogQueryImpl implements LogQuery {
 	private String queryString;
 	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
 	private Result result;
+	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
 
 	public LogQueryImpl(LogQueryService service, LogStorage logStorage, LogTableRegistry tableRegistry, String query) {
@@ -61,21 +62,32 @@ public class LogQueryImpl implements LogQuery {
 			commands.get(i).setNextCommand(commands.get(i + 1));
 		for (int i = 1; i < commands.size(); i++)
 			commands.get(i).setDataHeader(commands.get(i - 1).getDataHeader());
-
-		try {
-			result = new Result();
-		} catch (IOException e) {
-			logger.error("kraken logstorage: cannot create result command", e);
-		}
-		commands.get(commands.size() - 1).setNextCommand(result);
-		result.setDataHeader(commands.get(commands.size() - 1).getDataHeader());
 	}
 
 	@Override
 	public void run() {
+		if (commands.size() <= 0)
+			return;
+
+		try {
+			result = new Result();
+		} catch (IOException e) {
+			logger.error("kraken logstorage: cannot create result storage", e);
+		}
+		commands.get(commands.size() - 1).setNextCommand(result);
+		result.setDataHeader(commands.get(commands.size() - 1).getDataHeader());
+		for (LogQueryCallback callback : logQueryCallbacks)
+			result.registerCallback(callback);
+		logQueryCallbacks.clear();
+
+		if (commands.get(0).getStatus() != Status.Waiting & !isEnd())
+			throw new IllegalStateException("already running");
+
 		logger.trace("kraken logstorage: run query => {}", queryString);
-		if (commands.size() > 0)
-			commands.get(0).start();
+		for (LogQueryCommand command : commands)
+			command.init();
+
+		commands.get(0).start();
 	}
 
 	@Override
@@ -92,12 +104,15 @@ public class LogQueryImpl implements LogQuery {
 	public boolean isEnd() {
 		if (commands.size() == 0)
 			return true;
+		if (result == null)
+			return false;
 		return result.getStatus().equals(Status.End);
 	}
 
 	@Override
 	public void cancel() {
-		for (LogQueryCommand command : commands) {
+		for (int i = commands.size() - 1; i >= 0; i--) {
+			LogQueryCommand command = commands.get(i);
 			if (command.getStatus() != Status.End)
 				command.eof();
 		}
@@ -124,12 +139,12 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void registerQueryCallback(LogQueryCallback callback) {
-		result.registerCallback(callback);
+		logQueryCallbacks.add(callback);
 	}
 
 	@Override
 	public void unregisterQueryCallback(LogQueryCallback callback) {
-		result.unregisterCallback(callback);
+		logQueryCallbacks.add(callback);
 	}
 
 	@Override

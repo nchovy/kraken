@@ -61,18 +61,19 @@ public class Timechart extends LogQueryCommand {
 		this.clause = clause;
 	}
 
+	@Override
+	public void init() {
+		super.init();
+		try {
+			this.data = new FileBufferMap<Date, Object[]>(new FunctionCodec());
+		} catch (IOException e) {
+		}
+		this.amount = new HashMap<Date, Long>();
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void push(Map<String, Object> m) {
-		if (data == null) {
-			try {
-				this.data = new FileBufferMap<Date, Object[]>(new FunctionCodec());
-			} catch (IOException e) {
-			}
-		}
-		if (amount == null)
-			this.amount = new HashMap<Date, Long>();
-
 		Date row = getKey((Date) m.get("_time"));
 		if (!data.containsKey(row)) {
 			Object[] v = new Object[values.length];

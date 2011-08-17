@@ -140,6 +140,10 @@ public abstract class LogQueryCommand {
 		return status;
 	}
 
+	public void init() {
+		this.status = Status.Waiting;
+	}
+
 	public void start() {
 		throw new UnsupportedOperationException();
 	}
@@ -174,6 +178,7 @@ public abstract class LogQueryCommand {
 		status = Status.End;
 		if (next != null && next.status != Status.End)
 			next.eof();
+
 		if (logQuery != null) {
 			if (logQuery.getCommands().get(0).status != Status.End)
 				logQuery.getCommands().get(0).eof();

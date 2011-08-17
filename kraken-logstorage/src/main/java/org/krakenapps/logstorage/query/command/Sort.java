@@ -24,7 +24,7 @@ import org.krakenapps.logstorage.query.ObjectComparator;
 import org.krakenapps.logstorage.query.FileBufferList;
 
 public class Sort extends LogQueryCommand {
-	private Integer count;
+	private Integer limit;
 	private SortField[] fields;
 	private FileBufferList<Map<String, Object>> buf;
 	private boolean reverse;
@@ -33,22 +33,31 @@ public class Sort extends LogQueryCommand {
 		this(null, fields, false);
 	}
 
-	public Sort(Integer count, SortField[] fields) throws IOException {
-		this(count, fields, false);
+	public Sort(Integer limit, SortField[] fields) throws IOException {
+		this(limit, fields, false);
 	}
 
 	public Sort(SortField[] fields, boolean reverse) throws IOException {
 		this(null, fields, reverse);
 	}
 
-	public Sort(Integer count, SortField[] fields, boolean reverse) throws IOException {
-		this.count = count;
+	public Sort(Integer limit, SortField[] fields, boolean reverse) throws IOException {
+		this.limit = limit;
 		this.fields = fields;
 		this.reverse = reverse;
 	}
 
-	public Integer getCount() {
-		return count;
+	@Override
+	public void init() {
+		super.init();
+		try {
+			this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
+		} catch (IOException e) {
+		}
+	}
+
+	public Integer getLimit() {
+		return limit;
 	}
 
 	public SortField[] getFields() {
@@ -61,21 +70,16 @@ public class Sort extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
-		if (buf == null) {
-			try {
-				this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
-			} catch (IOException e) {
-			}
-		}
 		buf.add(m);
 	}
 
 	@Override
 	public void eof() {
-		if (count == null) {
+		if (limit == null) {
 			write(buf);
 		} else {
 			if (buf != null) {
+				int count = limit;
 				for (Map<String, Object> m : buf) {
 					if (--count < 0)
 						break;
@@ -85,7 +89,6 @@ public class Sort extends LogQueryCommand {
 			}
 			buf = null;
 		}
-
 		super.eof();
 	}
 

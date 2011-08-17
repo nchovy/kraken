@@ -15,17 +15,19 @@
  */
 package org.krakenapps.logstorage.query.command;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.logstorage.LogQueryCommand;
+import org.krakenapps.logstorage.query.FileBufferMap;
 
 public class Stats extends LogQueryCommand {
 	private List<String> clauses;
 	private Function[] values;
-	private Map<List<Object>, List<Function>> result;
+	private FileBufferMap<List<Object>, List<Function>> result;
 
 	public Stats(List<String> clause, Function[] values) {
 		this.clauses = clause;
@@ -33,10 +35,19 @@ public class Stats extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
-		if (result == null)
-			result = new HashMap<List<Object>, List<Function>>();
+	public void init() {
+		super.init();
+		try {
+			result = new FileBufferMap<List<Object>, List<Function>>();
+		} catch (IOException e) {
+		}
 
+		for (Function f : values)
+			f.clean();
+	}
+
+	@Override
+	public void push(Map<String, Object> m) {
 		List<Object> key = new ArrayList<Object>();
 		for (String clause : clauses)
 			key.add(getData(clause, m));
@@ -55,23 +66,20 @@ public class Stats extends LogQueryCommand {
 
 	@Override
 	public void eof() {
-		if (result != null) {
-			for (List<Object> key : result.keySet()) {
-				Map<String, Object> m = new HashMap<String, Object>();
+		for (List<Object> key : result.keySet()) {
+			Map<String, Object> m = new HashMap<String, Object>();
 
-				for (int i = 0; i < clauses.size(); i++)
-					m.put(clauses.get(i), key.get(i));
+			for (int i = 0; i < clauses.size(); i++)
+				m.put(clauses.get(i), key.get(i));
 
-				List<Function> fs = result.get(key);
-				for (int i = 0; i < values.length; i++)
-					m.put(values[i].toString(), fs.get(i).getResult());
+			List<Function> fs = result.get(key);
+			for (int i = 0; i < values.length; i++)
+				m.put(values[i].toString(), fs.get(i).getResult());
 
-				write(m);
-			}
+			write(m);
 		}
+		result.close();
 		result = null;
-		for (Function f : values)
-			f.clean();
 		super.eof();
 	}
 }
