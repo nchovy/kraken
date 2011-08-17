@@ -72,6 +72,9 @@ public class User implements Marshalable {
 	@Column(length = 60)
 	private String phone;
 
+	@Column(name = "external", nullable = false)
+	private boolean external;
+
 	@Column(name = "dc", length = 60)
 	private String domainController;
 
@@ -172,6 +175,14 @@ public class User implements Marshalable {
 		this.phone = phone;
 	}
 
+	public boolean isExternal() {
+		return external;
+	}
+
+	public void setExternal(boolean external) {
+		this.external = external;
+	}
+
 	public String getDomainController() {
 		return domainController;
 	}
@@ -213,6 +224,7 @@ public class User implements Marshalable {
 		m.put("name", name);
 		m.put("login_name", loginName);
 		m.put("description", description);
+		m.put("external", external);
 		m.put("dc", domainController);
 		m.put("email", email);
 		m.put("phone", phone);
