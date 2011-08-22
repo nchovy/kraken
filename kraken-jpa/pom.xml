@@ -12,7 +12,7 @@
 	<artifactId>kraken-jpa</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken JPA</name>
-	<version>1.5.0</version>
+	<version>1.5.1</version>
 	<repositories>
 		<repository>
 			<id>jboss</id>
@@ -58,15 +58,15 @@
 							javax.transaction.*;version=2;-split-package:=merge-first,
 							org.dom4j.*;-split-package:=merge-first,
 							org.hibernate.*;-split-package:=merge-first,
-							javax.persistence.*;version=2.0.0;-split-package:=merge-first
+							javax.persistence.*;version=2.0.0;-split-package:=merge-first,
+							com.mchange.*;-split-package:=merge-first
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.jpa.impl;version=1.4.0,
 							net.sf.cglib.*;-split-package:=merge-first,
 							net.sf.ehcache.*;-split-package:=merge-first,
 							org.objectweb.*;-split-package:=merge-first,
-							org.apache.commons.collections.*;-split-package:=merge-first,
-							com.mchange.*;-split-package:=merge-first
+							org.apache.commons.collections.*;-split-package:=merge-first
 						</Private-Package>
 						<DynamicImport-Package>*</DynamicImport-Package>
 					</instructions>
