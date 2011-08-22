@@ -32,9 +32,9 @@ public class EvalParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
-		syntax.add("eval", this, k("eval"), ref("option"), repeat(rule(new StringPlaceholder(), 
-				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<=")), 
-				new StringPlaceholder(new char[] { ' ', ',' }))));
+		syntax.add("eval", this, k("eval"), ref("option"), rule(new StringPlaceholder(), 
+				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
+				new StringPlaceholder(new char[] {})));
 		// @formatter:on
 		syntax.addRoot("eval");
 	}
@@ -73,6 +73,12 @@ public class EvalParser implements QueryParser {
 				term.setOperator(Operator.Ge);
 			else if (v[1].getValue().equals("<="))
 				term.setOperator(Operator.Le);
+			else if (v[1].getValue().equals("contain"))
+				term.setOperator(Operator.Contain);
+			else if (v[1].getValue().equals("regexp"))
+				term.setOperator(Operator.Regexp);
+			else if (v[1].getValue().equals("in"))
+				term.setOperator(Operator.In);
 
 			String rh = v[2].getValue().toString();
 			term.setRh(rh);

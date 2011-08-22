@@ -25,6 +25,7 @@ import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logstorage.query.FileBufferList;
 import org.krakenapps.logstorage.query.command.Lookup;
 import org.krakenapps.logstorage.query.command.Table;
+import org.krakenapps.logstorage.query.parser.DropParser;
 import org.krakenapps.logstorage.query.parser.EvalParser;
 import org.krakenapps.logstorage.query.parser.FieldsParser;
 import org.krakenapps.logstorage.query.parser.LookupParser;
@@ -48,15 +49,16 @@ public abstract class LogQueryCommand {
 	private static Logger logger = LoggerFactory.getLogger(LogQueryCommand.class);
 	private static Syntax syntax = new Syntax();
 	private String queryString;
+	private int pushCount;
 	protected LogQuery logQuery;
 	protected String[] header;
 	protected LogQueryCommand next;
 	protected volatile Status status = Status.Waiting;
 
 	static {
-		List<Class<? extends QueryParser>> parsers = Arrays.asList(EvalParser.class, FieldsParser.class,
-				FunctionParser.class, LookupParser.class, OptionParser.class, RenameParser.class, SortParser.class,
-				StatsParser.class, TableParser.class, TimechartParser.class);
+		List<Class<? extends QueryParser>> parsers = Arrays.asList(DropParser.class, EvalParser.class,
+				FieldsParser.class, FunctionParser.class, LookupParser.class, OptionParser.class, RenameParser.class,
+				SortParser.class, StatsParser.class, TableParser.class, TimechartParser.class);
 
 		for (Class<? extends QueryParser> parser : parsers) {
 			try {
@@ -148,6 +150,10 @@ public abstract class LogQueryCommand {
 		throw new UnsupportedOperationException();
 	}
 
+	public int getPushCount() {
+		return pushCount;
+	}
+
 	public abstract void push(Map<String, Object> m);
 
 	public void push(FileBufferList<Map<String, Object>> buf) {
@@ -159,6 +165,9 @@ public abstract class LogQueryCommand {
 	}
 
 	protected final void write(Map<String, Object> m) {
+		// logger.trace("kraken logstorage: data hand over from '{}'",
+		// queryString);
+		pushCount++;
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;
 			next.push(m);
@@ -166,6 +175,9 @@ public abstract class LogQueryCommand {
 	}
 
 	protected final void write(FileBufferList<Map<String, Object>> buf) {
+		// logger.trace("kraken logstorage: data hand over from '{}'",
+		// queryString);
+		pushCount += buf.size();
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;
 			next.push(buf);

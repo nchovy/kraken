@@ -29,6 +29,13 @@ public class NumberUtil {
 			return Double.class;
 		} catch (NumberFormatException e) {
 		}
+		if (obj.toString().startsWith("0x")) {
+			try {
+				Long.parseLong(obj.toString().substring(2), 16);
+				return Long.class;
+			} catch (NumberFormatException e) {
+			}
+		}
 		return null;
 	}
 
@@ -47,7 +54,21 @@ public class NumberUtil {
 			return Double.parseDouble(obj.toString());
 		} catch (NumberFormatException e) {
 		}
+		if (obj.toString().startsWith("0x")) {
+			try {
+				return Long.parseLong(obj.toString().substring(2), 16);
+			} catch (NumberFormatException e) {
+			}
+		}
 		return defaultValue;
+	}
+
+	public static boolean eq(Object o1, Object o2) {
+		Number n1 = getValue(o1);
+		Number n2 = getValue(o2);
+		if (n1 == null || n2 == null)
+			return false;
+		return (n1.doubleValue() == n2.doubleValue());
 	}
 
 	public static Number add(Object o1, Object o2) {

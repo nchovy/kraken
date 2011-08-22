@@ -347,10 +347,14 @@ public class LogStorageScript implements Script {
 	public void queries(String[] args) {
 		Collection<LogQuery> queries = logQueryService.getQueries();
 
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		for (LogQuery query : queries) {
-			context.println(String.format("[%d] %s", query.getId(), query.getQueryString()));
+			long sec = new Date().getTime() - query.getLastStarted().getTime();
+			context.println(String.format("[%d] %s \t/ %s, %d seconds ago", query.getId(), query.getQueryString(),
+					sdf.format(query.getLastStarted()), sec / 1000));
 			for (LogQueryCommand cmd : query.getCommands()) {
-				context.println(String.format("    [%s] %s", cmd.getStatus(), cmd.getQueryString()));
+				context.println(String.format("    [%s] %s \t/ %d write data(s) to next query", cmd.getStatus(),
+						cmd.getQueryString(), cmd.getPushCount()));
 			}
 		}
 	}
@@ -363,7 +367,7 @@ public class LogStorageScript implements Script {
 
 		while (!lq.isEnd()) {
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(100);
 			} catch (InterruptedException e) {
 			}
 		}
@@ -406,5 +410,97 @@ public class LogStorageScript implements Script {
 	public void removeQuery(String[] args) {
 		logQueryService.removeQuery(Integer.parseInt(args[0]));
 		context.println("removed");
+	}
+
+	@ScriptUsage(description = "", arguments = {
+			@ScriptArgument(name = "count", type = "integer", description = "log count", optional = true),
+			@ScriptArgument(name = "repeat", type = "integer", description = "repeat count", optional = true) })
+	public void benchmark(String[] args) {
+		String tableName = "benchmark";
+		int count = 1000000;
+		int repeat = 1;
+		if (args.length >= 1)
+			count = Integer.parseInt(args[0]);
+		if (args.length >= 2)
+			repeat = Integer.parseInt(args[1]);
+
+		Map<String, Object> text = new HashMap<String, Object>();
+		text.put("_data", "2011-08-22 17:30:23 Google 111.222.33.44 GET /search q=cache:xgLxoOQBOoIJ:"
+				+ "krakenapps.org/+krakenapps&cd=1&hl=en&ct=clnk&source=www.google.com 80 - 123.234.34.45 "
+				+ "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 "
+				+ "Safari/535.1 404 0 3");
+
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("c-ip", "111.222.33.44");
+		map.put("cs(User-Agent)",
+				"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 Safari/535.1");
+		map.put("cs-method", "GET");
+		map.put("cs-uri-query",
+				"q=cache:xgLxoOQBOoIJ:krakenapps.org/+krakenapps&cd=1&hl=en&ct=clnk&source=www.google.com");
+		map.put("cs-uri-stem", "/search");
+		map.put("cs-username", "-");
+		map.put("date", "2011-08-22");
+		map.put("s-ip", "123.234.34.45");
+		map.put("s-port", "80");
+		map.put("s-sitename", "Google");
+		map.put("sc-status", "200");
+		map.put("sc-substatus", "0");
+		map.put("sc-win32-status", "0");
+		map.put("time", "17:30:23");
+
+		for (int i = 1; i <= repeat; i++) {
+			context.println("=== Test #" + i + " ===");
+			benchmark("text", tableName, count, text);
+			benchmark("map", tableName, count, map);
+			context.println("");
+		}
+	}
+
+	private void benchmark(String name, String tableName, int count, Map<String, Object> data) {
+		storage.createTable(tableName);
+
+		Log log = new Log(tableName, new Date(), data);
+		long begin = System.currentTimeMillis();
+		for (long id = 1; id <= count; id++) {
+			log.setId(id);
+			storage.write(log);
+		}
+		long end = System.currentTimeMillis();
+		long time = end - begin;
+
+		context.println(String.format("%s(write): %d log/%d ms (%d log/s)", name, count, time, count * 1000L / time));
+
+		begin = System.currentTimeMillis();
+		try {
+			storage.search(tableName, new Date(0), new Date(), count, null, new BenchmarkCallback());
+		} catch (InterruptedException e) {
+		}
+		end = System.currentTimeMillis();
+		time = end - begin;
+		context.println(String.format("%s(read): %d log/%d ms (%d log/s)", name, count, time, count * 1000L / time));
+
+		storage.dropTable(tableName);
+	}
+
+	private class BenchmarkCallback implements LogSearchCallback {
+		private boolean interrupt = false;
+
+		@Override
+		public void onLog(Log log) {
+			if (log.getData().containsKey("_data")) {
+				String line = (String) log.getData().get("_data");
+				line.split(" ");
+			}
+		}
+
+		@Override
+		public void interrupt() {
+			interrupt = true;
+		}
+
+		@Override
+		public boolean isInterrupted() {
+			return interrupt;
+		}
 	}
 }

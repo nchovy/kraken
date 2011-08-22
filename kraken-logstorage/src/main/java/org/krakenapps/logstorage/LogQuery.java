@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logstorage;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +28,8 @@ public interface LogQuery extends Runnable {
 	boolean isEnd();
 
 	void cancel();
+
+	Date getLastStarted();
 
 	List<Map<String, Object>> getResult();
 

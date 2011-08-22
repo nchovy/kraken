@@ -78,8 +78,8 @@ public class Stats extends LogQueryCommand {
 
 			write(m);
 		}
+		super.eof();
 		result.close();
 		result = null;
-		super.eof();
 	}
 }

@@ -121,7 +121,7 @@ public class Table extends LogQueryCommand {
 
 		TimelineSpanValue timelineSpan = timelineSpanValues[timelineSpanValueIndex];
 		for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
-			callback.callback(timelineSpan.field.calendarField, timelineSpan.amount, timeline);
+			callbackTimeline(callback, timelineSpan);
 	}
 
 	@Override
@@ -153,64 +153,11 @@ public class Table extends LogQueryCommand {
 					timeline.put(key, 1);
 
 				if (System.currentTimeMillis() > latestCallback + DEFAULT_TIMELINE_REFRESH_INTERVAL) {
-					for (LogTimelineCallback callback : logQuery.getTimelineCallbacks()) {
-						while (true) {
-							try {
-								callback.callback(timelineSpan.field.calendarField, timelineSpan.amount, timeline);
-								break;
-							} catch (BufferOverflowException e) {
-								if (timelineSpanValueIndex == timelineSpanValues.length - 1)
-									break;
-
-								timelineSpan = timelineSpanValues[++timelineSpanValueIndex];
-								Map<Date, Integer> newTimeline = new HashMap<Date, Integer>();
-								for (Date k : timeline.keySet()) {
-									Date newKey = getTimelineKey(timelineSpan, k);
-									if (newTimeline.containsKey(newKey))
-										newTimeline.put(newKey, newTimeline.get(newKey) + timeline.get(k));
-									else
-										newTimeline.put(newKey, timeline.get(k));
-								}
-								timeline = newTimeline;
-							}
-						}
-					}
+					for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
+						callbackTimeline(callback, timelineSpan);
 					latestCallback = System.currentTimeMillis();
 				}
 			}
-		}
-
-		private Date getTimelineKey(TimelineSpanValue span, Date date) {
-			long time = date.getTime();
-
-			if (span.field == Span.Second || span.field == Span.Minute || span.field == Span.Hour
-					|| span.field == Span.Day || span.field == Span.Week) {
-				time += 291600000L; // base to Monday, 00:00:00
-				time -= time % (span.field.millis * span.amount);
-				time -= 291600000L;
-			} else {
-				Calendar c = Calendar.getInstance();
-				c.setTimeInMillis(time - time % Span.Second.millis);
-				c.set(Calendar.SECOND, 0);
-				c.set(Calendar.MINUTE, 0);
-				c.set(Calendar.HOUR_OF_DAY, 0);
-				c.set(Calendar.DAY_OF_MONTH, 1);
-
-				if (span.field == Span.Month) {
-					int monthOffset = c.get(Calendar.YEAR) * 12;
-					int month = monthOffset + c.get(Calendar.MONTH);
-					month -= month % span.amount;
-					month -= monthOffset;
-					c.add(Calendar.MONTH, month);
-					time = c.getTimeInMillis();
-				} else if (span.field == Span.Year) {
-					int year = c.get(Calendar.YEAR);
-					c.set(Calendar.YEAR, year - (year % span.amount));
-					time = c.getTimeInMillis();
-				}
-			}
-
-			return new Date(time);
 		}
 
 		@Override
@@ -222,6 +169,62 @@ public class Table extends LogQueryCommand {
 		public boolean isInterrupted() {
 			return status.equals(Status.End);
 		}
+	}
+
+	private void callbackTimeline(LogTimelineCallback callback, TimelineSpanValue timelineSpan) {
+		while (true) {
+			try {
+				callback.callback(timelineSpan.field.calendarField, timelineSpan.amount, timeline);
+				break;
+			} catch (BufferOverflowException e) {
+				if (timelineSpanValueIndex == timelineSpanValues.length - 1)
+					break;
+
+				timelineSpan = timelineSpanValues[++timelineSpanValueIndex];
+				Map<Date, Integer> newTimeline = new HashMap<Date, Integer>();
+				for (Date k : timeline.keySet()) {
+					Date newKey = getTimelineKey(timelineSpan, k);
+					if (newTimeline.containsKey(newKey))
+						newTimeline.put(newKey, newTimeline.get(newKey) + timeline.get(k));
+					else
+						newTimeline.put(newKey, timeline.get(k));
+				}
+				timeline = newTimeline;
+			}
+		}
+	}
+
+	private Date getTimelineKey(TimelineSpanValue span, Date date) {
+		long time = date.getTime();
+
+		if (span.field == Span.Second || span.field == Span.Minute || span.field == Span.Hour || span.field == Span.Day
+				|| span.field == Span.Week) {
+			time += 291600000L; // base to Monday, 00:00:00
+			time -= time % (span.field.millis * span.amount);
+			time -= 291600000L;
+		} else {
+			Calendar c = Calendar.getInstance();
+			c.setTimeInMillis(time - time % Span.Second.millis);
+			c.set(Calendar.SECOND, 0);
+			c.set(Calendar.MINUTE, 0);
+			c.set(Calendar.HOUR_OF_DAY, 0);
+			c.set(Calendar.DAY_OF_MONTH, 1);
+
+			if (span.field == Span.Month) {
+				int monthOffset = c.get(Calendar.YEAR) * 12;
+				int month = monthOffset + c.get(Calendar.MONTH);
+				month -= month % span.amount;
+				month -= monthOffset;
+				c.add(Calendar.MONTH, month);
+				time = c.getTimeInMillis();
+			} else if (span.field == Span.Year) {
+				int year = c.get(Calendar.YEAR);
+				c.set(Calendar.YEAR, year - (year % span.amount));
+				time = c.getTimeInMillis();
+			}
+		}
+
+		return new Date(time);
 	}
 
 	private class TimelineSpanValue {

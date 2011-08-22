@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class OnlineWriter {
 	private boolean closing;
 	private Date day;
 	private Date lastAccess = new Date();
-	private AtomicInteger nextId;
+	private AtomicLong nextId;
 	private LogFileWriter writer;
 
 	public OnlineWriter(int tableId, Date day, int maxLogBuffering) throws IOException {
@@ -49,7 +49,7 @@ public class OnlineWriter {
 		dataPath.getParentFile().mkdirs();
 
 		writer = LogFileWriter.getLogFileWriter(indexPath, dataPath, defaultLogVersion);
-		nextId = new AtomicInteger(writer.getLastKey());
+		nextId = new AtomicLong(writer.getLastKey());
 	}
 
 	public boolean isOpen() {
@@ -68,7 +68,7 @@ public class OnlineWriter {
 		return day;
 	}
 
-	private int nextId() {
+	private long nextId() {
 		// do NOT update last access here
 		return nextId.incrementAndGet();
 	}
@@ -82,7 +82,7 @@ public class OnlineWriter {
 			if (writer == null)
 				throw new IOException("file closed");
 
-			int nid = nextId();
+			long nid = nextId();
 			record.setId(nid);
 			writer.write(record);
 		}
@@ -101,8 +101,8 @@ public class OnlineWriter {
 		}
 	}
 
-	public List<LogRecord> getCache() {
-		return writer.getCache();
+	public List<LogRecord> getBuffer() {
+		return writer.getBuffer();
 	}
 
 	public void flush() throws IOException {

@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public class LogFileReaderV2 extends LogFileReader {
 	private Logger logger = LoggerFactory.getLogger(LogFileReaderV2.class);
-	private static final int INDEX_ITEM_SIZE = 16;
+	private static final int INDEX_ITEM_SIZE = 4;
 
 	private RandomAccessFile indexFile;
 	private RandomAccessFile dataFile;
@@ -44,8 +44,6 @@ public class LogFileReaderV2 extends LogFileReader {
 	private List<DataBlockHeader> dataBlockHeaders = new ArrayList<DataBlockHeader>();
 
 	private byte[] buf;
-	private IndexBlockHeader nowIndexBlock;
-	private ByteBuffer indexBuffer;
 	private DataBlockHeader nowDataBlock;
 	private ByteBuffer dataBuffer;
 
@@ -56,19 +54,20 @@ public class LogFileReaderV2 extends LogFileReader {
 		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile);
 		if (indexFileHeader.version() != 2)
 			throw new InvalidLogFileHeaderException("version not match");
-		int indexBlockSize = getInt(indexFileHeader.getExtraData());
-		indexBuffer = ByteBuffer.allocate(indexBlockSize);
 
 		long length = indexFile.length() - 4;
 		long pos = indexFileHeader.size();
+		long logCount = 0;
 		while (pos < length) {
 			indexFile.seek(pos);
 			IndexBlockHeader header = new IndexBlockHeader(indexFile);
 			header.fp = pos;
+			logCount += header.logCount;
 			indexBlockHeaders.add(header);
-			pos += 20 + header.compressedLength;
+			pos += 4 + header.logCount * INDEX_ITEM_SIZE;
 		}
-		logger.trace("kraken logstorage: {} has {} blocks.", indexPath.getName(), indexBlockHeaders.size());
+		logger.trace("kraken logstorage: {} has {} blocks, {} logs.", new Object[] { indexPath.getName(),
+				indexBlockHeaders.size(), logCount });
 
 		this.dataFile = new RandomAccessFile(dataPath, "r");
 		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile);
@@ -76,21 +75,18 @@ public class LogFileReaderV2 extends LogFileReader {
 			throw new InvalidLogFileHeaderException("version not match");
 		int dataBlockSize = getInt(dataFileHeader.getExtraData());
 		dataBuffer = ByteBuffer.allocate(dataBlockSize);
+		buf = new byte[dataBlockSize];
 
 		length = dataFile.length();
 		pos = dataFileHeader.size();
-		long offset = 0;
 		while (pos < length) {
 			dataFile.seek(pos);
 			DataBlockHeader header = new DataBlockHeader(dataFile);
 			header.fp = pos;
-			header.offset = offset;
-			offset += header.origLength;
 			dataBlockHeaders.add(header);
-			pos += 8 + header.compressedLength;
+			pos += 24 + header.compressedLength;
 		}
 
-		buf = new byte[(indexBlockSize > dataBlockSize) ? indexBlockSize : dataBlockSize];
 	}
 
 	private int getInt(byte[] extraData) {
@@ -104,17 +100,23 @@ public class LogFileReaderV2 extends LogFileReader {
 
 	@Override
 	public LogRecord find(int id) throws IOException {
-		Long pos = null;
-		for (IndexBlockHeader header : indexBlockHeaders) {
-			if (id < header.firstId + header.origLength / INDEX_ITEM_SIZE) {
-				pos = getLogIndex(header, id - header.firstId).fp;
-				break;
-			}
-		}
-		if (pos == null)
-			return null;
+		int l = 0;
+		int r = indexBlockHeaders.size();
+		while (l < r) {
+			int m = (l + r) / 2;
+			IndexBlockHeader header = indexBlockHeaders.get(m);
 
-		return getLogRecord(pos);
+			if (id < header.firstId)
+				r = m;
+			else if (header.firstId + header.logCount <= id)
+				l = m;
+
+			indexFile.seek(header.fp + (id - header.firstId) * INDEX_ITEM_SIZE);
+			int offset = indexFile.readInt();
+			return getLogRecord(m, offset);
+		}
+
+		return null;
 	}
 
 	@Override
@@ -127,104 +129,71 @@ public class LogFileReaderV2 extends LogFileReader {
 			InterruptedException {
 		int matched = 0;
 
-		int block = indexBlockHeaders.size() - 1;
-		IndexBlockHeader header = indexBlockHeaders.get(block);
-		long blockLogNum = header.origLength / INDEX_ITEM_SIZE;
-
-		if (header.endTime == 0)
-			blockLogNum = (indexFile.length() - (header.fp + 20)) / INDEX_ITEM_SIZE;
-
-		// block validate
-		while ((from != null && header.endTime != 0L && header.endTime < from.getTime())
-				|| (to != null && header.startTime > to.getTime())) {
-			if (--block < 0)
-				return;
-			header = indexBlockHeaders.get(block);
-			blockLogNum = header.origLength / INDEX_ITEM_SIZE;
-		}
-
-		while (true) {
-			if (--blockLogNum < 0) {
-				do {
-					if (--block < 0)
-						return;
-					header = indexBlockHeaders.get(block);
-					blockLogNum = header.origLength / INDEX_ITEM_SIZE - 1;
-				} while ((from != null && header.endTime < from.getTime())
-						|| (to != null && header.startTime > to.getTime()));
+		for (int i = dataBlockHeaders.size() - 1; i >= 0; i--) {
+			DataBlockHeader header = dataBlockHeaders.get(i);
+			if ((from == null || header.endDate >= from.getTime()) && (to == null || header.startDate <= to.getTime())) {
+				matched += readBlock(i, (from != null) ? from.getTime() : null, (to != null) ? to.getTime() : null,
+						limit, callback);
+				if (matched == limit)
+					return;
 			}
+		}
+	}
 
-			LogIndex index = getLogIndex(header, (int) blockLogNum);
+	private int readBlock(int blockId, Long from, Long to, int limit, LogRecordCallback callback) throws IOException,
+			InterruptedException {
+		IndexBlockHeader header = indexBlockHeaders.get(blockId);
+		List<Integer> offsets = new ArrayList<Integer>();
+		int matched = 0;
 
-			if (from != null && index.date.before(from))
-				continue;
-			if (to != null && index.date.after(to))
-				continue;
+		indexFile.seek(header.fp + 4);
+		for (int i = 0; i < header.logCount; i++)
+			offsets.add(indexFile.readInt());
 
-			// read data file fp
-			long pos = index.fp;
+		// reverse order
+		for (int i = offsets.size() - 1; i >= 0; i--) {
+			long date = getLogRecordDate(blockId, offsets.get(i));
+			if (from != null && date < from)
+				return matched;
+			if (to != null && date > to)
+				return matched;
 
-			if (callback.onLog(getLogRecord(pos))) {
+			if (callback.onLog(getLogRecord(blockId, offsets.get(i)))) {
 				if (++matched == limit)
-					break;
-			}
-		}
-	}
-
-	private class LogIndex {
-		@SuppressWarnings("unused")
-		private int id;
-		private Date date;
-		private long fp;
-
-		private LogIndex(int id, Date date, long fp) {
-			this.id = id;
-			this.date = date;
-			this.fp = fp;
-		}
-	}
-
-	private LogIndex getLogIndex(IndexBlockHeader header, int offset) throws IOException {
-		if (!header.equals(nowIndexBlock)) {
-			nowIndexBlock = header;
-
-			indexBuffer.clear();
-			indexFile.seek(header.fp + 20);
-			indexFile.read(buf, 0, header.compressedLength);
-			decompresser.setInput(buf, 0, header.compressedLength);
-			try {
-				indexBuffer.limit(header.origLength);
-				decompresser.inflate(indexBuffer.array());
-				decompresser.reset();
-			} catch (DataFormatException e) {
-				throw new IOException(e);
+					return matched;
 			}
 		}
 
-		indexBuffer.position(offset * INDEX_ITEM_SIZE);
-		int id = indexBuffer.getInt();
-		Date date = new Date(read6Bytes(indexBuffer));
-		long fp = read6Bytes(indexBuffer);
-
-		return new LogIndex(id, date, fp);
+		return matched;
 	}
 
-	private LogRecord getLogRecord(long pos) throws IOException {
-		DataBlockHeader header = null;
-		for (DataBlockHeader h : dataBlockHeaders) {
-			if (pos < h.offset + h.origLength) {
-				header = h;
-				break;
-			}
-		}
-		if (header == null)
-			throw new IOException("invalid position");
+	private long getLogRecordDate(int blockId, int offset) throws IOException {
+		DataBlockHeader header = dataBlockHeaders.get(blockId);
+		prepareDataBlock(header);
 
+		dataBuffer.position(offset + 8);
+		return dataBuffer.getLong();
+	}
+
+	private LogRecord getLogRecord(int blockId, int offset) throws IOException {
+		DataBlockHeader header = dataBlockHeaders.get(blockId);
+		prepareDataBlock(header);
+
+		dataBuffer.position(offset);
+		long id = dataBuffer.getLong();
+		Date date = new Date(dataBuffer.getLong());
+		byte[] data = new byte[dataBuffer.getInt()];
+		dataBuffer.get(data);
+
+		return new LogRecord(date, id, ByteBuffer.wrap(data));
+	}
+
+	private void prepareDataBlock(DataBlockHeader header) throws IOException {
 		if (!header.equals(nowDataBlock)) {
 			nowDataBlock = header;
 
 			dataBuffer.clear();
-			dataFile.seek(header.fp + 8);
+			dataFile.seek(header.fp + 24);
 			dataFile.read(buf, 0, header.compressedLength);
 			decompresser.setInput(buf, 0, header.compressedLength);
 			try {
@@ -235,18 +204,6 @@ public class LogFileReaderV2 extends LogFileReader {
 				throw new IOException(e);
 			}
 		}
-
-		dataBuffer.position((int) (pos - header.offset));
-		int id = dataBuffer.getInt();
-		Date date = new Date(dataBuffer.getLong());
-		byte[] data = new byte[dataBuffer.getInt()];
-		dataBuffer.get(data);
-
-		return new LogRecord(date, id, ByteBuffer.wrap(data));
-	}
-
-	private long read6Bytes(ByteBuffer b) throws IOException {
-		return ((long) b.getInt() << 16) | (b.getShort() & 0xFFFF);
 	}
 
 	@Override
@@ -259,33 +216,26 @@ public class LogFileReaderV2 extends LogFileReader {
 	private static class IndexBlockHeader {
 		private static Integer NEXT_ID = 1;
 		private long fp;
-		private long startTime;
-		private long endTime;
-		private int origLength;
-		private int compressedLength;
 		private int firstId;
+		private int logCount;
 
 		private IndexBlockHeader(RandomAccessFile f) throws IOException {
-			this.startTime = read6Bytes(f);
-			this.endTime = read6Bytes(f);
-			this.origLength = f.readInt();
-			this.compressedLength = f.readInt();
+			this.logCount = f.readInt();
 			this.firstId = NEXT_ID;
-			NEXT_ID += (int) this.origLength / INDEX_ITEM_SIZE;
-		}
-
-		private long read6Bytes(RandomAccessFile f) throws IOException {
-			return ((long) f.readInt() << 16) | (f.readShort() & 0xFFFF);
+			NEXT_ID += logCount;
 		}
 	}
 
 	private class DataBlockHeader {
 		private long fp;
-		private long offset;
+		private long startDate;
+		private long endDate;
 		private int origLength;
 		private int compressedLength;
 
 		private DataBlockHeader(RandomAccessFile f) throws IOException {
+			this.startDate = f.readLong();
+			this.endDate = f.readLong();
 			this.origLength = f.readInt();
 			this.compressedLength = f.readInt();
 		}

@@ -58,7 +58,7 @@ public abstract class LogFileWriter {
 		return writer;
 	}
 
-	public abstract int getLastKey();
+	public abstract long getLastKey();
 
 	public abstract Date getLastDate();
 
@@ -68,7 +68,7 @@ public abstract class LogFileWriter {
 
 	public abstract void write(Collection<LogRecord> data) throws IOException;
 
-	public abstract List<LogRecord> getCache();
+	public abstract List<LogRecord> getBuffer();
 
 	public abstract void flush() throws IOException;
 

@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 public class LogFileWriterV2 extends LogFileWriter {
 	private final Logger logger = LoggerFactory.getLogger(LogFileWriterV2.class.getName());
 
-	private static final int INDEX_ITEM_SIZE = 16;
+	private static final int INDEX_ITEM_SIZE = 4;
 	public static final int DEFAULT_BLOCK_SIZE = 640 * 1024; // 640KB
 	public static final int DEFAULT_LEVEL = 3;
 
@@ -50,21 +50,19 @@ public class LogFileWriterV2 extends LogFileWriter {
 	private int count;
 	private byte[] intbuf = new byte[4];
 	private byte[] longbuf = new byte[8];
-	private int lastKey;
+	private long lastKey;
 	private long lastTime;
 
 	private Long blockStartLogTime;
 	private Long blockEndLogTime;
-	private long blockLogCount;
-	private long dataFileOffset;
+	private int blockLogCount;
 
-	private int lastFlushed;
 	private ByteBuffer indexBuffer;
 	private ByteBuffer dataBuffer;
-	private ByteBuffer compressed;
+	private byte[] compressed;
 	private Deflater compresser;
 
-	private List<LogRecord> cached = new ArrayList<LogRecord>();
+	private List<LogRecord> buffer = new ArrayList<LogRecord>();
 
 	public LogFileWriterV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this(indexPath, dataPath, DEFAULT_BLOCK_SIZE);
@@ -83,19 +81,19 @@ public class LogFileWriterV2 extends LogFileWriter {
 		this.dataFile = new RandomAccessFile(dataPath, "rw");
 		this.indexBuffer = ByteBuffer.allocate(blockSize);
 		this.dataBuffer = ByteBuffer.allocate(blockSize);
-		this.compressed = ByteBuffer.allocate(blockSize);
+		this.compressed = new byte[blockSize];
 		this.compresser = new Deflater(level);
 
+		// get index file header
 		LogFileHeader indexFileHeader = null;
 		if (indexExists && indexFile.length() > 0) {
 			indexFileHeader = LogFileHeader.extractHeader(indexFile);
 		} else {
 			indexFileHeader = new LogFileHeader((short) 2, LogFileHeader.MAGIC_STRING_INDEX);
-			prepareInt(blockSize, intbuf);
-			indexFileHeader.setExtraData(intbuf);
 			indexFile.write(indexFileHeader.serialize());
 		}
 
+		// get data file header
 		LogFileHeader dataFileHeader = null;
 		if (dataExists && dataFile.length() > 0) {
 			dataFileHeader = LogFileHeader.extractHeader(dataFile);
@@ -106,48 +104,37 @@ public class LogFileWriterV2 extends LogFileWriter {
 			dataFile.write(dataFileHeader.serialize());
 		}
 
-		// read last key, last time
-		long length = indexFile.length() - 4;
+		// read last key
+		long length = indexFile.length();
 		long pos = indexFileHeader.size();
 		while (pos < length) {
 			indexFile.seek(pos);
-			// ignore start date
-			read6Byte(indexFile);
-			long endTime = read6Byte(indexFile);
-			long blockLength = read6Byte(indexFile);
-			long compressedLength = read6Byte(indexFile);
-			count += blockLength / INDEX_ITEM_SIZE;
+			int logCount = indexFile.readInt();
+			count += logCount;
+			pos += 4 + INDEX_ITEM_SIZE * logCount;
+		}
+		lastKey = count;
+
+		// read last time
+		length = dataFile.length();
+		pos = dataFileHeader.size();
+		while (pos < length) {
+			// jump to end date position
+			dataFile.seek(pos + 8);
+			long endTime = dataFile.readLong();
+			dataFile.readInt();
+			int compressedLength = dataFile.readInt();
 			lastTime = (lastTime < endTime) ? endTime : lastTime;
 			pos += 24 + compressedLength;
 		}
 
-		if (count > 0) {
-			indexFile.seek(length);
-			lastKey = indexFile.readInt();
-			indexFile.seek(length);
-
-			// read data file offset
-			length = dataFile.length();
-			pos = dataFileHeader.size();
-			while (pos < length) {
-				dataFile.seek(pos);
-				dataFileOffset += dataFile.readInt();
-				pos += 8 + dataFile.readInt();
-			}
-		} else {
-			indexFile.seek(length + 4);
-		}
-
 		// move to end
+		indexFile.seek(indexFile.length());
 		dataFile.seek(dataFile.length());
 	}
 
-	private long read6Byte(RandomAccessFile f) throws IOException {
-		return ((long) f.readInt() << 16) | (f.readShort() & 0xFFFF);
-	}
-
 	@Override
-	public int getLastKey() {
+	public long getLastKey() {
 		return lastKey;
 	}
 
@@ -166,30 +153,26 @@ public class LogFileWriterV2 extends LogFileWriter {
 		logger.trace("kraken logstorage: write new log: id {}, time {}", data.getId(), data.getDate().toString());
 
 		// check validity
-		int newKey = data.getId();
+		long newKey = data.getId();
 		if (newKey <= lastKey)
 			throw new IllegalArgumentException("invalid key: " + newKey + ", last key was " + lastKey);
 
-		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime()) || indexBuffer.remaining() < 16)
+		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime())
+				|| indexBuffer.remaining() < INDEX_ITEM_SIZE
+				|| dataBuffer.remaining() < 20 + data.getData().remaining())
 			flush();
 
-		// add to buffer
-		prepareInt(data.getId(), intbuf);
+		// add to index buffer
+		prepareInt(dataBuffer.position(), intbuf);
 		indexBuffer.put(intbuf);
-		prepareLong(data.getDate().getTime(), longbuf);
-		indexBuffer.put(longbuf, 2, 6);
-		prepareLong(dataFileOffset + dataBuffer.position(), longbuf);
-		indexBuffer.put(longbuf, 2, 6);
 		if (blockStartLogTime == null)
 			blockStartLogTime = data.getDate().getTime();
 		blockEndLogTime = data.getDate().getTime();
 		blockLogCount++;
 
-		if (dataBuffer.remaining() < 16 + data.getData().remaining())
-			flush();
-
-		prepareInt(data.getId(), intbuf);
-		dataBuffer.put(intbuf);
+		// add to data buffer
+		prepareLong(data.getId(), longbuf);
+		dataBuffer.put(longbuf);
 		prepareLong(data.getDate().getTime(), longbuf);
 		dataBuffer.put(longbuf);
 		prepareInt(data.getData().remaining(), intbuf);
@@ -212,7 +195,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 		count++;
 
-		cached.add(data);
+		buffer.add(data);
 	}
 
 	@Override
@@ -227,8 +210,8 @@ public class LogFileWriterV2 extends LogFileWriter {
 	}
 
 	@Override
-	public List<LogRecord> getCache() {
-		return cached;
+	public List<LogRecord> getBuffer() {
+		return buffer;
 	}
 
 	@Override
@@ -236,85 +219,51 @@ public class LogFileWriterV2 extends LogFileWriter {
 		if (indexBuffer.position() == 0)
 			return;
 
-		logger.trace("kraken logstorage: flush index");
+		logger.trace("kraken logstorage: flush");
 
-		for (int i = 0; i < cached.size(); i++) {
-			LogRecord data = cached.get(i);
-			if (data.getId() > lastFlushed)
-				break;
-			cached.remove(i--);
-		}
+		// write log count
+		prepareInt(blockLogCount, intbuf);
+		indexFile.write(intbuf);
 
+		// write log indexes
 		indexBuffer.flip();
-
-		// write start time
-		prepareLong(blockStartLogTime, longbuf);
-		indexFile.write(longbuf, 2, 6);
-
-		// write end time
-		prepareLong(blockEndLogTime, longbuf);
-		indexFile.write(longbuf, 2, 6);
-
-		// write original size
-		prepareInt(indexBuffer.limit(), intbuf);
-		indexFile.write(intbuf);
-
-		compresser.setInput(indexBuffer.array(), 0, indexBuffer.limit());
-		compresser.finish();
-		int compressedSize = compresser.deflate(compressed.array());
-
-		// write compressed size
-		prepareInt(compressedSize, intbuf);
-		indexFile.write(intbuf);
-
-		// write compressed indexes
-		indexFile.write(compressed.array(), 0, compressedSize);
-
-		// caching last key
-		prepareInt(lastKey, intbuf);
-		indexFile.write(intbuf);
-
+		indexFile.write(indexBuffer.array(), 0, indexBuffer.limit());
 		indexBuffer.clear();
-		compresser.reset();
 		indexFile.getFD().sync();
-		indexFile.seek(indexFile.length() - 4);
 
-		blockStartLogTime = null;
-		blockEndLogTime = null;
-		blockLogCount = 0;
+		// write start date
+		prepareLong(blockStartLogTime, longbuf);
+		dataFile.write(longbuf);
 
-		lastFlushed = lastKey;
-
-		flushData();
-	}
-
-	private void flushData() throws IOException {
-		if (dataBuffer.position() == 0)
-			return;
-
-		logger.trace("kraken logstorage: flush data");
-
-		dataBuffer.flip();
-		dataFileOffset += dataBuffer.limit();
+		// write end date
+		prepareLong(blockEndLogTime, longbuf);
+		dataFile.write(longbuf);
 
 		// write original size
+		dataBuffer.flip();
 		prepareInt(dataBuffer.limit(), intbuf);
 		dataFile.write(intbuf);
 
+		// compress data
 		compresser.setInput(dataBuffer.array(), 0, dataBuffer.limit());
 		compresser.finish();
-		int compressedSize = compresser.deflate(compressed.array());
+		int compressedSize = compresser.deflate(compressed);
 
 		// write compressed size
 		prepareInt(compressedSize, intbuf);
 		dataFile.write(intbuf);
 
 		// write compressed logs
-		dataFile.write(compressed.array(), 0, compressedSize);
+		dataFile.write(compressed, 0, compressedSize);
 
 		dataBuffer.clear();
 		compresser.reset();
 		dataFile.getFD().sync();
+
+		blockStartLogTime = null;
+		blockEndLogTime = null;
+		blockLogCount = 0;
+		buffer.clear();
 	}
 
 	private void prepareInt(int l, byte[] b) {

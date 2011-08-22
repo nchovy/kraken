@@ -15,9 +15,11 @@
  */
 package org.krakenapps.logstorage.query.command;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.krakenapps.logstorage.LogQueryCommand;
 import org.krakenapps.logstorage.query.ObjectComparator;
@@ -59,7 +61,7 @@ public class Eval extends LogQueryCommand {
 
 	public static class Term {
 		public static enum Operator {
-			Eq, Neq, Gt, Lt, Ge, Le
+			Eq, Neq, Gt, Lt, Ge, Le, Contain, Regexp, In
 		}
 
 		private static Comparator<Object> comp = new ObjectComparator();
@@ -88,6 +90,12 @@ public class Eval extends LogQueryCommand {
 					return cmp >= 0;
 				case Le:
 					return cmp <= 0;
+				case Contain:
+					return l.toString().contains(r.toString());
+				case Regexp:
+					return Pattern.matches(r.toString(), l.toString());
+				case In:
+					return Arrays.asList(r.toString().replaceAll(",( )*", ",").split(",")).contains(l.toString());
 				}
 			} catch (Exception e) {
 			}

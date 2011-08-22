@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -114,6 +115,14 @@ public class LogStorageEngine implements LogStorage {
 		status = LogStorageStatus.Open;
 
 		isDebugloggerTraceEnabled = debuglogger.isTraceEnabled();
+
+		File queryDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/query");
+		queryDir.mkdirs();
+
+		for (File f : queryDir.listFiles()) {
+			if ((f.getName().startsWith("fbl") || f.getName().startsWith("fbm")) && f.getName().endsWith(".buf"))
+				f.delete();
+		}
 	}
 
 	@Invalidate
@@ -423,21 +432,24 @@ public class LogStorageEngine implements LogStorage {
 		LogFileReader reader = null;
 		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, pred, callback);
 
-		OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
-		List<LogRecord> cache = onlineWriter.getCache();
-		if (cache != null) {
-			Collections.reverse(cache);
-			for (LogRecord logData : cache) {
-				if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
-					c.onLog(logData);
-					if (--limit == 0)
-						return c.matched;
+		try {
+			OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
+			List<LogRecord> buffer = onlineWriter.getBuffer();
+			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
+
+			if (buffer != null) {
+				logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
+				ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
+				while (li.hasPrevious()) {
+					LogRecord logData = li.previous();
+					if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
+						c.onLog(logData);
+						if (--limit == 0)
+							return c.matched;
+					}
 				}
 			}
-		}
 
-		try {
-			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 			reader.traverse(from, to, limit, c);
 		} catch (InterruptedException e) {
 			throw e;
@@ -456,6 +468,7 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	private class TraverseCallback implements LogRecordCallback {
+		private Logger logger = LoggerFactory.getLogger(TraverseCallback.class);
 		private String tableName;
 		private Date from;
 		private Date to;
@@ -499,7 +512,14 @@ public class LogStorageEngine implements LogStorage {
 				offset--;
 				return false;
 			} else {
-				callback.onLog(log);
+				try {
+					callback.onLog(log);
+				} catch (Exception e) {
+					if (callback.isInterrupted())
+						throw new InterruptedException("interrupted log traverse");
+					else
+						throw new RuntimeException(e);
+				}
 				return true;
 			}
 		}

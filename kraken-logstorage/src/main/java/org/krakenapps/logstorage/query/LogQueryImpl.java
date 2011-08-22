@@ -18,6 +18,7 @@ package org.krakenapps.logstorage.query;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ public class LogQueryImpl implements LogQuery {
 	private final int id = nextId.getAndIncrement();
 	private String queryString;
 	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
+	private Date lastStarted;
 	private Result result;
 	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
@@ -66,6 +68,8 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void run() {
+		lastStarted = new Date();
+
 		if (commands.size() <= 0)
 			return;
 
@@ -111,11 +115,19 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void cancel() {
+		if (result.getStatus() != Status.End)
+			result.eof();
 		for (int i = commands.size() - 1; i >= 0; i--) {
 			LogQueryCommand command = commands.get(i);
-			if (command.getStatus() != Status.End)
+			if (command.getStatus() != Status.End) {
 				command.eof();
+			}
 		}
+	}
+
+	@Override
+	public Date getLastStarted() {
+		return lastStarted;
 	}
 
 	@Override

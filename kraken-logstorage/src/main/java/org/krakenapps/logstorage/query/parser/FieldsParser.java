@@ -42,6 +42,9 @@ public class FieldsParser implements QueryParser {
 		if (c.getValue() != null) {
 			if (c.getValue().equals("-"))
 				remove = true;
+			else
+				fields.add((String) c.getValue());
+
 			if (c.getChildren() != null) {
 				for (int i = 0; i < c.getChildren().length; i++)
 					parse(c.getChildren()[i], fields);

@@ -50,7 +50,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	private int count;
 	private byte[] intbuf = new byte[4];
 	private byte[] longbuf = new byte[8];
-	private int lastKey;
+	private long lastKey;
 	private long lastTime;
 
 	private Long lastBlockHeaderFp;
@@ -132,7 +132,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	}
 
 	@Override
-	public int getLastKey() {
+	public long getLastKey() {
 		return lastKey;
 	}
 
@@ -149,7 +149,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	@Override
 	public void write(LogRecord data) throws IOException {
 		// check validity
-		int newKey = data.getId();
+		long newKey = data.getId();
 		if (newKey <= lastKey)
 			throw new IllegalArgumentException("invalid key: " + newKey + ", last key was " + lastKey);
 
@@ -180,7 +180,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	}
 
 	@Override
-	public List<LogRecord> getCache() {
+	public List<LogRecord> getBuffer() {
 		return bufferedLogs;
 	}
 
@@ -231,7 +231,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 		long dataFileFp = dataFile.getFilePointer();
 
 		// write key
-		prepareInt(data.getId(), intbuf);
+		prepareInt((int) data.getId(), intbuf);
 		indexFile.write(intbuf);
 		dataFile.write(intbuf);
 

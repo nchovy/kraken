@@ -26,7 +26,7 @@ public class Log {
 	private String tableName;
 	private Date date;
 	private Date day;
-	private int id;
+	private long id;
 	private Map<String, Object> data;
 	private Set<String> indexTokens;
 
@@ -34,11 +34,11 @@ public class Log {
 		this(tableName, date, 0, data, null);
 	}
 
-	public Log(String tableName, Date date, int id, Map<String, Object> data) {
+	public Log(String tableName, Date date, long id, Map<String, Object> data) {
 		this(tableName, date, id, data, null);
 	}
 
-	public Log(String tableName, Date date, int id, Map<String, Object> data, Set<String> indexTokens) {
+	public Log(String tableName, Date date, long id, Map<String, Object> data, Set<String> indexTokens) {
 		this.tableName = tableName;
 		this.date = date;
 		this.day = DateUtil.getDay(date);
@@ -59,11 +59,11 @@ public class Log {
 		return date;
 	}
 
-	public int getId() {
+	public long getId() {
 		return id;
 	}
 
-	public void setId(int id) {
+	public void setId(long id) {
 		this.id = id;
 	}
 

@@ -20,14 +20,14 @@ import java.util.Date;
 
 public class LogRecord implements Comparable<LogRecord> {
 	private Date date;
-	private int id;
+	private long id;
 	private ByteBuffer data;
-	
+
 	public LogRecord(Date date, ByteBuffer data) {
 		this(date, 0, data);
 	}
 
-	public LogRecord(Date date, int id, ByteBuffer data) {
+	public LogRecord(Date date, long id, ByteBuffer data) {
 		this.date = date;
 		this.id = id;
 		this.data = data;
@@ -37,11 +37,11 @@ public class LogRecord implements Comparable<LogRecord> {
 		return date;
 	}
 
-	public int getId() {
+	public long getId() {
 		return id;
 	}
-	
-	public void setId(int id) {
+
+	public void setId(long id) {
 		this.id = id;
 	}
 
@@ -51,7 +51,7 @@ public class LogRecord implements Comparable<LogRecord> {
 
 	@Override
 	public int compareTo(LogRecord o) {
-		return id - o.id;
+		return (int) (id - o.id);
 	}
 
 }

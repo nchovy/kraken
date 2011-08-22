@@ -42,8 +42,9 @@ public class Fields extends LogQueryCommand {
 		} else {
 			Map<String, Object> newMap = new HashMap<String, Object>();
 			for (String field : fields) {
-				if (m.containsKey(field))
-					newMap.put(field, m.get(field));
+				Object data = getData(field, m);
+				if (data != null)
+					newMap.put(field, data);
 			}
 
 			m = newMap;

@@ -16,7 +16,6 @@
 package org.krakenapps.logstorage.msgbus;
 
 import java.nio.BufferOverflowException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -159,8 +158,45 @@ public class LogQueryPlugin {
 
 		@Override
 		public void callback(int spanField, int spanAmount, Map<Date, Integer> timeline) {
-			if (timeline.size() > limit)
-				throw new BufferOverflowException();
+			int[] values = new int[limit];
+			Date beginDate = null;
+			for (Date d : timeline.keySet()) {
+				if (beginDate == null || d.before(beginDate))
+					beginDate = d;
+			}
+			if (beginDate != null) {
+				Map<Date, Integer> indexes = new HashMap<Date, Integer>();
+				Calendar c = Calendar.getInstance();
+				c.setTime(beginDate);
+				long current = System.currentTimeMillis();
+				for (int i = 0; i < limit; i++) {
+					indexes.put(c.getTime(), i);
+					c.add(spanField, spanAmount);
+
+					if (c.getTimeInMillis() > current) {
+						for (Date d : indexes.keySet())
+							indexes.put(d, indexes.get(d) + (limit - i - 1));
+
+						i++;
+						c.setTime(beginDate);
+						for (; i < limit; i++) {
+							c.add(spanField, -spanAmount);
+							indexes.put(c.getTime(), limit - i - 1);
+						}
+						beginDate = c.getTime();
+						break;
+					}
+				}
+
+				try {
+					for (Date d : timeline.keySet()) {
+						int index = indexes.get(d);
+						values[index] = timeline.get(d).intValue();
+					}
+				} catch (NullPointerException e) {
+					throw new BufferOverflowException();
+				}
+			}
 
 			String fieldName = "";
 			if (spanField == Calendar.MINUTE)
@@ -175,11 +211,8 @@ public class LogQueryPlugin {
 			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("span_field", fieldName);
 			m.put("span_amount", spanAmount);
-			Map<String, Object> t = new HashMap<String, Object>();
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			for (Date key : timeline.keySet())
-				t.put(sdf.format(key), timeline.get(key));
-			m.put("timeline", t);
+			m.put("begin", beginDate);
+			m.put("values", values);
 			pushApi.push(orgId, "logstorage-query-timeline", m);
 		}
 	}

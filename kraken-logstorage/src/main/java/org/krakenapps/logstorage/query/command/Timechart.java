@@ -115,32 +115,30 @@ public class Timechart extends LogQueryCommand {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
-		if (data != null) {
-			List<Date> sortedKey = new ArrayList<Date>(data.keySet());
-			Collections.sort(sortedKey);
-			for (Date key : sortedKey) {
-				Object[] values = data.get(key);
+		List<Date> sortedKey = new ArrayList<Date>(data.keySet());
+		Collections.sort(sortedKey);
+		for (Date key : sortedKey) {
+			Object[] values = data.get(key);
 
-				Map<String, Object> m = new HashMap<String, Object>();
-				m.put("_time", key);
-				if (values.length == 1) {
-					for (String k : ((Map<String, Function>) values[0]).keySet()) {
-						Function v = ((Map<String, Function>) values[0]).get(k);
-						m.put(k, v.getResult());
-					}
-				} else {
-					for (Object value : values) {
-						for (String k : ((Map<String, Function>) value).keySet()) {
-							Function v = ((Map<String, Function>) value).get(k);
-							m.put(v.toString() + ":" + k, v.getResult());
-						}
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("_time", key);
+			if (values.length == 1) {
+				for (String k : ((Map<String, Function>) values[0]).keySet()) {
+					Function v = ((Map<String, Function>) values[0]).get(k);
+					m.put(k, v.getResult());
+				}
+			} else {
+				for (Object value : values) {
+					for (String k : ((Map<String, Function>) value).keySet()) {
+						Function v = ((Map<String, Function>) value).get(k);
+						m.put(v.toString() + ":" + k, v.getResult());
 					}
 				}
-				write(m);
 			}
-			data.close();
-			data = null;
+			write(m);
 		}
+		data.close();
+		data = null;
 		amount = null;
 
 		super.eof();
