@@ -363,7 +363,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		spaceDir.mkdirs();
 
 		File f = new File(spaceDir, Integer.toString(resourceId));
-		if (!f.delete())
+		if (f.exists() && !f.delete())
 			throw new IllegalStateException(String.format(
 					"failed to delete uploaded file: space %d, resource %d, path %s", spaceId, resourceId,
 					f.getAbsolutePath()));
