@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.MessagingException;
+import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
@@ -40,7 +41,7 @@ public class MailerPlugin {
 			Properties props = configs.get(name);
 			m.put("name", name);
 			m.put("host", props.get("mail.smtp.host"));
-			m.put("port", props.get("mail.smtp.port"));
+			m.put("port", Integer.valueOf((String) props.get("mail.smtp.port")));
 			m.put("user", props.get("mail.smtp.user"));
 			objs.add(m);
 		}
@@ -72,14 +73,22 @@ public class MailerPlugin {
 		registry.register(name, props);
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void unregister(Request req, Response resp) {
 		String name = req.getString("name");
-		registry.unregister(name);
+		List<String> names = (List<String>) req.get("names");
+
+		if (name != null)
+			registry.unregister(name);
+
+		if (names != null)
+			for (String n : names)
+				registry.unregister(n);
 	}
 
 	@MsgbusMethod
-	public void send(Request req, Response resp) {
+	public void send(Request req, Response resp) throws NoSuchProviderException, MessagingException {
 		String confName = req.getString("config_name");
 		String from = req.getString("from");
 		String to = req.getString("to");
@@ -96,7 +105,10 @@ public class MailerPlugin {
 			msg.setContent(message, "text/plain; charset=utf-8");
 			Transport.send(msg);
 		} catch (MessagingException e) {
-			logger.error("kraken-mail: send failed. " + e.getMessage());
+			logger.error("kraken-mail: send failed.", e);
+		} finally {
+			if (session != null)
+				session.getTransport().close();
 		}
 	}
 }

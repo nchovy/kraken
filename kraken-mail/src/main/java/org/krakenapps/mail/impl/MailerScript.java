@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.MessagingException;
+import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
@@ -105,7 +106,7 @@ public class MailerScript implements Script {
 	}
 
 	@ScriptUsage(description = "send mail", arguments = { @ScriptArgument(name = "name", type = "string", description = "smtp configuration name") })
-	public void send(String[] args) {
+	public void send(String[] args) throws NoSuchProviderException, MessagingException {
 		String name = args[0];
 		Session session = registry.getSession(name);
 
@@ -144,11 +145,15 @@ public class MailerScript implements Script {
 			context.println("sending...");
 			Transport.send(msg);
 			context.println("completed");
+
 		} catch (MessagingException e) {
-			context.println("send failed. " + e.getMessage());
+			context.println("send failed. " + e);
 			logger.error("kraken-mail: send failed", e);
 		} catch (InterruptedException e) {
 			context.println("interrupted");
+		} finally {
+			if (session != null)
+				session.getTransport().close();
 		}
 
 	}

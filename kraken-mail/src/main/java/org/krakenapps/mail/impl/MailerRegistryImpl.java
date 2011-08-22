@@ -5,8 +5,13 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.Authenticator;
+import javax.mail.MessagingException;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMessage.RecipientType;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -55,6 +60,9 @@ public class MailerRegistryImpl implements MailerRegistry {
 				String value = p.get(key, null);
 				props.put(key, value);
 			}
+			
+			props.put("mail.smtp.connectiontimeout", 5000);
+			props.put("mail.smtp.timeout", 5000);
 			return props;
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException(e.getMessage());
@@ -66,9 +74,38 @@ public class MailerRegistryImpl implements MailerRegistry {
 		Properties props = getConfig(name);
 		String user = props.getProperty("mail.smtp.user");
 		String password = props.getProperty("mail.smtp.password");
+		
+		for (Object s : props.keySet()) {
+			logger.debug("kraken mail: connect with {}={}", s, props.get(s));
+		}
 
 		Authenticator auth = new SmtpAuthenticator(user, password);
-		return Session.getDefaultInstance(props, auth);
+		return Session.getInstance(props, auth);
+	}
+	
+	public static void main(String[] args) throws MessagingException {
+		Authenticator auth = new SmtpAuthenticator("xeraph@nchovy.com", "zkakdpf;");
+		Properties props = new Properties();
+		props.put("mail.transport.protocol", "smtp");
+		props.put("mail.smtp.host", "smtp.gmail.com");
+		props.put("mail.smtp.port", 587);
+		props.put("mail.smtp.user", "xeraph@nchovy.com");
+		props.put("mail.smtp.password", "zkakdpf;");
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.starttls.enable", "true");
+		
+		Session s = Session.getDefaultInstance(props, auth);
+		MimeMessage msg = new MimeMessage(s);
+
+		InternetAddress fromAddr = new InternetAddress("xeraph@nchovy.com");
+		InternetAddress toAddr = new InternetAddress("delmitz@nchovy.com");
+
+		msg.setFrom(fromAddr);
+		msg.setRecipient(RecipientType.TO, toAddr);
+		msg.setSubject("ahahahahaha");
+		msg.setContent("qoo", "text/plain; charset=utf-8");
+
+		Transport.send(msg);
 	}
 
 	private Preferences getPreferences() {
