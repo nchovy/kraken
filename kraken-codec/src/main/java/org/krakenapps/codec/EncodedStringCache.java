@@ -9,7 +9,7 @@ public class EncodedStringCache {
 	private byte[] value;
 	private int rawNumberLength;
 
-	public static EncodedStringCache getEncodedString(String value) {
+	public synchronized static EncodedStringCache getEncodedString(String value) {
 		EncodedStringCache es = cache.get(value);
 
 		if (es == null) {
