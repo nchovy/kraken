@@ -68,8 +68,10 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void run() {
-		lastStarted = new Date();
+		if (!isEnd())
+			throw new IllegalStateException("already running");
 
+		lastStarted = new Date();
 		if (commands.size() <= 0)
 			return;
 
@@ -83,9 +85,6 @@ public class LogQueryImpl implements LogQuery {
 		for (LogQueryCallback callback : logQueryCallbacks)
 			result.registerCallback(callback);
 		logQueryCallbacks.clear();
-
-		if (commands.get(0).getStatus() != Status.Waiting & !isEnd())
-			throw new IllegalStateException("already running");
 
 		logger.trace("kraken logstorage: run query => {}", queryString);
 		for (LogQueryCommand command : commands)
@@ -109,7 +108,9 @@ public class LogQueryImpl implements LogQuery {
 		if (commands.size() == 0)
 			return true;
 		if (result == null)
-			return false;
+			return true;
+		if (commands.get(0).getStatus() == Status.Waiting)
+			return true;
 		return result.getStatus().equals(Status.End);
 	}
 

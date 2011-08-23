@@ -165,8 +165,6 @@ public abstract class LogQueryCommand {
 	}
 
 	protected final void write(Map<String, Object> m) {
-		// logger.trace("kraken logstorage: data hand over from '{}'",
-		// queryString);
 		pushCount++;
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;
@@ -175,8 +173,6 @@ public abstract class LogQueryCommand {
 	}
 
 	protected final void write(FileBufferList<Map<String, Object>> buf) {
-		// logger.trace("kraken logstorage: data hand over from '{}'",
-		// queryString);
 		pushCount += buf.size();
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;

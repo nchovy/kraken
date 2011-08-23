@@ -30,6 +30,7 @@ import org.krakenapps.logstorage.LogQueryCallback;
 import org.krakenapps.logstorage.LogQueryService;
 import org.krakenapps.logstorage.LogTimelineCallback;
 import org.krakenapps.logstorage.query.FileBufferList;
+import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -88,10 +89,13 @@ public class LogQueryPlugin {
 
 		LogQuery query = service.getQuery(id);
 		if (query != null) {
+			if (!query.isEnd())
+				throw new MsgbusException("0", "already running");
+
 			LogQueryCallback queryCallback = new LogQueryCallbackImpl(req.getOrgId(), query, offset, limit);
 			query.registerQueryCallback(queryCallback);
 			if (timelineLimit != null) {
-				LogTimelineCallback timelineCallback = new LogTimelineCallbackImpl(req.getOrgId(),
+				LogTimelineCallback timelineCallback = new LogTimelineCallbackImpl(req.getOrgId(), query,
 						timelineLimit.intValue());
 				query.registerTimelineCallback(timelineCallback);
 			}
@@ -144,10 +148,12 @@ public class LogQueryPlugin {
 
 	private class LogTimelineCallbackImpl implements LogTimelineCallback {
 		private int orgId;
+		private LogQuery query;
 		private int limit;
 
-		public LogTimelineCallbackImpl(int orgId, int limit) {
+		public LogTimelineCallbackImpl(int orgId, LogQuery query, int limit) {
 			this.orgId = orgId;
+			this.query = query;
 			this.limit = limit;
 		}
 
@@ -157,7 +163,7 @@ public class LogQueryPlugin {
 		}
 
 		@Override
-		public void callback(int spanField, int spanAmount, Map<Date, Integer> timeline) {
+		public void callback(int spanField, int spanAmount, Map<Date, Integer> timeline, boolean isFinal) {
 			int[] values = new int[limit];
 			Date beginDate = null;
 			for (Date d : timeline.keySet()) {
@@ -214,6 +220,9 @@ public class LogQueryPlugin {
 			m.put("begin", beginDate);
 			m.put("values", values);
 			pushApi.push(orgId, "logstorage-query-timeline", m);
+
+			if (isFinal)
+				query.unregisterTimelineCallback(this);
 		}
 	}
 

@@ -135,7 +135,7 @@ public class Table extends LogQueryCommand {
 
 		TimelineSpanValue timelineSpan = timelineSpanValues[timelineSpanValueIndex];
 		for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
-			callbackTimeline(callback, timelineSpan);
+			callbackTimeline(callback, timelineSpan, true);
 	}
 
 	@Override
@@ -168,7 +168,7 @@ public class Table extends LogQueryCommand {
 
 				if (System.currentTimeMillis() > latestCallback + DEFAULT_TIMELINE_REFRESH_INTERVAL) {
 					for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
-						callbackTimeline(callback, timelineSpan);
+						callbackTimeline(callback, timelineSpan, false);
 					latestCallback = System.currentTimeMillis();
 				}
 			}
@@ -185,10 +185,10 @@ public class Table extends LogQueryCommand {
 		}
 	}
 
-	private void callbackTimeline(LogTimelineCallback callback, TimelineSpanValue timelineSpan) {
+	private void callbackTimeline(LogTimelineCallback callback, TimelineSpanValue timelineSpan, boolean isFinal) {
 		while (true) {
 			try {
-				callback.callback(timelineSpan.field.calendarField, timelineSpan.amount, timeline);
+				callback.callback(timelineSpan.field.calendarField, timelineSpan.amount, timeline, isFinal);
 				break;
 			} catch (BufferOverflowException e) {
 				if (timelineSpanValueIndex == timelineSpanValues.length - 1)
