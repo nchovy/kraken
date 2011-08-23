@@ -153,6 +153,7 @@ public class DomSyncService implements LdapSyncService, EntityEventListener<Orga
 			user.setEmail(domainUser.getMail());
 			user.setPhone(domainUser.getMobile());
 			user.setUpdateDateTime(new Date());
+			user.setExternal(true);
 
 			if (isUpdate)
 				userApi.updateUser(user);
