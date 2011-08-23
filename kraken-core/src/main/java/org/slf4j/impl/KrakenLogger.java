@@ -23,6 +23,7 @@ import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Marker;
 import org.slf4j.helpers.MessageFormatter;
@@ -465,9 +466,8 @@ public class KrakenLogger extends org.apache.felix.framework.Logger implements o
 	/**
 	 * for felix logger.
 	 */
-
 	@Override
-	protected void doLog(ServiceReference sr, int level, String msg, Throwable throwable) {
+	protected void doLog(Bundle bundle, ServiceReference sr, int level, String msg, Throwable throwable) {
 		internalLog(level, msg, throwable);
 	}
 }
