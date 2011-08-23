@@ -141,21 +141,56 @@ public class LdapScript implements Script {
 
 	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
 	public void syncDom(String args[]) {
-		ServiceReference ref = bc.getServiceReference(LdapSyncService.class.getName());
-		if (ref == null) {
+		LdapSyncService ldapSync = getSyncService();
+		if (ldapSync == null) {
 			context.println("kraken-dom not found");
 			return;
 		}
 
-		LdapSyncService ldapSync = (LdapSyncService) bc.getService(ref);
-
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
-		if (profile == null) {
-			context.println("profile not found.");
+		ldapSync.sync(profile);
+	}
+
+	public void periodicSync(String[] args) {
+		LdapSyncService ldapSync = getSyncService();
+		context.println(ldapSync.getPeriodicSync() ? "enabled" : "disabled");
+	}
+
+	@ScriptUsage(description = "activate or deactivate periodic sync", arguments = { @ScriptArgument(name = "activate flag", type = "string", description = "true or false") })
+	public void setPeriodicSync(String[] args) {
+		LdapSyncService ldapSync = getSyncService();
+		ldapSync.setPeriodicSync(Boolean.parseBoolean(args[0]));
+		context.println("set");
+	}
+
+	@ScriptUsage(description = "set sync interval", arguments = {
+			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
+			@ScriptArgument(name = "sync interval", type = "int", description = "sync interval in milliseconds") })
+	public void setSyncInterval(String[] args) {
+		LdapProfile p = ldap.getProfile(args[0]);
+		if (p == null) {
+			context.println("profile not found");
 			return;
 		}
 
-		ldapSync.sync(profile);
+		try {
+			LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
+					p.getPassword(), Integer.valueOf(args[1]), p.getLastSync());
+
+			ldap.updateProfile(newProfile);
+			context.println("set");
+		} catch (NumberFormatException e) {
+			context.println("invalid number format");
+		}
 	}
+
+	private LdapSyncService getSyncService() {
+		ServiceReference ref = bc.getServiceReference(LdapSyncService.class.getName());
+		if (ref == null)
+			throw new IllegalStateException("kraken-dom not found");
+
+		return (LdapSyncService) bc.getService(ref);
+	}
+
 }

@@ -65,8 +65,11 @@ public class JLdapService implements LdapService {
 				String dc = p.get("dc", null);
 				String account = p.get("account", null);
 				String password = p.get("password", null);
+				int syncInterval = p.getInt("sync_interval", 10 * 60 * 1000);
+				Date lastSync = new Date(p.getLong("last_sync", 0));
 
-				LdapProfile profile = new LdapProfile(name, dc, account, password);
+				LdapProfile profile = new LdapProfile(name, dc, LdapProfile.DEFAULT_PORT, account, password,
+						syncInterval, lastSync);
 				profiles.add(profile);
 			}
 		} catch (BackingStoreException e) {
@@ -83,17 +86,37 @@ public class JLdapService implements LdapService {
 			if (root.nodeExists(profile.getName()))
 				throw new IllegalStateException("duplicated profile name");
 
-			Preferences p = root.node(profile.getName());
-			p.put("dc", profile.getDc());
-			p.put("account", profile.getAccount());
-			p.put("password", profile.getPassword());
-
-			p.flush();
-			p.sync();
+			setPreference(profile, root);
 
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException("io error", e);
 		}
+	}
+
+	@Override
+	public void updateProfile(LdapProfile profile) {
+		try {
+			Preferences root = prefsvc.getSystemPreferences();
+			if (!root.nodeExists(profile.getName()))
+				throw new IllegalStateException("profile not found");
+
+			setPreference(profile, root);
+
+		} catch (BackingStoreException e) {
+			throw new IllegalStateException("io error", e);
+		}
+	}
+
+	private void setPreference(LdapProfile profile, Preferences root) throws BackingStoreException {
+		Preferences p = root.node(profile.getName());
+		p.put("dc", profile.getDc());
+		p.put("account", profile.getAccount());
+		p.put("password", profile.getPassword());
+		p.putInt("sync_interval", profile.getSyncInterval());
+		p.putLong("last_sync", profile.getLastSync() == null ? 0 : profile.getLastSync().getTime());
+
+		p.flush();
+		p.sync();
 	}
 
 	@Override

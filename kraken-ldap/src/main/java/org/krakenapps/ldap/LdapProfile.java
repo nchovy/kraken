@@ -15,23 +15,39 @@
  */
 package org.krakenapps.ldap;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class LdapProfile {
+	// default 10min
+	public static final int DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000;
+	public static final int DEFAULT_PORT = 389;
+
 	private String name;
 	private String dc;
 	private int port;
 	private String account;
 	private String password;
+	private int syncInterval = DEFAULT_SYNC_INTERVAL;
+	private Date lastSync = null;
 
 	public LdapProfile(String name, String dc, String account, String password) {
-		this(name, dc, 389, account, password);
+		this(name, dc, DEFAULT_PORT, account, password, DEFAULT_SYNC_INTERVAL, null);
 	}
 
 	public LdapProfile(String name, String dc, int port, String account, String password) {
+		this(name, dc, port, account, password, DEFAULT_SYNC_INTERVAL, null);
+	}
+
+	public LdapProfile(String name, String dc, int port, String account, String password, int syncInterval,
+			Date lastSync) {
 		this.name = name;
 		this.dc = dc;
 		this.port = port;
 		this.account = account;
 		this.password = password;
+		this.syncInterval = syncInterval;
+		this.lastSync = lastSync;
 	}
 
 	public String getName() {
@@ -54,8 +70,18 @@ public class LdapProfile {
 		return password;
 	}
 
+	public int getSyncInterval() {
+		return syncInterval;
+	}
+
+	public Date getLastSync() {
+		return lastSync;
+	}
+
 	@Override
 	public String toString() {
-		return String.format("name=%s, dc=%s, port=%d, account=%s", name, dc, port, account);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return String.format("name=%s, dc=%s, port=%d, account=%s, sync interval=%dms, last sync=%s", name, dc, port,
+				account, syncInterval, lastSync == null ? "none" : dateFormat.format(lastSync));
 	}
 }

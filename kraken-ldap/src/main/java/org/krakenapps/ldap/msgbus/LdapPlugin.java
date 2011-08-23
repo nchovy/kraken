@@ -55,11 +55,33 @@ public class LdapPlugin {
 	public void createProfile(Request req, Response resp) {
 		String name = req.getString("profile_name");
 		String dc = req.getString("dc");
+		int port = LdapProfile.DEFAULT_PORT;
 		String account = req.getString("account");
 		String password = req.getString("password");
+		int syncInterval = 10 * 60 * 1000;
+		if (req.has("port"))
+			port = req.getInteger("port");
 
-		LdapProfile profile = new LdapProfile(name, dc, account, password);
+		if (req.has("sync_interval"))
+			syncInterval = req.getInteger("sync_interval");
+
+		LdapProfile profile = new LdapProfile(name, dc, port, account, password, syncInterval, null);
 		ldap.createProfile(profile);
+	}
+
+	@MsgbusMethod
+	public void setSyncInterval(Request req, Response resp) {
+		String name = req.getString("profile_name");
+		int syncInterval = req.getInteger("sync_interval");
+
+		LdapProfile p = ldap.getProfile(name);
+		if (p == null)
+			throw new MsgbusException("ldap", "profile-not-found");
+
+		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
+				syncInterval, p.getLastSync());
+
+		ldap.updateProfile(newProfile);
 	}
 
 	@MsgbusMethod
@@ -148,8 +170,11 @@ public class LdapPlugin {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("name", profile.getName());
 		m.put("dc", profile.getDc());
+		m.put("port", profile.getPort());
 		m.put("account", profile.getAccount());
 		m.put("password", profile.getPassword());
+		m.put("sync_interval", profile.getSyncInterval());
+		m.put("last_sync", profile.getLastSync());
 		return m;
 	}
 

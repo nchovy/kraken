@@ -11,7 +11,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.AdminApi;
-import org.krakenapps.dom.api.EntityEventListener;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.LdapOrganizationalUnitApi;
 import org.krakenapps.dom.api.OrganizationParameterApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
@@ -31,11 +31,22 @@ import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
+import org.osgi.service.prefs.PreferencesService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "ldap-sync-service")
 @Provides
-public class DomSyncService implements LdapSyncService, EntityEventListener<OrganizationUnit> {
+public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit> implements LdapSyncService, Runnable {
+	private final Logger logger = LoggerFactory.getLogger(DomSyncService.class.getName());
+
 	private BundleContext bc;
+
+	private boolean syncState;
+
+	private Thread syncThread;
 
 	@Requires
 	private LdapService ldap;
@@ -49,6 +60,9 @@ public class DomSyncService implements LdapSyncService, EntityEventListener<Orga
 	@Requires
 	private OrganizationUnitApi orgUnitApi;
 
+	@Requires
+	private PreferencesService prefsvc;
+
 	public DomSyncService(BundleContext bc) {
 		this.bc = bc;
 	}
@@ -56,6 +70,12 @@ public class DomSyncService implements LdapSyncService, EntityEventListener<Orga
 	@Validate
 	public void start() {
 		orgUnitApi.addEntityEventListener(this);
+
+		// load sync state
+		Preferences p = prefsvc.getSystemPreferences();
+		syncState = p.getBoolean("sync_state", true);
+
+		startSyncThread();
 	}
 
 	@Invalidate
@@ -64,21 +84,87 @@ public class DomSyncService implements LdapSyncService, EntityEventListener<Orga
 			orgUnitApi.removeEntityEventListener(this);
 	}
 
-	@Override
-	public void entityAdded(OrganizationUnit obj) {
+	private void startSyncThread() {
+		if (syncState) {
+			syncThread = new Thread(this, "LDAP User Sync");
+			syncThread.start();
+		}
 	}
 
 	@Override
-	public void entityUpdated(OrganizationUnit obj) {
+	public void run() {
+		try {
+			while (syncState) {
+				try {
+					syncAll();
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					logger.debug("kraken dom: sync interrupted");
+				}
+			}
+		} catch (Exception e) {
+			logger.error("kraken dom: sync error", e);
+		} finally {
+			logger.info("kraken dom: sync thread stopped");
+		}
+	}
+
+	private void syncAll() {
+		// NPE at stopping
+		if (ldap == null)
+			return;
+
+		for (LdapProfile p : ldap.getProfiles()) {
+			try {
+				Date d = p.getLastSync();
+				Date now = new Date();
+				long span = 0;
+				if (d != null)
+					span = now.getTime() - d.getTime();
+
+				if (span == 0 || span > p.getSyncInterval()) {
+					logger.debug("kraken dom: try to sync using profile [{}]", p.getName());
+					try {
+						sync(p);
+					} catch (Exception e) {
+						logger.error("kraken dom: periodic sync failed", e);
+					}
+
+					LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
+							p.getPassword(), p.getSyncInterval(), now);
+					ldap.updateProfile(newProfile);
+				}
+			} catch (Exception e) {
+				logger.error("kraken dom: sync profile " + p.getName() + " failed", e);
+			}
+		}
 	}
 
 	@Override
-	public void entityRemoving(OrganizationUnit obj) {
+	public boolean getPeriodicSync() {
+		return syncState;
 	}
 
 	@Override
-	public void entityRemoved(OrganizationUnit obj) {
-		
+	public void setPeriodicSync(boolean activate) {
+		try {
+			Preferences p = prefsvc.getSystemPreferences();
+			p.putBoolean("sync_state", activate);
+			p.flush();
+			p.sync();
+
+			if (syncState == false && activate)
+				startSyncThread();
+
+			syncState = activate;
+		} catch (BackingStoreException e) {
+			throw new RuntimeException("cannot change sync state", e);
+		}
+	}
+
+	@Override
+	public void entityRemoved(OrganizationUnit orgUnit) {
+		ldapOrgUnitApi.removeLdapOrganizationalUnit(orgUnit);
 	}
 
 	@Override

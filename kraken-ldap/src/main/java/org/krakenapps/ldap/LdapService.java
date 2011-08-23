@@ -19,6 +19,8 @@ import java.util.Collection;
 
 public interface LdapService {
 	void createProfile(LdapProfile profile);
+	
+	void updateProfile(LdapProfile profile);
 
 	void removeProfile(String name);
 
