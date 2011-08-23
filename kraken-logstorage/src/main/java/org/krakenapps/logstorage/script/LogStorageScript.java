@@ -43,7 +43,6 @@ import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.TableMetadata;
-import org.krakenapps.logstorage.criterion.EqExpression;
 import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.ConfigUtil;
 import org.krakenapps.logstorage.query.FileBufferList;
@@ -125,7 +124,7 @@ public class LogStorageScript implements Script {
 		int limit = Integer.valueOf(args[4]);
 
 		try {
-			storage.search(tableName, from, to, offset, limit, null, new LogSearchCallback() {
+			storage.search(tableName, from, to, offset, limit, new LogSearchCallback() {
 				@Override
 				public void onLog(Log log) {
 					context.println(log.toString());
@@ -149,9 +148,7 @@ public class LogStorageScript implements Script {
 			@ScriptArgument(name = "table name", type = "string", description = "log table name"),
 			@ScriptArgument(name = "from", type = "string", description = "from"),
 			@ScriptArgument(name = "to", type = "string", description = "to"),
-			@ScriptArgument(name = "limit", type = "int", description = "count limit"),
-			@ScriptArgument(name = "field", type = "string", description = "field"),
-			@ScriptArgument(name = "term", type = "string", description = "term") })
+			@ScriptArgument(name = "limit", type = "int", description = "count limit") })
 	public void searchTable(String[] args) {
 		try {
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -159,13 +156,11 @@ public class LogStorageScript implements Script {
 			Date from = dateFormat.parse(args[1]);
 			Date to = dateFormat.parse(args[2]);
 			int limit = Integer.parseInt(args[3]);
-			String field = args[4];
-			String term = args[5];
 
 			long begin = new Date().getTime();
 
 			LogSearchCallback callback = new PrintCallback();
-			storage.search(tableName, from, to, limit, new EqExpression(field, term), callback);
+			storage.search(tableName, from, to, limit, callback);
 
 			long end = new Date().getTime();
 
@@ -307,7 +302,7 @@ public class LogStorageScript implements Script {
 
 			LogCounter counter = new LogCounter();
 			Date timestamp = new Date();
-			storage.search(tableName, from, to, Integer.MAX_VALUE, null, counter);
+			storage.search(tableName, from, to, Integer.MAX_VALUE, counter);
 			long elapsed = new Date().getTime() - timestamp.getTime();
 
 			context.println("total count: " + counter.getCount() + ", elapsed: " + elapsed + "ms");
@@ -472,7 +467,7 @@ public class LogStorageScript implements Script {
 
 		begin = System.currentTimeMillis();
 		try {
-			storage.search(tableName, new Date(0), new Date(), count, null, new BenchmarkCallback());
+			storage.search(tableName, new Date(0), new Date(), count, new BenchmarkCallback());
 		} catch (InterruptedException e) {
 		}
 		end = System.currentTimeMillis();

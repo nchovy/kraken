@@ -42,6 +42,7 @@ public class TableParser implements QueryParser {
 		String tableName = (String) b.getChildren()[2].getValue();
 		Date from = null;
 		Date to = null;
+		int offset = 0;
 		int limit = 0;
 
 		if (options.containsKey("duration")) {
@@ -61,10 +62,12 @@ public class TableParser implements QueryParser {
 		if (options.containsKey("to"))
 			to = getDate(options.get("to"));
 
+		if (options.containsKey("offset"))
+			offset = Integer.parseInt(options.get("offset"));
 		if (options.containsKey("limit"))
 			limit = Integer.parseInt(options.get("limit"));
 
-		return new Table(tableName, limit, from, to);
+		return new Table(tableName, offset, limit, from, to);
 	}
 
 	private Date getDuration(int value, String field) {

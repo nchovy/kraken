@@ -47,6 +47,7 @@ public class Table extends LogQueryCommand {
 	private Logger logger = LoggerFactory.getLogger(Table.class);
 	private LogStorage storage;
 	private String tableName;
+	private int offset;
 	private int limit;
 	private Date from;
 	private Date to;
@@ -67,7 +68,12 @@ public class Table extends LogQueryCommand {
 	}
 
 	public Table(String tableName, int limit, Date from, Date to) {
+		this(tableName, 0, 0, from, to);
+	}
+
+	public Table(String tableName, int offset, int limit, Date from, Date to) {
 		this.tableName = tableName;
+		this.offset = offset;
 		this.limit = limit;
 		this.from = from;
 		this.to = to;
@@ -92,6 +98,14 @@ public class Table extends LogQueryCommand {
 		this.storage = storage;
 	}
 
+	public int getOffset() {
+		return offset;
+	}
+
+	public void setOffset(int offset) {
+		this.offset = offset;
+	}
+
 	public int getLimit() {
 		return limit;
 	}
@@ -109,7 +123,7 @@ public class Table extends LogQueryCommand {
 				to = new Date();
 
 			status = Status.Running;
-			storage.search(tableName, from, to, limit, null, new LogSearchCallbackImpl());
+			storage.search(tableName, from, to, offset, limit, new LogSearchCallbackImpl());
 		} catch (InterruptedException e) {
 			logger.trace("kraken logstorage: query interrupted");
 		} catch (Exception e) {

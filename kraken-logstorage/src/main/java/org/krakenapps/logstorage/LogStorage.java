@@ -18,8 +18,6 @@ package org.krakenapps.logstorage;
 import java.util.Collection;
 import java.util.Date;
 
-import org.krakenapps.logstorage.criterion.Criterion;
-
 public interface LogStorage {
 	LogStorageStatus getStatus();
 
@@ -48,16 +46,13 @@ public interface LogStorage {
 
 	Log getLog(String tableName, Date date, int id);
 
-	int search(Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
+	int search(Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException;
 
-	int search(Date from, Date to, int offset, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
+	int search(Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException;
 
-	int search(String tableName, Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
+	int search(String tableName, Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException;
 
-	int search(String tableName, Date from, Date to, int offset, int limit, Criterion pred, LogSearchCallback callback)
+	int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback)
 			throws InterruptedException;
 
 	void addLogListener(LogCallback callback);

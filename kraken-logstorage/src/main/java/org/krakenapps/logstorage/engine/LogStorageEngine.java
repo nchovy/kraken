@@ -47,7 +47,6 @@ import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.criterion.Criterion;
 import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -350,13 +349,12 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException {
-		return search(from, to, 0, limit, pred, callback);
+	public int search(Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException {
+		return search(from, to, 0, limit, callback);
 	}
 
 	@Override
-	public int search(Date from, Date to, int offset, int limit, Criterion pred, LogSearchCallback callback)
+	public int search(Date from, Date to, int offset, int limit, LogSearchCallback callback)
 			throws InterruptedException {
 		verify();
 
@@ -366,7 +364,7 @@ public class LogStorageEngine implements LogStorage {
 			if (needed <= 0)
 				break;
 
-			found += search(tableName, from, to, offset, needed, pred, callback);
+			found += search(tableName, from, to, offset, needed, callback);
 
 			if (offset > 0) {
 				if (found > offset) {
@@ -383,14 +381,14 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int limit, final Criterion pred,
-			final LogSearchCallback callback) throws InterruptedException {
-		return search(tableName, from, to, 0, limit, pred, callback);
+	public int search(String tableName, Date from, Date to, int limit, LogSearchCallback callback)
+			throws InterruptedException {
+		return search(tableName, from, to, 0, limit, callback);
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int offset, int limit, Criterion pred,
-			LogSearchCallback callback) throws InterruptedException {
+	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback)
+			throws InterruptedException {
 		verify();
 
 		Collection<Date> days = getLogDates(tableName);
@@ -407,7 +405,7 @@ public class LogStorageEngine implements LogStorage {
 			if (limit != 0 && needed <= 0)
 				break;
 
-			found += searchTablet(tableName, day, from, to, offset, needed, pred, callback);
+			found += searchTablet(tableName, day, from, to, offset, needed, callback);
 
 			if (offset > 0) {
 				if (found > offset) {
@@ -424,13 +422,13 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit,
-			final Criterion pred, final LogSearchCallback callback) throws InterruptedException {
+			final LogSearchCallback callback) throws InterruptedException {
 		int tableId = tableRegistry.getTableId(tableName);
 
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);
 		File dataPath = DatapathUtil.getDataFile(tableId, day);
 		LogFileReader reader = null;
-		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, pred, callback);
+		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, callback);
 
 		try {
 			OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
@@ -473,17 +471,14 @@ public class LogStorageEngine implements LogStorage {
 		private Date from;
 		private Date to;
 		private int offset;
-		private Criterion pred;
 		private LogSearchCallback callback;
 		private int matched = 0;
 
-		public TraverseCallback(String tableName, Date from, Date to, int offset, Criterion pred,
-				LogSearchCallback callback) {
+		public TraverseCallback(String tableName, Date from, Date to, int offset, LogSearchCallback callback) {
 			this.tableName = tableName;
 			this.from = from;
 			this.to = to;
 			this.offset = offset;
-			this.pred = pred;
 			this.callback = callback;
 		}
 
@@ -496,10 +491,7 @@ public class LogStorageEngine implements LogStorage {
 			if (d.before(from) || d.after(to))
 				return false;
 
-			if (pred == null || pred.match(log))
-				return onMatch(log);
-
-			return false;
+			return onMatch(log);
 		}
 
 		private boolean onMatch(Log log) throws InterruptedException {
