@@ -78,7 +78,8 @@ public class Table extends LogQueryCommand {
 		this.from = from;
 		this.to = to;
 		this.timelineSpanValues = new TimelineSpanValue[] { new TimelineSpanValue(Span.Minute, 1),
-				new TimelineSpanValue(Span.Hour, 1), new TimelineSpanValue(Span.Day, 1),
+				new TimelineSpanValue(Span.Minute, 10), new TimelineSpanValue(Span.Hour, 1),
+				new TimelineSpanValue(Span.Day, 1), new TimelineSpanValue(Span.Week, 1),
 				new TimelineSpanValue(Span.Month, 1) };
 	}
 

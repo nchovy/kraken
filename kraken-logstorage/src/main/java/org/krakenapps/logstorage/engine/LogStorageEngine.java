@@ -441,9 +441,10 @@ public class LogStorageEngine implements LogStorage {
 				while (li.hasPrevious()) {
 					LogRecord logData = li.previous();
 					if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
-						c.onLog(logData);
-						if (--limit == 0)
-							return c.matched;
+						if (c.onLog(logData)) {
+							if (--limit == 0)
+								return c.matched;
+						}
 					}
 				}
 			}
@@ -599,6 +600,7 @@ public class LogStorageEngine implements LogStorage {
 
 	@Override
 	public void flush() {
+		writerSweeper.setForceFlush(true);
 		writerSweeperThread.interrupt();
 	}
 
@@ -624,6 +626,7 @@ public class LogStorageEngine implements LogStorage {
 
 		private volatile boolean doStop = false;
 		private volatile boolean isStopped = true;
+		private volatile boolean forceFlush = false;
 
 		public WriterSweeper(int maxIdleTime, int flushInterval) {
 			this.maxIdleTime = maxIdleTime;
@@ -636,6 +639,10 @@ public class LogStorageEngine implements LogStorage {
 
 		public void setMaxIdleTime(int maxIdleTime) {
 			this.maxIdleTime = maxIdleTime;
+		}
+
+		public void setForceFlush(boolean forceFlush) {
+			this.forceFlush = forceFlush;
 		}
 
 		@Override
@@ -651,6 +658,10 @@ public class LogStorageEngine implements LogStorage {
 						Thread.sleep(flushInterval);
 						sweep();
 					} catch (InterruptedException e) {
+						if (forceFlush) {
+							sweep();
+							forceFlush = false;
+						}
 						logger.trace("log storage: sweeper interrupted");
 					} catch (Exception e) {
 						logger.error("log storage: sweeper error", e);

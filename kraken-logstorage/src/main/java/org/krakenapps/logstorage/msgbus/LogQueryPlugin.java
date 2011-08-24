@@ -166,32 +166,20 @@ public class LogQueryPlugin {
 		public void callback(int spanField, int spanAmount, Map<Date, Integer> timeline, boolean isFinal) {
 			int[] values = new int[limit];
 			Date beginDate = null;
+			Date endDate = null;
 			for (Date d : timeline.keySet()) {
-				if (beginDate == null || d.before(beginDate))
-					beginDate = d;
+				if (endDate == null || d.after(endDate))
+					endDate = d;
 			}
-			if (beginDate != null) {
+
+			if (endDate != null) {
 				Map<Date, Integer> indexes = new HashMap<Date, Integer>();
 				Calendar c = Calendar.getInstance();
-				c.setTime(beginDate);
-				long current = System.currentTimeMillis();
-				for (int i = 0; i < limit; i++) {
-					indexes.put(c.getTime(), i);
-					c.add(spanField, spanAmount);
-
-					if (c.getTimeInMillis() > current) {
-						for (Date d : indexes.keySet())
-							indexes.put(d, indexes.get(d) + (limit - i - 1));
-
-						i++;
-						c.setTime(beginDate);
-						for (; i < limit; i++) {
-							c.add(spanField, -spanAmount);
-							indexes.put(c.getTime(), limit - i - 1);
-						}
-						beginDate = c.getTime();
-						break;
-					}
+				c.setTime(endDate);
+				for (int i = limit - 1; i >= 0; i--) {
+					beginDate = c.getTime();
+					indexes.put(beginDate, i);
+					c.add(spanField, -spanAmount);
 				}
 
 				try {
@@ -211,14 +199,18 @@ public class LogQueryPlugin {
 				fieldName = "Hour";
 			else if (spanField == Calendar.DAY_OF_MONTH)
 				fieldName = "Day";
+			else if (spanField == Calendar.WEEK_OF_YEAR)
+				fieldName = "Week";
 			else if (spanField == Calendar.MONTH)
 				fieldName = "Month";
 
 			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("id", query.getId());
 			m.put("span_field", fieldName);
 			m.put("span_amount", spanAmount);
 			m.put("begin", beginDate);
 			m.put("values", values);
+			m.put("count", query.getResult().size());
 			pushApi.push(orgId, "logstorage-query-timeline", m);
 
 			if (isFinal)
@@ -232,17 +224,22 @@ public class LogQueryPlugin {
 		int offset = req.getInteger("offset");
 		int limit = req.getInteger("limit");
 
-		resp.putAll(getResultData(id, offset, limit));
+		Map<String, Object> m = getResultData(id, offset, limit);
+		if (m != null)
+			resp.putAll(m);
 	}
 
 	private Map<String, Object> getResultData(int id, int offset, int limit) {
 		LogQuery query = service.getQuery(id);
-		Map<String, Object> m = new HashMap<String, Object>();
+		if (query != null) {
+			Map<String, Object> m = new HashMap<String, Object>();
 
-		m.put("result", query.getResult(offset, limit));
-		m.put("count", query.getResult().size());
+			m.put("result", query.getResult(offset, limit));
+			m.put("count", query.getResult().size());
 
-		return m;
+			return m;
+		}
+		return null;
 	}
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)

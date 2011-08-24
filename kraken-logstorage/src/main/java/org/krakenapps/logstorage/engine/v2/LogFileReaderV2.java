@@ -132,8 +132,9 @@ public class LogFileReaderV2 extends LogFileReader {
 		for (int i = dataBlockHeaders.size() - 1; i >= 0; i--) {
 			DataBlockHeader header = dataBlockHeaders.get(i);
 			if ((from == null || header.endDate >= from.getTime()) && (to == null || header.startDate <= to.getTime())) {
-				matched += readBlock(i, (from != null) ? from.getTime() : null, (to != null) ? to.getTime() : null,
-						limit, callback);
+				Long f = (from != null) ? from.getTime() : null;
+				Long t = (to != null) ? to.getTime() : null;
+				matched += readBlock(i, f, t, limit - matched, callback);
 				if (matched == limit)
 					return;
 			}

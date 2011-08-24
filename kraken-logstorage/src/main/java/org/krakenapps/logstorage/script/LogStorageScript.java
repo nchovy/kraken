@@ -360,12 +360,12 @@ public class LogStorageScript implements Script {
 		Thread t = new Thread(lq);
 		t.start();
 
-		while (!lq.isEnd()) {
+		do {
 			try {
 				Thread.sleep(100);
 			} catch (InterruptedException e) {
 			}
-		}
+		} while (!lq.isEnd());
 
 		List<Map<String, Object>> results = lq.getResult();
 		for (Map<String, Object> m : results)
@@ -373,7 +373,7 @@ public class LogStorageScript implements Script {
 		((FileBufferList<Map<String, Object>>) results).close();
 
 		logQueryService.removeQuery(lq.getId());
-		context.println((System.currentTimeMillis() - begin) + " ms");
+		context.println(String.format("%.1fs", (System.currentTimeMillis() - begin) / (double) 1000));
 	}
 
 	@SuppressWarnings("unchecked")

@@ -77,20 +77,20 @@ public class LogQueryImpl implements LogQuery {
 
 		try {
 			result = new Result();
+			commands.get(commands.size() - 1).setNextCommand(result);
+			result.setDataHeader(commands.get(commands.size() - 1).getDataHeader());
+			for (LogQueryCallback callback : logQueryCallbacks)
+				result.registerCallback(callback);
+			logQueryCallbacks.clear();
+
+			logger.trace("kraken logstorage: run query => {}", queryString);
+			for (LogQueryCommand command : commands)
+				command.init();
+
+			commands.get(0).start();
 		} catch (IOException e) {
-			logger.error("kraken logstorage: cannot create result storage", e);
+			logger.error("kraken logstorage: cannot start query", e);
 		}
-		commands.get(commands.size() - 1).setNextCommand(result);
-		result.setDataHeader(commands.get(commands.size() - 1).getDataHeader());
-		for (LogQueryCallback callback : logQueryCallbacks)
-			result.registerCallback(callback);
-		logQueryCallbacks.clear();
-
-		logger.trace("kraken logstorage: run query => {}", queryString);
-		for (LogQueryCommand command : commands)
-			command.init();
-
-		commands.get(0).start();
 	}
 
 	@Override
@@ -132,7 +132,7 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
-	public FileBufferList<Map<String, Object>> getResult() {
+	public List<Map<String, Object>> getResult() {
 		if (result != null)
 			return result.getResult();
 		return null;
