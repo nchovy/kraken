@@ -173,15 +173,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		}
 	}
 
-	/**
-	 * Boot felix framework up.
-	 * 
-	 * @param startOptions
-	 * 
-	 * @throws Exception
-	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public void boot(StartOptions startOptions) throws Exception {
+	public static void setKrakenSystemProperties() {
 		if (System.getProperty("kraken.dir") == null) {
 			File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
 			File dir = jarPath.getParentFile();
@@ -197,6 +189,18 @@ public class Kraken implements BundleActivator, SignalHandler {
 			System.setProperty("kraken.cache.dir", new File(krakenDir, "cache").getAbsolutePath());
 		if (System.getProperty("kraken.download.dir") == null)
 			System.setProperty("kraken.download.dir", new File(krakenDir, "download").getAbsolutePath());
+	}
+
+	/**
+	 * Boot felix framework up.
+	 * 
+	 * @param startOptions
+	 * 
+	 * @throws Exception
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void boot(StartOptions startOptions) throws Exception {
+		setKrakenSystemProperties();
 
 		setLogger();
 
