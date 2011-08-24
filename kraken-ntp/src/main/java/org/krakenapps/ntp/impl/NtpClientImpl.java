@@ -73,7 +73,7 @@ public class NtpClientImpl implements NtpClient, Runnable {
 		} catch (UnknownHostException e) {
 			logger.error("unknown host: " + host, e);
 		}
-		this.timeout = Integer.parseInt(node.get("timeout", "0"));
+		this.timeout = node.getInt("timeout", 5000);
 	}
 
 	@Override
@@ -98,7 +98,7 @@ public class NtpClientImpl implements NtpClient, Runnable {
 	public void setTimeout(int millisecond) {
 		this.timeout = millisecond;
 		Preferences p = getPreference();
-		p.put("timeout", String.valueOf(millisecond));
+		p.putInt("timeout", millisecond);
 		syncPreferences(p);
 	}
 
