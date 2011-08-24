@@ -152,7 +152,9 @@ public class NtpClientImpl implements NtpClient, Runnable {
 			String newTime = new SimpleDateFormat("MMddHHmmyyyy.ss").format(time);
 			Runtime.getRuntime().exec("date " + newTime);
 		} else {
-			throw new UnsupportedOperationException(os + " is not supported.");
+			// just pray
+			String newTime = new SimpleDateFormat("MMddHHmmyyyy.ss").format(time);
+			Runtime.getRuntime().exec("date " + newTime);
 		}
 	}
 
