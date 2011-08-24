@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-ca</artifactId>
-	<version>1.2.0</version>
+	<version>1.2.1</version>
 	<packaging>bundle</packaging>
 	<name>Kraken CA</name>
 	<build>
@@ -30,6 +30,8 @@
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
+							!org.junit,
+							!org.krakenapps.main,
 							*
 						</Import-Package>
 						<Private-Package>org.krakenapps.ca.impl</Private-Package>
@@ -55,7 +57,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
+			<version>1.7.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -77,6 +79,12 @@
 			<artifactId>kraken-msgbus</artifactId>
 			<version>1.0.0</version>
 			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-core</artifactId>
+			<version>1.7.8</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

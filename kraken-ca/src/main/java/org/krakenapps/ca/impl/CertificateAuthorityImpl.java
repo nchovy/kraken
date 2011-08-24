@@ -65,9 +65,13 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class CertificateAuthorityImpl implements CertificateAuthority {
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityImpl.class.getName());
-	private final File home = new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
+	private final File home = getCARootDir();
 	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
 			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	
+	public File getCARootDir() {
+		return new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
+	}
 
 	// install JCE provider
 	static {
@@ -159,7 +163,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		}
 
 	}
-
+	
 	private BigInteger getSerial(X509Certificate cert) {
 		String caCN = cert.getSubjectX500Principal().getName();
 		caCN = caCN.substring(caCN.indexOf("CN=") + 3);

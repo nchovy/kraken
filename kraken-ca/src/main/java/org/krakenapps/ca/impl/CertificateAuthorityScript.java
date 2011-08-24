@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -35,6 +36,7 @@ import java.util.Map;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMWriter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.ca.CertificateAuthority;
@@ -51,13 +53,14 @@ public class CertificateAuthorityScript implements Script {
 
 	private CertificateAuthority x509cert;
 	private ScriptContext context;
-	private File home = new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
-
-	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
+	private File home;
+	
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
 			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	public CertificateAuthorityScript(CertificateAuthority x509cert) {
 		this.x509cert = x509cert;
+		this.home = x509cert.getCARootDir();
 	}
 
 	@Override
@@ -68,6 +71,9 @@ public class CertificateAuthorityScript implements Script {
 	public void exportCaCrt(String[] args) {
 		FileInputStream is = null;
 		FileOutputStream os = null;
+		boolean usePem = false;
+		if (args.length >= 1 && args[0].equals("-pem"))
+			usePem = true;
 		try {
 			KeyStore store = KeyStore.getInstance("JKS");
 
@@ -81,8 +87,21 @@ public class CertificateAuthorityScript implements Script {
 			store.load(is, password.toCharArray());
 
 			Certificate caCert = store.getCertificate("ca");
-			os = new FileOutputStream(new File(new File(home, caCN), caCN + ".crt"));
-			os.write(caCert.getEncoded());
+			String extension = ".crt";
+			if (usePem)
+				extension = ".pem";
+			os = new FileOutputStream(new File(new File(home, caCN), caCN + extension));
+			if (!!!usePem) {
+				os.write(caCert.getEncoded());
+			} else {
+				PEMWriter writer = new PEMWriter(new PrintWriter(os), "PC");
+				try {
+					writer.writeObject(caCert);
+					writer.writeObject(store.getKey("ca-key", password.toCharArray()));
+				} finally {
+					writer.close();
+				}
+			}
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
 			logger.warn("kraken x509: export ca cert failed", e);

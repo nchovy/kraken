@@ -48,4 +48,6 @@ public interface CertificateAuthority {
 
 	X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword,
 			String dn, String signatureAlgorithm, int days) throws Exception;
+
+	File getCARootDir();
 }
