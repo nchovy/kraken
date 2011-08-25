@@ -51,8 +51,13 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Override
 	public void removeQuery(int id) {
 		LogQuery lq = queries.get(id);
-		if (lq != null && !lq.isEnd())
+		if (lq == null)
+			return;
+
+		if (!lq.isEnd())
 			lq.cancel();
+		FileBufferList<Map<String, Object>> fbl = (FileBufferList<Map<String, Object>>) lq.getResult();
+		fbl.close();
 		queries.remove(id);
 	}
 

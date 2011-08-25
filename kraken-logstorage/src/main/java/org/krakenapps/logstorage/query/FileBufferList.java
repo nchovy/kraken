@@ -51,7 +51,8 @@ public class FileBufferList<E> implements List<E> {
 
 	private File file;
 	private RandomAccessFile raf;
-	private Comparator<ObjectWrapper> comparator;
+	private Comparator<E> comparator;
+	private Comparator<ObjectWrapper> wrapperComparator;
 	private volatile int size = 0;
 	private ByteBuffer writeBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
 	private ByteBuffer readBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
@@ -89,8 +90,9 @@ public class FileBufferList<E> implements List<E> {
 			BASE_DIR.mkdirs();
 		this.file = File.createTempFile("fbl", ".buf", BASE_DIR);
 		this.file.deleteOnExit();
+		this.comparator = comparator;
 		if (comparator != null)
-			this.comparator = new ObjectWrapperComparator(comparator);
+			this.wrapperComparator = new ObjectWrapperComparator(comparator);
 		this.raf = new RandomAccessFile(file, "rw");
 		this.cacheSize = cacheSize;
 		this.cc = cc;
@@ -253,7 +255,7 @@ public class FileBufferList<E> implements List<E> {
 		fliped = 0;
 
 		int beforeSize = c.size();
-		if (comparator != null)
+		if (wrapperComparator != null)
 			beforeSize = sort(c);
 
 		long startFp = raf.length();
@@ -308,7 +310,7 @@ public class FileBufferList<E> implements List<E> {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private int sort(List<ObjectWrapper> list, int offset) {
 		Object[] a = list.toArray();
-		Arrays.sort(a, offset, a.length, (Comparator) comparator);
+		Arrays.sort(a, offset, a.length, (Comparator) wrapperComparator);
 		ListIterator i = list.listIterator(offset);
 		for (int j = offset; j < a.length; j++) {
 			i.next();
@@ -329,7 +331,7 @@ public class FileBufferList<E> implements List<E> {
 	private void flip() throws IOException {
 		needFlip = false;
 
-		if (comparator == null) {
+		if (wrapperComparator == null) {
 			synchronized (cacheLock) {
 				Iterator<ObjectWrapper> it = cache.listIterator(fliped);
 				while (it.hasNext()) {
@@ -341,14 +343,18 @@ public class FileBufferList<E> implements List<E> {
 		} else {
 			int sorted = sort(cache, fliped);
 			ListIterator<ObjectWrapper> li = cache.listIterator(fliped);
+			int m = 0;
+			List<ObjectWrapper> newObjs = new ArrayList<ObjectWrapper>(objs.size() + (sorted - fliped));
+			int lastIndex = 0;
 			for (int i = fliped; i < sorted; i++) {
 				ObjectWrapper ow = li.next();
-				int l = 0;
+				E e1 = ow.get();
+				int l = m;
 				int r = objs.size();
 				while (l < r) {
-					int m = (l + r) / 2;
-					ObjectWrapper o = objs.get(m);
-					int comp = comparator.compare(ow, o);
+					m = (l + r) / 2;
+					E e2 = objs.get(m).get();
+					int comp = comparator.compare(e1, e2);
 					if (comp < 0)
 						r = m;
 					else if (comp > 0)
@@ -356,9 +362,14 @@ public class FileBufferList<E> implements List<E> {
 					else
 						break;
 				}
-				objs.add((l + r) / 2, ow);
+				for (; lastIndex < m; lastIndex++)
+					newObjs.add(objs.get(lastIndex));
+				newObjs.add(ow);
 			}
+			for (; lastIndex < objs.size(); lastIndex++)
+				newObjs.add(objs.get(lastIndex));
 			fliped += sorted;
+			objs = newObjs;
 		}
 	}
 

@@ -22,9 +22,9 @@ import org.krakenapps.logstorage.query.command.Function;
 import org.krakenapps.logstorage.query.command.FunctionCodec;
 
 @SuppressWarnings("unused")
-@Ignore
+// @Ignore
 public class BufferTest {
-	@Test
+	// @Test
 	public void concurrentTest() {
 		try {
 			List<Integer> l = new FileBufferList<Integer>();
@@ -85,7 +85,7 @@ public class BufferTest {
 		}
 	}
 
-	// @Test
+	@Test
 	public void list() throws IOException {
 		Random r = new Random();
 		List<Integer> random = new ArrayList<Integer>();
@@ -108,15 +108,15 @@ public class BufferTest {
 			l.add(i);
 		}
 		long end = System.currentTimeMillis();
-		System.out.println(end - begin);
+		System.out.println("add : " + (end - begin));
 
 		begin = System.currentTimeMillis();
 		for (Integer i : l)
 			;
 		end = System.currentTimeMillis();
-		System.out.println(end - begin);
-
-		// System.out.println(((FileBufferList<Integer>) l).readCount);
+		System.out.println("print : " + (end - begin));
+		
+//		System.out.println("file read count: " + ((FileBufferList<Integer>) l).readCount);
 	}
 
 	// @Test
