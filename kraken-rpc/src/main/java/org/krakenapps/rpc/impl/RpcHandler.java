@@ -294,8 +294,13 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			msg.setSession(session);
 			String serviceName = session.getServiceName();
 			RpcServiceBinding binding = conn.findServiceBinding(serviceName);
-			if (binding == null)
-				throw new RpcException("service not found: " + serviceName);
+			if (binding == null) {
+				int newId = conn.nextMessageId();
+				String cause = "service not found: " + serviceName;
+				RpcMessage error = RpcMessage.newException(newId, session.getId(), id, cause);
+				channel.write(error);
+				return;
+			}
 
 			if (type.equals("rpc-call")) {
 				int newId = conn.nextMessageId();
