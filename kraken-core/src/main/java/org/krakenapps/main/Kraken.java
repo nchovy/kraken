@@ -48,6 +48,7 @@ import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.krakenapps.account.AccountScriptFactory;
+import org.krakenapps.api.Environment;
 import org.krakenapps.api.InstrumentationService;
 import org.krakenapps.api.LoggerControlService;
 import org.krakenapps.api.ScriptFactory;
@@ -173,24 +174,6 @@ public class Kraken implements BundleActivator, SignalHandler {
 		}
 	}
 
-	public static void setKrakenSystemProperties() {
-		if (System.getProperty("kraken.dir") == null) {
-			File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-			File dir = jarPath.getParentFile();
-			System.setProperty("kraken.dir", dir.getAbsolutePath());
-		}
-
-		String krakenDir = System.getProperty("kraken.dir");
-		if (System.getProperty("kraken.data.dir") == null)
-			System.setProperty("kraken.data.dir", new File(krakenDir, "data").getAbsolutePath());
-		if (System.getProperty("kraken.log.dir") == null)
-			System.setProperty("kraken.log.dir", new File(krakenDir, "log").getAbsolutePath());
-		if (System.getProperty("kraken.cache.dir") == null)
-			System.setProperty("kraken.cache.dir", new File(krakenDir, "cache").getAbsolutePath());
-		if (System.getProperty("kraken.download.dir") == null)
-			System.setProperty("kraken.download.dir", new File(krakenDir, "download").getAbsolutePath());
-	}
-
 	/**
 	 * Boot felix framework up.
 	 * 
@@ -200,7 +183,10 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void boot(StartOptions startOptions) throws Exception {
-		setKrakenSystemProperties();
+		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+		File dir = jarPath.getParentFile();
+
+		Environment.setKrakenSystemProperties(dir.getAbsolutePath());
 
 		setLogger();
 

@@ -41,12 +41,12 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 
+import org.krakenapps.api.Environment;
 import org.krakenapps.ca.impl.CertificateAuthorityImpl;
-import org.krakenapps.main.Kraken;
 
 public class ClientCAUsageTest {
 	public void PrimaryTest() throws IOException {
-		Kraken.setKrakenSystemProperties();
+		Environment.setKrakenSystemProperties(".");
 
 		// TODO: check prerequisite - kraken.data.dir, CA file exists?
 		System.out.println(System.getProperty("kraken.data.dir"));

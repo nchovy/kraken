@@ -57,7 +57,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.7.7</version>
+			<version>1.8.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -79,12 +79,6 @@
 			<artifactId>kraken-msgbus</artifactId>
 			<version>1.0.0</version>
 			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-core</artifactId>
-			<version>1.7.8</version>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
