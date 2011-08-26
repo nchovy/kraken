@@ -65,6 +65,11 @@ public class Stats extends LogQueryCommand {
 	}
 
 	@Override
+	public boolean isReducer() {
+		return true;
+	}
+
+	@Override
 	public void eof() {
 		for (List<Object> key : result.keySet()) {
 			Map<String, Object> m = new HashMap<String, Object>();

@@ -125,6 +125,11 @@ public class Result extends LogQueryCommand {
 		}
 	}
 
+	@Override
+	public boolean isReducer() {
+		return false;
+	}
+
 	public void registerCallback(LogQueryCallback callback) {
 		callbacks.add(callback);
 		callbackQueue.add(new LogQueryCallbackInfo(callback));
@@ -144,13 +149,9 @@ public class Result extends LogQueryCommand {
 	}
 
 	public List<Map<String, Object>> getResult(int offset, int limit) {
-		List<Map<String, Object>> r = new ArrayList<Map<String, Object>>();
-		for (int i = 0; i < limit; i++) {
-			if (offset + i >= result.size())
-				break;
-			r.add(result.get(offset + i));
-		}
-		return r;
+		if (offset + limit > result.size())
+			limit = result.size() - offset;
+		return result.subList(offset, offset + limit);
 	}
 
 	@Override

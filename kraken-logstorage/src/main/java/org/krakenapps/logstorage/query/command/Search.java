@@ -24,16 +24,16 @@ import java.util.regex.Pattern;
 import org.krakenapps.logstorage.LogQueryCommand;
 import org.krakenapps.logstorage.query.ObjectComparator;
 
-public class Eval extends LogQueryCommand {
+public class Search extends LogQueryCommand {
 	private Integer limit;
 	private Integer count;
 	private List<Term> terms;
 
-	public Eval(List<Term> terms) {
+	public Search(List<Term> terms) {
 		this(null, terms);
 	}
 
-	public Eval(Integer limit, List<Term> terms) {
+	public Search(Integer limit, List<Term> terms) {
 		this.limit = limit;
 		this.terms = terms;
 	}
@@ -59,6 +59,11 @@ public class Eval extends LogQueryCommand {
 		}
 	}
 
+	@Override
+	public boolean isReducer() {
+		return false;
+	}
+
 	public static class Term {
 		public static enum Operator {
 			Eq, Neq, Gt, Lt, Ge, Le, Contain, Regexp, In
@@ -71,7 +76,7 @@ public class Eval extends LogQueryCommand {
 		private Object rh;
 		private boolean isRhString = true;
 
-		public boolean eval(Eval eval, Map<String, Object> m) {
+		public boolean eval(Search eval, Map<String, Object> m) {
 			Object l = isLhString ? lh : eval.getData(lh.toString(), m);
 			Object r = isRhString ? rh : eval.getData(rh.toString(), m);
 

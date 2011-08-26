@@ -8,4 +8,9 @@ public class Drop extends LogQueryCommand {
 	@Override
 	public void push(Map<String, Object> m) {
 	}
+
+	@Override
+	public boolean isReducer() {
+		return true;
+	}
 }

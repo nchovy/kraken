@@ -51,6 +51,7 @@ public class FileBufferList<E> implements List<E> {
 
 	private File file;
 	private RandomAccessFile raf;
+	private Object fileLock = new Object();
 	private Comparator<E> comparator;
 	private Comparator<ObjectWrapper> wrapperComparator;
 	private volatile int size = 0;
@@ -240,7 +241,22 @@ public class FileBufferList<E> implements List<E> {
 
 	@Override
 	public List<E> subList(int fromIndex, int toIndex) {
-		throw new UnsupportedOperationException();
+		if (fromIndex < 0 || fromIndex > size)
+			throw new IndexOutOfBoundsException();
+		if (toIndex < fromIndex || toIndex > size)
+			throw new IndexOutOfBoundsException();
+
+		if (needFlip) {
+			try {
+				flip();
+			} catch (IOException e) {
+			}
+		}
+
+		List<E> sub = new ArrayList<E>();
+		for (int i = fromIndex; i < toIndex; i++)
+			sub.add(objs.get(i).get());
+		return sub;
 	}
 
 	private void flush() throws IOException {
@@ -259,8 +275,10 @@ public class FileBufferList<E> implements List<E> {
 			beforeSize = sort(c);
 
 		long startFp = raf.length();
-		raf.seek(startFp);
-		raf.write(getBytes(0));
+		synchronized (fileLock) {
+			raf.seek(startFp);
+			raf.write(getBytes(0));
+		}
 
 		long currentFp = startFp + 4;
 		int length = 0;
@@ -278,7 +296,10 @@ public class FileBufferList<E> implements List<E> {
 				objectSize = writeBuffer.position() - pos;
 			} catch (BufferOverflowException e) {
 				length += pos;
-				raf.write(writeBuffer.array(), 0, pos);
+				synchronized (fileLock) {
+					raf.seek(raf.length());
+					raf.write(writeBuffer.array(), 0, pos);
+				}
 				writeBuffer.clear();
 				EncodingRule.encode(writeBuffer, obj, cc);
 				objectSize = writeBuffer.position();
@@ -286,15 +307,18 @@ public class FileBufferList<E> implements List<E> {
 			currentFp += objectSize;
 		}
 
-		raf.write(writeBuffer.array(), 0, writeBuffer.position());
-		for (ObjectWrapper ow : flush.keySet())
-			ow.flush(flush.get(ow));
+		synchronized (fileLock) {
+			raf.seek(raf.length());
+			raf.write(writeBuffer.array(), 0, writeBuffer.position());
+
+			raf.seek(startFp);
+			raf.write(getBytes(length));
+			raf.seek(raf.length());
+		}
 		length += writeBuffer.position();
 		writeBuffer.clear();
-
-		raf.seek(startFp);
-		raf.write(getBytes(length));
-		raf.seek(raf.length());
+		for (ObjectWrapper ow : flush.keySet())
+			ow.flush(flush.get(ow));
 
 		ListIterator<ObjectWrapper> li = c.listIterator(beforeSize);
 		synchronized (cacheLock) {
@@ -390,6 +414,7 @@ public class FileBufferList<E> implements List<E> {
 		private long fp;
 		private SoftReference<E> cache;
 		private E obj;
+		private Object readLock = new Object();
 
 		public ObjectWrapper(E obj) {
 			this.isFlushed = false;
@@ -406,19 +431,25 @@ public class FileBufferList<E> implements List<E> {
 			if (isFlushed) {
 				E element = (cache != null) ? cache.get() : null;
 				if (element == null) {
-					if (readBufferIndex == null || readBufferIndex > fp || readBufferIndex + readBuffer.limit() <= fp)
-						read(fp);
+					synchronized (readLock) {
+						if (readBufferIndex == null || readBufferIndex > fp
+								|| readBufferIndex + readBuffer.limit() <= fp)
+							read(fp);
 
-					try {
-						return decode((int) (fp - readBufferIndex));
-					} catch (UnsupportedTypeException e) {
-						logger.error("kraken logstorage: unsupported decode type, {}", e.getMessage());
-					} catch (BufferUnderflowException e) {
-						read(fp);
-						return decode(0);
+						try {
+							return decode((int) (fp - readBufferIndex));
+						} catch (UnsupportedTypeException e) {
+							logger.error("kraken logstorage: unsupported decode type, {}", e.getMessage());
+						} catch (BufferUnderflowException e) {
+							read(fp);
+							return decode(0);
+						} catch (IllegalArgumentException e) {
+							read(fp);
+							return decode(0);
+						}
 					}
 				} else
-					return cache.get();
+					return element;
 			} else {
 				return obj;
 			}
@@ -428,10 +459,14 @@ public class FileBufferList<E> implements List<E> {
 
 		private void read(long fp) {
 			try {
-				raf.seek(fp);
-				int readed = raf.read(readBuffer.array());
+				int readed = 0;
+				synchronized (fileLock) {
+					raf.seek(fp);
+					readed = raf.read(readBuffer.array());
+				}
 				if (readed == -1)
 					throw new EOFException();
+				readBuffer.position(0);
 				readBuffer.limit(readed);
 				readBufferIndex = fp;
 			} catch (IOException e) {

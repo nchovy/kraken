@@ -16,10 +16,13 @@
 package org.krakenapps.logstorage;
 
 import java.util.Date;
-import java.util.Map;
 
 public interface LogTimelineCallback {
-	int limit();
+	int getSize();
 
-	void callback(int spanField, int spanAmount, Map<Date, Integer> timeline, boolean isFinal);
+	void setSize(int size);
+	
+	void put(Date date);
+
+	void callback();
 }

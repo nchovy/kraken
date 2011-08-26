@@ -24,19 +24,19 @@ import java.util.Map;
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logstorage.query.StringPlaceholder;
-import org.krakenapps.logstorage.query.command.Eval;
-import org.krakenapps.logstorage.query.command.Eval.Term;
-import org.krakenapps.logstorage.query.command.Eval.Term.Operator;
+import org.krakenapps.logstorage.query.command.Search;
+import org.krakenapps.logstorage.query.command.Search.Term;
+import org.krakenapps.logstorage.query.command.Search.Term.Operator;
 
-public class EvalParser implements QueryParser {
+public class SearchParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
-		syntax.add("eval", this, k("eval"), ref("option"), rule(new StringPlaceholder(), 
+		syntax.add("search", this, k("eval"), ref("option"), rule(new StringPlaceholder(), 
 				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
 				new StringPlaceholder(new char[] {})));
 		// @formatter:on
-		syntax.addRoot("eval");
+		syntax.addRoot("search");
 	}
 
 	@SuppressWarnings("unchecked")
@@ -48,7 +48,7 @@ public class EvalParser implements QueryParser {
 		if (option.containsKey("limit"))
 			limit = Integer.parseInt(option.get("limit"));
 
-		List<Term> terms = new ArrayList<Eval.Term>();
+		List<Term> terms = new ArrayList<Search.Term>();
 		Binding[] c = b.getChildren();
 		for (int i = 2; i < c.length; i++) {
 			Binding[] v = c[i].getChildren();
@@ -90,6 +90,6 @@ public class EvalParser implements QueryParser {
 			terms.add(term);
 		}
 
-		return new Eval(limit, terms);
+		return new Search(limit, terms);
 	}
 }

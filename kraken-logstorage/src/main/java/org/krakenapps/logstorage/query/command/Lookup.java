@@ -53,4 +53,9 @@ public class Lookup extends LogQueryCommand {
 			m.put(localDstField, handler.lookup(srcField, dstField, value));
 		write(m);
 	}
+
+	@Override
+	public boolean isReducer() {
+		return false;
+	}
 }

@@ -74,6 +74,11 @@ public class Sort extends LogQueryCommand {
 	}
 
 	@Override
+	public boolean isReducer() {
+		return true;
+	}
+
+	@Override
 	public void eof() {
 		if (limit == null) {
 			write(buf);

@@ -112,6 +112,11 @@ public class Timechart extends LogQueryCommand {
 		}
 	}
 
+	@Override
+	public boolean isReducer() {
+		return true;
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {

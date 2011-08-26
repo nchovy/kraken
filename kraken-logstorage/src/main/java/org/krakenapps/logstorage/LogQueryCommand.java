@@ -17,6 +17,7 @@ package org.krakenapps.logstorage;
 
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +27,7 @@ import org.krakenapps.logstorage.query.FileBufferList;
 import org.krakenapps.logstorage.query.command.Lookup;
 import org.krakenapps.logstorage.query.command.Table;
 import org.krakenapps.logstorage.query.parser.DropParser;
-import org.krakenapps.logstorage.query.parser.EvalParser;
+import org.krakenapps.logstorage.query.parser.SearchParser;
 import org.krakenapps.logstorage.query.parser.FieldsParser;
 import org.krakenapps.logstorage.query.parser.LookupParser;
 import org.krakenapps.logstorage.query.parser.OptionParser;
@@ -52,11 +53,13 @@ public abstract class LogQueryCommand {
 	private int pushCount;
 	protected LogQuery logQuery;
 	protected String[] header;
+	protected String dateColumnName;
 	protected LogQueryCommand next;
+	private boolean callbackTimeline;
 	protected volatile Status status = Status.Waiting;
 
 	static {
-		List<Class<? extends QueryParser>> parsers = Arrays.asList(DropParser.class, EvalParser.class,
+		List<Class<? extends QueryParser>> parsers = Arrays.asList(DropParser.class, SearchParser.class,
 				FieldsParser.class, FunctionParser.class, LookupParser.class, OptionParser.class, RenameParser.class,
 				SortParser.class, StatsParser.class, TableParser.class, TimechartParser.class);
 
@@ -91,12 +94,18 @@ public abstract class LogQueryCommand {
 		return queryString;
 	}
 
-	public String[] getDataHeader() {
-		return header;
+	protected void setDataHeader(String[] header) {
+		this.header = header;
 	}
 
-	public void setDataHeader(String[] header) {
-		this.header = header;
+	protected String getDateColumnName() {
+		if (isReducer())
+			return null;
+		return dateColumnName;
+	}
+
+	protected void setDateColumnName(String dateColumnName) {
+		this.dateColumnName = dateColumnName;
 	}
 
 	protected Object getData(String key, Map<String, Object> m) {
@@ -136,6 +145,15 @@ public abstract class LogQueryCommand {
 
 	public void setNextCommand(LogQueryCommand next) {
 		this.next = next;
+		setNextCommandConfigure();
+	}
+
+	private void setNextCommandConfigure() {
+		if (next != null) {
+			next.setDataHeader(header);
+			next.setDateColumnName(getDateColumnName());
+			next.setNextCommandConfigure();
+		}
 	}
 
 	public Status getStatus() {
@@ -167,6 +185,10 @@ public abstract class LogQueryCommand {
 	protected final void write(Map<String, Object> m) {
 		pushCount++;
 		if (next != null && next.status != Status.End) {
+			if (callbackTimeline) {
+				for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
+					callback.put((Date) m.get(dateColumnName));
+			}
 			next.status = Status.Running;
 			next.push(m);
 		}
@@ -182,12 +204,28 @@ public abstract class LogQueryCommand {
 		}
 	}
 
+	public abstract boolean isReducer();
+
+	public boolean isCallbackTimeline() {
+		return callbackTimeline;
+	}
+
+	public void setCallbackTimeline(boolean callbackTimeline) {
+		this.callbackTimeline = callbackTimeline;
+	}
+
 	public void eof() {
 		status = Status.End;
+
 		if (next != null && next.status != Status.End)
 			next.eof();
 
 		if (logQuery != null) {
+			if (callbackTimeline) {
+				for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
+					callback.callback();
+				logQuery.getTimelineCallbacks().clear();
+			}
 			if (logQuery.getCommands().get(0).status != Status.End)
 				logQuery.getCommands().get(0).eof();
 		}

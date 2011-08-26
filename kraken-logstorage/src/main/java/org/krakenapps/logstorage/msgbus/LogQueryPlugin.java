@@ -15,9 +15,9 @@
  */
 package org.krakenapps.logstorage.msgbus;
 
-import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -104,6 +104,29 @@ public class LogQueryPlugin {
 		}
 	}
 
+	@MsgbusMethod
+	public void getResult(Request req, Response resp) {
+		int id = req.getInteger("id");
+		int offset = req.getInteger("offset");
+		int limit = req.getInteger("limit");
+
+		Map<String, Object> m = getResultData(id, offset, limit);
+		if (m != null)
+			resp.putAll(m);
+	}
+
+	@MsgbusMethod(type = CallbackType.SessionClosed)
+	public void sessionClosed(Session session) {
+		List<LogQuery> q = queries.get(session);
+		if (q != null) {
+			for (LogQuery lq : q) {
+				lq.cancel();
+				service.removeQuery(lq.getId());
+			}
+		}
+		queries.remove(session);
+	}
+
 	private class LogQueryCallbackImpl implements LogQueryCallback {
 		private int orgId;
 		private LogQuery query;
@@ -132,7 +155,7 @@ public class LogQueryPlugin {
 			Map<String, Object> m = getResultData(query.getId(), offset, limit);
 			m.put("id", query.getId());
 			m.put("type", "page_loaded");
-			pushApi.push(orgId, "logstorage-query", m);
+			pushApi.push(orgId, "logstorage-query-" + query.getId(), m);
 		}
 
 		@Override
@@ -141,92 +164,9 @@ public class LogQueryPlugin {
 			m.put("id", query.getId());
 			m.put("type", "eof");
 			m.put("total_count", query.getResult().size());
-			pushApi.push(orgId, "logstorage-query", m);
+			pushApi.push(orgId, "logstorage-query-" + query.getId(), m);
 			query.unregisterQueryCallback(this);
 		}
-	}
-
-	private class LogTimelineCallbackImpl implements LogTimelineCallback {
-		private int orgId;
-		private LogQuery query;
-		private int limit;
-
-		public LogTimelineCallbackImpl(int orgId, LogQuery query, int limit) {
-			this.orgId = orgId;
-			this.query = query;
-			this.limit = limit;
-		}
-
-		@Override
-		public int limit() {
-			return limit;
-		}
-
-		@Override
-		public void callback(int spanField, int spanAmount, Map<Date, Integer> timeline, boolean isFinal) {
-			int[] values = new int[limit];
-			Date beginDate = null;
-			Date endDate = null;
-			for (Date d : timeline.keySet()) {
-				if (endDate == null || d.after(endDate))
-					endDate = d;
-			}
-
-			if (endDate != null) {
-				Map<Date, Integer> indexes = new HashMap<Date, Integer>();
-				Calendar c = Calendar.getInstance();
-				c.setTime(endDate);
-				for (int i = limit - 1; i >= 0; i--) {
-					beginDate = c.getTime();
-					indexes.put(beginDate, i);
-					c.add(spanField, -spanAmount);
-				}
-
-				try {
-					for (Date d : timeline.keySet()) {
-						int index = indexes.get(d);
-						values[index] = timeline.get(d).intValue();
-					}
-				} catch (NullPointerException e) {
-					throw new BufferOverflowException();
-				}
-			}
-
-			String fieldName = "";
-			if (spanField == Calendar.MINUTE)
-				fieldName = "Minute";
-			else if (spanField == Calendar.HOUR_OF_DAY)
-				fieldName = "Hour";
-			else if (spanField == Calendar.DAY_OF_MONTH)
-				fieldName = "Day";
-			else if (spanField == Calendar.WEEK_OF_YEAR)
-				fieldName = "Week";
-			else if (spanField == Calendar.MONTH)
-				fieldName = "Month";
-
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("id", query.getId());
-			m.put("span_field", fieldName);
-			m.put("span_amount", spanAmount);
-			m.put("begin", beginDate);
-			m.put("values", values);
-			m.put("count", query.getResult().size());
-			pushApi.push(orgId, "logstorage-query-timeline", m);
-
-			if (isFinal)
-				query.unregisterTimelineCallback(this);
-		}
-	}
-
-	@MsgbusMethod
-	public void getResult(Request req, Response resp) {
-		int id = req.getInteger("id");
-		int offset = req.getInteger("offset");
-		int limit = req.getInteger("limit");
-
-		Map<String, Object> m = getResultData(id, offset, limit);
-		if (m != null)
-			resp.putAll(m);
 	}
 
 	private Map<String, Object> getResultData(int id, int offset, int limit) {
@@ -242,15 +182,178 @@ public class LogQueryPlugin {
 		return null;
 	}
 
-	@MsgbusMethod(type = CallbackType.SessionClosed)
-	public void sessionClosed(Session session) {
-		List<LogQuery> q = queries.get(session);
-		if (q != null) {
-			for (LogQuery lq : q) {
-				lq.cancel();
-				service.removeQuery(lq.getId());
+	private class LogTimelineCallbackImpl implements LogTimelineCallback {
+		private final long CALLBACK_INTERVAL = 2000;
+		private int orgId;
+		private LogQuery query;
+		private int size;
+		private Map<Long, Integer> timeline = new HashMap<Long, Integer>();
+		private SpanValue[] spans = new SpanValue[] { new SpanValue(Calendar.MINUTE, 1),
+				new SpanValue(Calendar.MINUTE, 10), new SpanValue(Calendar.HOUR_OF_DAY, 1),
+				new SpanValue(Calendar.DAY_OF_YEAR, 1), new SpanValue(Calendar.WEEK_OF_YEAR, 1),
+				new SpanValue(Calendar.MONTH, 1) };
+		private int spansIndex = 0;
+		private long lastCallbackTime;
+
+		private LogTimelineCallbackImpl(int orgId, LogQuery query) {
+			this(orgId, query, 10);
+		}
+
+		private LogTimelineCallbackImpl(int orgId, LogQuery query, int size) {
+			this.orgId = orgId;
+			this.query = query;
+			this.size = size;
+		}
+
+		@Override
+		public int getSize() {
+			return size;
+		}
+
+		@Override
+		public void setSize(int size) {
+			this.size = size;
+		}
+
+		@Override
+		public void put(Date date) {
+			long time = date.getTime();
+			time = time - time % 86400;
+			if (timeline.containsKey(time))
+				timeline.put(time, timeline.get(time) + 1);
+			else
+				timeline.put(time, 1);
+
+			if (System.currentTimeMillis() > lastCallbackTime + CALLBACK_INTERVAL) {
+				callback();
+				lastCallbackTime = System.currentTimeMillis();
 			}
 		}
-		queries.remove(session);
+
+		@Override
+		public void callback() {
+			int[] values = new int[size];
+			Long beginTime = null;
+
+			if (!timeline.isEmpty()) {
+				if (spansIndex >= spans.length)
+					return;
+
+				long[] index = new long[size];
+				while (true) {
+					List<Long> keys = new ArrayList<Long>(timeline.keySet());
+					Collections.sort(keys, Collections.reverseOrder());
+					Calendar c = Calendar.getInstance();
+					c.setTimeInMillis(spans[spansIndex].getBaseTime(keys.get(0)));
+					for (int i = size - 1; i >= 0; i--) {
+						index[i] = c.getTimeInMillis();
+						c.add(spans[spansIndex].field, -spans[spansIndex].amount);
+					}
+					beginTime = index[0];
+					if (keys.get(keys.size() - 1) < beginTime) {
+						if (++spansIndex >= spans.length)
+							return;
+						continue;
+					}
+
+					int indexPos = size - 1;
+					for (Long key : keys) {
+						if (key < index[indexPos])
+							indexPos--;
+						values[indexPos] += timeline.get(key);
+					}
+
+					Map<Long, Integer> newTimeline = new HashMap<Long, Integer>();
+					for (int i = 0; i < size; i++)
+						newTimeline.put(index[i], values[i]);
+					timeline = newTimeline;
+
+					break;
+				}
+			}
+
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("id", query.getId());
+			m.put("span_field", spans[spansIndex].getFieldName());
+			m.put("span_amount", spans[spansIndex].amount);
+			m.put("begin", new Date(beginTime));
+			m.put("values", values);
+			m.put("count", query.getResult().size());
+			pushApi.push(orgId, "logstorage-query-timeline-" + query.getId(), m);
+		}
+
+		private class SpanValue {
+			private int field;
+			private int amount;
+
+			private SpanValue(int field, int amount) {
+				this.field = field;
+				this.amount = amount;
+			}
+
+			public String getFieldName() {
+				switch (field) {
+				case Calendar.MINUTE:
+					return "Minute";
+				case Calendar.HOUR_OF_DAY:
+					return "Hour";
+				case Calendar.DAY_OF_YEAR:
+					return "Day";
+				case Calendar.WEEK_OF_YEAR:
+					return "Week";
+				case Calendar.MONTH:
+					return "Month";
+				}
+				return Integer.toString(field);
+			}
+
+			public long getBaseTime(long time) {
+				switch (field) {
+				case Calendar.MINUTE:
+				case Calendar.HOUR_OF_DAY:
+				case Calendar.DAY_OF_YEAR:
+				case Calendar.WEEK_OF_YEAR:
+					time += 291600000L; // base to Monday, 00:00:00
+					time -= time % (getMillis() * amount);
+					time -= 291600000L;
+					return time;
+
+				case Calendar.MONTH:
+					Calendar c = Calendar.getInstance();
+					c.setTimeInMillis(time);
+					c.set(Calendar.MILLISECOND, 0);
+					c.set(Calendar.SECOND, 0);
+					c.set(Calendar.MINUTE, 0);
+					c.set(Calendar.HOUR_OF_DAY, 0);
+					c.set(Calendar.DAY_OF_MONTH, 1);
+					int monthOffset = c.get(Calendar.YEAR) * 12;
+					int month = monthOffset + c.get(Calendar.MONTH);
+					month -= month % amount;
+					month -= monthOffset;
+					if (month >= 0)
+						c.set(Calendar.MONTH, month);
+					else {
+						c.set(Calendar.YEAR, c.get(Calendar.YEAR) - 1);
+						c.set(Calendar.MONTH, month + 12);
+					}
+					return c.getTimeInMillis();
+				}
+				return time;
+			}
+
+			private long getMillis() {
+				switch (field) {
+				case Calendar.MINUTE:
+					return 60 * 1000L;
+				case Calendar.HOUR_OF_DAY:
+					return 60 * 60 * 1000L;
+				case Calendar.DAY_OF_YEAR:
+					return 24 * 60 * 60 * 1000L;
+				case Calendar.WEEK_OF_YEAR:
+					return 7 * 24 * 60 * 60 * 1000L;
+				}
+				return -1;
+			}
+		}
 	}
 }

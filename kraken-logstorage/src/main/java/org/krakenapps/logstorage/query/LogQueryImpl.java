@@ -62,8 +62,16 @@ public class LogQueryImpl implements LogQuery {
 
 		for (int i = 0; i < commands.size() - 1; i++)
 			commands.get(i).setNextCommand(commands.get(i + 1));
-		for (int i = 1; i < commands.size(); i++)
-			commands.get(i).setDataHeader(commands.get(i - 1).getDataHeader());
+
+		commands.get(commands.size() - 1).setCallbackTimeline(true);
+		for (int i = 1; i < commands.size(); i++) {
+			LogQueryCommand command = commands.get(i);
+			if (command.isReducer()) {
+				commands.get(commands.size() - 1).setCallbackTimeline(false);
+				commands.get(i - 1).setCallbackTimeline(true);
+				break;
+			}
+		}
 	}
 
 	@Override
@@ -78,7 +86,6 @@ public class LogQueryImpl implements LogQuery {
 		try {
 			result = new Result();
 			commands.get(commands.size() - 1).setNextCommand(result);
-			result.setDataHeader(commands.get(commands.size() - 1).getDataHeader());
 			for (LogQueryCallback callback : logQueryCallbacks)
 				result.registerCallback(callback);
 			logQueryCallbacks.clear();
@@ -148,6 +155,11 @@ public class LogQueryImpl implements LogQuery {
 	@Override
 	public List<LogQueryCommand> getCommands() {
 		return commands;
+	}
+
+	@Override
+	public Set<LogQueryCallback> getLogQueryCallback() {
+		return logQueryCallbacks;
 	}
 
 	@Override

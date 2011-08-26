@@ -29,6 +29,13 @@ public class Rename extends LogQueryCommand {
 	}
 
 	@Override
+	protected String getDateColumnName() {
+		if (from.equals(dateColumnName))
+			return to;
+		return super.getDateColumnName();
+	}
+
+	@Override
 	public void setDataHeader(String[] header) {
 		for (int i = 0; i < header.length; i++) {
 			if (header[i].equals(from))
@@ -45,5 +52,10 @@ public class Rename extends LogQueryCommand {
 			m.remove(from);
 		}
 		write(m);
+	}
+
+	@Override
+	public boolean isReducer() {
+		return false;
 	}
 }

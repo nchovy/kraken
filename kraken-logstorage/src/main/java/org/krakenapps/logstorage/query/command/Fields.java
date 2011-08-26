@@ -53,4 +53,9 @@ public class Fields extends LogQueryCommand {
 
 		write(m);
 	}
+
+	@Override
+	public boolean isReducer() {
+		return (remove == fields.contains(dateColumnName));
+	}
 }

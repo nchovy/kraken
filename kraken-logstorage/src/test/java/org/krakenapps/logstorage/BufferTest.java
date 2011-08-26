@@ -22,7 +22,7 @@ import org.krakenapps.logstorage.query.command.Function;
 import org.krakenapps.logstorage.query.command.FunctionCodec;
 
 @SuppressWarnings("unused")
-// @Ignore
+@Ignore
 public class BufferTest {
 	// @Test
 	public void concurrentTest() {
@@ -52,7 +52,7 @@ public class BufferTest {
 				while (true) {
 					for (Integer i : l)
 						;
-					Thread.sleep(2);
+					// Thread.sleep(2);
 				}
 			} catch (Exception e) {
 				System.out.println("READER DEATH");
@@ -75,7 +75,7 @@ public class BufferTest {
 				Random r = new Random();
 				while (true) {
 					l.add(r.nextInt(10000));
-					Thread.sleep(1);
+					// Thread.sleep(2);
 				}
 			} catch (Exception e) {
 				System.out.println("WRITER DEATH");
@@ -115,8 +115,9 @@ public class BufferTest {
 			;
 		end = System.currentTimeMillis();
 		System.out.println("print : " + (end - begin));
-		
-//		System.out.println("file read count: " + ((FileBufferList<Integer>) l).readCount);
+
+		// System.out.println("file read count: " + ((FileBufferList<Integer>)
+		// l).readCount);
 	}
 
 	// @Test

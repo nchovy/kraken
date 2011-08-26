@@ -37,6 +37,8 @@ public interface LogQuery extends Runnable {
 
 	List<LogQueryCommand> getCommands();
 
+	Set<LogQueryCallback> getLogQueryCallback();
+
 	void registerQueryCallback(LogQueryCallback callback);
 
 	void unregisterQueryCallback(LogQueryCallback callback);
