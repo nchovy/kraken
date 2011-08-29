@@ -1,12 +1,17 @@
 package org.krakenapps.msgbus.impl;
 
 import java.lang.reflect.InvocationTargetException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -177,6 +182,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 	}
 
+	@SuppressWarnings("unchecked")
 	public void send(Message message) {
 		Session session = sessionMap.get(message.getSession());
 		if (session == null) {
@@ -185,8 +191,43 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 		}
 
 		logger.debug("kraken msgbus: sending message [{}] to session [{}]", message.getMethod(), message.getSession());
+		Map<String, Object> m = message.getParameters();
+		message.setParameters((Map<String, Object>) convert(m));
 		session.send(message);
+		message.setParameters(m);
+	}
 
+	private Object convert(Object value) {
+		if (value == null)
+			return null;
+
+		if (value instanceof Date) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+			return sdf.format((Date) value);
+		} else if (value instanceof Map) {
+			Map<?, ?> m = (Map<?, ?>) value;
+			Map<Object, Object> mm = new HashMap<Object, Object>();
+			for (Object key : m.keySet())
+				mm.put(convert(key), convert(m.get(key)));
+			return mm;
+		} else if (value instanceof Collection) {
+			return convertList((Collection<?>) value);
+		} else if (value.getClass().isArray()) {
+			try {
+				return convertList(Arrays.asList((Object[]) value));
+			} catch (ClassCastException e) {
+				return value;
+			}
+		}
+
+		return value;
+	}
+
+	private Object convertList(Collection<?> value) {
+		List<Object> list = new ArrayList<Object>();
+		for (Object obj : value)
+			list.add(convert(obj));
+		return list;
 	}
 
 	public void openSession(Session session) {
@@ -288,6 +329,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 			invokeMessageHandler(session, message, handler);
 		}
 
+		@SuppressWarnings("unchecked")
 		private void invokeMessageHandler(Session session, Message message, MessageHandler handler) {
 			Message respondMessage = null;
 			try {
@@ -341,7 +383,10 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 				respondMessage = Message.createError(session, message, "unknown", "unknown exception");
 				logger.error("kraken msgbus: message handler failed", e);
 			} finally {
+				Map<String, Object> m = respondMessage.getParameters();
+				respondMessage.setParameters((Map<String, Object>) convert(m));
 				session.send(respondMessage);
+				respondMessage.setParameters(m);
 			}
 		}
 	}

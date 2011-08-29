@@ -1,12 +1,7 @@
 package org.krakenapps.msgbus;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,36 +50,7 @@ public class Response implements Map<String, Object> {
 
 	@Override
 	public Object put(String key, Object value) {
-		return m.put(key, convert(value));
-	}
-
-	private Object convert(Object value) {
-		if (value == null)
-			return null;
-
-		if (value instanceof Date) {
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-			return sdf.format((Date) value);
-		} else if (value instanceof Map) {
-			Map<?, ?> m = (Map<?, ?>) value;
-			Map<Object, Object> mm = new HashMap<Object, Object>();
-			for (Object key : m.keySet())
-				mm.put(convert(key), convert(m.get(key)));
-			return mm;
-		} else if (value instanceof Collection) {
-			return convertList((Collection<?>) value);
-		} else if (value.getClass().isArray()) {
-			return convertList(Arrays.asList((Object[]) value));
-		}
-
-		return value;
-	}
-
-	private Object convertList(Collection<?> value) {
-		List<Object> list = new ArrayList<Object>();
-		for (Object obj : value)
-			list.add(convert(obj));
-		return list;
+		return m.put(key, value);
 	}
 
 	@Override
