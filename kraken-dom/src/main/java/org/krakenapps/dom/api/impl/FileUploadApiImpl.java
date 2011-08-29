@@ -286,14 +286,14 @@ public class FileUploadApiImpl implements FileUploadApi {
 		// save properties
 		FileSpace space = em.find(FileSpace.class, token.getSpaceId());
 		if (space == null) {
-			String msg = String.format("kraken dom: file space [{}] not found for uploaded file [{}]",
+			String msg = String.format("kraken dom: file space [%d] not found for uploaded file [%s]",
 					token.getSpaceId(), token.getFileName());
 			throw new IllegalStateException(msg);
 		}
 
 		User owner = em.find(User.class, token.getUserId());
 		if (owner == null) {
-			String msg = String.format("kraken dom: user [{}] not found for uploaded file [{}]", token.getUserId(),
+			String msg = String.format("kraken dom: user [%d] not found for uploaded file [%s]", token.getUserId(),
 					token.getFileName());
 			throw new IllegalStateException(msg);
 		}
