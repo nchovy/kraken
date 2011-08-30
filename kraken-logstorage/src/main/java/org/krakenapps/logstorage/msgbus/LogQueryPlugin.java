@@ -16,6 +16,7 @@
 package org.krakenapps.logstorage.msgbus;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -38,6 +39,8 @@ import org.krakenapps.msgbus.Session;
 import org.krakenapps.msgbus.handler.CallbackType;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "log-query-plugin")
 @MsgbusPlugin
@@ -183,6 +186,7 @@ public class LogQueryPlugin {
 	}
 
 	private class LogTimelineCallbackImpl implements LogTimelineCallback {
+		private Logger logger = LoggerFactory.getLogger(LogTimelineCallbackImpl.class);
 		private final long CALLBACK_INTERVAL = 2000;
 		private int orgId;
 		private LogQuery query;
@@ -258,7 +262,7 @@ public class LogQueryPlugin {
 
 					int indexPos = size - 1;
 					for (Long key : keys) {
-						if (key < index[indexPos])
+						while (key < index[indexPos])
 							indexPos--;
 						values[indexPos] += timeline.get(key);
 					}
@@ -280,6 +284,11 @@ public class LogQueryPlugin {
 			m.put("values", values);
 			m.put("count", query.getResult().size());
 			pushApi.push(orgId, "logstorage-query-timeline-" + query.getId(), m);
+
+			logger.trace("kraken logstorage: timeline callback => "
+					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
+					new Object[] { query.getId(), spans[spansIndex].getFieldName(), spans[spansIndex].amount,
+							new Date(beginTime), Arrays.toString(values), query.getResult().size() });
 		}
 
 		private class SpanValue {

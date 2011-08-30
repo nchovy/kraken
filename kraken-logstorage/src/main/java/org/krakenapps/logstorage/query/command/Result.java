@@ -156,8 +156,8 @@ public class Result extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		super.eof();
 		for (LogQueryCallback callback : callbacks)
 			callback.eofCallback();
-		super.eof();
 	}
 }
