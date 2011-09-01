@@ -30,11 +30,12 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import org.krakenapps.msgbus.Marshalable;
 
 @Entity
-@Table(name = "dom_users")
+@Table(name = "dom_users", uniqueConstraints = { @UniqueConstraint(columnNames = { "login_name" }) })
 public class User implements Marshalable {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)

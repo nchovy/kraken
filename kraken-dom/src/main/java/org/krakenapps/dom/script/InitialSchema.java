@@ -59,6 +59,7 @@ public class InitialSchema {
 			}
 		} catch (Exception e) {
 			logger.error("kraken dom: schema init failed", e);
+			throw new RuntimeException("create schema failed", e);
 		} finally {
 			em.getTransaction().commit();
 		}
@@ -66,6 +67,12 @@ public class InitialSchema {
 	}
 
 	public static Organization createOrganization(EntityManager em) {
+		try {
+			return (Organization) em.createQuery("FROM Organization o WHERE o.name = ?").setParameter(1, "krakenapps")
+					.getSingleResult();
+		} catch (NoResultException e) {
+		}
+
 		Organization org = new Organization();
 		org.setName("krakenapps");
 		org.setCreateDateTime(new Date());
@@ -75,6 +82,13 @@ public class InitialSchema {
 	}
 
 	public static void createArea(EntityManager em, Organization org) {
+		// skip area generation if exists
+		try {
+			em.createQuery("FROM Area a WHERE a.name = ?").setParameter(1, "/").getSingleResult();
+			return;
+		} catch (NoResultException e) {
+		}
+
 		Area area = new Area();
 		area.setOrganization(org);
 		area.setName("/");
@@ -83,6 +97,12 @@ public class InitialSchema {
 	}
 
 	public static ProgramPack createSystemPack(EntityManager em, Organization org) {
+		try {
+			return (ProgramPack) em.createQuery("FROM ProgramPack p WHERE p.name = ?").setParameter(1, "System")
+					.getSingleResult();
+		} catch (NoResultException e) {
+		}
+
 		ProgramPack pack = new ProgramPack();
 		pack.setName("System");
 		pack.setDll("Nchovy.WatchCat.Plugins.Core.dll");
@@ -96,20 +116,21 @@ public class InitialSchema {
 	}
 
 	public static void createPrograms(EntityManager em, ProgramPack pack, ProgramProfile pp) {
-		createProgram(em, pack, pp, "Company Information",
-				"Nchovy.WatchCat.Plugins.Core.CompanyInformation.CompanyInformation", 1);
-		createProgram(em, pack, pp, "Account Manager", "Nchovy.WatchCat.Plugins.Core.AccountManager.AccountManager", 2);
-		createProgram(em, pack, pp, "Host Config", "Nchovy.WatchCat.Plugins.Core.HostConfig.HostConfig", 3);
-		createProgram(em, pack, pp, "Task Manager", "Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 4);
-		createProgram(em, pack, pp, "Run", "Nchovy.WatchCat.Plugins.Core.Run.Run", 5);
-		createProgram(em, pack, pp, "Developer Console", "Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 6);
-		createProgram(em, pack, pp, "File Browser", "Nchovy.WatchCat.Plugins.Core.FileBrowser.FileBrowser", 7);
-		createProgram(em, pack, pp, "Report Manager", "Nchovy.WatchCat.Plugins.Core.ReportManager.ReportManager", 8);
-		createProgram(em, pack, pp, "Version Check", "Nchovy.WatchCat.Plugins.Core.VersionCheck.VersionCheck", 9);
+		createProgram(em, pack, pp, "Account Manager", "Nchovy.WatchCat.Plugins.Core.AccountManager.AccountPlugin", 1);
+		createProgram(em, pack, pp, "Task Manager", "Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 2);
+		createProgram(em, pack, pp, "Run", "Nchovy.WatchCat.Plugins.Core.Run.Run", 3);
+		createProgram(em, pack, pp, "Developer Console", "Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 4);
 	}
 
 	public static void createProgram(EntityManager em, ProgramPack pack, ProgramProfile pp, String name, String type,
 			int seq) {
+		try {
+			// skip if exists
+			em.createQuery("FROM Program p WHERE p.typeName = ?").setParameter(1, type).getSingleResult();
+			return;
+		} catch (NoResultException e) {
+		}
+
 		Program p = new Program();
 		p.setName(name);
 		p.setPack(pack);
@@ -138,6 +159,11 @@ public class InitialSchema {
 	}
 
 	public static Role createRole(EntityManager em, String name, int level) {
+		try {
+			return (Role) em.createQuery("FROM Role r WHERE r.name = ?").setParameter(1, name).getSingleResult();
+		} catch (NoResultException e) {
+		}
+
 		Role role = new Role();
 		role.setName(name);
 		role.setLevel(level);
@@ -146,38 +172,63 @@ public class InitialSchema {
 	}
 
 	public static Admin createSuperAdmin(EntityManager em, Organization org, Role role, ProgramProfile pp) {
-		User user = new User();
-		user.setOrganization(org);
-		user.setLoginName("admin");
-		user.setName("xeraph");
-		user.setPassword(Sha1.hashPassword("kraken"));
-		user.setCreateDateTime(new Date());
-		user.setUpdateDateTime(user.getCreateDateTime());
-		em.persist(user);
+		User user = null;
 
-		Admin admin = new Admin();
-		admin.setRole(role);
-		admin.setProgramProfile(pp);
-		admin.setLang("en");
-		admin.setEnabled(true);
-		admin.setCreateDateTime(new Date());
-		admin.setUser(user);
-		em.persist(admin);
+		try {
+			user = (User) em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, "admin")
+					.getSingleResult();
+		} catch (NoResultException e) {
+			user = new User();
+			user.setOrganization(org);
+			user.setLoginName("admin");
+			user.setName("xeraph");
+			user.setPassword(Sha1.hashPassword("kraken"));
+			user.setCreateDateTime(new Date());
+			user.setUpdateDateTime(user.getCreateDateTime());
+			em.persist(user);
+		}
+
+		Admin admin = null;
+		try {
+			admin = (Admin) em.createQuery("FROM Admin a WHERE a.user.id = ?").setParameter(1, user.getId())
+					.getSingleResult();
+		} catch (NoResultException e) {
+			admin = new Admin();
+			admin.setRole(role);
+			admin.setProgramProfile(pp);
+			admin.setLang("en");
+			admin.setEnabled(true);
+			admin.setCreateDateTime(new Date());
+			admin.setUser(user);
+			em.persist(admin);
+		}
 
 		return admin;
 	}
 
 	public static ProgramProfile createProgramProfile(EntityManager em, Organization org) {
+		try {
+			return (ProgramProfile) em.createQuery("FROM ProgramProfile p WHERE p.name = ?").setParameter(1, "master")
+					.getSingleResult();
+		} catch (NoResultException e) {
+		}
+
 		ProgramProfile pp = new ProgramProfile();
 		pp.setName("master");
 		pp.setOrganization(org);
 		em.persist(pp);
 
-		OrganizationParameter op = new OrganizationParameter();
-		op.setOrganization(org);
-		op.setName("default_program_profile_id");
-		op.setValue(String.valueOf(pp.getId()));
-		em.persist(op);
+		try {
+			em.createQuery("FROM OrganizationParameter p WHERE p.name = ?")
+					.setParameter(1, "default_program_profile_id").getSingleResult();
+		} catch (NoResultException e) {
+			OrganizationParameter op = new OrganizationParameter();
+			op.setOrganization(org);
+			op.setName("default_program_profile_id");
+			op.setValue(String.valueOf(pp.getId()));
+			em.persist(op);
+		}
+
 		return pp;
 	}
 }
