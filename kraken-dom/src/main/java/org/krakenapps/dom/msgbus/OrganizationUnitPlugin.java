@@ -71,6 +71,8 @@ public class OrganizationUnitPlugin {
 		orgUnit.setOrganization(orgApi.getOrganization(req.getOrgId()));
 		if (req.getInteger("parent_id") != null)
 			orgUnit.setParent(orgUnitApi.getOrganizationUnit(req.getInteger("parent_id")));
+		else
+			orgUnit.setParent(null);
 		orgUnit.setName(req.getString("name"));
 		orgUnit.setDomainController(req.getString("dc"));
 		orgUnit.setFromLdap(false);
