@@ -69,7 +69,8 @@ public class OrganizationUnitPlugin {
 	private OrganizationUnit toOrganizationUnit(Request req) {
 		OrganizationUnit orgUnit = new OrganizationUnit();
 		orgUnit.setOrganization(orgApi.getOrganization(req.getOrgId()));
-		orgUnit.setParent(orgUnitApi.getOrganizationUnit(req.getInteger("parent_id")));
+		if (req.getInteger("parent_id") != null)
+			orgUnit.setParent(orgUnitApi.getOrganizationUnit(req.getInteger("parent_id")));
 		orgUnit.setName(req.getString("name"));
 		orgUnit.setDomainController(req.getString("dc"));
 		orgUnit.setFromLdap(false);
