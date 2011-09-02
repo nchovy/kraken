@@ -23,8 +23,10 @@ public class CpuUsage {
 	public CpuUsage(long deltaUser, long deltaNice, long deltaSystem, long deltaIdle) {
 		long deltaSum = deltaUser + deltaNice + deltaSystem + deltaIdle;
 
-		this.idle = (int) (100 * deltaIdle / deltaSum);
-		this.user = (int) (100 * (deltaUser + deltaNice) / deltaSum);
+		if (deltaSum != 0) {
+			this.idle = (int) (100 * deltaIdle / deltaSum);
+			this.user = (int) (100 * (deltaUser + deltaNice) / deltaSum);
+		}
 		this.system = 100 - (idle + user);
 	}
 
