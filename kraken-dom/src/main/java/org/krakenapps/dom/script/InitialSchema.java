@@ -182,7 +182,7 @@ public class InitialSchema {
 			user.setOrganization(org);
 			user.setLoginName("admin");
 			user.setName("xeraph");
-			user.setPassword(Sha1.hashPassword("kraken"));
+			user.setPassword(Sha1.hashPassword(null, "kraken"));
 			user.setCreateDateTime(new Date());
 			user.setUpdateDateTime(user.getCreateDateTime());
 			em.persist(user);

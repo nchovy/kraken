@@ -20,10 +20,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class Sha1 {
-	public static String hashPassword(String password) {
+	public static String hashPassword(String salt, String password) {
 		if (password == null)
 			return null;
-		return hash("Kraken " + password);
+		return hash(((salt == null) ? "" : salt) + password);
 	}
 
 	public static String hash(String text) {

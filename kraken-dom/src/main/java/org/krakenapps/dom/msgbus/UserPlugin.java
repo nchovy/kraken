@@ -108,6 +108,7 @@ public class UserPlugin {
 
 		user.setName(req.getString("name"));
 		user.setPassword(req.getString("password"));
+		user.setSalt(req.getString("salt"));
 		user.setLoginName(req.getString("login_name"));
 		user.setDescription(req.getString("description"));
 		user.setTitle(req.getString("title"));

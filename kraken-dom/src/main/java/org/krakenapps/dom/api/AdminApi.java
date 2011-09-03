@@ -27,7 +27,7 @@ public interface AdminApi extends EntityEventProvider<Admin> {
 	List<Admin> getAdmins(int organizationId);
 
 	Admin getAdmin(int organizationId, int adminId);
-	
+
 	Admin getAdminByUser(int organizationId, int userId);
 
 	void createAdmin(int organizationId, Integer requestAdminId, Admin admin);
@@ -40,5 +40,5 @@ public interface AdminApi extends EntityEventProvider<Admin> {
 
 	String hash(String text);
 
-	String hashPassword(String text);
+	String hashPassword(String salt, String text);
 }

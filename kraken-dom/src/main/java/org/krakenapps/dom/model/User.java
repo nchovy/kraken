@@ -61,6 +61,9 @@ public class User implements Marshalable {
 	@Column(name = "pwd", length = 60)
 	private String password;
 
+	@Column(name = "salt", length = 20)
+	private String salt;
+
 	@Column(length = 60)
 	private String title;
 
@@ -142,6 +145,14 @@ public class User implements Marshalable {
 
 	public void setPassword(String password) {
 		this.password = password;
+	}
+
+	public String getSalt() {
+		return salt;
+	}
+
+	public void setSalt(String salt) {
+		this.salt = salt;
 	}
 
 	public String getTitle() {

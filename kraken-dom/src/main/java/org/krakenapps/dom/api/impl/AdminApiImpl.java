@@ -133,13 +133,13 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		if (admin == null)
 			throw new AdminNotFoundException(adminId);
 
-		String hashedPassword = hashPassword(password);
+		String hashedPassword = hashPassword(admin.getUser().getSalt(), password);
 		return admin.getUser().getPassword().equals(hashedPassword);
 	}
 
 	@Override
-	public String hashPassword(String text) {
-		return Sha1.hashPassword(text);
+	public String hashPassword(String salt, String text) {
+		return Sha1.hashPassword(salt, text);
 	}
 
 	@Override

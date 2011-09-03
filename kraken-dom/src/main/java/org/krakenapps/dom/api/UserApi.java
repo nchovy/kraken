@@ -46,5 +46,5 @@ public interface UserApi extends EntityEventProvider<User> {
 	
 	boolean verifyPassword(String id, String password);
 
-	String hashPassword(String text);
+	String hashPassword(String salt, String text);
 }

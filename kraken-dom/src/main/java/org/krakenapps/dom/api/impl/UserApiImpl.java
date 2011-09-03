@@ -197,7 +197,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		u.setName(user.getName());
 		u.setDescription(user.getDescription());
 		if (user.getPassword() != null)
-			u.setPassword(hashPassword(user.getPassword()));
+			u.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		u.setTitle(user.getTitle());
 		u.setEmail(user.getEmail());
 		u.setPhone(user.getPhone());
@@ -227,7 +227,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		if (user == null)
 			return false;
 
-		String hash = hashPassword(password);
+		String hash = hashPassword(user.getSalt(), password);
 
 		// null check
 		if (user.getPassword() == null || hash == null)
@@ -237,8 +237,8 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	}
 
 	@Override
-	public String hashPassword(String text) {
-		return Sha1.hashPassword(text);
+	public String hashPassword(String salt, String text) {
+		return Sha1.hashPassword(salt, text);
 	}
 
 	private class UserExtensionProviderTracker extends ServiceTracker {
