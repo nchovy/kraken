@@ -39,6 +39,8 @@ import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.PreferencesService;
 import org.osgi.util.tracker.ServiceTracker;
 
 @Component(name = "dom-user-api")
@@ -47,6 +49,9 @@ import org.osgi.util.tracker.ServiceTracker;
 public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
+
+	@Requires
+	private PreferencesService prefsvc;
 
 	private UserExtensionProviderTracker tracker;
 
@@ -239,6 +244,25 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Override
 	public String hashPassword(String salt, String text) {
 		return Sha1.hashPassword(salt, text);
+	}
+
+	@Override
+	public void setSaltLength(int length) {
+		if (length < 0 || length > 20)
+			throw new IllegalArgumentException("invalid salt length. (valid: 0~20)");
+
+		try {
+			prefsvc.getSystemPreferences().putInt("salt_length", length);
+			prefsvc.getSystemPreferences().flush();
+			prefsvc.getSystemPreferences().sync();
+		} catch (BackingStoreException e) {
+			throw new RuntimeException("kraken dom: cannot set salt length", e);
+		}
+	}
+
+	@Override
+	public int getSaltLength() {
+		return prefsvc.getSystemPreferences().getInt("salt_length", 10);
 	}
 
 	private class UserExtensionProviderTracker extends ServiceTracker {

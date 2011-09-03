@@ -88,6 +88,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 				throw new SecurityException("create admin");
 		}
 
+		if (admin.getLang() == null)
+			admin.setLang("en");
 		admin.setCreateDateTime(new Date());
 
 		em.persist(admin);

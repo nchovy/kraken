@@ -18,6 +18,7 @@ package org.krakenapps.dom.msgbus;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -108,13 +109,31 @@ public class UserPlugin {
 
 		user.setName(req.getString("name"));
 		user.setPassword(req.getString("password"));
-		user.setSalt(req.getString("salt"));
+		user.setSalt(createSalt(userApi.getSaltLength()));
 		user.setLoginName(req.getString("login_name"));
 		user.setDescription(req.getString("description"));
 		user.setTitle(req.getString("title"));
 		user.setEmail(req.getString("email"));
 		user.setPhone(req.getString("phone"));
 		return user;
+	}
+
+	private static final char[] chars = new char[52];
+	static {
+		char c = 'a';
+		for (int i = 0; i < 26; i++)
+			chars[i] = c++;
+		c = 'A';
+		for (int i = 26; i < 52; i++)
+			chars[i] = c++;
+	}
+
+	private String createSalt(int length) {
+		Random random = new Random();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++)
+			sb.append(chars[random.nextInt(chars.length)]);
+		return sb.toString();
 	}
 
 	@MsgbusMethod
