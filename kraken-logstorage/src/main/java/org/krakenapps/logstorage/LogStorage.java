@@ -42,6 +42,16 @@ public interface LogStorage {
 
 	void write(Collection<Log> logs);
 
+	int getMinFreeSpaceValue();
+
+	DiskSpaceType getMinFreeSpaceType();
+
+	void setMinFreeSpace(int value, DiskSpaceType type);
+
+	DiskLackAction getDiskLackAction();
+
+	void setDiskLackAction(DiskLackAction action);
+
 	Log getLog(LogKey logKey);
 
 	Log getLog(String tableName, Date date, int id);

@@ -91,6 +91,10 @@ public class LogStorageScript implements Script {
 		storage.stop();
 	}
 
+	public void reload(String[] args) {
+		storage.reload();
+	}
+
 	@ScriptUsage(description = "create new table", arguments = { @ScriptArgument(name = "name", type = "string",
 			description = "log table name") })
 	public void createTable(String[] args) {
@@ -201,7 +205,9 @@ public class LogStorageScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "set parameters")
+	@ScriptUsage(description = "set parameters", arguments = {
+			@ScriptArgument(name = "key", type = "string", description = "parameter key"),
+			@ScriptArgument(name = "value", type = "string", description = "parameter value") })
 	public void setParameter(String[] args) {
 		Constants configKey = Constants.parse(args[0]);
 		if (configKey == null) {

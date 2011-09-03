@@ -18,7 +18,10 @@ package org.krakenapps.logstorage.engine;
 public enum Constants {
 	LogMaxIdleTime("log_max_idle_time"), 
 	LogFlushInterval("log_flush_interval"), 
-	LogMaxBuffering("log_max_buffering");
+	LogMaxBuffering("log_max_buffering"),
+	MinFreeDiskSpaceType("min_free_disk_space_type", "string"),
+	MinFreeDiskSpaceValue("min_free_disk_space_value"),
+	DiskLackAction("disk_lack_action", "string");
 
 	Constants(String name) {
 		this(name, "int");
@@ -35,7 +38,7 @@ public enum Constants {
 	public String getName() {
 		return name;
 	}
-	
+
 	public String getType() {
 		return type;
 	}

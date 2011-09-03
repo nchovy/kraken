@@ -40,6 +40,8 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.logstorage.DiskLackAction;
+import org.krakenapps.logstorage.DiskSpaceType;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
 import org.krakenapps.logstorage.LogKey;
@@ -61,6 +63,9 @@ public class LogStorageEngine implements LogStorage {
 	private static final int DEFAULT_MAX_IDLE_TIME = 10000;
 	private static final int DEFAULT_MAX_LOG_BUFFERING = 10000;
 	private static final int DEFAULT_LOG_FLUSH_INTERVAL = 3600000;
+	private static final String DEFAULT_MIN_FREE_SPACE_TYPE = DiskSpaceType.Percentage.toString();
+	private static final int DEFAULT_MIN_FREE_SPACE_VALUE = 10;
+	private static final String DEFAULT_DISK_LACK_ACTION = DiskLackAction.StopLogging.toString();
 
 	private LogStorageStatus status = LogStorageStatus.Closed;
 
@@ -79,6 +84,15 @@ public class LogStorageEngine implements LogStorage {
 	private WriterSweeper writerSweeper;
 	private Thread writerSweeperThread;
 
+	private static final File logDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/log");
+	private DiskSpaceType minFreeSpaceType;
+	private int minFreeSpaceValue;
+	private DiskLackAction diskLackAction;
+
+	static {
+		logDir.mkdirs();
+	}
+
 	public LogStorageEngine() {
 		int maxIdleTime = getIntParameter(Constants.LogMaxIdleTime, DEFAULT_MAX_IDLE_TIME);
 		int flushInterval = getIntParameter(Constants.LogFlushInterval, DEFAULT_LOG_FLUSH_INTERVAL);
@@ -86,6 +100,17 @@ public class LogStorageEngine implements LogStorage {
 		onlineWriters = new ConcurrentHashMap<OnlineWriterKey, OnlineWriter>();
 		writerSweeper = new WriterSweeper(maxIdleTime, flushInterval);
 		callbacks = new CopyOnWriteArraySet<LogCallback>();
+		minFreeSpaceType = DiskSpaceType.valueOf(getStringParameter(Constants.MinFreeDiskSpaceType,
+				DEFAULT_MIN_FREE_SPACE_TYPE));
+		minFreeSpaceValue = getIntParameter(Constants.MinFreeDiskSpaceValue, DEFAULT_MIN_FREE_SPACE_VALUE);
+		diskLackAction = DiskLackAction.valueOf(getStringParameter(Constants.DiskLackAction, DEFAULT_DISK_LACK_ACTION));
+	}
+
+	private String getStringParameter(Constants key, String defaultValue) {
+		String value = ConfigUtil.get(prefsvc, key);
+		if (value != null)
+			return value;
+		return defaultValue;
 	}
 
 	private int getIntParameter(Constants key, int defaultValue) {
@@ -228,17 +253,12 @@ public class LogStorageEngine implements LogStorage {
 				try {
 					dates.add(dateFormat.parse(file.getName().split("\\.")[0]));
 				} catch (ParseException e) {
-					e.printStackTrace();
+					logger.error("kraken logstorage: invalid log filename, table {}, {}", tableName, file.getName());
 				}
 			}
 		}
 
-		Collections.sort(dates, new Comparator<Date>() {
-			@Override
-			public int compare(Date o1, Date o2) {
-				return (int) (o2.getTime() - o1.getTime());
-			}
-		});
+		Collections.sort(dates, Collections.reverseOrder());
 
 		return dates;
 	}
@@ -294,6 +314,49 @@ public class LogStorageEngine implements LogStorage {
 		bb.flip();
 		LogRecord logdata = new LogRecord(log.getDate(), log.getId(), bb);
 		return logdata;
+	}
+
+	@Override
+	public int getMinFreeSpaceValue() {
+		return minFreeSpaceValue;
+	}
+
+	@Override
+	public DiskSpaceType getMinFreeSpaceType() {
+		return minFreeSpaceType;
+	}
+
+	@Override
+	public void setMinFreeSpace(int value, DiskSpaceType type) {
+		if (type == DiskSpaceType.Percentage) {
+			if (value <= 0 || value >= 100)
+				throw new IllegalArgumentException("invalid value");
+		} else if (type == DiskSpaceType.Megabyte) {
+			if (value <= 0)
+				throw new IllegalArgumentException("invalid value");
+		} else if (type == null)
+			throw new IllegalArgumentException("type cannot be null");
+
+		this.minFreeSpaceType = type;
+		this.minFreeSpaceValue = value;
+
+		ConfigUtil.set(prefsvc, Constants.MinFreeDiskSpaceType, type.toString());
+		ConfigUtil.set(prefsvc, Constants.MinFreeDiskSpaceValue, Integer.toString(value));
+	}
+
+	@Override
+	public DiskLackAction getDiskLackAction() {
+		return diskLackAction;
+	}
+
+	@Override
+	public void setDiskLackAction(DiskLackAction action) {
+		if (action == null)
+			throw new IllegalArgumentException("action cannot be null");
+
+		this.diskLackAction = action;
+
+		ConfigUtil.set(prefsvc, Constants.DiskLackAction, action.toString());
 	}
 
 	@Override
@@ -592,10 +655,15 @@ public class LogStorageEngine implements LogStorage {
 
 	@Override
 	public void reload() {
-		int flushInterval = Integer.valueOf(ConfigUtil.get(prefsvc, Constants.LogFlushInterval));
-		int maxIdleTime = Integer.valueOf(ConfigUtil.get(prefsvc, Constants.LogMaxIdleTime));
+		int flushInterval = getIntParameter(Constants.LogFlushInterval, DEFAULT_LOG_FLUSH_INTERVAL);
+		int maxIdleTime = getIntParameter(Constants.LogMaxIdleTime, DEFAULT_MAX_IDLE_TIME);
 		writerSweeper.setFlushInterval(flushInterval);
 		writerSweeper.setMaxIdleTime(maxIdleTime);
+
+		minFreeSpaceType = DiskSpaceType.valueOf(getStringParameter(Constants.MinFreeDiskSpaceType,
+				DEFAULT_MIN_FREE_SPACE_TYPE));
+		minFreeSpaceValue = getIntParameter(Constants.MinFreeDiskSpaceValue, DEFAULT_MIN_FREE_SPACE_VALUE);
+		diskLackAction = DiskLackAction.valueOf(getStringParameter(Constants.DiskLackAction, DEFAULT_DISK_LACK_ACTION));
 	}
 
 	@Override
@@ -617,6 +685,35 @@ public class LogStorageEngine implements LogStorage {
 	private void verify() {
 		if (status != LogStorageStatus.Open)
 			throw new IllegalStateException("archive not opened");
+	}
+
+	private class LogFile {
+		private String tableName;
+		private Date date;
+		private File index;
+		private File data;
+
+		private LogFile(String tableName, Date date) {
+			this.tableName = tableName;
+			this.date = date;
+			int tableId = tableRegistry.getTableId(tableName);
+			File tableDir = getTableDirectory(tableId);
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			this.index = new File(tableDir, sdf.format(date) + ".idx");
+			this.data = new File(tableDir, sdf.format(date) + ".dat");
+		}
+
+		public void remove() {
+			index.delete();
+			data.delete();
+		}
+	}
+
+	private class LogFileComparator implements Comparator<LogFile> {
+		@Override
+		public int compare(LogFile o1, LogFile o2) {
+			return o1.date.compareTo(o2.date);
+		}
 	}
 
 	private class WriterSweeper implements Runnable {
@@ -651,6 +748,34 @@ public class LogStorageEngine implements LogStorage {
 				isStopped = false;
 
 				while (true) {
+					if (isDiskLack()) {
+						logger.warn("kraken logstorage: not enough disk space");
+						if (diskLackAction == DiskLackAction.StopLogging) {
+							logger.info("kraken logstorage: stop logging");
+							stop();
+						} else if (diskLackAction == DiskLackAction.RemoveOldLog) {
+							List<LogFile> files = new ArrayList<LogFile>();
+							for (String tableName : tableRegistry.getTableNames()) {
+								for (Date date : getLogDates(tableName))
+									files.add(new LogFile(tableName, date));
+							}
+							Collections.sort(files, new LogFileComparator());
+							int index = 0;
+							SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+							do {
+								if (index >= files.size()) {
+									logger.info("kraken logstorage: stop logging");
+									stop();
+									break;
+								}
+								LogFile lf = files.get(index++);
+								logger.info("kraken logstorage: remove old log, table {}, {}", lf.tableName,
+										sdf.format(lf.date));
+								lf.remove();
+							} while (isDiskLack());
+						}
+					}
+
 					try {
 						if (doStop)
 							break;
@@ -705,6 +830,30 @@ public class LogStorageEngine implements LogStorage {
 					onlineWriters.remove(key);
 				}
 			}
+		}
+
+		private boolean isDiskLack() {
+			long usable = logDir.getUsableSpace();
+			long total = logDir.getTotalSpace();
+
+			logger.trace("kraken logstorage: check disk lack, {} {}", minFreeSpaceValue, minFreeSpaceType);
+			if (minFreeSpaceType == DiskSpaceType.Percentage) {
+				int percent = (int) (usable * 100 / total);
+				if (percent < minFreeSpaceValue) {
+					logger.warn("kraken logstorage: setted minimum free space {}%, now free space {}%",
+							minFreeSpaceValue, percent);
+					return true;
+				}
+			} else if (minFreeSpaceType == DiskSpaceType.Megabyte) {
+				int mega = (int) (usable / 1048576);
+				if (mega < minFreeSpaceValue) {
+					logger.warn("kraken logstorage: setted minimum free space {} MB, now free space {} MB",
+							minFreeSpaceValue, mega);
+					return true;
+				}
+			}
+
+			return false;
 		}
 	}
 }

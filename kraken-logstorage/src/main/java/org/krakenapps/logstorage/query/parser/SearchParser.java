@@ -32,7 +32,7 @@ public class SearchParser implements QueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
-		syntax.add("search", this, k("eval"), ref("option"), rule(new StringPlaceholder(), 
+		syntax.add("search", this, k("search"), ref("option"), rule(new StringPlaceholder(), 
 				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
 				new StringPlaceholder(new char[] {})));
 		// @formatter:on
