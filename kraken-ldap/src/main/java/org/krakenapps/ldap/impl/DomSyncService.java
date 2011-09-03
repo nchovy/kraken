@@ -271,7 +271,6 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 			admin = user.getAdmin();
 			isUpdate = true;
 		}
-		admin.setLastLoginDateTime(domainUser.getLastLogon());
 		admin.setEnabled(true);
 
 		ProgramProfile programProfile = getProgramProfile(bc, admin);

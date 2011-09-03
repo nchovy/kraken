@@ -305,7 +305,7 @@ public class JLdapService implements LdapService {
 			d.setDepartment(getString(attrs, "department"));
 			d.setMail(getString(attrs, "mail"));
 			d.setMobile(getString(attrs, "mobile"));
-			d.setLastLogon(getDate(attrs, "lastLogon"));
+			d.setLastLogon(new Date(getLong(attrs, "lastLogon") / 10000L - 11644473600000L));
 			d.setWhenCreated(getDate(attrs, "whenCreated"));
 			d.setLastPasswordChange(getTimestamp(attrs, "pwdLastSet"));
 			d.setAccountExpires(getTimestamp(attrs, "accountExpires"));
@@ -346,6 +346,11 @@ public class JLdapService implements LdapService {
 	private int getInt(LDAPAttributeSet attrs, String attrName) {
 		LDAPAttribute attr = attrs.getAttribute(attrName);
 		return (attr == null) ? 0 : Integer.parseInt(attr.getStringValue());
+	}
+
+	private long getLong(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? 0L : Long.parseLong(attr.getStringValue());
 	}
 
 	private Date getDate(LDAPAttributeSet attrs, String attrName) {
