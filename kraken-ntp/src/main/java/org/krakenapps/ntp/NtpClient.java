@@ -31,7 +31,7 @@ public interface NtpClient {
 
 	void setTimeout(int millisecond);
 
-	String sync();
+	Date sync();
 
 	void setSystemTime(Date date) throws IOException;
 }

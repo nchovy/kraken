@@ -123,14 +123,13 @@ public class NtpClientImpl implements NtpClient, Runnable {
 	}
 
 	@Override
-	public String sync() {
+	public Date sync() {
 		try {
 			ServerTime time = getTime();
 			setSystemTime(addOffset(time));
-			String str = "The time has been successfully synchronized with " + server + " on "
-					+ new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(time.getTransmit());
-			logger.info("kraken-ntp: " + str);
-			return str;
+			logger.info("kraken-ntp: The time has been successfully synchronized with {} on {}", server,
+					new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(time.getTransmit()));
+			return time.getTransmit();
 		} catch (SocketTimeoutException e) {
 			logger.error("kraken-ntp: receive timeout.", e);
 		} catch (IOException e) {

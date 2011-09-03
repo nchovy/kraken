@@ -37,7 +37,6 @@ import org.krakenapps.ntp.NtpClient;
 @Component(name = "ntp-plugin")
 @MsgbusPlugin
 public class NtpPlugin {
-
 	@Requires
 	private NtpClient ntpClient;
 
@@ -66,8 +65,7 @@ public class NtpPlugin {
 
 	@MsgbusMethod
 	public void sync(Request req, Response resp) {
-		String msg = ntpClient.sync();
-		resp.put("message", msg);
+		resp.put("synced_time", ntpClient.sync());
 	}
 
 	@MsgbusMethod

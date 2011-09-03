@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-ntp</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<packaging>bundle</packaging>
 	<name>Kraken NTP Client</name>
 	<build>
