@@ -26,6 +26,7 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.api.impl.Sha1;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.User;
@@ -108,8 +109,8 @@ public class UserPlugin {
 			user.setOrganizationUnit(orgUnitApi.getOrganizationUnit(req.getInteger("org_unit_id")));
 
 		user.setName(req.getString("name"));
-		user.setPassword(req.getString("password"));
 		user.setSalt(createSalt(userApi.getSaltLength()));
+		user.setPassword(Sha1.hashPassword(user.getSalt(), req.getString("password")));
 		user.setLoginName(req.getString("login_name"));
 		user.setDescription(req.getString("description"));
 		user.setTitle(req.getString("title"));
