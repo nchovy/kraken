@@ -80,6 +80,7 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 
 	@Transactional
 	private void createOrganizationParameterInternal(int orgId, OrganizationParameter orgParameter) {
+		// TODO: check orgId
 		EntityManager em = entityManagerService.getEntityManager();
 		em.persist(orgParameter);
 	}

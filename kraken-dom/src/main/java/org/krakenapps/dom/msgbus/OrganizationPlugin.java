@@ -15,11 +15,16 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.Collection;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.OrganizationParameterApi;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
+import org.krakenapps.dom.model.OrganizationParameter;
+import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -31,6 +36,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 public class OrganizationPlugin {
 	@Requires
 	private OrganizationApi organizationApi;
+
+	@Requires
+	private OrganizationParameterApi organizationParameterApi;
 
 	@MsgbusMethod
 	public void getOrganization(Request req, Response response) {
@@ -76,4 +84,52 @@ public class OrganizationPlugin {
 		organizationApi.removeOrganization(id);
 	}
 
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom.org", code = "manage")
+	public void getOrganizationParameters(Request req, Response resp) {
+		Collection<OrganizationParameter> parameters = organizationParameterApi.getOrganizationParameters(req
+				.getOrgId());
+		resp.put("result", Marshaler.marshal(parameters));
+	}
+
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom.org", code = "manage")
+	public void getOrganizationParameter(Request req, Response resp) {
+		OrganizationParameter parameter = null;
+		if (req.has("id"))
+			parameter = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getInteger("id"));
+		else if (req.has("name"))
+			parameter = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getString("name"));
+		resp.put("result", parameter.marshal());
+	}
+
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom.org", code = "manage")
+	public void createOrganizationParameter(Request req, Response resp) {
+		OrganizationParameter parameter = toOrganizationParameter(req);
+		organizationParameterApi.createOrganizationParameter(req.getOrgId(), parameter);
+	}
+
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom.org", code = "manage")
+	public void updateOrganizationParameter(Request req, Response resp) {
+		OrganizationParameter parameter = toOrganizationParameter(req);
+		organizationParameterApi.updateOrganizationParameter(req.getOrgId(), parameter);
+	}
+
+	private OrganizationParameter toOrganizationParameter(Request req) {
+		OrganizationParameter parameter = new OrganizationParameter();
+		parameter.setId(req.getInteger("id"));
+		parameter.setOrganization(organizationApi.getOrganization(req.getInteger("org_id")));
+		parameter.setName(req.getString("name"));
+		parameter.setValue(req.getString("value"));
+		return parameter;
+	}
+
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom.org", code = "manage")
+	public void removeOrganizationParameter(Request req, Response resp) {
+		int id = req.getInteger("id");
+		organizationParameterApi.removeOrganizationParameter(req.getOrgId(), id);
+	}
 }
