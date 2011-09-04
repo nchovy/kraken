@@ -60,22 +60,26 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		Admin admin = getAdmin(nick, hash, nonce);
 
 		if (hash.equals(Sha1.hash(admin.getUser().getPassword() + nonce)) == false) {
-			updateLoginFailures(admin);
+			updateLoginFailures(admin, false);
 			throw new InvalidPasswordException();
-		}
+		} else
+			updateLoginFailures(admin, true);
 
 		return admin;
 	}
 
 	@Transactional
-	private void updateLoginFailures(Admin admin) {
+	private void updateLoginFailures(Admin admin, boolean success) {
 		EntityManager em = entityManagerService.getEntityManager();
 		admin = em.find(Admin.class, admin.getId());
-		admin.setLoginFailures(admin.getLoginFailures() + 1);
-		logger.debug("kraken dom: login [{}] login failures [{}]", admin.getUser().getName(), admin.getLoginFailures());
 
-		if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
-			admin.setEnabled(false);
+		if (success) {
+			admin.setLoginFailures(0);
+		} else {
+			admin.setLoginFailures(admin.getLoginFailures() + 1);
+			if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
+				admin.setEnabled(false);
+		}
 
 		em.merge(admin);
 	}
