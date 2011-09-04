@@ -27,6 +27,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.exception.AdminLockedException;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
 import org.krakenapps.dom.exception.InvalidPasswordException;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
@@ -37,11 +38,15 @@ import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-admin-api")
 @Provides
 @JpaConfig(factory = "dom")
 public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserExtensionProvider {
+	private final Logger logger = LoggerFactory.getLogger(AdminApiImpl.class.getName());
+
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
@@ -50,16 +55,39 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		return "admin";
 	}
 
-	@Transactional
 	@Override
 	public Admin login(String nick, String hash, String nonce) throws AdminNotFoundException, InvalidPasswordException {
+		Admin admin = getAdmin(nick, hash, nonce);
+
+		if (hash.equals(Sha1.hash(admin.getUser().getPassword() + nonce)) == false) {
+			updateLoginFailures(admin);
+			throw new InvalidPasswordException();
+		}
+
+		return admin;
+	}
+
+	@Transactional
+	private void updateLoginFailures(Admin admin) {
 		EntityManager em = entityManagerService.getEntityManager();
+		admin = em.find(Admin.class, admin.getId());
+		admin.setLoginFailures(admin.getLoginFailures() + 1);
+		logger.debug("kraken dom: login [{}] login failures [{}]", admin.getUser().getName(), admin.getLoginFailures());
+
+		if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
+			admin.setEnabled(false);
+
+		em.merge(admin);
+	}
+
+	@Transactional
+	private Admin getAdmin(String nick, String hash, String nonce) {
 		try {
+			EntityManager em = entityManagerService.getEntityManager();
 			Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
 					.setParameter(1, nick).getSingleResult();
-
-			if (hash.equals(Sha1.hash(admin.getUser().getPassword() + nonce)) == false)
-				throw new InvalidPasswordException();
+			if (!admin.isEnabled())
+				throw new AdminLockedException();
 
 			admin.setLastLoginDateTime(new Date());
 			em.merge(admin);
@@ -214,12 +242,12 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			admin.setUseLoginLock(targetAdmin.isUseLoginLock());
 			admin.setIdleTimeout(targetAdmin.getIdleTimeout());
 			admin.setLoginLockCount(targetAdmin.getLoginLockCount());
-			
-			if (!admin.isEnabled() && targetAdmin.isEnabled()) 
+
+			if (!admin.isEnabled() && targetAdmin.isEnabled())
 				admin.setLoginFailures(0);
-				
+
 			admin.setEnabled(targetAdmin.isEnabled());
-			
+
 			em.merge(admin);
 
 			return admin;

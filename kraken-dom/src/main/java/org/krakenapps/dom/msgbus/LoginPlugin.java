@@ -52,7 +52,6 @@ public class LoginPlugin {
 	private ThreadLocalEntityManagerService entityManagerService;
 
 	@AllowGuestAccess
-	@Transactional
 	@MsgbusMethod
 	public void login(Request req, Response resp) throws AdminNotFoundException, InvalidPasswordException {
 		Session session = req.getSession();
