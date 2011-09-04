@@ -206,9 +206,20 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 					.setParameter(1, organizationId).setParameter(2, targetAdmin.getId()).getSingleResult();
 
 			Role role = em.find(Role.class, targetAdmin.getRole().getId());
+
 			admin.setRole(role);
 			admin.setLastLoginDateTime(targetAdmin.getLastLoginDateTime());
 			admin.setProgramProfile(targetAdmin.getProgramProfile());
+			admin.setUseIdleTimeout(targetAdmin.isUseIdleTimeout());
+			admin.setUseLoginLock(targetAdmin.isUseLoginLock());
+			admin.setIdleTimeout(targetAdmin.getIdleTimeout());
+			admin.setLoginLockCount(targetAdmin.getLoginLockCount());
+			
+			if (!admin.isEnabled() && targetAdmin.isEnabled()) 
+				admin.setLoginFailures(0);
+				
+			admin.setEnabled(targetAdmin.isEnabled());
+			
 			em.merge(admin);
 
 			return admin;

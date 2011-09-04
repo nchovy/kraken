@@ -155,7 +155,14 @@ public class AdminPlugin {
 		ProgramProfile profile = programApi.getProgramProfile(req.getOrgId(), profileId);
 		if (profile == null)
 			throw new ProgramProfileNotFoundException(profileId);
+		
 		admin.setProgramProfile(profile);
+		admin.setUseLoginLock(req.getBoolean("use_login_lock"));
+		admin.setLoginLockCount(req.getInteger("login_lock_count"));
+		admin.setLoginFailures(req.getInteger("login_failures"));
+		admin.setUseIdleTimeout(req.getBoolean("use_idle_timeout"));
+		admin.setIdleTimeout(req.getInteger("idle_timeout"));
+		admin.setEnabled(req.getBoolean("is_enabled"));
 
 		admin.validate();
 		return admin;

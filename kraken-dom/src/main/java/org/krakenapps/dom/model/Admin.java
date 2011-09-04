@@ -15,7 +15,6 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -57,6 +56,22 @@ public class Admin implements Marshalable {
 
 	@Column(length = 16)
 	private String lang;
+
+	@Column(name = "use_login_lock", nullable = false)
+	private boolean useLoginLock;
+
+	@Column(name = "login_lock_count", nullable = false)
+	private int loginLockCount;
+
+	@Column(name = "login_failures", nullable = false)
+	private int loginFailures;
+
+	@Column(name = "use_idle_timeout", nullable = false)
+	private boolean useIdleTimeout;
+
+	// in seconds
+	@Column(name = "idle_timeout", nullable = false)
+	private int idleTimeout;
 
 	@Column(name = "created_at", nullable = false)
 	private Date createDateTime;
@@ -103,6 +118,46 @@ public class Admin implements Marshalable {
 
 	public void setLang(String lang) {
 		this.lang = lang;
+	}
+
+	public boolean isUseLoginLock() {
+		return useLoginLock;
+	}
+
+	public void setUseLoginLock(boolean useLoginLock) {
+		this.useLoginLock = useLoginLock;
+	}
+
+	public int getLoginLockCount() {
+		return loginLockCount;
+	}
+
+	public void setLoginLockCount(int loginLockCount) {
+		this.loginLockCount = loginLockCount;
+	}
+
+	public int getLoginFailures() {
+		return loginFailures;
+	}
+
+	public void setLoginFailures(int loginFailures) {
+		this.loginFailures = loginFailures;
+	}
+
+	public boolean isUseIdleTimeout() {
+		return useIdleTimeout;
+	}
+
+	public void setUseIdleTimeout(boolean useIdleTimeout) {
+		this.useIdleTimeout = useIdleTimeout;
+	}
+
+	public int getIdleTimeout() {
+		return idleTimeout;
+	}
+
+	public void setIdleTimeout(int idleTimeout) {
+		this.idleTimeout = idleTimeout;
 	}
 
 	public Date getCreateDateTime() {
@@ -160,15 +215,19 @@ public class Admin implements Marshalable {
 
 	@Override
 	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("id", id);
 		m.put("user_id", user.getId());
 		m.put("role_id", role.getId());
 		m.put("role", role.getName());
 		m.put("profile_id", programProfile.getId());
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("last_login", lastLoginDateTime == null ? null : dateFormat.format(lastLoginDateTime));
+		m.put("use_login_lock", useLoginLock);
+		m.put("login_lock_count", loginLockCount);
+		m.put("login_failures", loginFailures);
+		m.put("use_idle_timeout", useIdleTimeout);
+		m.put("idle_timeout", idleTimeout);
+		m.put("created_at", createDateTime);
+		m.put("last_login", lastLoginDateTime);
 		m.put("is_enabled", isEnabled);
 		return m;
 	}
