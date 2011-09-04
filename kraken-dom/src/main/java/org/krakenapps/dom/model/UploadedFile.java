@@ -36,7 +36,7 @@ public class UploadedFile implements Marshalable {
 	private int id;
 
 	@ManyToOne
-	@JoinColumn(name = "space_id", nullable = false)
+	@JoinColumn(name = "space_id")
 	private FileSpace fileSpace;
 
 	@ManyToOne

@@ -272,7 +272,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		UploadToken token = item.token;
 
 		// build path
-		File spaceDir = new File(baseDir, Integer.toString(token.getSpaceId()));
+		File spaceDir = new File(baseDir, (token.getSpaceId() == null) ? "0" : Integer.toString(token.getSpaceId()));
 		spaceDir.mkdirs();
 
 		// move file
@@ -284,11 +284,14 @@ public class FileUploadApiImpl implements FileUploadApi {
 		}
 
 		// save properties
-		FileSpace space = em.find(FileSpace.class, token.getSpaceId());
-		if (space == null) {
-			String msg = String.format("kraken dom: file space [%d] not found for uploaded file [%s]",
-					token.getSpaceId(), token.getFileName());
-			throw new IllegalStateException(msg);
+		FileSpace space = null;
+		if (token.getSpaceId() != null) {
+			space = em.find(FileSpace.class, token.getSpaceId());
+			if (space == null) {
+				String msg = String.format("kraken dom: file space [%d] not found for uploaded file [%s]",
+						token.getSpaceId(), token.getFileName());
+				throw new IllegalStateException(msg);
+			}
 		}
 
 		User owner = em.find(User.class, token.getUserId());
@@ -380,7 +383,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		em.remove(file);
 
 		// remove physical file
-		int spaceId = file.getFileSpace().getId();
+		int spaceId = (file.getFileSpace() == null) ? 0 : file.getFileSpace().getId();
 		File spaceDir = new File(baseDir, Integer.toString(spaceId));
 		spaceDir.mkdirs();
 

@@ -18,12 +18,12 @@ package org.krakenapps.dom.api;
 public class UploadToken {
 	private String token;
 	private int userId;
-	private int spaceId;
+	private Integer spaceId;
 	private String fileName;
 	private long fileSize;
 	private Object userData;
 
-	public UploadToken(String token, int userId, int spaceId, String fileName, long fileSize) {
+	public UploadToken(String token, int userId, Integer spaceId, String fileName, long fileSize) {
 		this.token = token;
 		this.userId = userId;
 		this.spaceId = spaceId;
@@ -54,7 +54,7 @@ public class UploadToken {
 	 * 
 	 * @return the space id
 	 */
-	public int getSpaceId() {
+	public Integer getSpaceId() {
 		return spaceId;
 	}
 

@@ -76,7 +76,7 @@ public class FileUploadPlugin {
 	@MsgbusMethod
 	public void setUploadToken(Request req, Response resp) {
 		String token = UUID.randomUUID().toString();
-		int spaceId = req.getInteger("space_id");
+		Integer spaceId = req.getInteger("space_id");
 		String fileName = req.getString("file_name");
 		long fileSize = req.getInteger("file_size");
 
