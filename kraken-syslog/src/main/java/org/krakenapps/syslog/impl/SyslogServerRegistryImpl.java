@@ -15,6 +15,7 @@
  */
 package org.krakenapps.syslog.impl;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -77,6 +78,20 @@ public class SyslogServerRegistryImpl extends ServiceTracker implements SyslogSe
 	@Override
 	public SyslogServer getServer(String name) {
 		return serverMap.get(name);
+	}
+
+	@Override
+	public SyslogServer findServer(InetSocketAddress local) {
+		if (local == null)
+			return null;
+		
+		for (String name : serverMap.keySet()) {
+			SyslogServer server = serverMap.get(name);
+			if (server.getLocalAddress().equals(local))
+				return server;
+		}
+		
+		return null;
 	}
 
 	@Override

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.syslog;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
 
 public interface SyslogServerRegistry {
@@ -23,6 +24,8 @@ public interface SyslogServerRegistry {
 	Collection<String> getNames();
 	
 	SyslogServer getServer(String name);
+	
+	SyslogServer findServer(InetSocketAddress local);
 
 	void register(String name, SyslogServer server);
 
