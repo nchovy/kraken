@@ -242,6 +242,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			admin.setUseLoginLock(targetAdmin.isUseLoginLock());
 			admin.setIdleTimeout(targetAdmin.getIdleTimeout());
 			admin.setLoginLockCount(targetAdmin.getLoginLockCount());
+			admin.setUseOtp(targetAdmin.isUseOtp());
+			admin.setOtpSeed(targetAdmin.getOtpSeed());
 
 			if (!admin.isEnabled() && targetAdmin.isEnabled())
 				admin.setLoginFailures(0);

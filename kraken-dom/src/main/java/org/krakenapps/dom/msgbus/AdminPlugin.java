@@ -95,8 +95,6 @@ public class AdminPlugin {
 		userApi.createUser(user);
 
 		Admin admin = toAdmin(req);
-		if (admin.isUseOtp())
-			admin.setOtpSeed(createOtpSeed());
 		admin.setUser(user);
 		adminApi.createAdmin(req.getOrgId(), req.getAdminId(), admin);
 		resp.put("id", admin.getId());
@@ -185,7 +183,10 @@ public class AdminPlugin {
 		admin.setIdleTimeout(req.getInteger("idle_timeout"));
 		admin.setEnabled(req.getBoolean("is_enabled"));
 		admin.setUseOtp(req.getBoolean("use_otp"));
-		if (admin.isUseOtp())
+		if (admin.isUseOtp()) {
+			if (admin.getOtpSeed() == null)
+				admin.setOtpSeed(createOtpSeed());
+		} else
 			admin.setOtpSeed(null);
 
 		admin.validate();
