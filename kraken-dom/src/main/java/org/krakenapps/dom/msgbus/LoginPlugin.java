@@ -64,7 +64,8 @@ public class LoginPlugin {
 
 		Admin admin = adminApi.login(nick, hash, nonce);
 		resp.put("result", "success");
-		resp.put("idle_timeout", admin.getIdleTimeout());
+		if (admin.isUseIdleTimeout())
+			resp.put("idle_timeout", admin.getIdleTimeout());
 
 		session.unsetProperty("nonce");
 		session.setProperty("org_id", admin.getUser().getOrganization().getId());
