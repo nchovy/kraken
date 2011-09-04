@@ -70,7 +70,7 @@ public class FileUploadPlugin {
 	@MsgbusMethod
 	public void removeFileSpace(Request req, Response resp) {
 		int spaceId = req.getInteger("id");
-		upload.removeFileSpace(req.getOrgId(), spaceId);
+		upload.removeFileSpace(req.getAdminId(), spaceId);
 	}
 
 	@MsgbusMethod
