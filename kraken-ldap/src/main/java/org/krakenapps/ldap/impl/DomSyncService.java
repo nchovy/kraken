@@ -243,8 +243,11 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 
 			if (isUpdate)
 				userApi.updateUser(user);
-			else
+			else {
+				if (userApi.getUserByLoginName(user.getLoginName()) != null)
+					continue;
 				userApi.createUser(user);
+			}
 
 			if (domainUser.isDomainAdmin())
 				syncAdmin(bc, user, domainUser);
