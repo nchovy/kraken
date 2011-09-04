@@ -159,8 +159,12 @@ public class JpaScript implements Script {
 	private List<DatabaseConfigTemplate> getConfigTemplates() {
 		List<DatabaseConfigTemplate> configs = new ArrayList<JpaScript.DatabaseConfigTemplate>();
 		configs.add(new DatabaseConfigTemplate("MySQL", "com.mysql.jdbc.Driver",
-				"jdbc:mysql://$host/$db??useUnicode=true&amp;characterEncoding=utf8"));
-		configs.add(new DatabaseConfigTemplate("PostgreSQL", "org.postgresql.Driver", "jdbc:postgresql://$host/$db"));
+				"org.hibernate.dialect.MySQLInnoDBDialect",
+				"jdbc:mysql://$host/$db?useUnicode=true&characterEncoding=utf8"));
+		configs.add(new DatabaseConfigTemplate("PostgreSQL", "org.postgresql.Driver",
+				"org.hibernate.dialect.PostgreSQLDialect", "jdbc:postgresql://$host/$db"));
+		configs.add(new DatabaseConfigTemplate("HSQLDB", "org.hsqldb.jdbcDriver", "org.hibernate.dialect.HSQLDialect",
+				"jdbc:hsqldb:$db;shutdown=true"));
 		return configs;
 	}
 
@@ -246,11 +250,14 @@ public class JpaScript implements Script {
 		private String displayText;
 		private String connectionString;
 		private String driverClass;
+		private String dialectClass;
 
-		public DatabaseConfigTemplate(String displayText, String driverClass, String connectionString) {
+		public DatabaseConfigTemplate(String displayText, String driverClass, String dialectClass,
+				String connectionString) {
 			this.displayText = displayText;
 			this.driverClass = driverClass;
 			this.connectionString = connectionString;
+			this.dialectClass = dialectClass;
 		}
 
 		public void set(Properties props, String host, String db, String user, String password) {
@@ -260,6 +267,7 @@ public class JpaScript implements Script {
 			user = emptyToNull(user);
 			password = emptyToNull(password);
 
+			props.put("hibernate.dialect", dialectClass);
 			props.put("hibernate.connection.driver_class", driverClass);
 			props.put("hibernate.connection.url", url);
 
