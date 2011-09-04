@@ -241,6 +241,7 @@ public class User implements Marshalable {
 		m.put("email", email);
 		m.put("phone", phone);
 		m.put("title", title);
+		m.put("department", department);
 		m.put("created_at", dateFormat.format(createDateTime));
 		m.put("updated_at", dateFormat.format(updateDateTime));
 		return m;

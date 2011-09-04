@@ -112,6 +112,8 @@ public class UserPlugin {
 		user.setPassword(req.getString("password"));
 		user.setLoginName(req.getString("login_name"));
 		user.setDescription(req.getString("description"));
+		user.setDepartment(req.getString("department"));
+		user.setDomainController(req.getString("dc"));
 		user.setTitle(req.getString("title"));
 		user.setEmail(req.getString("email"));
 		user.setPhone(req.getString("phone"));

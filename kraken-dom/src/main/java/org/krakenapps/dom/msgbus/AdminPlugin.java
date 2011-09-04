@@ -16,6 +16,7 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.List;
+import java.util.Random;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -191,7 +192,25 @@ public class AdminPlugin {
 		return admin;
 	}
 
+	private static final char[] chars = new char[62];
+	static {
+		int i = 0;
+		char c = 'a';
+		for (; i < 26; i++)
+			chars[i] = c++;
+		c = 'A';
+		for (; i < 52; i++)
+			chars[i] = c++;
+		c = '0';
+		for (; i < 62; i++)
+			chars[i] = c++;
+	}
+
 	private String createOtpSeed() {
-		return null;
+		Random random = new Random();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < 10; i++)
+			sb.append(chars[random.nextInt(62)]);
+		return sb.toString();
 	}
 }
