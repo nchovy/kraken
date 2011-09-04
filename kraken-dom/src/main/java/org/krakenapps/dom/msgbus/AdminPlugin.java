@@ -94,6 +94,8 @@ public class AdminPlugin {
 		userApi.createUser(user);
 
 		Admin admin = toAdmin(req);
+		if (admin.isUseOtp())
+			admin.setOtpSeed(createOtpSeed());
 		admin.setUser(user);
 		adminApi.createAdmin(req.getOrgId(), req.getAdminId(), admin);
 		resp.put("id", admin.getId());
@@ -142,6 +144,24 @@ public class AdminPlugin {
 		adminApi.removeAdmin(req.getOrgId(), req.getAdminId(), adminId);
 	}
 
+	@MsgbusMethod
+	public void updateOtpSeed(Request req, Response resp) {
+		if (req.getAdminId() == null)
+			throw new SecurityException("not admin");
+
+		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
+		if (admin == null)
+			throw new IllegalArgumentException("admin not found");
+
+		if (admin.isUseOtp())
+			admin.setOtpSeed(createOtpSeed());
+		else
+			admin.setOtpSeed(null);
+
+		adminApi.updateAdmin(req.getOrgId(), req.getAdminId(), admin);
+		resp.put("otp_seed", admin.getOtpSeed());
+	}
+
 	private Admin toAdmin(Request req) throws RoleNotFoundException {
 		Admin admin = new Admin();
 
@@ -155,7 +175,7 @@ public class AdminPlugin {
 		ProgramProfile profile = programApi.getProgramProfile(req.getOrgId(), profileId);
 		if (profile == null)
 			throw new ProgramProfileNotFoundException(profileId);
-		
+
 		admin.setProgramProfile(profile);
 		admin.setUseLoginLock(req.getBoolean("use_login_lock"));
 		admin.setLoginLockCount(req.getInteger("login_lock_count"));
@@ -163,8 +183,15 @@ public class AdminPlugin {
 		admin.setUseIdleTimeout(req.getBoolean("use_idle_timeout"));
 		admin.setIdleTimeout(req.getInteger("idle_timeout"));
 		admin.setEnabled(req.getBoolean("is_enabled"));
+		admin.setUseOtp(req.getBoolean("use_otp"));
+		if (admin.isUseOtp())
+			admin.setOtpSeed(null);
 
 		admin.validate();
 		return admin;
+	}
+
+	private String createOtpSeed() {
+		return null;
 	}
 }

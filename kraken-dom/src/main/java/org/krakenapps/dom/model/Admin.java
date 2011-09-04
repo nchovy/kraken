@@ -82,6 +82,12 @@ public class Admin implements Marshalable {
 	@Column(name = "is_enabled", nullable = false)
 	private boolean isEnabled;
 
+	@Column(name = "use_otp", nullable = false)
+	private boolean useOtp;
+
+	@Column(name = "otp_seed")
+	private String otpSeed;
+
 	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
 	private List<Widget> widgets = new ArrayList<Widget>();
 
@@ -192,6 +198,22 @@ public class Admin implements Marshalable {
 		this.user = user;
 	}
 
+	public boolean isUseOtp() {
+		return useOtp;
+	}
+
+	public void setUseOtp(boolean useOtp) {
+		this.useOtp = useOtp;
+	}
+
+	public String getOtpSeed() {
+		return otpSeed;
+	}
+
+	public void setOtpSeed(String otpSeed) {
+		this.otpSeed = otpSeed;
+	}
+
 	public List<Widget> getWidgets() {
 		return widgets;
 	}
@@ -229,6 +251,8 @@ public class Admin implements Marshalable {
 		m.put("created_at", createDateTime);
 		m.put("last_login", lastLoginDateTime);
 		m.put("is_enabled", isEnabled);
+		m.put("use_otp", useOtp);
+		m.put("otp_seed", otpSeed);
 		return m;
 	}
 }
