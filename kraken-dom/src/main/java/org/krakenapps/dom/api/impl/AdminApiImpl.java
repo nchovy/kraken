@@ -26,6 +26,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.AdminApi;
+import org.krakenapps.dom.api.OtpApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.exception.AdminLockedException;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
@@ -38,13 +39,20 @@ import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-admin-api")
 @Provides
 @JpaConfig(factory = "dom")
 public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserExtensionProvider {
+	private Logger logger = LoggerFactory.getLogger(AdminApiImpl.class);
+
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
+
+	@Requires(optional = true, nullable = false)
+	private OtpApi otpApi;
 
 	@Override
 	public String getName() {
@@ -53,15 +61,22 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 	@Override
 	public Admin login(String nick, String hash, String nonce) throws AdminNotFoundException, InvalidPasswordException {
-		Admin admin = getAdmin(nick, hash, nonce);
+		Admin admin = getAdmin(nick);
+		String password = null;
 
-		if (hash.equals(Sha1.hash(admin.getUser().getPassword() + nonce)) == false) {
+		logger.info("otpApi = " + otpApi);
+		if (otpApi != null && admin.isUseOtp())
+			password = Sha1.hash(otpApi.getOtpValue(admin.getOtpSeed()));
+		else
+			password = admin.getUser().getPassword();
+
+		if (hash.equals(Sha1.hash(password + nonce))) {
+			updateLoginFailures(admin, true);
+			return admin;
+		} else {
 			updateLoginFailures(admin, false);
 			throw new InvalidPasswordException();
-		} else
-			updateLoginFailures(admin, true);
-
-		return admin;
+		}
 	}
 
 	@Transactional
@@ -81,7 +96,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Transactional
-	private Admin getAdmin(String nick, String hash, String nonce) {
+	private Admin getAdmin(String nick) {
 		try {
 			EntityManager em = entityManagerService.getEntityManager();
 			Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
