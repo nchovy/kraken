@@ -17,6 +17,7 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -253,7 +254,13 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			admin.setIdleTimeout(targetAdmin.getIdleTimeout());
 			admin.setLoginLockCount(targetAdmin.getLoginLockCount());
 			admin.setUseOtp(targetAdmin.isUseOtp());
-			admin.setOtpSeed(targetAdmin.getOtpSeed());
+			if (admin.isUseOtp()) {
+				if (targetAdmin.getOtpSeed() != null)
+					admin.setOtpSeed(targetAdmin.getOtpSeed());
+				else if (admin.getOtpSeed() == null)
+					admin.setOtpSeed(createOtpSeed());
+			} else
+				admin.setOtpSeed(null);
 
 			if (!admin.isEnabled() && targetAdmin.isEnabled())
 				admin.setLoginFailures(0);
@@ -266,5 +273,27 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		} catch (NoResultException e) {
 			throw new AdminNotFoundException(targetAdmin.getId());
 		}
+	}
+
+	private static final char[] chars = new char[62];
+	static {
+		int i = 0;
+		char c = 'a';
+		for (; i < 26; i++)
+			chars[i] = c++;
+		c = 'A';
+		for (; i < 52; i++)
+			chars[i] = c++;
+		c = '0';
+		for (; i < 62; i++)
+			chars[i] = c++;
+	}
+
+	private String createOtpSeed() {
+		Random random = new Random();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < 10; i++)
+			sb.append(chars[random.nextInt(62)]);
+		return sb.toString();
 	}
 }

@@ -152,10 +152,7 @@ public class AdminPlugin {
 		if (admin == null)
 			throw new IllegalArgumentException("admin not found");
 
-		if (admin.isUseOtp())
-			admin.setOtpSeed(createOtpSeed());
-		else
-			admin.setOtpSeed(null);
+		admin.setOtpSeed(createOtpSeed());
 
 		adminApi.updateAdmin(req.getOrgId(), req.getAdminId(), admin);
 		resp.put("otp_seed", admin.getOtpSeed());
@@ -183,11 +180,6 @@ public class AdminPlugin {
 		admin.setIdleTimeout(req.getInteger("idle_timeout"));
 		admin.setEnabled(req.getBoolean("is_enabled"));
 		admin.setUseOtp(req.getBoolean("use_otp"));
-		if (admin.isUseOtp()) {
-			if (admin.getOtpSeed() == null)
-				admin.setOtpSeed(createOtpSeed());
-		} else
-			admin.setOtpSeed(null);
 
 		admin.validate();
 		return admin;
