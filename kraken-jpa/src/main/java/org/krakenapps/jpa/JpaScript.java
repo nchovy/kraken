@@ -241,6 +241,10 @@ public class JpaScript implements Script {
 	@ScriptUsage(description = "Close and unregister the entity manager", arguments = { @ScriptArgument(name = "Entity Manager Factory Name", type = "string", description = "Alias for entity manager factory") })
 	public void unregister(String[] args) {
 		String factoryName = args[0];
+		if (jpa.hasEntityManagerFactory(factoryName)) {
+			context.println(factoryName + " not found");
+			return;
+		}
 
 		jpa.unregisterEntityManagerFactory(factoryName);
 		context.println(factoryName + " unregistered.");
