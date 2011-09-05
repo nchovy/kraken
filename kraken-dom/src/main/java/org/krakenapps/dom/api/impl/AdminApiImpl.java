@@ -39,15 +39,11 @@ import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-admin-api")
 @Provides
 @JpaConfig(factory = "dom")
 public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserExtensionProvider {
-	private Logger logger = LoggerFactory.getLogger(AdminApiImpl.class);
-
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
@@ -64,7 +60,6 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		Admin admin = getAdmin(nick);
 		String password = null;
 
-		logger.info("otpApi = " + otpApi);
 		if (otpApi != null && admin.isUseOtp())
 			password = Sha1.hash(otpApi.getOtpValue(admin.getOtpSeed()));
 		else
