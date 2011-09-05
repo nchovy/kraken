@@ -159,6 +159,7 @@ public class JpaScript implements Script {
 
 	private List<DatabaseConfigTemplate> getConfigTemplates() {
 		File jpaDir = new File(System.getProperty("kraken.data.dir"), "kraken-jpa");
+		jpaDir.mkdirs();
 		String jpaDataPath = jpaDir.getAbsolutePath();
 		
 		List<DatabaseConfigTemplate> configs = new ArrayList<JpaScript.DatabaseConfigTemplate>();
