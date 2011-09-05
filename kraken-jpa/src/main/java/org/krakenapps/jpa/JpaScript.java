@@ -15,6 +15,7 @@
  */
 package org.krakenapps.jpa;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -157,6 +158,9 @@ public class JpaScript implements Script {
 	}
 
 	private List<DatabaseConfigTemplate> getConfigTemplates() {
+		File jpaDir = new File(System.getProperty("kraken.data.dir"), "kraken-jpa");
+		String jpaDataPath = jpaDir.getAbsolutePath();
+		
 		List<DatabaseConfigTemplate> configs = new ArrayList<JpaScript.DatabaseConfigTemplate>();
 		configs.add(new DatabaseConfigTemplate("MySQL", "com.mysql.jdbc.Driver",
 				"org.hibernate.dialect.MySQLInnoDBDialect",
@@ -164,7 +168,7 @@ public class JpaScript implements Script {
 		configs.add(new DatabaseConfigTemplate("PostgreSQL", "org.postgresql.Driver",
 				"org.hibernate.dialect.PostgreSQLDialect", "jdbc:postgresql://$host/$db"));
 		configs.add(new DatabaseConfigTemplate("HSQLDB", "org.hsqldb.jdbcDriver", "org.hibernate.dialect.HSQLDialect",
-				"jdbc:hsqldb:$db;shutdown=true"));
+				"jdbc:hsqldb:" + jpaDataPath + "/$db;shutdown=true"));
 		return configs;
 	}
 
@@ -241,7 +245,7 @@ public class JpaScript implements Script {
 	@ScriptUsage(description = "Close and unregister the entity manager", arguments = { @ScriptArgument(name = "Entity Manager Factory Name", type = "string", description = "Alias for entity manager factory") })
 	public void unregister(String[] args) {
 		String factoryName = args[0];
-		if (jpa.hasEntityManagerFactory(factoryName)) {
+		if (!jpa.hasEntityManagerFactory(factoryName)) {
 			context.println(factoryName + " not found");
 			return;
 		}
