@@ -27,15 +27,17 @@ public class AccountPlugin {
 	@Requires
 	private AdminApi adminApi;
 
+	// from js web console only
 	@AllowGuestAccess
 	@MsgbusMethod
 	public void login(Request req, Response resp) throws AdminNotFoundException, InvalidPasswordException {
 		String user = req.getString("user");
 		String password = req.getString("password");
+		String salt = req.getString("salt");
 
 		logger.trace("kraken webconsole: login attempt user [{}], password [{}]", new Object[] { user, password });
 
-		String hash = adminApi.hash(adminApi.hashPassword(password));
+		String hash = adminApi.hash(adminApi.hashPassword(salt, password));
 		String nonce = "";
 		Admin admin = adminApi.login(user, hash, nonce);
 
