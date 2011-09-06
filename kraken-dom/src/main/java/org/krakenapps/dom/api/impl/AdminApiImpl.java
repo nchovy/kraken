@@ -103,7 +103,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			if (!admin.isEnabled()) {
 				Date failed = admin.getLastLoginFailedDateTime();
 				Calendar c = Calendar.getInstance();
-				c.add(Calendar.HOUR_OF_DAY, -1);
+				c.add(Calendar.MINUTE, -1);
 				if (failed != null && failed.after(c.getTime()))
 					throw new AdminLockedException();
 				else
@@ -140,6 +140,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		if (admin.getLang() == null)
 			admin.setLang("en");
 		admin.setCreateDateTime(new Date());
+		if (admin.isUseOtp())
+			admin.setOtpSeed(createOtpSeed());
 
 		em.persist(admin);
 	}
