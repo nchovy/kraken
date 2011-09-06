@@ -148,13 +148,15 @@ public class AdminPlugin {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
 
-		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
+		int userId = req.getInteger("user_id");
+		
+		Admin admin = adminApi.getAdmin(req.getOrgId(), userId);
 		if (admin == null)
 			throw new IllegalArgumentException("admin not found");
 
 		admin.setOtpSeed(createOtpSeed());
 
-		adminApi.updateAdmin(req.getOrgId(), req.getAdminId(), admin);
+		adminApi.updateAdmin(req.getOrgId(), admin.getId(), admin);
 		resp.put("otp_seed", admin.getOtpSeed());
 	}
 
