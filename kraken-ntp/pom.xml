@@ -65,12 +65,6 @@
 			<optional>true</optional>
 		</dependency>
 		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-cron</artifactId>
-			<version>1.5.0</version>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
 			<version>1.4.0</version>

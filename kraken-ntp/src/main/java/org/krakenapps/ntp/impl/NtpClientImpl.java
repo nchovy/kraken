@@ -29,7 +29,6 @@ import java.util.Date;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.cron.PeriodicJob;
 import org.krakenapps.ntp.NtpClient;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
@@ -41,7 +40,6 @@ import org.slf4j.LoggerFactory;
  * @author delmitz
  */
 @Component(name = "ntp-client")
-@PeriodicJob(value = "0 * * * *")
 @Provides
 public class NtpClientImpl implements NtpClient, Runnable {
 	private final Logger logger = LoggerFactory.getLogger(NtpClientImpl.class);
