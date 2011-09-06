@@ -27,21 +27,32 @@ public class RoutingTable {
 
 			while ((line = br.readLine()) != null) {
 				String[] tokens = line.split("[\t| ]+");
-				if (tokens.length != 11)
-					continue;
-
-				InetAddress destination = (!tokens[0].equals("default")) ? InetAddress.getByName(tokens[0]) : null;
-				InetAddress gateway = (!tokens[1].equals("*")) ? InetAddress.getByName(tokens[1]) : null;
-				InetAddress genmask = InetAddress.getByName(tokens[2]);
-				Flag flags = new RoutingEntry.Flag(tokens[3]);
-				int metric = Integer.parseInt(tokens[4]);
-				int ref = Integer.parseInt(tokens[5]);
-				int use = Integer.parseInt(tokens[6]);
-				String iface = tokens[7];
-				int mss = Integer.parseInt(tokens[8]);
-				int window = Integer.parseInt(tokens[9]);
-				int irtt = Integer.parseInt(tokens[10]);
-				entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, mss, window, irtt));
+				if (tokens.length == 8) {
+					InetAddress destination = (!tokens[0].equals("default")) ? InetAddress.getByName(tokens[0]) : null;
+					InetAddress gateway = (!tokens[1].equals("*")) ? InetAddress.getByName(tokens[1]) : null;
+					InetAddress genmask = InetAddress.getByName(tokens[2]);
+					Flag flags = new RoutingEntry.Flag(tokens[3]);
+					int metric = Integer.parseInt(tokens[4]);
+					int ref = Integer.parseInt(tokens[5]);
+					int use = Integer.parseInt(tokens[6]);
+					String iface = tokens[7];
+					entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, null,
+							null, null));
+				} else if (tokens.length == 11) {
+					InetAddress destination = (!tokens[0].equals("default")) ? InetAddress.getByName(tokens[0]) : null;
+					InetAddress gateway = (!tokens[1].equals("*")) ? InetAddress.getByName(tokens[1]) : null;
+					InetAddress genmask = InetAddress.getByName(tokens[2]);
+					Flag flags = new RoutingEntry.Flag(tokens[3]);
+					int metric = Integer.parseInt(tokens[4]);
+					int ref = Integer.parseInt(tokens[5]);
+					int use = Integer.parseInt(tokens[6]);
+					String iface = tokens[7];
+					int mss = Integer.parseInt(tokens[8]);
+					int window = Integer.parseInt(tokens[9]);
+					int irtt = Integer.parseInt(tokens[10]);
+					entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, mss,
+							window, irtt));
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -81,11 +92,11 @@ public class RoutingTable {
 				String destination = tokens[0];
 				int mask = 0;
 				int pos = 0;
-				if((pos = tokens[0].indexOf("/")) != -1)  {
+				if ((pos = tokens[0].indexOf("/")) != -1) {
 					destination = destination.substring(0, pos);
 					mask = Integer.parseInt(tokens[0].substring(pos + 1));
 				}
-				
+
 				String nextHop = (!tokens[1].equals("*")) ? tokens[1] : null;
 				Flag flags = new RoutingEntry.Flag(tokens[2]);
 				int metric = Integer.parseInt(tokens[3]);
