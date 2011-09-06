@@ -179,6 +179,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Transactional
 	private void createUserInternal(User user) {
 		EntityManager em = entityManagerService.getEntityManager();
+		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		user.setCreateDateTime(new Date());
 		user.setUpdateDateTime(new Date());
 		em.persist(user);

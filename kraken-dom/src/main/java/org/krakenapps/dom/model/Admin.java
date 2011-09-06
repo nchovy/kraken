@@ -66,6 +66,9 @@ public class Admin implements Marshalable {
 	@Column(name = "login_failures", nullable = false)
 	private int loginFailures;
 
+	@Column(name = "last_login_failed_at")
+	private Date lastLoginFailedDateTime;
+
 	@Column(name = "use_idle_timeout", nullable = false)
 	private boolean useIdleTimeout;
 
@@ -148,6 +151,14 @@ public class Admin implements Marshalable {
 
 	public void setLoginFailures(int loginFailures) {
 		this.loginFailures = loginFailures;
+	}
+
+	public Date getLastLoginFailedDateTime() {
+		return lastLoginFailedDateTime;
+	}
+
+	public void setLastLoginFailedDateTime(Date lastLoginFailedDateTime) {
+		this.lastLoginFailedDateTime = lastLoginFailedDateTime;
 	}
 
 	public boolean isUseIdleTimeout() {
@@ -246,6 +257,7 @@ public class Admin implements Marshalable {
 		m.put("use_login_lock", useLoginLock);
 		m.put("login_lock_count", loginLockCount);
 		m.put("login_failures", loginFailures);
+		m.put("last_login_failed_at", lastLoginFailedDateTime);
 		m.put("use_idle_timeout", useIdleTimeout);
 		m.put("idle_timeout", idleTimeout);
 		m.put("created_at", createDateTime);

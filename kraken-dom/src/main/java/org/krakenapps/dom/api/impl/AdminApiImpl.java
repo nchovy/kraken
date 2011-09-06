@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -82,7 +83,9 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 		if (success) {
 			admin.setLoginFailures(0);
+			admin.setEnabled(true);
 		} else {
+			admin.setLastLoginFailedDateTime(new Date());
 			admin.setLoginFailures(admin.getLoginFailures() + 1);
 			if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
 				admin.setEnabled(false);
@@ -97,8 +100,15 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			EntityManager em = entityManagerService.getEntityManager();
 			Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
 					.setParameter(1, nick).getSingleResult();
-			if (!admin.isEnabled())
-				throw new AdminLockedException();
+			if (!admin.isEnabled()) {
+				Date failed = admin.getLastLoginFailedDateTime();
+				Calendar c = Calendar.getInstance();
+				c.add(Calendar.HOUR_OF_DAY, -1);
+				if (failed != null && failed.after(c.getTime()))
+					throw new AdminLockedException();
+				else
+					updateLoginFailures(admin, true);
+			}
 
 			admin.setLastLoginDateTime(new Date());
 			em.merge(admin);
