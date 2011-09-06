@@ -14,34 +14,40 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.util.CharsetUtil;
 
 public class SilverlightPolicyHandler extends SimpleChannelUpstreamHandler {
+	private final Logger logger = LoggerFactory.getLogger(SilverlightPolicyHandler.class.getName());
+
+	private static final String REQUEST = "<policy-file-request/>";
 
 	@Override
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+		ChannelBuffer buf = (ChannelBuffer) e.getMessage();
+		logger.debug("kraken webconsole: readable bytes [{}]", buf.readableBytes());
+		
+		if (buf.readableBytes() < REQUEST.length())
+			return;
+
+		logger.debug("kraken webconsole: silverlight policy request");
+
 		Document xml = getPolicy();
 		String s = xmlToString(xml);
 
-		HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		resp.setHeader("Content-Type", "text/xml");
-		resp.setContent(ChannelBuffers.copiedBuffer(s, CharsetUtil.UTF_8));
-
-		ChannelFuture f = ctx.getChannel().write(resp);
+		ChannelFuture f = ctx.getChannel().write(s);
 		f.addListener(ChannelFutureListener.CLOSE);
+
+		logger.debug("kraken webconsole: sent silverlight policy [{}]", s);
 	}
 
 	private Document getPolicy() {

@@ -4,7 +4,9 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
@@ -20,6 +22,7 @@ public class SilverlightPolicyServerImpl implements SilverlightPolicyServer {
 		return listener != null;
 	}
 
+	@Validate
 	@Override
 	public synchronized void open() {
 		if (listener != null)
@@ -29,9 +32,20 @@ public class SilverlightPolicyServerImpl implements SilverlightPolicyServer {
 				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
 		bootstrap.setPipelineFactory(new SilverlightPolicyPipelineFactory());
+		bootstrap.setOption("reuseAddress", true);
+		bootstrap.setOption("child.tcpNoDelay", true);
+		bootstrap.setOption("child.keepAlive", true);
 
 		InetSocketAddress addr = new InetSocketAddress(943);
 		listener = bootstrap.bind(addr);
+	}
+
+	@Invalidate
+	public void stop() {
+		if (listener != null) {
+			listener.close();
+			listener = null;
+		}
 	}
 
 	@Override
