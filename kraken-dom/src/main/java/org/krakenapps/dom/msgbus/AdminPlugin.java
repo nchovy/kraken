@@ -17,6 +17,7 @@ package org.krakenapps.dom.msgbus;
 
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -28,6 +29,7 @@ import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.exception.ProgramProfileNotFoundException;
 import org.krakenapps.dom.exception.RoleNotFoundException;
+import org.krakenapps.dom.model.Permission;
 import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.Role;
 import org.krakenapps.dom.model.Admin;
@@ -144,12 +146,35 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	public void getPermissions(Request req, Response resp) {
+		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
+		Set<Permission> permissions = admin.getRole().getPermissions();
+		resp.put("permissions", Marshaler.marshal(permissions));
+	}
+
+	@MsgbusMethod
+	public void hasPermission(Request req, Response resp) {
+		String group = req.getString("group");
+		String perm = req.getString("permission");
+		boolean result = false;
+
+		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
+		Set<Permission> permissions = admin.getRole().getPermissions();
+		for (Permission permission : permissions) {
+			if (group.equals(permission.getPermissionGroup()) && perm.equals(permission.getPermission()))
+				result = true;
+		}
+
+		resp.put("result", result);
+	}
+
+	@MsgbusMethod
 	public void updateOtpSeed(Request req, Response resp) {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
 
 		int userId = req.getInteger("user_id");
-		
+
 		Admin admin = adminApi.getAdmin(req.getOrgId(), userId);
 		if (admin == null)
 			throw new IllegalArgumentException("admin not found");
