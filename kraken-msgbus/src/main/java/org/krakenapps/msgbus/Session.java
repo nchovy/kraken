@@ -1,14 +1,19 @@
 package org.krakenapps.msgbus;
 
+import java.net.InetAddress;
 import java.util.Locale;
 
 public interface Session {
 	int getId();
-	
+
 	Integer getOrgId();
-	
+
 	Integer getAdminId();
-	
+
+	InetAddress getLocalAddress();
+
+	InetAddress getRemoteAddress();
+
 	Locale getLocale();
 
 	Object get(String key);

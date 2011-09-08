@@ -15,6 +15,8 @@
  */
 package org.krakenapps.webconsole.impl;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +49,7 @@ public class WebSocketSession implements Session {
 	public int getId() {
 		return channel.getId();
 	}
-	
+
 	@Override
 	public Integer getOrgId() {
 		return getInt("org_id");
@@ -56,6 +58,16 @@ public class WebSocketSession implements Session {
 	@Override
 	public Integer getAdminId() {
 		return getInt("admin_id");
+	}
+
+	@Override
+	public InetAddress getLocalAddress() {
+		return ((InetSocketAddress) channel.getLocalAddress()).getAddress();
+	}
+
+	@Override
+	public InetAddress getRemoteAddress() {
+		return ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
 	}
 
 	public Object get(String key) {
