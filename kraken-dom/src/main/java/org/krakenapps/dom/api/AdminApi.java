@@ -20,9 +20,16 @@ import java.util.List;
 import org.krakenapps.dom.exception.InvalidPasswordException;
 import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.msgbus.Session;
 
 public interface AdminApi extends EntityEventProvider<Admin> {
-	Admin login(String nick, String hash, String nonce) throws AdminNotFoundException, InvalidPasswordException;
+	Admin login(Session session, String nick, String hash) throws AdminNotFoundException, InvalidPasswordException;
+
+	void logout(Session session);
+
+	void registerLoginCallback(LoginCallback callback);
+
+	void unregisterLoginCallback(LoginCallback callback);
 
 	List<Admin> getAdmins(int organizationId);
 

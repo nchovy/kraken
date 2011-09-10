@@ -34,6 +34,7 @@ import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.Session;
 import org.krakenapps.msgbus.handler.AllowGuestAccess;
+import org.krakenapps.msgbus.handler.CallbackType;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.slf4j.Logger;
@@ -62,7 +63,7 @@ public class LoginPlugin {
 		logger.info("watchcat login plugin: login attempt nick [{}] hash [{}] nonce [{}]", new Object[] { nick, hash,
 				nonce });
 
-		Admin admin = adminApi.login(nick, hash, nonce);
+		Admin admin = adminApi.login(session, nick, hash);
 		resp.put("result", "success");
 		resp.put("use_idle_timeout", admin.isUseIdleTimeout());
 		if (admin.isUseIdleTimeout())
@@ -72,6 +73,11 @@ public class LoginPlugin {
 		session.setProperty("org_id", admin.getUser().getOrganization().getId());
 		session.setProperty("admin_id", admin.getId());
 		session.setProperty("locale", admin.getLang());
+	}
+
+	@MsgbusMethod(type = CallbackType.SessionClosed)
+	public void logout(Session session) {
+		adminApi.logout(session);
 	}
 
 	@SuppressWarnings("unchecked")

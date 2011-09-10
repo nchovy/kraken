@@ -17,8 +17,10 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -28,6 +30,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.AdminApi;
+import org.krakenapps.dom.api.LoginCallback;
 import org.krakenapps.dom.api.OtpApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.exception.AdminLockedException;
@@ -41,6 +44,7 @@ import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.msgbus.Session;
 
 @Component(name = "dom-admin-api")
 @Provides
@@ -52,14 +56,17 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Requires(optional = true, nullable = false)
 	private OtpApi otpApi;
 
+	private Set<LoginCallback> callbacks = new HashSet<LoginCallback>();
+
 	@Override
 	public String getName() {
 		return "admin";
 	}
 
 	@Override
-	public Admin login(String nick, String hash, String nonce) throws AdminNotFoundException, InvalidPasswordException {
-		Admin admin = getAdmin(nick);
+	public Admin login(Session session, String nick, String hash) throws AdminNotFoundException,
+			InvalidPasswordException {
+		Admin admin = getAdmin(nick, session);
 		String password = null;
 
 		if (otpApi != null && admin.isUseOtp())
@@ -67,13 +74,34 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		else
 			password = admin.getUser().getPassword();
 
-		if (hash.equals(Sha1.hash(password + nonce))) {
+		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
 			updateLoginFailures(admin, true);
+			for (LoginCallback callback : callbacks)
+				callback.onLoginSuccessCallback(admin, session);
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
+			for (LoginCallback callback : callbacks)
+				callback.onLoginFailedCallback(admin, session);
 			throw new InvalidPasswordException();
 		}
+	}
+
+	@Override
+	public void logout(Session session) {
+		Admin admin = getAdmin(session.getOrgId(), session.getAdminId());
+		for (LoginCallback callback : callbacks)
+			callback.onLogout(admin, session);
+	}
+
+	@Override
+	public void registerLoginCallback(LoginCallback callback) {
+		callbacks.add(callback);
+	}
+
+	@Override
+	public void unregisterLoginCallback(LoginCallback callback) {
+		callbacks.remove(callback);
 	}
 
 	@Transactional
@@ -95,7 +123,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Transactional
-	private Admin getAdmin(String nick) {
+	private Admin getAdmin(String nick, Session session) {
 		try {
 			EntityManager em = entityManagerService.getEntityManager();
 			Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
@@ -103,10 +131,12 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			if (!admin.isEnabled()) {
 				Date failed = admin.getLastLoginFailedDateTime();
 				Calendar c = Calendar.getInstance();
-				c.add(Calendar.MINUTE, -1);
-				if (failed != null && failed.after(c.getTime()))
+				c.add(Calendar.SECOND, -10);
+				if (failed != null && failed.after(c.getTime())) {
+					for (LoginCallback callback : callbacks)
+						callback.onLoginLockedCallback(admin, session);
 					throw new AdminLockedException();
-				else
+				} else
 					updateLoginFailures(admin, true);
 			}
 

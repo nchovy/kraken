@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-dom</artifactId>
-	<version>1.2.10</version>
+	<version>1.2.11</version>
 	<packaging>bundle</packaging>
 	<name>Kraken DOM</name>
 	<build>
@@ -77,7 +77,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-msgbus</artifactId>
-			<version>1.0.0</version>
+			<version>1.1.2</version>
 		</dependency>
 	</dependencies>
 </project>
