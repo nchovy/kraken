@@ -96,40 +96,20 @@ public class OrganizationPlugin {
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void getOrganizationParameter(Request req, Response resp) {
 		OrganizationParameter parameter = null;
-		if (req.has("id"))
-			parameter = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getInteger("id"));
-		else if (req.has("name"))
-			parameter = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getString("name"));
+		parameter = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getString("name"));
 		resp.put("result", parameter.marshal());
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
-	public void createOrganizationParameter(Request req, Response resp) {
-		OrganizationParameter parameter = toOrganizationParameter(req);
-		organizationParameterApi.createOrganizationParameter(req.getOrgId(), parameter);
+	public void setOrganizationParameter(Request req, Response resp) {
+		organizationParameterApi
+				.setOrganizationParameter(req.getOrgId(), req.getString("name"), req.getString("value"));
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
-	public void updateOrganizationParameter(Request req, Response resp) {
-		OrganizationParameter parameter = toOrganizationParameter(req);
-		organizationParameterApi.updateOrganizationParameter(req.getOrgId(), parameter);
-	}
-
-	private OrganizationParameter toOrganizationParameter(Request req) {
-		OrganizationParameter parameter = new OrganizationParameter();
-		parameter.setId(req.getInteger("id"));
-		parameter.setOrganization(organizationApi.getOrganization(req.getInteger("org_id")));
-		parameter.setName(req.getString("name"));
-		parameter.setValue(req.getString("value"));
-		return parameter;
-	}
-
-	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
-	public void removeOrganizationParameter(Request req, Response resp) {
-		int id = req.getInteger("id");
-		organizationParameterApi.removeOrganizationParameter(req.getOrgId(), id);
+	public void unsetOrganizationParameter(Request req, Response resp) {
+		organizationParameterApi.unsetOrganizationParameter(req.getOrgId(), req.getString("name"));
 	}
 }

@@ -24,6 +24,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationParameterApi;
 import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
@@ -35,6 +36,9 @@ import org.krakenapps.jpa.handler.Transactional;
 @JpaConfig(factory = "dom")
 public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParameter> implements
 		OrganizationParameterApi {
+	@Requires
+	private OrganizationApi orgApi;
+
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
@@ -62,59 +66,47 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 		}
 	}
 
-	@Transactional
 	@Override
-	public OrganizationParameter getOrganizationParameter(int orgId, int orgParameterId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		OrganizationParameter op = em.find(OrganizationParameter.class, orgParameterId);
-		if (op.getOrganization().getId() == orgId)
-			return op;
-		return null;
-	}
-
-	@Override
-	public void createOrganizationParameter(int orgId, OrganizationParameter orgParameter) {
-		createOrganizationParameterInternal(orgId, orgParameter);
-		fireEntityAdded(orgParameter);
+	public void setOrganizationParameter(int orgId, String name, String value) {
+		boolean isUpdate = (getOrganizationParameter(orgId, name) != null);
+		OrganizationParameter orgParameter = setOrganizationParameterInternal(orgId, name, value);
+		if (isUpdate)
+			fireEntityAdded(orgParameter);
+		else
+			fireEntityAdded(orgParameter);
 	}
 
 	@Transactional
-	private void createOrganizationParameterInternal(int orgId, OrganizationParameter orgParameter) {
-		if (orgParameter.getOrganization().getId() != orgId)
-			throw new IllegalArgumentException("invalid organization");
-		EntityManager em = entityManagerService.getEntityManager();
-		em.persist(orgParameter);
+	private OrganizationParameter setOrganizationParameterInternal(int orgId, String name, String value) {
+		OrganizationParameter orgParameter = getOrganizationParameter(orgId, name);
+		if (orgParameter == null) {
+			orgParameter = new OrganizationParameter();
+			orgParameter.setOrganization(orgApi.getOrganization(orgId));
+			orgParameter.setName(name);
+			orgParameter.setValue(value);
+			EntityManager em = entityManagerService.getEntityManager();
+			em.persist(orgParameter);
+		} else {
+			if (orgParameter.getOrganization().getId() != orgId)
+				throw new IllegalArgumentException("invalid organization");
+			orgParameter.setValue(value);
+			EntityManager em = entityManagerService.getEntityManager();
+			em.merge(orgParameter);
+		}
+		return orgParameter;
 	}
 
 	@Override
-	public void updateOrganizationParameter(int orgId, OrganizationParameter orgParameter) {
-		updateOrganizationParameterInternal(orgId, orgParameter);
-		fireEntityUpdated(orgParameter);
+	public void unsetOrganizationParameter(int orgId, String name) {
+		OrganizationParameter op = unsetOrganizationParameterInternal(orgId, name);
+		if (op != null)
+			fireEntityRemoved(op);
 	}
 
 	@Transactional
-	private void updateOrganizationParameterInternal(int orgId, OrganizationParameter orgParameter) {
+	private OrganizationParameter unsetOrganizationParameterInternal(int orgId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
-		if (orgParameter.getId() == 0)
-			throw new IllegalArgumentException("check organization parameter id");
-
-		OrganizationParameter op = em.find(OrganizationParameter.class, orgParameter.getId());
-		if (op.getOrganization().getId() != orgId || orgParameter.getOrganization().getId() != orgId)
-			; // TODO
-		op.setValue(orgParameter.getValue());
-		em.merge(op);
-	}
-
-	@Override
-	public void removeOrganizationParameter(int orgId, int orgParameterId) {
-		OrganizationParameter op = removeOrganizationParameterInternal(orgId, orgParameterId);
-		fireEntityRemoved(op);
-	}
-
-	@Transactional
-	private OrganizationParameter removeOrganizationParameterInternal(int orgId, int orgParameterId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		OrganizationParameter op = em.find(OrganizationParameter.class, orgParameterId);
+		OrganizationParameter op = getOrganizationParameter(orgId, name);
 		if (op.getOrganization().getId() == orgId) {
 			em.remove(op);
 			return op;

@@ -29,7 +29,6 @@ import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
@@ -89,11 +88,8 @@ public class OrganizationApiImpl extends AbstractApi<Organization> implements Or
 		profile.setOrganization(organization);
 		programApi.createProgramProfile(profile);
 
-		OrganizationParameter orgParameter = new OrganizationParameter();
-		orgParameter.setOrganization(organization);
-		orgParameter.setName("default_program_profile_id");
-		orgParameter.setValue(String.valueOf(profile.getId()));
-		orgParameterApi.createOrganizationParameter(organization.getId(), orgParameter);
+		orgParameterApi.setOrganizationParameter(organization.getId(), "default_program_profile_id",
+				String.valueOf(profile.getId()));
 	}
 
 	public void updateOrganization(Organization organization) {

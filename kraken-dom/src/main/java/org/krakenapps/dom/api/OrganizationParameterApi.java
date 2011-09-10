@@ -24,11 +24,7 @@ public interface OrganizationParameterApi {
 
 	OrganizationParameter getOrganizationParameter(int orgId, String name);
 
-	OrganizationParameter getOrganizationParameter(int orgId, int organizationParameterId);
+	void setOrganizationParameter(int orgId, String name, String value);
 
-	void createOrganizationParameter(int orgId, OrganizationParameter orgParameter);
-
-	void updateOrganizationParameter(int orgId, OrganizationParameter orgParameter);
-
-	void removeOrganizationParameter(int orgId, int orgParameterId);
+	void unsetOrganizationParameter(int orgId, String name);
 }
