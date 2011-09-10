@@ -24,8 +24,8 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
-import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationParameterApi;
+import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
@@ -36,9 +36,6 @@ import org.krakenapps.jpa.handler.Transactional;
 @JpaConfig(factory = "dom")
 public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParameter> implements
 		OrganizationParameterApi {
-	@Requires
-	private OrganizationApi orgApi;
-
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
@@ -80,11 +77,11 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 	private OrganizationParameter setOrganizationParameterInternal(int orgId, String name, String value) {
 		OrganizationParameter orgParameter = getOrganizationParameter(orgId, name);
 		if (orgParameter == null) {
+			EntityManager em = entityManagerService.getEntityManager();
 			orgParameter = new OrganizationParameter();
-			orgParameter.setOrganization(orgApi.getOrganization(orgId));
+			orgParameter.setOrganization(em.find(Organization.class, orgId));
 			orgParameter.setName(name);
 			orgParameter.setValue(value);
-			EntityManager em = entityManagerService.getEntityManager();
 			em.persist(orgParameter);
 		} else {
 			if (orgParameter.getOrganization().getId() != orgId)
