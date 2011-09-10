@@ -94,6 +94,7 @@ public class LoginPlugin {
 		req.getSession().setProperty("lang", lang);
 
 		resp.put("nonce", nonce);
+		resp.put("session_id", req.getSession().getId());
 		resp.put("message", "login please.");
 
 		EntityManager em = entityManagerService.getEntityManager();
