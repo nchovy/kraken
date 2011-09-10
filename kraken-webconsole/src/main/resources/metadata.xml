@@ -15,6 +15,7 @@
 	<instance component="webconsole-bundle-resource-servlet" />
 	<instance component="webconsole-file-resource-servlet" />
 	<instance component="webconsole-file-upload-servlet" />
+	<instance component="webconsole-keydist-servlet" />
 	<instance component="slpolicy-server" />
 	<instance component="slpolicy-script-factory" />
 </ipojo>
