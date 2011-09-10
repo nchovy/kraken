@@ -15,20 +15,18 @@
  */
 package org.krakenapps.dom.exception;
 
-import org.krakenapps.msgbus.MsgbusException;
-
-public class AdminNotFoundException extends MsgbusException {
+public class AdminNotFoundException extends LoginFailedException {
 	private static final long serialVersionUID = 1L;
 	private int userId;
 	private String nick;
 
 	public AdminNotFoundException(String nick) {
-		super("dom", "admin-not-found");
+		super("admin-not-found");
 		this.nick = nick;
 	}
 
 	public AdminNotFoundException(int userId) {
-		super("dom", "admin-not-found");
+		super("admin-not-found");
 		this.userId = userId;
 	}
 

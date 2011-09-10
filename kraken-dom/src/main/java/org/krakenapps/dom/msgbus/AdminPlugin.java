@@ -15,7 +15,10 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -152,20 +155,40 @@ public class AdminPlugin {
 		resp.put("permissions", Marshaler.marshal(permissions));
 	}
 
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void checkPermissions(Request req, Response resp) {
+		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
+		List<Map<String, String>> permissions = (List<Map<String, String>>) req.get("permissions");
+		List<Map<String, String>> result = new ArrayList<Map<String, String>>();
+		for (Map<String, String> perm : permissions) {
+			String group = perm.get("group");
+			String permission = perm.get("permission");
+			if (hasPermission(admin, group, permission)) {
+				Map<String, String> m = new HashMap<String, String>();
+				m.put(group, permission);
+				result.add(m);
+			}
+		}
+		resp.put("result", result);
+	}
+
 	@MsgbusMethod
 	public void hasPermission(Request req, Response resp) {
+		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
 		String group = req.getString("group");
 		String perm = req.getString("permission");
-		boolean result = false;
 
-		Admin admin = adminApi.getAdmin(req.getOrgId(), req.getAdminId());
+		resp.put("result", hasPermission(admin, group, perm));
+	}
+
+	private boolean hasPermission(Admin admin, String group, String permission) {
 		Set<Permission> permissions = admin.getRole().getPermissions();
-		for (Permission permission : permissions) {
-			if (group.equals(permission.getPermissionGroup()) && perm.equals(permission.getPermission()))
-				result = true;
+		for (Permission perm : permissions) {
+			if (group.equals(perm.getPermissionGroup()) && permission.equals(perm.getPermission()))
+				return true;
 		}
-
-		resp.put("result", result);
+		return false;
 	}
 
 	@MsgbusMethod

@@ -16,9 +16,11 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
@@ -31,15 +33,18 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.LoginCallback;
+import org.krakenapps.dom.api.OrganizationParameterApi;
 import org.krakenapps.dom.api.OtpApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.exception.AdminLockedException;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
 import org.krakenapps.dom.exception.InvalidPasswordException;
+import org.krakenapps.dom.exception.LoginFailedException;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
@@ -53,10 +58,14 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
+	@Requires
+	private OrganizationParameterApi orgParamApi;
+
 	@Requires(optional = true, nullable = false)
 	private OtpApi otpApi;
 
 	private Set<LoginCallback> callbacks = new HashSet<LoginCallback>();
+	private PriorityQueue<LoggedInAdmin> loggedIn = new PriorityQueue<LoggedInAdmin>(11, new LoggedInAdminComparator());
 
 	@Override
 	public String getName() {
@@ -75,23 +84,101 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			password = admin.getUser().getPassword();
 
 		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
+			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization()
+					.getId(), "max_sessions");
+			if (param != null) {
+				try {
+					int maxSessions = Integer.parseInt(param.getValue());
+					if (maxSessions > 0) {
+						while (loggedIn.size() >= maxSessions) {
+							if (loggedIn.peek().level > admin.getRole().getLevel())
+								throw new LoginFailedException("too many sessions");
+							loggedIn.poll().session.close();
+						}
+					}
+				} catch (NumberFormatException e) {
+				}
+			}
+
 			updateLoginFailures(admin, true);
 			for (LoginCallback callback : callbacks)
-				callback.onLoginSuccessCallback(admin, session);
+				callback.onLoginSuccess(admin, session);
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session));
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
 			for (LoginCallback callback : callbacks)
-				callback.onLoginFailedCallback(admin, session);
+				callback.onLoginFailed(admin, session);
 			throw new InvalidPasswordException();
+		}
+	}
+
+	private class LoggedInAdmin {
+		private int level;
+		private Date loginTime;
+		private Session session;
+
+		private LoggedInAdmin(Session session) {
+			this.session = session;
+		}
+
+		private LoggedInAdmin(int level, Date loginTime, Session session) {
+			this.level = level;
+			this.loginTime = loginTime;
+			this.session = session;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((session == null) ? 0 : session.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			LoggedInAdmin other = (LoggedInAdmin) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (session == null) {
+				if (other.session != null)
+					return false;
+			} else if (!session.equals(other.session))
+				return false;
+			return true;
+		}
+
+		private AdminApiImpl getOuterType() {
+			return AdminApiImpl.this;
+		}
+	}
+
+	private class LoggedInAdminComparator implements Comparator<LoggedInAdmin> {
+		@Override
+		public int compare(LoggedInAdmin o1, LoggedInAdmin o2) {
+			if (o1.level != o2.level)
+				return o1.level - o2.level;
+			else
+				return o1.loginTime.compareTo(o2.loginTime);
 		}
 	}
 
 	@Override
 	public void logout(Session session) {
-		Admin admin = getAdmin(session.getOrgId(), session.getAdminId());
-		for (LoginCallback callback : callbacks)
-			callback.onLogout(admin, session);
+		if (session.getOrgId() != null) {
+			Admin admin = getAdmin(session.getOrgId(), session.getAdminId());
+			loggedIn.remove(new LoggedInAdmin(session));
+			for (LoginCallback callback : callbacks)
+				callback.onLogout(admin, session);
+		}
 	}
 
 	@Override
@@ -134,7 +221,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 				c.add(Calendar.SECOND, -10);
 				if (failed != null && failed.after(c.getTime())) {
 					for (LoginCallback callback : callbacks)
-						callback.onLoginLockedCallback(admin, session);
+						callback.onLoginLocked(admin, session);
 					throw new AdminLockedException();
 				} else
 					updateLoginFailures(admin, true);

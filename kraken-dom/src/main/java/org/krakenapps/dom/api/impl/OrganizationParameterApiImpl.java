@@ -80,7 +80,8 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 
 	@Transactional
 	private void createOrganizationParameterInternal(int orgId, OrganizationParameter orgParameter) {
-		// TODO: check orgId
+		if (orgParameter.getOrganization().getId() != orgId)
+			throw new IllegalArgumentException("invalid organization");
 		EntityManager em = entityManagerService.getEntityManager();
 		em.persist(orgParameter);
 	}

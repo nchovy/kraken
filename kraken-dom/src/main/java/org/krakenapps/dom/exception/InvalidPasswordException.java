@@ -15,12 +15,10 @@
  */
 package org.krakenapps.dom.exception;
 
-import org.krakenapps.msgbus.MsgbusException;
-
-public class InvalidPasswordException extends MsgbusException {
+public class InvalidPasswordException extends LoginFailedException {
 	private static final long serialVersionUID = 1L;
 
 	public InvalidPasswordException() {
-		super("dom", "invalid-password");
+		super("invalid-password");
 	}
 }

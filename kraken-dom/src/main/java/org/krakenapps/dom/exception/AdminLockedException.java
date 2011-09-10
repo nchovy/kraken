@@ -15,12 +15,10 @@
  */
 package org.krakenapps.dom.exception;
 
-import org.krakenapps.msgbus.MsgbusException;
-
-public class AdminLockedException extends MsgbusException {
+public class AdminLockedException extends LoginFailedException {
 	private static final long serialVersionUID = 1L;
 
 	public AdminLockedException() {
-		super("dom", "admin-locked");
+		super("admin-locked");
 	}
 }
