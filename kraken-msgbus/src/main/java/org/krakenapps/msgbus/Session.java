@@ -15,6 +15,8 @@ public interface Session {
 	InetAddress getRemoteAddress();
 
 	Locale getLocale();
+	
+	boolean has(String key);
 
 	Object get(String key);
 
