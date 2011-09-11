@@ -25,6 +25,8 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.exception.InvalidPasswordException;
 import org.krakenapps.dom.exception.AdminNotFoundException;
+import org.krakenapps.dom.exception.LoginFailedException;
+import org.krakenapps.dom.exception.MaxSessionException;
 import org.krakenapps.dom.model.GlobalParameter;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
@@ -59,20 +61,38 @@ public class LoginPlugin {
 		String nick = req.getString("nick");
 		String hash = req.getString("hash");
 		String nonce = (String) session.get("nonce");
+		boolean force = req.has("force") ? req.getBoolean("force") : false;
 
 		logger.info("watchcat login plugin: login attempt nick [{}] hash [{}] nonce [{}]", new Object[] { nick, hash,
 				nonce });
 
-		Admin admin = adminApi.login(session, nick, hash);
-		resp.put("result", "success");
-		resp.put("use_idle_timeout", admin.isUseIdleTimeout());
-		if (admin.isUseIdleTimeout())
-			resp.put("idle_timeout", admin.getIdleTimeout());
+		try {
+			Admin admin = adminApi.login(session, nick, hash, force);
 
-		session.unsetProperty("nonce");
-		session.setProperty("org_id", admin.getUser().getOrganization().getId());
-		session.setProperty("admin_id", admin.getId());
-		session.setProperty("locale", admin.getLang());
+			resp.put("result", "success");
+			resp.put("use_idle_timeout", admin.isUseIdleTimeout());
+			if (admin.isUseIdleTimeout())
+				resp.put("idle_timeout", admin.getIdleTimeout());
+
+			session.unsetProperty("nonce");
+			session.setProperty("org_id", admin.getUser().getOrganization().getId());
+			session.setProperty("admin_id", admin.getId());
+			session.setProperty("locale", admin.getLang());
+		} catch (MaxSessionException e) {
+			resp.put("result", e.getErrorCode());
+			String loginName = null;
+			if (e.getAdminId() != null) {
+				Admin admin = adminApi.getAdmin(req.getOrgId(), e.getAdminId());
+				loginName = admin.getUser().getLoginName();
+			}
+			resp.put("login_name", loginName);
+			String ip = null;
+			if (e.getSession() != null)
+				ip = e.getSession().getRemoteAddress().getHostAddress();
+			resp.put("ip", ip);
+		} catch (LoginFailedException e) {
+			resp.put("result", e.getErrorCode());
+		}
 	}
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)

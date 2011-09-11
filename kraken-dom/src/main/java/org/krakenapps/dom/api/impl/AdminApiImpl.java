@@ -40,6 +40,7 @@ import org.krakenapps.dom.exception.AdminLockedException;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
 import org.krakenapps.dom.exception.InvalidPasswordException;
 import org.krakenapps.dom.exception.LoginFailedException;
+import org.krakenapps.dom.exception.MaxSessionException;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.Organization;
@@ -73,8 +74,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Override
-	public Admin login(Session session, String nick, String hash) throws AdminNotFoundException,
-			InvalidPasswordException {
+	public Admin login(Session session, String nick, String hash, boolean force) throws LoginFailedException {
 		Admin admin = getAdmin(nick, session);
 		String password = null;
 
@@ -90,10 +90,15 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 				try {
 					int maxSessions = Integer.parseInt(param.getValue());
 					if (maxSessions > 0) {
-						while (loggedIn.size() >= maxSessions) {
-							if (loggedIn.peek().level > admin.getRole().getLevel())
-								throw new LoginFailedException("too many sessions");
-							loggedIn.poll().session.close();
+						if (force) {
+							while (loggedIn.size() >= maxSessions) {
+								if (loggedIn.peek().level > admin.getRole().getLevel())
+									throw new MaxSessionException();
+								loggedIn.poll().session.close();
+							}
+						} else if (loggedIn.size() >= maxSessions) {
+							Session peek = loggedIn.peek().session;
+							throw new MaxSessionException(peek.getAdminId(), peek);
 						}
 					}
 				} catch (NumberFormatException e) {
