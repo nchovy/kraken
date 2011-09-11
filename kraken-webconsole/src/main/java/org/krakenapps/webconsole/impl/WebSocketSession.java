@@ -70,6 +70,11 @@ public class WebSocketSession implements Session {
 		return ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
 	}
 
+	@Override
+	public boolean has(String key) {
+		return params.containsKey(key);
+	}
+
 	public Object get(String key) {
 		return params.get(key);
 	}
@@ -91,7 +96,7 @@ public class WebSocketSession implements Session {
 	}
 
 	public void send(Message msg) {
-		String payload = KrakenMessageEncoder.encode(msg);
+		String payload = KrakenMessageEncoder.encode(this, msg);
 		if (logger.isDebugEnabled())
 			logger.debug("kraken webconsole: sending [{}]", payload);
 

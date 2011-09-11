@@ -16,16 +16,25 @@
 package org.krakenapps.webconsole.impl;
 
 import java.io.StringReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.base64.Base64;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.krakenapps.msgbus.Message;
+import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +42,40 @@ public class KrakenMessageDecoder {
 	private KrakenMessageDecoder() {
 	}
 
-	public static Message decode(String text) {
+	public static Message decode(Session session, String text) {
+		Logger logger = LoggerFactory.getLogger(KrakenMessageDecoder.class.getName());
+		Charset utf8 = Charset.forName("utf-8");
+
+		// decrypt if msg is encrypted
+		if (session.has("enc_key")) {
+			try {
+				JSONTokener tokenizer = new JSONTokener(new StringReader(text));
+				JSONArray container = (JSONArray) tokenizer.nextValue();
+				JSONObject header = container.getJSONObject(0);
+				JSONObject body = container.getJSONObject(1);
+				
+				if (header.has("iv") && body.has("data")) {
+					String data = body.getString("data");
+					
+					byte[] iv = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(header.getString("iv").getBytes())));
+					byte[] buf = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(data.getBytes())));
+					byte[] key = ByteUtil.asByteArray(UUID.fromString(session.getString("enc_key")));
+					SecretKeySpec secret = new SecretKeySpec(key, "AES");
+
+					Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+					cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
+					byte[] plain = new byte[cipher.getOutputSize(buf.length)];
+					int plainLength = cipher.update(buf, 0, buf.length, plain, 0);
+					plainLength += cipher.doFinal(plain, plainLength);
+
+					text = new String(plain, 0, plainLength, utf8);
+					logger.trace("kraken webconsole: decrypted msg [{}]", text);
+				}
+			} catch (Exception e) {
+				logger.error("kraken webconsole: cannot decode encrypted msg [" + text + "]", e);
+			}
+		}
+
 		try {
 			JSONTokener tokenizer = new JSONTokener(new StringReader(text));
 			JSONArray container = (JSONArray) tokenizer.nextValue();
@@ -41,7 +83,7 @@ public class KrakenMessageDecoder {
 			JSONObject body = container.getJSONObject(1);
 
 			Message msg = new Message();
-			
+
 			msg.setGuid(header.getString("guid").trim());
 			msg.setType(Message.Type.valueOf(header.getString("type").trim()));
 			msg.setSource(header.getString("source"));
@@ -51,11 +93,11 @@ public class KrakenMessageDecoder {
 
 			return msg;
 		} catch (JSONException e) {
-			Logger logger = LoggerFactory.getLogger(KrakenMessageDecoder.class.getName());
 			logger.error("kraken webconsole: invalid json => " + text, e);
 		}
 		return null;
 	}
+
 
 	private static Map<String, Object> parse(JSONObject obj) {
 		Map<String, Object> m = new HashMap<String, Object>();

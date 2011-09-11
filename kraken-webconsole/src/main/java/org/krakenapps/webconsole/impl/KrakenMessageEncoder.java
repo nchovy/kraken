@@ -16,15 +16,26 @@
 package org.krakenapps.webconsole.impl;
 
 import java.io.StringWriter;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.base64.Base64;
 import org.json.JSONWriter;
 import org.krakenapps.msgbus.Message;
+import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +45,7 @@ public class KrakenMessageEncoder {
 	private KrakenMessageEncoder() {
 	}
 
-	public static String encode(Message msg) {
+	public static String encode(Session session, Message msg) {
 		Map<String, Object> headers = new HashMap<String, Object>();
 		headers.put("guid", msg.getGuid());
 		if (msg.getRequestId() != null)
@@ -51,7 +62,45 @@ public class KrakenMessageEncoder {
 			headers.put("errorMessage", msg.getErrorMessage());
 		}
 
-		return jsonize(headers, msg.getParameters());
+		String json = jsonize(headers, msg.getParameters());
+
+		// encrypt if session has encrypt key
+		if (session.has("enc_key")) {
+			try {
+				Charset utf8 = Charset.forName("utf-8");
+				byte[] iv = generateIv();
+				byte[] key = ByteUtil.asByteArray(UUID.fromString(session.getString("enc_key")));
+				SecretKeySpec secret = new SecretKeySpec(key, "AES");
+
+				Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+				cipher.init(Cipher.ENCRYPT_MODE, secret, new IvParameterSpec(iv));
+				byte[] encrypted = cipher.doFinal(json.getBytes(utf8));
+
+				Map<String, Object> encHeaders = new HashMap<String, Object>();
+				encHeaders.put("iv", toBase64(iv));
+				
+				Map<String, Object> encData = new HashMap<String, Object>();
+				encData.put("data", toBase64(encrypted));
+				
+				json = jsonize(encHeaders, encData);
+			} catch (Exception e) {
+				logger.error("kraken webconsole: cannot encrypt msg", e);
+			}
+		}
+
+		return json;
+	}
+
+	private static String toBase64(byte[] b) {
+		ChannelBuffer buf = Base64.encode(ChannelBuffers.wrappedBuffer(b));
+		return new String(buf.array(), 0, buf.readableBytes());
+	}
+
+	private static byte[] generateIv() {
+		Random r = new Random();
+		byte[] b = new byte[16];
+		r.nextBytes(b);
+		return b;
 	}
 
 	private static String jsonize(Map<String, Object> headers, Map<String, Object> properties) {

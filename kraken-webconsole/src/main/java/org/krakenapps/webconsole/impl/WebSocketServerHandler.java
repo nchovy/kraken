@@ -20,7 +20,6 @@ import java.nio.channels.ClosedChannelException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -160,7 +159,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 			return;
 		}
 
-		Message msg = KrakenMessageDecoder.decode(frame.getTextData());
+		Message msg = KrakenMessageDecoder.decode(session, frame.getTextData());
 		if (msg != null)
 			msgbus.dispatch(session, msg);
 	}
