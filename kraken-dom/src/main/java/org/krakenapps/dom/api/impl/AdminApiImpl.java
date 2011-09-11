@@ -97,8 +97,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 								loggedIn.poll().session.close();
 							}
 						} else if (loggedIn.size() >= maxSessions) {
-							Session peek = loggedIn.peek().session;
-							throw new MaxSessionException(peek.getAdminId(), peek);
+							LoggedInAdmin peek = loggedIn.peek();
+							throw new MaxSessionException(peek.loginName, peek.session);
 						}
 					}
 				} catch (NumberFormatException e) {
@@ -108,7 +108,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			updateLoginFailures(admin, true);
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
-			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session));
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
+					.getLoginName()));
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
@@ -122,15 +123,17 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		private int level;
 		private Date loginTime;
 		private Session session;
+		private String loginName;
 
 		private LoggedInAdmin(Session session) {
 			this.session = session;
 		}
 
-		private LoggedInAdmin(int level, Date loginTime, Session session) {
+		private LoggedInAdmin(int level, Date loginTime, Session session, String loginName) {
 			this.level = level;
 			this.loginTime = loginTime;
 			this.session = session;
+			this.loginName = loginName;
 		}
 
 		@Override
@@ -217,9 +220,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Transactional
 	private Admin getAdmin(String nick, Session session) {
 		try {
-			EntityManager em = entityManagerService.getEntityManager();
-			Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
-					.setParameter(1, nick).getSingleResult();
+			Admin admin = getAdminByLoginName(nick);
 			if (!admin.isEnabled()) {
 				Date failed = admin.getLastLoginFailedDateTime();
 				Calendar c = Calendar.getInstance();
@@ -231,8 +232,9 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 				} else
 					updateLoginFailures(admin, true);
 			}
-
 			admin.setLastLoginDateTime(new Date());
+
+			EntityManager em = entityManagerService.getEntityManager();
 			em.merge(admin);
 			return admin;
 		} catch (NoResultException e) {
@@ -276,6 +278,15 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		if (admin == null || admin.getUser().getOrganization().getId() != organizationId)
 			return null;
 
+		return admin;
+	}
+
+	@Transactional
+	@Override
+	public Admin getAdminByLoginName(String loginName) {
+		EntityManager em = entityManagerService.getEntityManager();
+		Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
+				.setParameter(1, loginName).getSingleResult();
 		return admin;
 	}
 

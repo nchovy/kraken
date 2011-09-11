@@ -81,8 +81,8 @@ public class LoginPlugin {
 		} catch (MaxSessionException e) {
 			resp.put("result", e.getErrorCode());
 			String loginName = null;
-			if (e.getAdminId() != null) {
-				Admin admin = adminApi.getAdmin(req.getOrgId(), e.getAdminId());
+			if (e.getLoginName() != null) {
+				Admin admin = adminApi.getAdminByLoginName(e.getLoginName());
 				loginName = admin.getUser().getLoginName();
 			}
 			resp.put("login_name", loginName);
