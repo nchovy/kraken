@@ -68,7 +68,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	private final File home = getCARootDir();
 	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
 			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
-	
+
 	public File getCARootDir() {
 		return new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
 	}
@@ -163,7 +163,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		}
 
 	}
-	
+
 	private BigInteger getSerial(X509Certificate cert) {
 		String caCN = cert.getSubjectX500Principal().getName();
 		caCN = caCN.substring(caCN.indexOf("CN=") + 3);
@@ -231,27 +231,43 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 		for (File f : home.listFiles()) {
 			if (f.isDirectory()) {
-				File caFile = new File(f, "CA.jks");
-				FileInputStream fs = null;
-				try {
-					fs = new FileInputStream(caFile);
-					KeyStore store = KeyStore.getInstance("JKS");
-					store.load(fs, null);
-					X509Certificate cert = (X509Certificate) store.getCertificate("ca");
+				X509Certificate cert = loadRootCert(f);
+				if (cert != null)
 					certs.add(cert);
-				} catch (Exception e) {
-					logger.error("kraken ca: keystore error", e);
-				} finally {
-					if (fs != null)
-						try {
-							fs.close();
-						} catch (IOException e) {
-						}
-				}
 			}
 		}
 
 		return certs;
+	}
+
+	@Override
+	public X509Certificate getRootCertificate(String caCommonName) {
+		File caDir = new File(home, caCommonName);
+		if (!caDir.exists() || !caDir.isDirectory())
+			return null;
+
+		return loadRootCert(caDir);
+	}
+
+	private X509Certificate loadRootCert(File caDir) {
+		File caFile = new File(caDir, "CA.jks");
+		FileInputStream fs = null;
+		try {
+			fs = new FileInputStream(caFile);
+			KeyStore store = KeyStore.getInstance("JKS");
+			store.load(fs, null);
+			return (X509Certificate) store.getCertificate("ca");
+		} catch (Exception e) {
+			logger.error("kraken ca: keystore error", e);
+		} finally {
+			if (fs != null)
+				try {
+					fs.close();
+				} catch (IOException e) {
+				}
+		}
+
+		return null;
 	}
 
 	@Override

@@ -36,6 +36,8 @@ public interface CertificateAuthority {
 			throws Exception;
 
 	Collection<X509Certificate> getRootCertificates();
+	
+	X509Certificate getRootCertificate(String caCommonName);
 
 	Collection<String> getCertificates(String caCommonName);
 
