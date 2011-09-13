@@ -278,6 +278,9 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		if (admin == null || admin.getUser().getOrganization().getId() != organizationId)
 			return null;
 
+		// enforce lazy loading
+		admin.getRole().getPermissions().size();
+
 		return admin;
 	}
 
