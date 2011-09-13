@@ -147,8 +147,8 @@ public class InitialSchema {
 	public static Role createRoles(EntityManager em) {
 		Role master = createRole(em, "master", 4);
 		Permission permission = new Permission();
-		permission.setPermissionGroup("dom.org");
-		permission.setPermission("manage");
+		permission.setPermissionGroup("dom");
+		permission.setPermission("admin_grant");
 		em.persist(permission);
 		master.getPermissions().add(permission);
 		em.merge(master);

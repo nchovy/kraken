@@ -41,6 +41,7 @@ import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
+import org.krakenapps.msgbus.handler.MsgbusPermission;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 
 @Component(name = "dom-admin-plugin")
@@ -82,6 +83,7 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void createAdmin(Request req, Response resp) {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
@@ -106,6 +108,7 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void setUserToAdmin(Request req, Response resp) {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
@@ -123,6 +126,7 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void updateAdmin(Request req, Response resp) {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
@@ -140,6 +144,7 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void unsetAdmin(Request req, Response resp) {
 		if (req.getAdminId() == null)
 			throw new SecurityException("not admin");
