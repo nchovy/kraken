@@ -208,13 +208,13 @@ public class InitialSchema {
 
 	public static ProgramProfile createProgramProfile(EntityManager em, Organization org) {
 		try {
-			return (ProgramProfile) em.createQuery("FROM ProgramProfile p WHERE p.name = ?").setParameter(1, "master")
+			return (ProgramProfile) em.createQuery("FROM ProgramProfile p WHERE p.name = ?").setParameter(1, "all")
 					.getSingleResult();
 		} catch (NoResultException e) {
 		}
 
 		ProgramProfile pp = new ProgramProfile();
-		pp.setName("master");
+		pp.setName("all");
 		pp.setOrganization(org);
 		em.persist(pp);
 
