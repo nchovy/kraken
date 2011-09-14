@@ -91,11 +91,17 @@ public class Admin implements Marshalable {
 	@Column(name = "otp_seed")
 	private String otpSeed;
 
+	@Column(name = "use_acl")
+	private boolean useAcl;
+
 	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
 	private List<Widget> widgets = new ArrayList<Widget>();
 
 	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
 	private List<AdminSetting> settings = new ArrayList<AdminSetting>();
+
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
+	private List<AdminTrustHost> trustHosts = new ArrayList<AdminTrustHost>();
 
 	public int getId() {
 		return id;
@@ -225,6 +231,14 @@ public class Admin implements Marshalable {
 		this.otpSeed = otpSeed;
 	}
 
+	public boolean isUseAcl() {
+		return useAcl;
+	}
+
+	public void setUseAcl(boolean useAcl) {
+		this.useAcl = useAcl;
+	}
+
 	public List<Widget> getWidgets() {
 		return widgets;
 	}
@@ -241,6 +255,14 @@ public class Admin implements Marshalable {
 		this.settings = settings;
 	}
 
+	public List<AdminTrustHost> getTrustHosts() {
+		return trustHosts;
+	}
+
+	public void setTrustHosts(List<AdminTrustHost> trustHosts) {
+		this.trustHosts = trustHosts;
+	}
+
 	public void validate() throws IllegalArgumentException {
 		if (role == null)
 			throw new IllegalArgumentException("role");
@@ -248,6 +270,10 @@ public class Admin implements Marshalable {
 
 	@Override
 	public Map<String, Object> marshal() {
+		List<String> acl = new ArrayList<String>();
+		for (AdminTrustHost h : trustHosts)
+			acl.add(h.getIp());
+		
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("id", id);
 		m.put("user_id", user.getId());
@@ -265,6 +291,8 @@ public class Admin implements Marshalable {
 		m.put("is_enabled", isEnabled);
 		m.put("use_otp", useOtp);
 		m.put("otp_seed", otpSeed);
+		m.put("use_acl", useAcl);
+		m.put("acl", acl);
 		return m;
 	}
 }

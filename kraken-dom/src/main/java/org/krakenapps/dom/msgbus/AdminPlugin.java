@@ -32,6 +32,7 @@ import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.exception.ProgramProfileNotFoundException;
 import org.krakenapps.dom.exception.RoleNotFoundException;
+import org.krakenapps.dom.model.AdminTrustHost;
 import org.krakenapps.dom.model.Permission;
 import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.Role;
@@ -213,6 +214,7 @@ public class AdminPlugin {
 		resp.put("otp_seed", admin.getOtpSeed());
 	}
 
+	@SuppressWarnings("unchecked")
 	private Admin toAdmin(Request req) throws RoleNotFoundException {
 		Admin admin = new Admin();
 
@@ -235,9 +237,21 @@ public class AdminPlugin {
 		admin.setIdleTimeout(req.getInteger("idle_timeout"));
 		admin.setEnabled(req.getBoolean("is_enabled"));
 		admin.setUseOtp(req.getBoolean("use_otp"));
+		admin.setUseAcl(req.getBoolean("use_acl"));
+		admin.setTrustHosts(parseAcl((List<String>) req.get("acl")));
 
 		admin.validate();
 		return admin;
+	}
+
+	private List<AdminTrustHost> parseAcl(List<String> acl) {
+		List<AdminTrustHost> hosts = new ArrayList<AdminTrustHost>();
+		for (String ip : acl) {
+			AdminTrustHost h = new AdminTrustHost();
+			h.setIp(ip);
+			hosts.add(h);
+		}
+		return hosts;
 	}
 
 	private static final char[] chars = new char[62];

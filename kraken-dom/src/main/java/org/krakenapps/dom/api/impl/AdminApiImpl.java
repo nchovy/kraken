@@ -44,6 +44,7 @@ import org.krakenapps.dom.exception.LoginFailedException;
 import org.krakenapps.dom.exception.MaxSessionException;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.exception.AdminNotFoundException;
+import org.krakenapps.dom.model.AdminTrustHost;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.OrganizationParameter;
@@ -85,8 +86,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			password = admin.getUser().getPassword();
 
 		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
-			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization()
-					.getId(), "max_sessions");
+			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
+					"max_sessions");
 			if (param != null) {
 				try {
 					int maxSessions = Integer.parseInt(param.getValue());
@@ -109,8 +110,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			updateLoginFailures(admin, true);
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
-			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
-					.getLoginName()));
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser().getLoginName()));
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
@@ -272,6 +272,12 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			admin.setOtpSeed(createOtpSeed());
 
 		em.persist(admin);
+
+		// add acl
+		for (AdminTrustHost host : admin.getTrustHosts()) {
+			host.setAdmin(admin);
+			em.persist(host);
+		}
 	}
 
 	@Transactional
@@ -303,9 +309,13 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		EntityManager em = entityManagerService.getEntityManager();
 
 		try {
-			return (Admin) em
+			Admin admin = (Admin) em
 					.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.organization.id = ? AND u.id = ?")
 					.setParameter(1, organizationId).setParameter(2, userId).getSingleResult();
+
+			admin.getTrustHosts().size();
+
+			return admin;
 		} catch (NoResultException e) {
 			return null;
 		}
@@ -414,10 +424,21 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			} else
 				admin.setOtpSeed(null);
 
+			admin.setUseAcl(targetAdmin.isUseAcl());
+
 			if (!admin.isEnabled() && targetAdmin.isEnabled())
 				admin.setLoginFailures(0);
 
 			admin.setEnabled(targetAdmin.isEnabled());
+
+			// reset acl
+			for (AdminTrustHost h : admin.getTrustHosts())
+				em.remove(h);
+
+			for (AdminTrustHost h : targetAdmin.getTrustHosts()) {
+				h.setAdmin(admin);
+				em.persist(h);
+			}
 
 			em.merge(admin);
 
