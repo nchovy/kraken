@@ -38,6 +38,7 @@ import org.krakenapps.dom.api.OtpApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.exception.AdminLockedException;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
+import org.krakenapps.dom.exception.InvalidOtpPasswordException;
 import org.krakenapps.dom.exception.InvalidPasswordException;
 import org.krakenapps.dom.exception.LoginFailedException;
 import org.krakenapps.dom.exception.MaxSessionException;
@@ -115,7 +116,10 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			updateLoginFailures(admin, false);
 			for (LoginCallback callback : callbacks)
 				callback.onLoginFailed(admin, session);
-			throw new InvalidPasswordException();
+			if (admin.isUseOtp())
+				throw new InvalidOtpPasswordException();
+			else
+				throw new InvalidPasswordException();
 		}
 	}
 
