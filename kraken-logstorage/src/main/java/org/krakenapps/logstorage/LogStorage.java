@@ -52,6 +52,10 @@ public interface LogStorage {
 
 	void setDiskLackAction(DiskLackAction action);
 
+	void registerDiskLackCallback(DiskLackCallback callback);
+
+	void unregisterDiskLackCallback(DiskLackCallback callback);
+
 	Log getLog(LogKey logKey);
 
 	Log getLog(String tableName, Date date, int id);

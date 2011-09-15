@@ -27,9 +27,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -41,6 +43,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.logstorage.DiskLackAction;
+import org.krakenapps.logstorage.DiskLackCallback;
 import org.krakenapps.logstorage.DiskSpaceType;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
@@ -88,6 +91,7 @@ public class LogStorageEngine implements LogStorage {
 	private DiskSpaceType minFreeSpaceType;
 	private int minFreeSpaceValue;
 	private DiskLackAction diskLackAction;
+	private Set<DiskLackCallback> diskLackCallbacks = new HashSet<DiskLackCallback>();
 
 	static {
 		logDir.mkdirs();
@@ -357,6 +361,16 @@ public class LogStorageEngine implements LogStorage {
 		this.diskLackAction = action;
 
 		ConfigUtil.set(prefsvc, Constants.DiskLackAction, action.toString());
+	}
+
+	@Override
+	public void registerDiskLackCallback(DiskLackCallback callback) {
+		diskLackCallbacks.add(callback);
+	}
+
+	@Override
+	public void unregisterDiskLackCallback(DiskLackCallback callback) {
+		diskLackCallbacks.remove(callback);
 	}
 
 	@Override
@@ -773,6 +787,9 @@ public class LogStorageEngine implements LogStorage {
 										sdf.format(lf.date));
 								lf.remove();
 							} while (isDiskLack());
+
+							for (DiskLackCallback callback : diskLackCallbacks)
+								callback.callback();
 						}
 					}
 
