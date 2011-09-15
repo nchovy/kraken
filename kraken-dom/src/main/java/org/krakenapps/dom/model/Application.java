@@ -69,7 +69,8 @@ public class Application implements Marshalable {
 	private List<ApplicationVersion> applicationVersions = new ArrayList<ApplicationVersion>();
 
 	@ManyToMany
-	@JoinTable(name = "dom_apps_to_groups", joinColumns = @JoinColumn(name = "app_id"), inverseJoinColumns = @JoinColumn(name = "group_id"))
+	@JoinTable(name = "dom_apps_to_groups", joinColumns = @JoinColumn(name = "app_id"),
+			inverseJoinColumns = @JoinColumn(name = "group_id"))
 	private Set<ApplicationGroup> applicationGroups = new HashSet<ApplicationGroup>();
 
 	public String getGuid() {
@@ -149,8 +150,8 @@ public class Application implements Marshalable {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("guid", guid);
-		m.put("vendor_guid", vendor.getGuid());
-		m.put("vendor_name", vendor.getName());
+		m.put("vendor_guid", vendor != null ? vendor.getGuid() : null);
+		m.put("vendor_name", vendor != null ? vendor.getName() : null);
 		m.put("name", name);
 		m.put("platform", platform);
 		m.put("created_at", dateFormat.format(createDateTime));
