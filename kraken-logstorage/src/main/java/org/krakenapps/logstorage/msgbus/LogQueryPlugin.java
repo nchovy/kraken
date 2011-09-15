@@ -239,41 +239,42 @@ public class LogQueryPlugin {
 			int[] values = new int[size];
 			Long beginTime = null;
 
-			if (!timeline.isEmpty()) {
-				if (spansIndex >= spans.length)
-					return;
+			if (timeline.isEmpty())
+				return;
 
-				long[] index = new long[size];
-				while (true) {
-					List<Long> keys = new ArrayList<Long>(timeline.keySet());
-					Collections.sort(keys, Collections.reverseOrder());
-					Calendar c = Calendar.getInstance();
-					c.setTimeInMillis(spans[spansIndex].getBaseTime(keys.get(0)));
-					for (int i = size - 1; i >= 0; i--) {
-						index[i] = c.getTimeInMillis();
-						c.add(spans[spansIndex].field, -spans[spansIndex].amount);
-					}
-					beginTime = index[0];
-					if (keys.get(keys.size() - 1) < beginTime) {
-						if (++spansIndex >= spans.length)
-							return;
-						continue;
-					}
+			if (spansIndex >= spans.length)
+				return;
 
-					int indexPos = size - 1;
-					for (Long key : keys) {
-						while (key < index[indexPos])
-							indexPos--;
-						values[indexPos] += timeline.get(key);
-					}
-
-					Map<Long, Integer> newTimeline = new HashMap<Long, Integer>();
-					for (int i = 0; i < size; i++)
-						newTimeline.put(index[i], values[i]);
-					timeline = newTimeline;
-
-					break;
+			long[] index = new long[size];
+			while (true) {
+				List<Long> keys = new ArrayList<Long>(timeline.keySet());
+				Collections.sort(keys, Collections.reverseOrder());
+				Calendar c = Calendar.getInstance();
+				c.setTimeInMillis(spans[spansIndex].getBaseTime(keys.get(0)));
+				for (int i = size - 1; i >= 0; i--) {
+					index[i] = c.getTimeInMillis();
+					c.add(spans[spansIndex].field, -spans[spansIndex].amount);
 				}
+				beginTime = index[0];
+				if (keys.get(keys.size() - 1) < beginTime) {
+					if (++spansIndex >= spans.length)
+						return;
+					continue;
+				}
+
+				int indexPos = size - 1;
+				for (Long key : keys) {
+					while (key < index[indexPos])
+						indexPos--;
+					values[indexPos] += timeline.get(key);
+				}
+
+				Map<Long, Integer> newTimeline = new HashMap<Long, Integer>();
+				for (int i = 0; i < size; i++)
+					newTimeline.put(index[i], values[i]);
+				timeline = newTimeline;
+
+				break;
 			}
 
 			Map<String, Object> m = new HashMap<String, Object>();
