@@ -63,7 +63,7 @@ public class LoginPlugin {
 		String nonce = (String) session.get("nonce");
 		boolean force = req.has("force") ? req.getBoolean("force") : false;
 
-		logger.info("watchcat login plugin: login attempt nick [{}] hash [{}] nonce [{}]", new Object[] { nick, hash,
+		logger.trace("watchcat login plugin: login attempt nick [{}] hash [{}] nonce [{}]", new Object[] { nick, hash,
 				nonce });
 
 		try {
