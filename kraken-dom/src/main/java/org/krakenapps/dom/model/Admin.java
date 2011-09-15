@@ -91,7 +91,7 @@ public class Admin implements Marshalable {
 	@Column(name = "otp_seed")
 	private String otpSeed;
 
-	@Column(name = "use_acl")
+	@Column(name = "use_acl", nullable = false)
 	private boolean useAcl;
 
 	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
@@ -273,7 +273,7 @@ public class Admin implements Marshalable {
 		List<String> acl = new ArrayList<String>();
 		for (AdminTrustHost h : trustHosts)
 			acl.add(h.getIp());
-		
+
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("id", id);
 		m.put("user_id", user.getId());
