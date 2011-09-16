@@ -36,6 +36,7 @@ import org.krakenapps.dom.api.LoginCallback;
 import org.krakenapps.dom.api.OrganizationParameterApi;
 import org.krakenapps.dom.api.OtpApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.exception.AccessControlException;
 import org.krakenapps.dom.exception.AdminLockedException;
 import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
 import org.krakenapps.dom.exception.InvalidOtpPasswordException;
@@ -78,16 +79,20 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Override
 	public Admin login(Session session, String nick, String hash, boolean force) throws LoginFailedException {
 		Admin admin = getAdmin(nick, session);
-		String password = null;
 
+		// check acl (trust host)
+		checkAcl(session, admin);
+
+		// check password
+		String password = null;
 		if (otpApi != null && admin.isUseOtp())
 			password = Sha1.hash(otpApi.getOtpValue(admin.getOtpSeed()));
 		else
 			password = admin.getUser().getPassword();
 
 		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
-			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization()
-					.getId(), "max_sessions");
+			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
+					"max_sessions");
 			if (param != null) {
 				try {
 					int maxSessions = Integer.parseInt(param.getValue());
@@ -110,8 +115,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			updateLoginFailures(admin, true);
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
-			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
-					.getLoginName()));
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser().getLoginName()));
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
@@ -121,6 +125,22 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 				throw new InvalidOtpPasswordException();
 			else
 				throw new InvalidPasswordException();
+		}
+	}
+
+	private void checkAcl(Session session, Admin admin) {
+		if (admin.isUseAcl()) {
+			boolean found = false;
+			String remote = session.getRemoteAddress().getHostAddress();
+
+			for (AdminTrustHost h : admin.getTrustHosts())
+				if (h.getIp() != null && h.getIp().equals(remote))
+					found = true;
+
+			if (!found) {
+				updateLoginFailures(admin, false);
+				throw new AccessControlException();
+			}
 		}
 	}
 
