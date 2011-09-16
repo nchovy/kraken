@@ -105,7 +105,7 @@ public class ServletRegistryImpl implements ServletRegistry {
 			HttpServlet servlet = directoryMap.get(servletPath + "/context");
 
 			String pathInfo = req.getUri().substring(servletPath.length());
-			if (pathInfo.endsWith("/")) {
+			if (pathInfo.isEmpty() || pathInfo.endsWith("/")) {
 				pathInfo += "index.html";
 			}
 
