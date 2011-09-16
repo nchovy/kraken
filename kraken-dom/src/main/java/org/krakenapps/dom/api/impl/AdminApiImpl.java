@@ -86,8 +86,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			password = admin.getUser().getPassword();
 
 		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
-			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
-					"max_sessions");
+			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization()
+					.getId(), "max_sessions");
 			if (param != null) {
 				try {
 					int maxSessions = Integer.parseInt(param.getValue());
@@ -110,7 +110,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			updateLoginFailures(admin, true);
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
-			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser().getLoginName()));
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
+					.getLoginName()));
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
@@ -435,11 +436,12 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			for (AdminTrustHost h : admin.getTrustHosts())
 				em.remove(h);
 
+			admin.getTrustHosts().clear();
+
 			for (AdminTrustHost h : targetAdmin.getTrustHosts()) {
 				h.setAdmin(admin);
-				em.persist(h);
+				admin.getTrustHosts().add(h);
 			}
-
 			em.merge(admin);
 
 			return admin;
