@@ -204,7 +204,7 @@ public class AdminPlugin {
 
 		int userId = req.getInteger("user_id");
 
-		Admin admin = adminApi.getAdmin(req.getOrgId(), userId);
+		Admin admin = adminApi.getAdminByUser(req.getOrgId(), userId);
 		if (admin == null)
 			throw new IllegalArgumentException("admin not found");
 

@@ -37,7 +37,7 @@ public class Vendor implements Marshalable {
 	@Id
 	private String guid;
 
-	@Column(nullable = false, length = 60)
+	@Column(nullable = false, length = 60, unique = true)
 	private String name;
 
 	@Column(name = "created_at", nullable = false)
