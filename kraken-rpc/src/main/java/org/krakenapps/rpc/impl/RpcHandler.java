@@ -33,7 +33,6 @@ import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionEventListener;
 import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcContext;
-import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcExceptionEvent;
 import org.krakenapps.rpc.RpcMessage;
 import org.krakenapps.rpc.RpcPeerRegistry;
@@ -294,7 +293,7 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			msg.setSession(session);
 			String serviceName = session.getServiceName();
 			RpcServiceBinding binding = conn.findServiceBinding(serviceName);
-			if (binding == null) {
+			if (binding == null && (type.equals("rpc-call") || type.equals("rpc-post"))) {
 				int newId = conn.nextMessageId();
 				String cause = "service not found: " + serviceName;
 				RpcMessage error = RpcMessage.newException(newId, session.getId(), id, cause);
