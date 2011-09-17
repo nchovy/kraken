@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-ntp</artifactId>
-	<version>1.0.3</version>
+	<version>1.1.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken NTP Client</name>
 	<build>
@@ -62,6 +62,12 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-msgbus</artifactId>
 			<version>1.0.0</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-cron</artifactId>
+			<version>1.5.0</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>

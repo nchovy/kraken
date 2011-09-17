@@ -24,17 +24,17 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.ntp.NtpClient;
+import org.krakenapps.ntp.NtpSyncService;
 
 /**
  * @author delmitz
  */
 public class NtpScript implements Script {
 	private ScriptContext context;
-	private NtpClient ntpClient;
+	private NtpSyncService syncService;
 
-	public NtpScript(NtpClient ntpClient) {
-		this.ntpClient = ntpClient;
+	public NtpScript(NtpSyncService syncService) {
+		this.syncService = syncService;
 	}
 
 	@Override
@@ -48,13 +48,13 @@ public class NtpScript implements Script {
 		if (args.length > 0) {
 			try {
 				InetAddress server = InetAddress.getByName(args[0]);
-				ntpClient.setTimeServer(server);
+				syncService.setTimeServer(server);
 			} catch (UnknownHostException e) {
 				context.println("unknown host");
 			}
 		}
 
-		context.println(ntpClient.getTimeServer());
+		context.println(syncService.getTimeServer());
 	}
 
 	@ScriptUsage(description = "get/set connection timeout", arguments = { @ScriptArgument(name = "timeout limit",
@@ -62,16 +62,16 @@ public class NtpScript implements Script {
 	public void timeout(String[] args) {
 		if (args.length > 0) {
 			Integer millisecond = Integer.parseInt(args[0]);
-			ntpClient.setTimeout(millisecond);
+			syncService.setTimeout(millisecond);
 		}
 
-		context.println(ntpClient.getTimeout());
+		context.println(syncService.getTimeout());
 	}
 
 	public void sync(String[] args) {
-		Date result = ntpClient.sync();
+		Date result = syncService.getNtpClient().sync();
 		if (result != null)
-			context.printf("The time has been successfully synchronized with %s on %s\n", ntpClient.getTimeServer()
+			context.printf("The time has been successfully synchronized with %s on %s\n", syncService.getTimeServer()
 					.getHostName(), new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(result));
 		else
 			context.println("synchronized failed.");

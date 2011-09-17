@@ -29,7 +29,7 @@ import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
-import org.krakenapps.ntp.NtpClient;
+import org.krakenapps.ntp.NtpSyncService;
 
 /**
  * @author delmitz
@@ -38,7 +38,7 @@ import org.krakenapps.ntp.NtpClient;
 @MsgbusPlugin
 public class NtpPlugin {
 	@Requires
-	private NtpClient ntpClient;
+	private NtpSyncService syncService;
 
 	@MsgbusMethod
 	public void nowDate(Request req, Response resp) {
@@ -47,8 +47,8 @@ public class NtpPlugin {
 
 	@MsgbusMethod
 	public void getNtpClientConfig(Request req, Response resp) {
-		resp.put("time_server", ntpClient.getTimeServer().getHostName());
-		resp.put("timeout", ntpClient.getTimeout());
+		resp.put("time_server", syncService.getTimeServer().getHostName());
+		resp.put("timeout", syncService.getTimeout());
 	}
 
 	@MsgbusMethod
@@ -56,8 +56,8 @@ public class NtpPlugin {
 		String server = req.getString("time_server");
 		int timeout = req.getInteger("timeout");
 		try {
-			ntpClient.setTimeServer(InetAddress.getByName(server));
-			ntpClient.setTimeout(timeout);
+			syncService.setTimeServer(InetAddress.getByName(server));
+			syncService.setTimeout(timeout);
 		} catch (UnknownHostException e) {
 			throw new MsgbusException("ntp", "unknown host");
 		}
@@ -65,7 +65,7 @@ public class NtpPlugin {
 
 	@MsgbusMethod
 	public void sync(Request req, Response resp) {
-		resp.put("synced_time", ntpClient.sync());
+		resp.put("synced_time", syncService.getNtpClient().sync());
 	}
 
 	@MsgbusMethod
@@ -79,7 +79,7 @@ public class NtpPlugin {
 		String s = String.format("%d-%d-%d %d:%d:%d", year, month, day, hour, minute, second);
 		try {
 			Date d = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(s);
-			ntpClient.setSystemTime(d);
+			syncService.getNtpClient().setSystemTime(d);
 		} catch (ParseException e) {
 			throw new MsgbusException("ntp", "date parse exception");
 		} catch (IOException e) {

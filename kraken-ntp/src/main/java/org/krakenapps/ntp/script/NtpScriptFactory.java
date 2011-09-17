@@ -21,7 +21,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.ntp.NtpClient;
+import org.krakenapps.ntp.NtpSyncService;
 
 /**
  * @author delmitz
@@ -34,11 +34,11 @@ public class NtpScriptFactory implements ScriptFactory {
 	private String alias;
 
 	@Requires
-	private NtpClient ntpClient;
+	private NtpSyncService syncService;
 
 	@Override
 	public Script createScript() {
-		return new NtpScript(ntpClient);
+		return new NtpScript(syncService);
 	}
 
 }
