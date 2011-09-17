@@ -12,7 +12,7 @@
 	<artifactId>kraken-jpa</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken JPA</name>
-	<version>1.6.2</version>
+	<version>1.6.3</version>
 	<repositories>
 		<repository>
 			<id>jboss</id>
@@ -58,8 +58,7 @@
 							javax.transaction.*;version=2;-split-package:=merge-first,
 							org.dom4j.*;-split-package:=merge-first,
 							org.hibernate.*;-split-package:=merge-first,
-							javax.persistence.*;version=2.0.0;-split-package:=merge-first,
-							com.mchange.*;-split-package:=merge-first
+							javax.persistence.*;version=2.0.0;-split-package:=merge-first
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.jpa.impl;version=1.4.0,
@@ -145,16 +144,6 @@
 			<artifactId>com.springsource.javax.annotation
 			</artifactId>
 			<version>1.0.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.hibernate</groupId>
-			<artifactId>hibernate-c3p0</artifactId>
-			<version>3.6.7.Final</version>
-		</dependency>
-		<dependency>
-			<groupId>c3p0</groupId>
-			<artifactId>c3p0</artifactId>
-			<version>0.9.1.2</version>
 		</dependency>
 	</dependencies>
 </project>
