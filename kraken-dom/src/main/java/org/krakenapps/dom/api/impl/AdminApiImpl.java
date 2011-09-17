@@ -311,6 +311,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 		// enforce lazy loading
 		admin.getRole().getPermissions().size();
+		admin.getTrustHosts().size();
 
 		return admin;
 	}
@@ -321,6 +322,10 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		EntityManager em = entityManagerService.getEntityManager();
 		Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
 				.setParameter(1, loginName).getSingleResult();
+		
+		admin.getRole().getPermissions().size();
+		admin.getTrustHosts().size();
+		
 		return admin;
 	}
 
@@ -334,6 +339,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 					.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.organization.id = ? AND u.id = ?")
 					.setParameter(1, organizationId).setParameter(2, userId).getSingleResult();
 
+			admin.getRole().getPermissions().size();
 			admin.getTrustHosts().size();
 
 			return admin;
