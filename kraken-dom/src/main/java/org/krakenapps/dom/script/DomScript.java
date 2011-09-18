@@ -41,9 +41,9 @@ public class DomScript implements Script {
 					+ "?useUnicode=true&characterEncoding=utf8");
 			props.put("hibernate.connection.username", user);
 			props.put("hibernate.connection.password", password);
-			props.put("hibernate.is-connection-validation-required", "true");
-			props.put("hibernate.autoReconnect", "true");
-			props.put("hibernate.autoReconnectForPools", "true");
+			props.put("hibernate.connection.is-connection-validation-required", "true");
+			props.put("hibernate.connection.autoReconnect", "true");
+			props.put("hibernate.connection.autoReconnectForPools", "true");
 
 			jpa.registerEntityManagerFactory(FACTORY_NAME, props, bc.getBundle().getBundleId());
 		} catch (Exception e) {
