@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.linux.api;
 
 import java.io.BufferedReader;
@@ -11,7 +26,7 @@ import java.util.List;
 import org.krakenapps.linux.api.RoutingEntry.Flag;
 
 public class RoutingTable {
-	public static List<RoutingEntry> getRoutingEntries() {
+	public static List<RoutingEntry> getRoutingEntries() throws IOException {
 		List<RoutingEntry> entries = new ArrayList<RoutingEntry>();
 		java.lang.Process p = null;
 		BufferedReader br = null;
@@ -36,8 +51,7 @@ public class RoutingTable {
 					int ref = Integer.parseInt(tokens[5]);
 					int use = Integer.parseInt(tokens[6]);
 					String iface = tokens[7];
-					entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, null,
-							null, null));
+					entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, null, null, null));
 				} else if (tokens.length == 11) {
 					InetAddress destination = (!tokens[0].equals("default")) ? InetAddress.getByName(tokens[0]) : null;
 					InetAddress gateway = (!tokens[1].equals("*")) ? InetAddress.getByName(tokens[1]) : null;
@@ -50,27 +64,20 @@ public class RoutingTable {
 					int mss = Integer.parseInt(tokens[8]);
 					int window = Integer.parseInt(tokens[9]);
 					int irtt = Integer.parseInt(tokens[10]);
-					entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, mss,
-							window, irtt));
+					entries.add(new RoutingEntry(destination, gateway, genmask, flags, metric, ref, use, iface, mss, window, irtt));
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		} finally {
 			if (p != null)
 				p.destroy();
-			try {
-				if (br != null)
-					br.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			if (br != null)
+				br.close();
 		}
 
 		return entries;
 	}
 
-	public static List<RoutingEntryV6> getIpv6RoutingEntries() {
+	public static List<RoutingEntryV6> getIpv6RoutingEntries() throws IOException {
 		List<RoutingEntryV6> entries = new ArrayList<RoutingEntryV6>();
 		java.lang.Process p = null;
 		BufferedReader br = null;
@@ -105,17 +112,11 @@ public class RoutingTable {
 				String iface = tokens[6];
 				entries.add(new RoutingEntryV6(destination, nextHop, mask, flags, metric, ref, use, iface));
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		} finally {
 			if (p != null)
 				p.destroy();
-			try {
-				if (br != null)
-					br.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			if (br != null)
+				br.close();
 		}
 
 		return entries;
@@ -169,7 +170,7 @@ public class RoutingTable {
 		return Util.run(cmd);
 	}
 
-	public static RoutingEntry findRoute(InetAddress ip) {
+	public static RoutingEntry findRoute(InetAddress ip) throws IOException {
 		int target = toInt((Inet4Address) ip);
 
 		for (RoutingEntry entry : RoutingTable.getRoutingEntries()) {

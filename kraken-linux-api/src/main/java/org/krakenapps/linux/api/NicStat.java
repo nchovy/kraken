@@ -116,26 +116,29 @@ public class NicStat {
 	public static List<NicStat> getNicStats() throws IOException {
 		List<NicStat> stats = new ArrayList<NicStat>();
 		BufferedReader br = null;
-
-		br = new BufferedReader(new InputStreamReader(new FileInputStream(new File("/proc/net/dev"))));
-		br.readLine(); // ignore column name
-		br.readLine();
-		while (true) {
-			NicStat stat = new NicStat();
-			String line = br.readLine();
-			if (line == null)
-				break;
-
-			parse(stat, line);
-			stats.add(stat);
-		}
+		FileInputStream is = null;
 
 		try {
-			br.close();
-		} catch (IOException e) {
-		}
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(new File("/proc/net/dev"))));
+			br.readLine(); // ignore column name
+			br.readLine();
+			while (true) {
+				NicStat stat = new NicStat();
+				String line = br.readLine();
+				if (line == null)
+					break;
 
-		return stats;
+				parse(stat, line);
+				stats.add(stat);
+			}
+
+			return stats;
+		} finally {
+			if (is != null)
+				is.close();
+			if (br != null)
+				br.close();
+		}
 	}
 
 	private static void parse(NicStat stat, String line) {
@@ -168,11 +171,11 @@ public class NicStat {
 
 	@Override
 	public String toString() {
-		return "name=" + name + ", rxBytes=" + rxBytes + ", rxCompressed=" + rxCompressed + ", rxDrops="
-				+ rxDrops + ", rxErrors=" + rxErrors + ", rxFifo=" + rxFifo + ", rxFrames=" + rxFrames
-				+ ", rxMulticast=" + rxMulticast + ", rxPackets=" + rxPackets + ", txBytes=" + txBytes + ", txCarrier="
-				+ txCarrier + ", txColls=" + txColls + ", txCompressed=" + txCompressed + ", txDrops=" + txDrops
-				+ ", txErrors=" + txErrors + ", txFifo=" + txFifo + ", txPackets=" + txPackets;
+		return "name=" + name + ", rxBytes=" + rxBytes + ", rxCompressed=" + rxCompressed + ", rxDrops=" + rxDrops
+				+ ", rxErrors=" + rxErrors + ", rxFifo=" + rxFifo + ", rxFrames=" + rxFrames + ", rxMulticast=" + rxMulticast
+				+ ", rxPackets=" + rxPackets + ", txBytes=" + txBytes + ", txCarrier=" + txCarrier + ", txColls=" + txColls
+				+ ", txCompressed=" + txCompressed + ", txDrops=" + txDrops + ", txErrors=" + txErrors + ", txFifo=" + txFifo
+				+ ", txPackets=" + txPackets;
 	}
 
 }

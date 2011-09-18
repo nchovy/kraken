@@ -78,23 +78,27 @@ public class TcpConnectionInformation extends ConnectionInformation {
 			throws IOException {
 		List<ConnectionInformation> stats = new ArrayList<ConnectionInformation>();
 		BufferedReader br = null;
-
-		br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(filePath))));
-		br.readLine(); // ignore column name line
-		while (true) {
-			String line = br.readLine();
-			if (line == null)
-				break;
-
-			if (filePath.endsWith("tcp"))
-				stats.add(parse(line, 4, uidToPid));
-			else if (filePath.endsWith("tcp6"))
-				stats.add(parse(line, 16, uidToPid));
-		}
+		FileInputStream is = null;
 
 		try {
-			br.close();
-		} catch (IOException e) {
+			is = new FileInputStream(new File(filePath));
+			br = new BufferedReader(new InputStreamReader(is));
+			br.readLine(); // ignore column name line
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				if (filePath.endsWith("tcp"))
+					stats.add(parse(line, 4, uidToPid));
+				else if (filePath.endsWith("tcp6"))
+					stats.add(parse(line, 16, uidToPid));
+			}
+		} finally {
+			if (is != null)
+				is.close();
+			if (br != null)
+				br.close();
 		}
 
 		return stats;

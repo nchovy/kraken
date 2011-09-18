@@ -1,4 +1,18 @@
-package org.krakenapps.linux.api;
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */package org.krakenapps.linux.api;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -42,7 +56,7 @@ public class EthernetInterface {
 	private List<String> description;
 	private List<AddressBinding> addressBindings;
 
-	public EthernetInterface(String device) throws FileNotFoundException {
+	public EthernetInterface(String device) throws IOException {
 		BufferedReader br = null;
 		String line = null;
 
@@ -106,14 +120,9 @@ public class EthernetInterface {
 					description.add(line);
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		} finally {
-			try {
+			if (br != null)
 				br.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
 		}
 
 		this.addressBindings = new ArrayList<AddressBinding>();
@@ -146,15 +155,16 @@ public class EthernetInterface {
 					} else
 						subAddr.description.add(line);
 				}
-				br.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+			} finally {
+				if (br != null)
+					br.close();
 			}
+			
 			addressBindings.add(subAddr);
 		}
 	}
 
-	public static List<EthernetInterface> getEthernetInterfaces() {
+	public static List<EthernetInterface> getEthernetInterfaces() throws IOException {
 		List<EthernetInterface> interfaces = new ArrayList<EthernetInterface>();
 		String[] filenames = new File(cfgPath).list(new FilenameFilter() {
 			@Override

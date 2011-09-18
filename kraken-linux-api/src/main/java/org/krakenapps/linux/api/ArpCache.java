@@ -25,10 +25,10 @@ public class ArpCache {
 	private ArpCache() {
 	}
 
-	public static List<ArpEntry> getEntries() {
+	public static List<ArpEntry> getEntries() throws FileNotFoundException {
 		List<ArpEntry> entries = new ArrayList<ArpEntry>();
 
-		Scanner scanner;
+		Scanner scanner = null;
 		try {
 			scanner = new Scanner(new File("/proc/net/arp"));
 			// skip header
@@ -95,7 +95,9 @@ public class ArpCache {
 				entries.add(entry);
 			}
 
-		} catch (FileNotFoundException e) {
+		} finally {
+			if (scanner != null)
+				scanner.close();
 		}
 
 		return entries;

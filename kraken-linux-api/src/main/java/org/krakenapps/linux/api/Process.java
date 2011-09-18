@@ -156,19 +156,19 @@ public class Process {
 
 	private static void readStatus(File f, Process p) throws IOException {
 		BufferedReader br = null;
-		br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(f, "status"))));
-
-		while (true) {
-			String line = br.readLine();
-			if (line == null)
-				break;
-
-			parse(p, line);
-		}
-
 		try {
-			br.close();
-		} catch (IOException e) {
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(f, "status"))));
+
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				parse(p, line);
+			}
+		} finally {
+			if (br != null)
+				br.close();
 		}
 	}
 

@@ -1,5 +1,6 @@
 package org.krakenapps.linux.api.msgbus;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -22,12 +23,12 @@ public class RoutingTablePlugin {
 	private final Logger logger = LoggerFactory.getLogger(RoutingTablePlugin.class);
 
 	@MsgbusMethod
-	public void getRoutingTable(Request req, Response resp) {
+	public void getRoutingTable(Request req, Response resp) throws IOException {
 		resp.put("routing_table", Marshaler.marshal(RoutingTable.getRoutingEntries()));
 	}
 
 	@MsgbusMethod
-	public void getRoutingTableV6(Request req, Response resp) {
+	public void getRoutingTableV6(Request req, Response resp) throws IOException {
 		resp.put("routing_table", Marshaler.marshal(RoutingTable.getIpv6RoutingEntries()));
 	}
 	

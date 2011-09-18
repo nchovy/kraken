@@ -76,12 +76,6 @@ public class Wtmp {
 		return entries;
 	}
 
-	public static void main(String[] args) throws IOException {
-		for (WtmpEntry entry : Wtmp.getEntries()) {
-			System.out.println(entry);
-		}
-	}
-
 	private static int swap(int v) {
 		int a = v;
 		int b = (a >> 24) & 0xFF;

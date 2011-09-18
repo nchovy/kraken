@@ -1,5 +1,21 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.linux.api.script;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -163,7 +179,7 @@ public class LinuxApiScript implements Script {
 		}
 	}
 
-	public void arp(String[] args) {
+	public void arp(String[] args) throws FileNotFoundException {
 		List<ArpEntry> entries = ArpCache.getEntries();
 
 		context.println("       ip        |  device  |  HW  |  flags  |    mac address    | mask ");
@@ -174,7 +190,7 @@ public class LinuxApiScript implements Script {
 		}
 	}
 
-	public void routingTable(String[] args) {
+	public void routingTable(String[] args) throws IOException {
 		List<RoutingEntry> entries = RoutingTable.getRoutingEntries();
 
 		context.println("   destination   |     gateway     |     genmask     | flags | metric |  ref  | use | iface | mss | window | irtt ");
@@ -286,7 +302,7 @@ public class LinuxApiScript implements Script {
 		}
 	}
 
-	public void dnsConfig(String[] args) {
+	public void dnsConfig(String[] args) throws IOException {
 		DnsConfig dns = DnsConfig.getConfig();
 
 		if (dns.getNameserver().size() > 0) {
@@ -315,7 +331,7 @@ public class LinuxApiScript implements Script {
 			@ScriptArgument(name = "first nameserver", type = "string", description = "first nameserver"),
 			@ScriptArgument(name = "second nameserver", type = "string", description = "second nameserver", optional = true),
 			@ScriptArgument(name = "third nameserver", type = "string", description = "third nameserver", optional = true) })
-	public void setNameserver(String[] args) {
+	public void setNameserver(String[] args) throws IOException {
 		DnsConfig dns = DnsConfig.getConfig();
 		Object[] nameserver = dns.getNameserver().toArray();
 

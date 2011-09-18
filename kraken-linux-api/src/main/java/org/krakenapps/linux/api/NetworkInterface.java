@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.linux.api;
 
 import java.io.BufferedReader;
@@ -106,7 +121,7 @@ public class NetworkInterface {
 		return memory;
 	}
 
-	public static List<NetworkInterface> getNetworkInterfaces() {
+	public static List<NetworkInterface> getNetworkInterfaces() throws IOException {
 		List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
 		java.lang.Process p = null;
 		BufferedReader br = null;
@@ -121,17 +136,11 @@ public class NetworkInterface {
 					break;
 				ifaces.add(iface);
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		} finally {
 			if (p != null)
 				p.destroy();
-			try {
-				if (br != null)
-					br.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			if (br != null)
+				br.close();
 		}
 
 		return ifaces;
@@ -257,8 +266,8 @@ public class NetworkInterface {
 
 		@Override
 		public String toString() {
-			return "RxPacket [packets=" + packets + ", errors=" + errors + ", dropped=" + dropped + ", overruns="
-					+ overruns + ", frame=" + frame + "]";
+			return "RxPacket [packets=" + packets + ", errors=" + errors + ", dropped=" + dropped + ", overruns=" + overruns
+					+ ", frame=" + frame + "]";
 		}
 	}
 
@@ -331,17 +340,17 @@ public class NetworkInterface {
 
 		@Override
 		public String toString() {
-			return "TxPacket [packets=" + packets + ", errors=" + errors + ", dropped=" + dropped + ", overruns="
-					+ overruns + ", carrier=" + carrier + ", collisions=" + collisions + ", queuelen=" + queuelen + "]";
+			return "TxPacket [packets=" + packets + ", errors=" + errors + ", dropped=" + dropped + ", overruns=" + overruns
+					+ ", carrier=" + carrier + ", collisions=" + collisions + ", queuelen=" + queuelen + "]";
 		}
 	}
 
 	@Override
 	public String toString() {
-		return "NetworkInterface [name=" + name + ", linkEncap=" + linkEncap + ", hwaddr=" + hwaddr + ", inet=" + inet
-				+ ", ptp=" + ptp + ", mask=" + mask + ", inet6=" + inet6 + ", cidr=" + cidr + ", scope=" + scope
-				+ ", options=" + options + ", mtu=" + mtu + ", metric=" + metric + ", rxPacket=" + rxPacket
-				+ ", txPacket=" + txPacket + ", rxBytes=" + rxBytes + ", txBytes=" + txBytes + ", interrupt="
-				+ interrupt + ", baseAddress=" + baseAddress + ", memory=" + memory + "]";
+		return "NetworkInterface [name=" + name + ", linkEncap=" + linkEncap + ", hwaddr=" + hwaddr + ", inet=" + inet + ", ptp="
+				+ ptp + ", mask=" + mask + ", inet6=" + inet6 + ", cidr=" + cidr + ", scope=" + scope + ", options=" + options
+				+ ", mtu=" + mtu + ", metric=" + metric + ", rxPacket=" + rxPacket + ", txPacket=" + txPacket + ", rxBytes="
+				+ rxBytes + ", txBytes=" + txBytes + ", interrupt=" + interrupt + ", baseAddress=" + baseAddress + ", memory="
+				+ memory + "]";
 	}
 }

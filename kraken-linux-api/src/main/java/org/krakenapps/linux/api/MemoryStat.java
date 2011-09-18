@@ -219,22 +219,26 @@ public class MemoryStat {
 	public static MemoryStat getMemoryStat() throws IOException {
 		MemoryStat memory = new MemoryStat();
 		BufferedReader br = null;
-
-		br = new BufferedReader(new InputStreamReader(new FileInputStream(new File("/proc/meminfo"))));
-		while (true) {
-			String line = br.readLine();
-			if (line == null)
-				break;
-
-			parse(memory, line);
-		}
+		FileInputStream is = null;
 
 		try {
-			br.close();
-		} catch (IOException e) {
-		}
+			is = new FileInputStream(new File("/proc/meminfo"));
+			br = new BufferedReader(new InputStreamReader(is));
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
 
-		return memory;
+				parse(memory, line);
+			}
+
+			return memory;
+		} finally {
+			if (is != null)
+				is.close();
+			if (br != null)
+				br.close();
+		}
 	}
 
 	private static void parse(MemoryStat memory, String line) {
