@@ -436,6 +436,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 			admin.getTrustHosts().clear();
 
+			targetAdmin.getTrustHosts().size();
 			for (AdminTrustHost h : targetAdmin.getTrustHosts()) {
 				h.setAdmin(admin);
 				admin.getTrustHosts().add(h);
