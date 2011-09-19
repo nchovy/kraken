@@ -217,9 +217,8 @@ public class JLdapService implements LdapService {
 					logger.trace("kraken-ldap: skip referer", e);
 				}
 			}
-
 		} catch (Exception e) {
-			logger.error("kraken-ldap: cannot fetch domain users", e);
+			logger.error("kraken-ldap: cannot fetch domain users");
 			throw new IllegalStateException(e);
 		} finally {
 			try {

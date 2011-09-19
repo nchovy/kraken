@@ -20,7 +20,6 @@ import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.LdapOrganizationalUnit;
-import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.User;
@@ -294,10 +293,10 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 		ServiceReference programApiRef = bc.getServiceReference(ProgramApi.class.getName());
 		ProgramApi programApi = (ProgramApi) bc.getService(programApiRef);
 
-		OrganizationParameter op = orgParameterApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
-				"default_program_profile_id");
+		String defaultProgramProfileId = orgParameterApi.getOrganizationParameter(admin.getUser().getOrganization()
+				.getId(), "default_program_profile_id");
 		ProgramProfile profile = programApi.getProgramProfile(admin.getUser().getOrganization().getId(),
-				Integer.parseInt(op.getValue()));
+				Integer.parseInt(defaultProgramProfileId));
 
 		return profile;
 	}
