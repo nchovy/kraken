@@ -146,4 +146,73 @@ public class XmlUtil {
 		}
 		return sw.toString();
 	}
+
+	private static byte[] encodeMap = new byte[64];
+	private static byte[] decodeMap = new byte[128];
+	static {
+		int i = 0;
+		byte b = 'A';
+		for (; i < 26; i++) {
+			encodeMap[i] = b;
+			decodeMap[b++] = (byte) i;
+		}
+		b = 'a';
+		for (; i < 52; i++) {
+			encodeMap[i] = b;
+			decodeMap[b++] = (byte) i;
+		}
+		b = '0';
+		for (; i < 62; i++) {
+			encodeMap[i] = b;
+			decodeMap[b++] = (byte) i;
+		}
+		encodeMap[62] = '+';
+		decodeMap['+'] = 62;
+		encodeMap[63] = '/';
+		decodeMap['/'] = 63;
+	}
+
+	public static byte[] encodeBase64(byte[] bytes) {
+		byte[] result = new byte[(bytes.length + 2) / 3 * 4];
+		for (int i = 0; i < (bytes.length + 2) / 3; i++) {
+			byte a = bytes[i * 3];
+			byte b = (i * 3 + 1 < bytes.length) ? bytes[i * 3 + 1] : 0;
+			byte c = (i * 3 + 2 < bytes.length) ? bytes[i * 3 + 2] : 0;
+
+			long l = (a & 0xFF) << 16 | (b & 0xFF) << 8 | (c & 0xFF);
+			for (int j = 3; j >= 0; j--) {
+				result[i * 4 + j] = encodeMap[(int) (l & 0x3F)];
+				l >>= 6;
+			}
+		}
+		if (bytes.length % 3 == 2)
+			result[result.length - 1] = '=';
+		else if (bytes.length % 3 == 1)
+			result[result.length - 2] = result[result.length - 1] = '=';
+		return result;
+	}
+
+	public static byte[] decodeBase64(byte[] bytes) {
+		int len = bytes.length / 4 * 3;
+		if (bytes[bytes.length - 1] == '=')
+			len--;
+		if (bytes[bytes.length - 2] == '=')
+			len--;
+
+		byte[] result = new byte[len];
+		for (int i = 0; i < bytes.length / 4; i++) {
+			byte a = decodeMap[bytes[i * 4]];
+			byte b = decodeMap[bytes[i * 4 + 1]];
+			byte c = decodeMap[bytes[i * 4 + 2]];
+			byte d = decodeMap[bytes[i * 4 + 3]];
+
+			long l = (a & 0x3F) << 18 | (b & 0x3F) << 12 | (c & 0x3F) << 6 | (d & 0x3F);
+			for (int j = 2; j >= 0; j--) {
+				if (i * 3 + j < result.length)
+					result[i * 3 + j] = (byte) (l & 0xFF);
+				l >>= 8;
+			}
+		}
+		return result;
+	}
 }

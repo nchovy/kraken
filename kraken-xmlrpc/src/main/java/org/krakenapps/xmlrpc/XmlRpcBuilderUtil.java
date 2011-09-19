@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -66,7 +65,7 @@ public class XmlRpcBuilderUtil {
 	}
 
 	private static String base64ToString(byte[] binary) {
-		return new String(Base64.encodeBase64(binary));
+		return new String(XmlUtil.encodeBase64(binary));
 	}
 
 	private static Element structToElement(Document document, Map<String, Object> map) {

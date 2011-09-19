@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -112,8 +111,7 @@ public class XmlRpcParameterParser {
 	}
 
 	private static Object parseBase64(Node scalarNode) {
-		Base64 base64 = new Base64();
-		return base64.decode(scalarNode.getTextContent().getBytes());
+		return XmlUtil.decodeBase64(scalarNode.getTextContent().getBytes());
 	}
 
 	private static Object parseStruct(Node structNode) {
