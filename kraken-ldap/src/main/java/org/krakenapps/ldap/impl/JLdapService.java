@@ -163,11 +163,13 @@ public class JLdapService implements LdapService {
 
 			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
 			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
-					"(&(sAMAccountName=*)(givenName=*))", null, false);
+					"(&(userPrincipalName=*))", null, false);
 
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
+					logger.debug("kraken-ldap: fetch entry [{}]", entry);
+					
 					DomainUserAccount account = parseUserAccount(entry);
 					if (account != null)
 						accounts.add(account);
@@ -206,6 +208,8 @@ public class JLdapService implements LdapService {
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
+					logger.debug("kraken-ldap: fetch org unit entry [{}]", entry);
+					
 					DomainOrganizationalUnit ou = parseOrganizationUnit(entry);
 					if (ou != null)
 						ous.add(ou);
