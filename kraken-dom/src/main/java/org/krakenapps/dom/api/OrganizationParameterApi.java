@@ -15,14 +15,12 @@
  */
 package org.krakenapps.dom.api;
 
-import java.util.Collection;
-
-import org.krakenapps.dom.model.OrganizationParameter;
+import java.util.Map;
 
 public interface OrganizationParameterApi {
-	Collection<OrganizationParameter> getOrganizationParameters(int orgId);
+	Map<String, String> getOrganizationParameters(int orgId);
 
-	OrganizationParameter getOrganizationParameter(int orgId, String name);
+	String getOrganizationParameter(int orgId, String name);
 
 	void setOrganizationParameter(int orgId, String name, String value);
 

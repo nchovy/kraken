@@ -28,7 +28,7 @@ public interface TimetableApi {
 
 	Timetable createTimetable(int organizationId, String name, List<Schedule> schedules);
 
-	void updateTimetable(int organizationId, int id, String name, List<Schedule> schedules);
+	Timetable updateTimetable(int organizationId, int id, String name, List<Schedule> schedules);
 
-	void removeTimetable(int organizationId, int id);
+	Timetable removeTimetable(int organizationId, int id);
 }

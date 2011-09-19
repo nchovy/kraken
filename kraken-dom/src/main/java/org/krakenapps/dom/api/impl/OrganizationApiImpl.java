@@ -56,12 +56,14 @@ public class OrganizationApiImpl extends AbstractApi<Organization> implements Or
 	}
 
 	@Transactional
+	@Override
 	public Organization getOrganization(int id) {
 		EntityManager em = entityManagerService.getEntityManager();
 		return em.find(Organization.class, id);
 	}
 
 	@Transactional
+	@Override
 	public Organization getOrganizationForUser(int userId) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Admin admin = em.find(Admin.class, userId);
@@ -71,13 +73,15 @@ public class OrganizationApiImpl extends AbstractApi<Organization> implements Or
 		return admin.getUser().getOrganization();
 	}
 
-	public void createOrganization(Organization organization) {
-		createOrganizationInternal(organization);
-		fireEntityAdded(organization);
+	@Override
+	public Organization createOrganization(Organization organization) {
+		Organization org = createOrganizationInternal(organization);
+		fireEntityAdded(org);
+		return org;
 	}
 
 	@Transactional
-	private void createOrganizationInternal(Organization organization) {
+	private Organization createOrganizationInternal(Organization organization) {
 		EntityManager em = entityManagerService.getEntityManager();
 		organization.setCreateDateTime(new Date());
 		organization.setEnabled(true);
@@ -90,15 +94,18 @@ public class OrganizationApiImpl extends AbstractApi<Organization> implements Or
 
 		orgParameterApi.setOrganizationParameter(organization.getId(), "default_program_profile_id",
 				String.valueOf(profile.getId()));
+		return organization;
 	}
 
-	public void updateOrganization(Organization organization) {
-		updateOrganizationInternal(organization);
-		fireEntityUpdated(organization);
+	@Override
+	public Organization updateOrganization(Organization organization) {
+		Organization org = updateOrganizationInternal(organization);
+		fireEntityUpdated(org);
+		return org;
 	}
 
 	@Transactional
-	private void updateOrganizationInternal(Organization organization) {
+	private Organization updateOrganizationInternal(Organization organization) {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (organization.getId() == 0)
 			throw new IllegalArgumentException("check organization id");
@@ -111,11 +118,14 @@ public class OrganizationApiImpl extends AbstractApi<Organization> implements Or
 		org.setDomainController(organization.getDomainController());
 		org.setBackupDomainController(organization.getBackupDomainController());
 		em.merge(org);
+		return org;
 	}
 
-	public void removeOrganization(int id) {
+	@Override
+	public Organization removeOrganization(int id) {
 		Organization org = removeOrganizationInternal(id);
 		fireEntityRemoved(org);
+		return org;
 	}
 
 	@Transactional

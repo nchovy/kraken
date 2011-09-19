@@ -38,11 +38,11 @@ public interface AdminApi extends EntityEventProvider<Admin> {
 
 	Admin getAdminByUser(int organizationId, int userId);
 
-	void createAdmin(int organizationId, Integer requestAdminId, Admin admin);
+	Admin createAdmin(int organizationId, Integer requestAdminId, Admin admin);
 
-	void updateAdmin(int organizationId, Integer requestAdminId, Admin admin);
+	Admin updateAdmin(int organizationId, Integer requestAdminId, Admin admin);
 
-	void removeAdmin(int organizationId, Integer requestAdminId, int adminId);
+	Admin removeAdmin(int organizationId, Integer requestAdminId, int adminId);
 
 	boolean matchPassword(int organizationId, int adminId, String password);
 

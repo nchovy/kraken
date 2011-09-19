@@ -26,6 +26,7 @@ import javax.persistence.NoResultException;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.TimetableApi;
 import org.krakenapps.dom.model.Organization;
@@ -38,7 +39,7 @@ import org.krakenapps.jpa.handler.Transactional;
 @Component(name = "dom-timetable-api")
 @Provides
 @JpaConfig(factory = "dom")
-public class TimetableApiImpl implements TimetableApi {
+public class TimetableApiImpl extends AbstractApi<Timetable> implements TimetableApi {
 	@Requires
 	private OrganizationApi orgApi;
 
@@ -61,9 +62,15 @@ public class TimetableApiImpl implements TimetableApi {
 		return get(em, organizationId, id);
 	}
 
-	@Transactional
 	@Override
 	public Timetable createTimetable(int organizationId, String name, List<Schedule> schedules) {
+		Timetable t = createTimetableInternal(organizationId, name, schedules);
+		fireEntityAdded(t);
+		return t;
+	}
+
+	@Transactional
+	private Timetable createTimetableInternal(int organizationId, String name, List<Schedule> schedules) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Long count = (Long) em
 				.createQuery("SELECT COUNT(*) FROM Timetable t WHERE t.organization.id = ? AND t.name = ?")
@@ -93,9 +100,15 @@ public class TimetableApiImpl implements TimetableApi {
 		return t;
 	}
 
-	@Transactional
 	@Override
-	public void updateTimetable(int organizationId, int id, String name, List<Schedule> schedules) {
+	public Timetable updateTimetable(int organizationId, int id, String name, List<Schedule> schedules) {
+		Timetable t = updateTimetableInternal(organizationId, id, name, schedules);
+		fireEntityUpdated(t);
+		return t;
+	}
+
+	@Transactional
+	private Timetable updateTimetableInternal(int organizationId, int id, String name, List<Schedule> schedules) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Long count = (Long) em
 				.createQuery(
@@ -123,14 +136,22 @@ public class TimetableApiImpl implements TimetableApi {
 		}
 
 		em.merge(t);
+		return t;
+	}
+
+	@Override
+	public Timetable removeTimetable(int organizationId, int id) {
+		Timetable t = removeTimetableInternal(organizationId, id);
+		fireEntityRemoved(t);
+		return t;
 	}
 
 	@Transactional
-	@Override
-	public void removeTimetable(int organizationId, int id) {
+	private Timetable removeTimetableInternal(int organizationId, int id) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Timetable t = get(em, organizationId, id);
 		em.remove(t);
+		return t;
 	}
 
 	private Timetable get(EntityManager em, int organizationId, int id) {

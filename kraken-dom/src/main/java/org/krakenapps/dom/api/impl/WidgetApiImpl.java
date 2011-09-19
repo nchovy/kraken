@@ -44,8 +44,10 @@ import org.krakenapps.jpa.handler.Transactional;
 public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
+
 	@Requires
 	private ProgramApi programApi;
+
 	@Requires
 	private AdminApi adminApi;
 
@@ -81,9 +83,10 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 	}
 
 	@Override
-	public void removeWidget(int adminId, int widgetId) throws WidgetNotFoundException {
+	public Widget removeWidget(int adminId, int widgetId) throws WidgetNotFoundException {
 		Widget widget = removeWidgetInternal(adminId, widgetId);
 		fireEntityRemoved(widget);
+		return widget;
 	}
 
 	@Transactional
@@ -97,9 +100,18 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 		return widget;
 	}
 
-	@Transactional
 	@Override
-	public void setConfig(int adminId, int widgetId, String name, String value) throws WidgetNotFoundException {
+	public WidgetConfig setConfig(int adminId, int widgetId, String name, String value) throws WidgetNotFoundException {
+		WidgetConfig config = setConfigInternal(adminId, widgetId, name, value);
+		Widget widget = config.getWidget();
+		widget.getWidgetConfigs().size();
+		fireEntityUpdated(widget);
+		return config;
+	}
+
+	@Transactional
+	private WidgetConfig setConfigInternal(int adminId, int widgetId, String name, String value)
+			throws WidgetNotFoundException {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		WidgetConfig config = findWidgetConfig(em, widgetId, name);
@@ -120,6 +132,7 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 
 			em.persist(config);
 		}
+		return config;
 	}
 
 	private WidgetConfig findWidgetConfig(EntityManager em, int widgetId, String name) {
@@ -131,18 +144,28 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 		}
 	}
 
-	@Transactional
 	@Override
-	public void unsetConfig(int adminId, int widgetId, String key) throws WidgetConfigNotFoundException {
+	public WidgetConfig unsetConfig(int adminId, int widgetId, String key) throws WidgetConfigNotFoundException {
+		WidgetConfig config = unsetConfigInternal(adminId, widgetId, key);
+		Widget widget = config.getWidget();
+		widget.getWidgetConfigs().size();
+		fireEntityUpdated(widget);
+		return config;
+	}
+
+	@Transactional
+	private WidgetConfig unsetConfigInternal(int adminId, int widgetId, String key)
+			throws WidgetConfigNotFoundException {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			WidgetConfig config = (WidgetConfig) em.createQuery(
-					"FROM WidgetConfig c WHERE c.widget.id = ? AND c.name = ?").setParameter(1, widgetId).setParameter(
-					2, key).getSingleResult();
+			WidgetConfig config = (WidgetConfig) em
+					.createQuery("FROM WidgetConfig c WHERE c.widget.id = ? AND c.name = ?").setParameter(1, widgetId)
+					.setParameter(2, key).getSingleResult();
 			if (config.getWidget().getAdmin().getId() != adminId)
 				throw new WidgetConfigNotFoundException();
 
 			em.remove(config);
+			return config;
 		} catch (NoResultException e) {
 			throw new WidgetConfigNotFoundException();
 		}

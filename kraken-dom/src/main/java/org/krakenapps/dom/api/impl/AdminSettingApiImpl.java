@@ -45,7 +45,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
-	public List<AdminSetting> getUserSettings(int organizationId, int userId) {
+	public List<AdminSetting> getAdminSettings(int organizationId, int userId) {
 		Admin user = userApi.getAdminByUser(organizationId, userId);
 		if (user == null)
 			throw new AdminNotFoundException(userId);
@@ -56,7 +56,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 
 	@Transactional
 	@Override
-	public String getUserSetting(int organizationId, int userId, String name) {
+	public String getAdminSetting(int organizationId, int userId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 		AdminSetting setting = getUserSetting(em, userId, name);
 		return setting != null ? setting.getValue() : null;
@@ -64,7 +64,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 
 	@Transactional
 	@Override
-	public void updateAdminSetting(int organizationId, int userId, String name, String value) {
+	public void setAdminSetting(int organizationId, int userId, String name, String value) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Admin user = userApi.getAdminByUser(organizationId, userId);
 		if (user == null)
@@ -85,7 +85,7 @@ public class AdminSettingApiImpl implements AdminSettingApi {
 
 	@Transactional
 	@Override
-	public void removeUserSetting(int organizationId, int userId, String name) {
+	public void unsetAdminSetting(int organizationId, int userId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Admin user = userApi.getAdminByUser(organizationId, userId);
 		if (user == null)

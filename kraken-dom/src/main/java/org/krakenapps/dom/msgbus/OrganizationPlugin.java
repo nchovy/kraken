@@ -15,7 +15,7 @@
  */
 package org.krakenapps.dom.msgbus;
 
-import java.util.Collection;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -23,8 +23,6 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationParameterApi;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
-import org.krakenapps.dom.model.OrganizationParameter;
-import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -87,17 +85,15 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void getOrganizationParameters(Request req, Response resp) {
-		Collection<OrganizationParameter> parameters = organizationParameterApi.getOrganizationParameters(req
-				.getOrgId());
-		resp.put("result", Marshaler.marshal(parameters));
+		Map<String, String> parameters = organizationParameterApi.getOrganizationParameters(req.getOrgId());
+		resp.put("result", parameters);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void getOrganizationParameter(Request req, Response resp) {
-		OrganizationParameter parameter = null;
-		parameter = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getString("name"));
-		resp.put("result", parameter.marshal());
+		String value = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getString("name"));
+		resp.put("result", value);
 	}
 
 	@MsgbusMethod

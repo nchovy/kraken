@@ -21,16 +21,16 @@ import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.exception.WidgetConfigNotFoundException;
 import org.krakenapps.dom.exception.WidgetNotFoundException;
 import org.krakenapps.dom.model.Widget;
+import org.krakenapps.dom.model.WidgetConfig;
 
 public interface WidgetApi extends EntityEventProvider<Widget> {
 	List<Widget> getWidgets(int userId);
 
 	Widget createWidget(int organizationId, int userId, int programId) throws AdminNotFoundException;
 
-	void removeWidget(int userId, int widgetId) throws WidgetNotFoundException;
+	Widget removeWidget(int userId, int widgetId) throws WidgetNotFoundException;
+	
+	WidgetConfig setConfig(int userId, int widgetId, String key, String value) throws WidgetNotFoundException;
 
-	void setConfig(int userId, int widgetId, String key, String value) throws WidgetNotFoundException;
-
-	void unsetConfig(int userId, int widgetId, String key) throws WidgetConfigNotFoundException;
-
+	WidgetConfig unsetConfig(int userId, int widgetId, String key) throws WidgetConfigNotFoundException;
 }

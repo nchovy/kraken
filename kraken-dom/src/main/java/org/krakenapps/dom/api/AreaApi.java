@@ -32,15 +32,11 @@ public interface AreaApi extends EntityEventProvider<Area> {
 
 	Collection<Area> getSubAreas(int organizationId, int areaId);
 
-	void moveArea(int organizationId, int newParentId, int id) throws AreaNotFoundException;
+	Area moveArea(int organizationId, int newParentId, int id) throws AreaNotFoundException;
 
 	Area createArea(int organizationId, int parentId, String name, String description) throws AreaNotFoundException;
 
 	Area updateArea(int organizationId, int areaId, String name, String description) throws AreaNotFoundException;
 
-	void removeArea(int organizationId, int areaId) throws AreaNotFoundException, UndeletableAreaException;
-
-	void registerCallback(AreaEventCallback callback);
-
-	void unregisterCallback(AreaEventCallback callback);
+	Area removeArea(int organizationId, int areaId) throws AreaNotFoundException, UndeletableAreaException;
 }

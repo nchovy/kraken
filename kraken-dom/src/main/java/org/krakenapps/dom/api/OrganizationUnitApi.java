@@ -26,12 +26,12 @@ public interface OrganizationUnitApi extends EntityEventProvider<OrganizationUni
 	Collection<OrganizationUnit> getOrganizationUnits(Organization org);
 
 	OrganizationUnit getOrganizationUnit(int id);
-	
+
 	Collection<OrganizationUnit> getParents(int orgId, int id);
 
-	void createOrganizationUnit(OrganizationUnit orgUnit);
+	OrganizationUnit createOrganizationUnit(OrganizationUnit orgUnit);
 
-	void updateOrganizationUnit(OrganizationUnit orgUnit);
+	OrganizationUnit updateOrganizationUnit(OrganizationUnit orgUnit);
 
-	void removeOrganizationUnit(int id);
+	OrganizationUnit removeOrganizationUnit(int id);
 }

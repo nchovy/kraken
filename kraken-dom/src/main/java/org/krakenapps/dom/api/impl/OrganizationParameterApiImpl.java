@@ -15,7 +15,9 @@
  */
 package org.krakenapps.dom.api.impl;
 
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -42,22 +44,28 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 	@SuppressWarnings("unchecked")
 	@Override
 	@Transactional
-	public Collection<OrganizationParameter> getOrganizationParameters(int orgId) {
+	public Map<String, String> getOrganizationParameters(int orgId) {
 		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM OrganizationParameter o WHERE o.organization.id = ?").setParameter(1, orgId)
+		List<OrganizationParameter> orgParameters = em
+				.createQuery("FROM OrganizationParameter o WHERE o.organization.id = ?").setParameter(1, orgId)
 				.getResultList();
+
+		Map<String, String> m = new HashMap<String, String>();
+		for (OrganizationParameter orgParameter : orgParameters)
+			m.put(orgParameter.getName(), orgParameter.getValue());
+		return m;
 	}
 
 	@Transactional
 	@Override
-	public OrganizationParameter getOrganizationParameter(int orgId, String name) {
+	public String getOrganizationParameter(int orgId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
 			OrganizationParameter op = (OrganizationParameter) em
 					.createQuery("FROM OrganizationParameter o WHERE o.organization.id = ? AND o.name = ?")
 					.setParameter(1, orgId).setParameter(2, name).getSingleResult();
 
-			return op;
+			return op.getValue();
 		} catch (NoResultException e) {
 			return null;
 		}
@@ -75,7 +83,7 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 
 	@Transactional
 	private OrganizationParameter setOrganizationParameterInternal(int orgId, String name, String value) {
-		OrganizationParameter orgParameter = getOrganizationParameter(orgId, name);
+		OrganizationParameter orgParameter = getOrgParameter(orgId, name);
 		if (orgParameter == null) {
 			EntityManager em = entityManagerService.getEntityManager();
 			orgParameter = new OrganizationParameter();
@@ -103,11 +111,21 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 	@Transactional
 	private OrganizationParameter unsetOrganizationParameterInternal(int orgId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
-		OrganizationParameter op = getOrganizationParameter(orgId, name);
+		OrganizationParameter op = getOrgParameter(orgId, name);
 		if (op.getOrganization().getId() == orgId) {
 			em.remove(op);
 			return op;
 		}
 		return null;
+	}
+
+	@Transactional
+	public OrganizationParameter getOrgParameter(int orgId, String name) {
+		EntityManager em = entityManagerService.getEntityManager();
+		OrganizationParameter op = (OrganizationParameter) em
+				.createQuery("FROM OrganizationParameter o WHERE o.organization.id = ? AND o.name = ?")
+				.setParameter(1, orgId).setParameter(2, name).getSingleResult();
+
+		return op;
 	}
 }

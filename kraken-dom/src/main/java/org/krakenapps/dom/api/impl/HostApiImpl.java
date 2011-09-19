@@ -58,8 +58,8 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 	public HostExtension getHostExtension(String className) {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			return (HostExtension) em.createQuery("FROM HostExtension e WHERE e.className = ?").setParameter(1,
-					className).getSingleResult();
+			return (HostExtension) em.createQuery("FROM HostExtension e WHERE e.className = ?")
+					.setParameter(1, className).getSingleResult();
 		} catch (NoResultException e) {
 			return null;
 		}
@@ -82,10 +82,10 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 	}
 
 	@Override
-	public int createHost(int organizationId, int hostTypeId, int areaId, String name, String description) {
+	public Host createHost(int organizationId, int hostTypeId, int areaId, String name, String description) {
 		Host host = createHostInternal(organizationId, hostTypeId, areaId, name, description);
 		fireEntityAdded(host);
-		return host.getId();
+		return host;
 	}
 
 	@Transactional
@@ -128,9 +128,10 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 	}
 
 	@Override
-	public void updateHost(int organizationId, int hostId, String name, String description) {
+	public Host updateHost(int organizationId, int hostId, String name, String description) {
 		Host host = updateHostInternal(organizationId, hostId, name, description);
 		fireEntityUpdated(host);
+		return host;
 	}
 
 	@Transactional
@@ -153,23 +154,23 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 		}
 	}
 
-	@Transactional
 	@Override
-	public void updateHostGuid(int organizationId, int hostId, String guid) {
+	public Host updateHostGuid(int organizationId, int hostId, String guid) {
+		Host host = updateHostGuidInternal(organizationId, hostId, guid);
+		fireEntityUpdated(host);
+		return host;
+	}
+
+	@Transactional
+	private Host updateHostGuidInternal(int organizationId, int hostId, String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
-
-		try {
-			Host host = getHost(organizationId, hostId);
-			if (host == null)
-				throw new HostNotFoundException();
-
-			host.setGuid(guid);
-			em.merge(host);
-
-			fireEntityUpdated(host);
-		} catch (NoResultException e) {
+		Host host = getHost(organizationId, hostId);
+		if (host == null)
 			throw new HostNotFoundException();
-		}
+
+		host.setGuid(guid);
+		em.merge(host);
+		return host;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -205,8 +206,8 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 	public Host getHost(int organizationId, int hostId) {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			Host host = (Host) em.createNamedQuery("Host.findById").setParameter(1, organizationId).setParameter(2,
-					hostId).getSingleResult();
+			Host host = (Host) em.createNamedQuery("Host.findById").setParameter(1, organizationId)
+					.setParameter(2, hostId).getSingleResult();
 
 			host.getExtensions().size(); // force loading
 			return host;
@@ -224,9 +225,15 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 				.getResultList();
 	}
 
-	@Transactional
 	@Override
-	public void moveHost(int organizationId, int hostId, int areaId) {
+	public Host moveHost(int organizationId, int hostId, int areaId) {
+		Host host = moveHostInternal(organizationId, hostId, areaId);
+		fireEntityUpdated(host);
+		return host;
+	}
+
+	@Transactional
+	private Host moveHostInternal(int organizationId, int hostId, int areaId) {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		Host host = getHost(organizationId, hostId);
@@ -237,32 +244,37 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 		host.setArea(area);
 
 		em.merge(host);
+		return host;
 	}
 
 	@Override
-	public void removeHost(int organizationId, int hostId) {
+	public Host removeHost(int organizationId, int hostId) {
 		Host host = getHost(organizationId, hostId);
 		if (host == null)
 			throw new HostNotFoundException();
-
 		fireEntityRemoving(host);
 		removeHostInternal(organizationId, hostId);
 		fireEntityRemoved(host);
+		return host;
 	}
 
 	@Transactional
 	private void removeHostInternal(int organizationId, int hostId) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Host host = getHost(organizationId, hostId);
-
 		host.getExtensions().clear();
-
 		em.remove(host);
 	}
 
-	@Transactional
 	@Override
-	public void mapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames) {
+	public Host mapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames) {
+		Host host = mapHostExtensionsInternal(organizationId, hostId, hostExtensionNames);
+		fireEntityUpdated(host);
+		return host;
+	}
+
+	@Transactional
+	private Host mapHostExtensionsInternal(int organizationId, int hostId, Set<String> hostExtensionNames) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Host host = getHost(organizationId, hostId);
 		if (host == null)
@@ -279,6 +291,8 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 			em.merge(ext);
 			em.merge(host);
 		}
+
+		return host;
 	}
 
 	private HostExtension findHostExtension(EntityManager em, String className) {
@@ -291,9 +305,15 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 		}
 	}
 
-	@Transactional
 	@Override
-	public void unmapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames) {
+	public Host unmapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames) {
+		Host host = unmapHostExtensionsInternal(organizationId, hostId, hostExtensionNames);
+		fireEntityUpdated(host);
+		return host;
+	}
+
+	@Transactional
+	private Host unmapHostExtensionsInternal(int organizationId, int hostId, Set<String> hostExtensionNames) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Host host = getHost(organizationId, hostId);
 		if (host == null)
@@ -310,6 +330,8 @@ public class HostApiImpl extends AbstractApi<Host> implements HostApi {
 			em.merge(ext);
 			em.merge(host);
 		}
+
+		return host;
 	}
 
 	@SuppressWarnings("unchecked")

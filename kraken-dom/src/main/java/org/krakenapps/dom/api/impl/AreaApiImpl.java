@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -29,7 +28,6 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.AreaApi;
-import org.krakenapps.dom.api.AreaEventCallback;
 import org.krakenapps.dom.exception.AreaNotFoundException;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.exception.UndeletableAreaException;
@@ -45,12 +43,6 @@ import org.krakenapps.jpa.handler.Transactional;
 public class AreaApiImpl extends AbstractApi<Area> implements AreaApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
-	
-	private WeakHashMap<AreaEventCallback, Integer> callbacks;
-
-	public AreaApiImpl() {
-		callbacks = new WeakHashMap<AreaEventCallback, Integer>();
-	}
 
 	@SuppressWarnings("unchecked")
 	@Transactional
@@ -107,9 +99,15 @@ public class AreaApiImpl extends AbstractApi<Area> implements AreaApi {
 		}
 	}
 
-	@Transactional
 	@Override
-	public void moveArea(int organizationId, int newParentId, int id) throws AreaNotFoundException {
+	public Area moveArea(int organizationId, int newParentId, int id) throws AreaNotFoundException {
+		Area area = moveAreaInternal(organizationId, newParentId, id);
+		fireEntityUpdated(area);
+		return area;
+	}
+
+	@Transactional
+	private Area moveAreaInternal(int organizationId, int newParentId, int id) throws AreaNotFoundException {
 		EntityManager em = entityManagerService.getEntityManager();
 		Area area = em.find(Area.class, id);
 		if (area == null || area.getOrganization().getId() != organizationId)
@@ -124,11 +122,20 @@ public class AreaApiImpl extends AbstractApi<Area> implements AreaApi {
 		newParent.getAreas().add(area);
 
 		em.merge(area);
+
+		return area;
+	}
+
+	@Override
+	public Area createArea(int organizationId, int parentId, String name, String description)
+			throws AreaNotFoundException {
+		Area area = createAreaInternal(organizationId, parentId, name, description);
+		fireEntityAdded(area);
+		return area;
 	}
 
 	@Transactional
-	@Override
-	public Area createArea(int organizationId, int parentId, String name, String description)
+	private Area createAreaInternal(int organizationId, int parentId, String name, String description)
 			throws AreaNotFoundException {
 		EntityManager em = entityManagerService.getEntityManager();
 
@@ -146,11 +153,6 @@ public class AreaApiImpl extends AbstractApi<Area> implements AreaApi {
 
 		em.persist(newArea);
 
-		for (AreaEventCallback callback : callbacks.keySet()) {
-			if (callback != null)
-				callback.onCreateCallback(newArea);
-		}
-
 		return newArea;
 	}
 
@@ -159,37 +161,23 @@ public class AreaApiImpl extends AbstractApi<Area> implements AreaApi {
 	public Area getRootArea(int organizationId) {
 		EntityManager em = entityManagerService.getEntityManager();
 		try {
-			return (Area) em.createQuery("FROM Area a WHERE a.organization.id = ? AND a.parent IS NULL").setParameter(
-					1, organizationId).getSingleResult();
+			return (Area) em.createQuery("FROM Area a WHERE a.organization.id = ? AND a.parent IS NULL")
+					.setParameter(1, organizationId).getSingleResult();
 		} catch (NoResultException e) {
 			return null;
 		}
 	}
 
-	@Transactional
 	@Override
-	public void removeArea(int organizationId, int areaId) throws AreaNotFoundException, UndeletableAreaException {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		Area area = getArea(organizationId, areaId, em);
-
-		if (area.getParent() == null)
-			throw new UndeletableAreaException();
-
-		// node means all sub areas including parent
-		for (Area node : getSubAreas(organizationId, areaId)) {
-			for (AreaEventCallback callback : callbacks.keySet()) {
-				if (callback != null)
-					callback.onRemoveCallback(node);
-			}
-		}
-
-		em.remove(area);
+	public Area updateArea(int organizationId, int areaId, String name, String description)
+			throws AreaNotFoundException {
+		Area area = updateAreaInternal(organizationId, areaId, name, description);
+		fireEntityUpdated(area);
+		return area;
 	}
 
 	@Transactional
-	@Override
-	public Area updateArea(int organizationId, int areaId, String name, String description)
+	private Area updateAreaInternal(int organizationId, int areaId, String name, String description)
 			throws AreaNotFoundException {
 		EntityManager em = entityManagerService.getEntityManager();
 
@@ -198,22 +186,29 @@ public class AreaApiImpl extends AbstractApi<Area> implements AreaApi {
 		area.setDescription(description);
 		em.merge(area);
 
-		for (AreaEventCallback callback : callbacks.keySet()) {
-			if (callback != null)
-				callback.onUpdateCallback(area);
-		}
-
 		return area;
 	}
 
 	@Override
-	public void registerCallback(AreaEventCallback callback) {
-		callbacks.put(callback, null);
+	public Area removeArea(int organizationId, int areaId) throws AreaNotFoundException, UndeletableAreaException {
+		Area area = removeAreaInternal(organizationId, areaId);
+		fireEntityRemoved(area);
+		return area;
 	}
 
-	@Override
-	public void unregisterCallback(AreaEventCallback callback) {
-		callbacks.remove(callback);
+	@Transactional
+	private Area removeAreaInternal(int organizationId, int areaId) throws AreaNotFoundException,
+			UndeletableAreaException {
+		EntityManager em = entityManagerService.getEntityManager();
+
+		Area area = getArea(organizationId, areaId, em);
+
+		if (area.getParent() == null)
+			throw new UndeletableAreaException();
+
+		em.remove(area);
+
+		return area;
 	}
 
 	private Area getArea(int organizationId, int areaId, EntityManager em) throws AreaNotFoundException {

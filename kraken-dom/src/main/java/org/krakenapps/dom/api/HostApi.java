@@ -41,17 +41,17 @@ public interface HostApi extends EntityEventProvider<Host> {
 
 	List<Host> getHostsRecursively(int organizationId, int rootAreaId);
 
-	int createHost(int organizationId, int hostTypeId, int areaId, String name, String description);
+	Host createHost(int organizationId, int hostTypeId, int areaId, String name, String description);
 
-	void updateHost(int organizationId, int hostId, String name, String description);
+	Host updateHost(int organizationId, int hostId, String name, String description);
 
-	void updateHostGuid(int organizationId, int hostId, String guid);
+	Host updateHostGuid(int organizationId, int hostId, String guid);
 
-	void removeHost(int organizationId, int hostId);
+	Host removeHost(int organizationId, int hostId);
 
-	void moveHost(int organizationId, int hostId, int areaId);
+	Host moveHost(int organizationId, int hostId, int areaId);
 
-	void mapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames);
+	Host mapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames);
 
-	void unmapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames);
+	Host unmapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames);
 }

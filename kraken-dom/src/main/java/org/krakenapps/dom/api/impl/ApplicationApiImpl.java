@@ -62,9 +62,14 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		return em.find(Vendor.class, guid);
 	}
 
-	@Transactional
 	@Override
 	public Vendor createVendor(String name) {
+		Vendor vendor = createVendorInternal(name);
+		return vendor;
+	}
+
+	@Transactional
+	private Vendor createVendorInternal(String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Vendor vendor = new Vendor();
 		vendor.setGuid(UUID.randomUUID().toString());
@@ -76,9 +81,14 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		return vendor;
 	}
 
-	@Transactional
 	@Override
-	public void updateVendor(String guid, String name) {
+	public Vendor updateVendor(String guid, String name) {
+		Vendor vendor = updateVendorInternal(guid, name);
+		return vendor;
+	}
+
+	@Transactional
+	private Vendor updateVendorInternal(String guid, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		Vendor vendor = em.find(Vendor.class, guid);
@@ -89,11 +99,18 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		vendor.setUpdateDateTime(new Date());
 
 		em.merge(vendor);
+
+		return vendor;
+	}
+
+	@Override
+	public Vendor removeVendor(String guid) {
+		Vendor vendor = removeVendorInternal(guid);
+		return vendor;
 	}
 
 	@Transactional
-	@Override
-	public void removeVendor(String guid) {
+	private Vendor removeVendorInternal(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Vendor vendor = em.find(Vendor.class, guid);
 
@@ -101,6 +118,8 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 			throw new VendorNotFoundException();
 
 		em.remove(vendor);
+
+		return vendor;
 	}
 
 	@Override
@@ -156,9 +175,16 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		return createApplication(null, name, platform, props);
 	}
 
-	@Transactional
 	@Override
 	public Application createApplication(String vendorGuid, String name, String platform, Map<String, String> props) {
+		Application app = createApplicationInternal(vendorGuid, name, platform, props);
+		fireEntityAdded(app);
+		return app;
+	}
+
+	@Transactional
+	private Application createApplicationInternal(String vendorGuid, String name, String platform,
+			Map<String, String> props) {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		Vendor vendor = null;
@@ -180,9 +206,15 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		return app;
 	}
 
-	@Transactional
 	@Override
-	public void updateApplication(String guid, String name, Map<String, String> props) {
+	public Application updateApplication(String guid, String name, Map<String, String> props) {
+		Application app = updateApplicationInternal(guid, name, props);
+		fireEntityUpdated(app);
+		return app;
+	}
+
+	@Transactional
+	private Application updateApplicationInternal(String guid, String name, Map<String, String> props) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Application app = em.find(Application.class, guid);
 		if (app == null)
@@ -196,11 +228,13 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		for (ApplicationMetadata d : app.getMetadatas()) {
 			em.remove(d);
 		}
-		
+
 		app.getMetadatas().clear();
 		setAppMetadatas(em, app, props);
 
 		em.merge(app);
+
+		return app;
 	}
 
 	private void setAppMetadatas(EntityManager em, Application app, Map<String, String> props) {
@@ -216,15 +250,23 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		}
 	}
 
-	@Transactional
 	@Override
-	public void removeApplication(String guid) {
+	public Application removeApplication(String guid) {
+		Application app = removeApplicationInternal(guid);
+		fireEntityRemoved(app);
+		return app;
+	}
+
+	@Transactional
+	private Application removeApplicationInternal(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Application app = em.find(Application.class, guid);
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
 		em.remove(app);
+
+		return app;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -240,9 +282,14 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 				.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?").setParameter(1, app.getGuid());
 	}
 
-	@Transactional
 	@Override
 	public ApplicationVersion createApplicationVersion(String vendorName, String appName, String version) {
+		ApplicationVersion appVersion = createApplicationVersionIntenal(vendorName, appName, version);
+		return appVersion;
+	}
+
+	@Transactional
+	private ApplicationVersion createApplicationVersionIntenal(String vendorName, String appName, String version) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Vendor vendor = getVendor(vendorName);
 		if (vendor == null)
@@ -263,9 +310,14 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		return appVersion;
 	}
 
-	@Transactional
 	@Override
-	public void updateApplicationVersion(String guid, String version) {
+	public ApplicationVersion updateApplicationVersion(String guid, String version) {
+		ApplicationVersion appVersion = updateApplicationVersionInternal(guid, version);
+		return appVersion;
+	}
+
+	@Transactional
+	private ApplicationVersion updateApplicationVersionInternal(String guid, String version) {
 		EntityManager em = entityManagerService.getEntityManager();
 		ApplicationVersion appVersion = em.find(ApplicationVersion.class, guid);
 		if (appVersion == null)
@@ -275,16 +327,25 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		appVersion.setUpdateDateTime(new Date());
 
 		em.merge(appVersion);
+
+		return appVersion;
+	}
+
+	@Override
+	public ApplicationVersion removeApplicationVersion(String guid) {
+		ApplicationVersion appVersion = removeApplicationVersionInternal(guid);
+		return appVersion;
 	}
 
 	@Transactional
-	@Override
-	public void removeApplicationVersion(String guid) {
+	private ApplicationVersion removeApplicationVersionInternal(String guid) {
 		EntityManager em = entityManagerService.getEntityManager();
 		ApplicationVersion version = em.find(ApplicationVersion.class, guid);
 		if (version == null)
-			return;
+			return null;
 
 		em.remove(version);
+
+		return version;
 	}
 }

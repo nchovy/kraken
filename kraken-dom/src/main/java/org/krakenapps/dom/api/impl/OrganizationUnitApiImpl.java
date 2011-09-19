@@ -82,26 +82,29 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 	}
 
 	@Override
-	public void createOrganizationUnit(OrganizationUnit orgUnit) {
-		createOrganizationUnitInternal(orgUnit);
-		fireEntityAdded(orgUnit);
+	public OrganizationUnit createOrganizationUnit(OrganizationUnit orgUnit) {
+		OrganizationUnit ou = createOrganizationUnitInternal(orgUnit);
+		fireEntityAdded(ou);
+		return ou;
 	}
 
 	@Transactional
-	private void createOrganizationUnitInternal(OrganizationUnit orgUnit) {
+	private OrganizationUnit createOrganizationUnitInternal(OrganizationUnit orgUnit) {
 		EntityManager em = entityManagerService.getEntityManager();
 		orgUnit.setCreateDateTime(new Date());
 		em.persist(orgUnit);
+		return orgUnit;
 	}
 
 	@Override
-	public void updateOrganizationUnit(OrganizationUnit orgUnit) {
-		updateOrganizationUnitInternal(orgUnit);
-		fireEntityUpdated(orgUnit);
+	public OrganizationUnit updateOrganizationUnit(OrganizationUnit orgUnit) {
+		OrganizationUnit ou = updateOrganizationUnitInternal(orgUnit);
+		fireEntityUpdated(ou);
+		return ou;
 	}
 
 	@Transactional
-	private void updateOrganizationUnitInternal(OrganizationUnit orgUnit) {
+	private OrganizationUnit updateOrganizationUnitInternal(OrganizationUnit orgUnit) {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (orgUnit.getId() == 0)
 			throw new IllegalArgumentException("check organization unit id");
@@ -111,10 +114,11 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 		ou.setParent(orgUnit.getParent());
 		ou.setDomainController(orgUnit.getDomainController());
 		em.merge(ou);
+		return ou;
 	}
 
 	@Override
-	public void removeOrganizationUnit(int id) {
+	public OrganizationUnit removeOrganizationUnit(int id) {
 		// remove all related users
 		OrganizationUnit ou = getOrganizationUnit(id);
 		if (ou == null)
@@ -127,6 +131,7 @@ public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> imple
 		// remove org unit
 		OrganizationUnit orgUnit = removeOrganizationUnitInternal(id);
 		fireEntityRemoved(orgUnit);
+		return orgUnit;
 	}
 
 	@Transactional

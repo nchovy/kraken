@@ -19,16 +19,16 @@ import java.util.Collection;
 
 import org.krakenapps.dom.model.Organization;
 
-public interface OrganizationApi {
+public interface OrganizationApi extends EntityEventProvider<Organization> {
 	Collection<Organization> getOrganizations();
 
 	Organization getOrganization(int id);
 
 	Organization getOrganizationForUser(int userId);
 
-	void createOrganization(Organization organization);
+	Organization createOrganization(Organization organization);
 
-	void updateOrganization(Organization organization);
+	Organization updateOrganization(Organization organization);
 
-	void removeOrganization(int id);
+	Organization removeOrganization(int id);
 }

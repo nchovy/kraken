@@ -31,11 +31,11 @@ public interface ProgramApi {
 
 	List<Program> getAvailablePrograms(int organizationId, int adminId) throws AdminNotFoundException;
 
-	void createProgramProfile(ProgramProfile profile);
+	ProgramProfile createProgramProfile(ProgramProfile profile);
 
-	void updateProgramProfile(ProgramProfile profile);
+	ProgramProfile updateProgramProfile(ProgramProfile profile);
 
-	void removeProgramProfile(int programProfileId);
+	ProgramProfile removeProgramProfile(int programProfileId);
 
 	Program getProgram(int programId);
 }

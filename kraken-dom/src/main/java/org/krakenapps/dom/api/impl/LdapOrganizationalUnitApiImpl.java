@@ -70,9 +70,10 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 	}
 
 	@Override
-	public void createLdapOrganizationalUnit(LdapOrganizationalUnit unit) {
+	public LdapOrganizationalUnit createLdapOrganizationalUnit(LdapOrganizationalUnit unit) {
 		createLdapOrganizationalUnitInternal(unit);
 		fireEntityAdded(unit);
+		return unit;
 	}
 
 	@Transactional
@@ -83,9 +84,10 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 	}
 
 	@Override
-	public void updateLdapOrganizationalUnit(LdapOrganizationalUnit unit) {
+	public LdapOrganizationalUnit updateLdapOrganizationalUnit(LdapOrganizationalUnit unit) {
 		updateLdapOrganizationalUnitInternal(unit);
 		fireEntityUpdated(unit);
+		return unit;
 	}
 
 	@Transactional
@@ -101,9 +103,10 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 	}
 
 	@Override
-	public void removeLdapOrganizationalUnit(int id) {
+	public LdapOrganizationalUnit removeLdapOrganizationalUnit(int id) {
 		LdapOrganizationalUnit unit = removeLdapOrganizationalUnitInternal(id);
 		fireEntityRemoved(unit);
+		return unit;
 	}
 
 	@Transactional
@@ -115,9 +118,10 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 	}
 
 	@Override
-	public void removeLdapOrganizationalUnit(OrganizationUnit orgUnit) {
-		LdapOrganizationalUnit ldapUnit = removeLdapOrganizationalUnitInternal(orgUnit);
-		fireEntityRemoved(ldapUnit);
+	public LdapOrganizationalUnit removeLdapOrganizationalUnit(OrganizationUnit orgUnit) {
+		LdapOrganizationalUnit unit = removeLdapOrganizationalUnitInternal(orgUnit);
+		fireEntityRemoved(unit);
+		return unit;
 	}
 
 	@Transactional
@@ -126,7 +130,7 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 		LdapOrganizationalUnit ldapUnit = (LdapOrganizationalUnit) em
 				.createQuery("FROM LdapOrganizationalUnit l WHERE l.organizationUnit.id = ?")
 				.setParameter(1, orgUnit.getId()).getSingleResult();
-		
+
 		em.remove(ldapUnit);
 		return ldapUnit;
 	}

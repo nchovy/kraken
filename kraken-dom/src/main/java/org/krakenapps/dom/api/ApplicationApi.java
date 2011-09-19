@@ -22,16 +22,16 @@ import org.krakenapps.dom.model.Application;
 import org.krakenapps.dom.model.ApplicationVersion;
 import org.krakenapps.dom.model.Vendor;
 
-public interface ApplicationApi {
+public interface ApplicationApi extends EntityEventProvider<Application> {
 	Collection<Vendor> getVendors();
 
 	Vendor getVendor(String guid);
 
 	Vendor createVendor(String name);
 
-	void updateVendor(String guid, String name);
+	Vendor updateVendor(String guid, String name);
 
-	void removeVendor(String guid);
+	Vendor removeVendor(String guid);
 
 	Collection<Application> getApplications();
 
@@ -45,15 +45,15 @@ public interface ApplicationApi {
 
 	Application createApplication(String vendorGuid, String name, String platform, Map<String, String> props);
 
-	void updateApplication(String guid, String name, Map<String, String> props);
+	Application updateApplication(String guid, String name, Map<String, String> props);
 
-	void removeApplication(String guid);
+	Application removeApplication(String guid);
 
 	Collection<ApplicationVersion> getApplicationVersions(String vendorName, String appName);
 
 	ApplicationVersion createApplicationVersion(String vendorName, String appName, String version);
 
-	void updateApplicationVersion(String guid, String version);
+	ApplicationVersion updateApplicationVersion(String guid, String version);
 
-	void removeApplicationVersion(String guid);
+	ApplicationVersion removeApplicationVersion(String guid);
 }

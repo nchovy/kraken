@@ -20,18 +20,18 @@ import java.util.Collection;
 import org.krakenapps.dom.model.LdapOrganizationalUnit;
 import org.krakenapps.dom.model.OrganizationUnit;
 
-public interface LdapOrganizationalUnitApi {
+public interface LdapOrganizationalUnitApi extends EntityEventProvider<LdapOrganizationalUnit> {
 	Collection<LdapOrganizationalUnit> getLdapOrganizationalUnits();
 
 	LdapOrganizationalUnit getLdapOrganizationalUnit(int id);
 
-	void createLdapOrganizationalUnit(LdapOrganizationalUnit unit);
+	LdapOrganizationalUnit createLdapOrganizationalUnit(LdapOrganizationalUnit unit);
 
-	void updateLdapOrganizationalUnit(LdapOrganizationalUnit unit);
+	LdapOrganizationalUnit updateLdapOrganizationalUnit(LdapOrganizationalUnit unit);
 
-	void removeLdapOrganizationalUnit(int id);
-	
-	void removeLdapOrganizationalUnit(OrganizationUnit unit);
+	LdapOrganizationalUnit removeLdapOrganizationalUnit(int id);
+
+	LdapOrganizationalUnit removeLdapOrganizationalUnit(OrganizationUnit unit);
 
 	void sync();
 }

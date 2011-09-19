@@ -171,28 +171,31 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	}
 
 	@Override
-	public void createUser(User user) {
-		createUserInternal(user);
-		fireEntityAdded(user);
+	public User createUser(User user) {
+		User u = createUserInternal(user);
+		fireEntityAdded(u);
+		return u;
 	}
 
 	@Transactional
-	private void createUserInternal(User user) {
+	private User createUserInternal(User user) {
 		EntityManager em = entityManagerService.getEntityManager();
 		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		user.setCreateDateTime(new Date());
 		user.setUpdateDateTime(new Date());
 		em.persist(user);
+		return user;
 	}
 
 	@Override
-	public void updateUser(User user) {
-		updateUserInternal(user);
-		fireEntityUpdated(user);
+	public User updateUser(User user) {
+		User u = updateUserInternal(user);
+		fireEntityUpdated(u);
+		return u;
 	}
 
 	@Transactional
-	private void updateUserInternal(User user) {
+	private User updateUserInternal(User user) {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (user.getId() == 0)
 			throw new IllegalArgumentException("check user id");
@@ -202,7 +205,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		u.setLoginName(user.getLoginName());
 		u.setName(user.getName());
 		u.setDescription(user.getDescription());
-		if (user.getPassword() != null)
+		if (user.getPassword() != null && !user.getPassword().isEmpty())
 			u.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		u.setTitle(user.getTitle());
 		u.setEmail(user.getEmail());
@@ -211,12 +214,14 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		u.setUpdateDateTime(new Date());
 		u.setAdmin(user.getAdmin());
 		em.merge(u);
+		return u;
 	}
 
 	@Override
-	public void removeUser(int id) {
+	public User removeUser(int id) {
 		User user = removeUserInternal(id);
 		fireEntityRemoved(user);
+		return user;
 	}
 
 	@Transactional

@@ -19,14 +19,15 @@ import java.util.Collection;
 
 import org.krakenapps.dom.model.NetworkAddress;
 
-public interface NetworkAddressApi {
+public interface NetworkAddressApi extends EntityEventProvider<NetworkAddress> {
 	Collection<NetworkAddress> getNetworkAddresses(int organizationId);
 
 	NetworkAddress getNetworkAddress(int organizationId, int id);
 
 	NetworkAddress createNetworkAddress(int organizationId, String name, int type, String address1, String address2);
 
-	void updateNetworkAddress(int organizationId, int id, String name, int type, String address1, String address2);
+	NetworkAddress updateNetworkAddress(int organizationId, int id, String name, int type, String address1,
+			String address2);
 
-	void removeNetworkAddress(int organizationId, int id);
+	NetworkAddress removeNetworkAddress(int organizationId, int id);
 }

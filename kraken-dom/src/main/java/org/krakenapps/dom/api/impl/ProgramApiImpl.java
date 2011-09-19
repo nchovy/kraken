@@ -96,25 +96,28 @@ public class ProgramApiImpl extends AbstractApi<ProgramProfile> implements Progr
 	}
 
 	@Override
-	public void createProgramProfile(ProgramProfile profile) {
-		createProgramProfileInternal(profile);
-		fireEntityAdded(profile);
+	public ProgramProfile createProgramProfile(ProgramProfile profile) {
+		ProgramProfile pp = createProgramProfileInternal(profile);
+		fireEntityAdded(pp);
+		return pp;
 	}
 
 	@Transactional
-	private void createProgramProfileInternal(ProgramProfile profile) {
+	private ProgramProfile createProgramProfileInternal(ProgramProfile profile) {
 		EntityManager em = entityManagerService.getEntityManager();
 		em.persist(profile);
+		return profile;
 	}
 
 	@Override
-	public void updateProgramProfile(ProgramProfile profile) {
-		updateProgramProfileInternal(profile);
-		fireEntityUpdated(profile);
+	public ProgramProfile updateProgramProfile(ProgramProfile profile) {
+		ProgramProfile pp = updateProgramProfileInternal(profile);
+		fireEntityUpdated(pp);
+		return pp;
 	}
 
 	@Transactional
-	private void updateProgramProfileInternal(ProgramProfile profile) {
+	private ProgramProfile updateProgramProfileInternal(ProgramProfile profile) {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (profile.getId() == 0)
 			throw new IllegalArgumentException("check program profile id");
@@ -123,12 +126,14 @@ public class ProgramApiImpl extends AbstractApi<ProgramProfile> implements Progr
 		pp.setName(profile.getName());
 		pp.setDescription(profile.getDescription());
 		em.merge(pp);
+		return pp;
 	}
 
 	@Override
-	public void removeProgramProfile(int programProfileId) {
+	public ProgramProfile removeProgramProfile(int programProfileId) {
 		ProgramProfile profile = removeProgramProfileInternal(programProfileId);
 		fireEntityRemoved(profile);
+		return profile;
 	}
 
 	@Transactional

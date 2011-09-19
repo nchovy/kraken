@@ -90,8 +90,8 @@ public class HostPlugin {
 		String name = req.getString("name");
 		String description = req.getString("description");
 
-		int id = hostApi.createHost(organizationId, hostTypeId, areaId, name, description);
-		resp.put("id", id);
+		Host host = hostApi.createHost(organizationId, hostTypeId, areaId, name, description);
+		resp.put("id", host.getId());
 	}
 
 	@MsgbusMethod

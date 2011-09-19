@@ -20,11 +20,11 @@ import java.util.List;
 import org.krakenapps.dom.model.AdminSetting;
 
 public interface AdminSettingApi {
-	List<AdminSetting> getUserSettings(int organizationId, int userId);
+	List<AdminSetting> getAdminSettings(int organizationId, int userId);
 
-	String getUserSetting(int organizationId, int userId, String name);
+	String getAdminSetting(int organizationId, int userId, String name);
 
-	void updateAdminSetting(int organizationId, int userId, String name, String value);
+	void setAdminSetting(int organizationId, int userId, String name, String value);
 
-	void removeUserSetting(int organizationId, int userId, String name);
+	void unsetAdminSetting(int organizationId, int userId, String name);
 }

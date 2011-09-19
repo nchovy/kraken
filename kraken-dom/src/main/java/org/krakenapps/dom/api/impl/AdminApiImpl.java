@@ -48,7 +48,6 @@ import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.AdminTrustHost;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
@@ -91,11 +90,11 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			password = admin.getUser().getPassword();
 
 		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
-			OrganizationParameter param = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
+			String maxSession = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
 					"max_sessions");
-			if (param != null) {
+			if (maxSession != null) {
 				try {
-					int maxSessions = Integer.parseInt(param.getValue());
+					int maxSessions = Integer.parseInt(maxSession);
 					if (maxSessions > 0) {
 						if (force) {
 							while (loggedIn.size() >= maxSessions) {
@@ -115,7 +114,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			updateLoginFailures(admin, true);
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
-			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser().getLoginName()));
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
+					.getLoginName()));
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
@@ -268,13 +268,14 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Override
-	public void createAdmin(int organizationId, Integer requestAdminId, Admin admin) {
-		createAdminInternal(organizationId, requestAdminId, admin);
-		fireEntityAdded(admin);
+	public Admin createAdmin(int organizationId, Integer requestAdminId, Admin admin) {
+		Admin a = createAdminInternal(organizationId, requestAdminId, admin);
+		fireEntityAdded(a);
+		return a;
 	}
 
 	@Transactional
-	private void createAdminInternal(int organizationId, Integer requestAdminId, Admin admin) {
+	private Admin createAdminInternal(int organizationId, Integer requestAdminId, Admin admin) {
 		EntityManager em = entityManagerService.getEntityManager();
 		Organization organization = em.find(Organization.class, organizationId);
 		if (organization == null)
@@ -299,6 +300,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			host.setAdmin(admin);
 			em.persist(host);
 		}
+
+		return admin;
 	}
 
 	@Transactional
@@ -322,10 +325,10 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		EntityManager em = entityManagerService.getEntityManager();
 		Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
 				.setParameter(1, loginName).getSingleResult();
-		
+
 		admin.getRole().getPermissions().size();
 		admin.getTrustHosts().size();
-		
+
 		return admin;
 	}
 
@@ -378,41 +381,10 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Override
-	public void removeAdmin(int organizationId, Integer requestAdminId, int adminId) {
-		Admin admin = removeAdminInternal(organizationId, requestAdminId, adminId);
-		fireEntityRemoved(admin);
-	}
-
-	@Transactional
-	private Admin removeAdminInternal(int organizationId, Integer requestAdminId, int adminId) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		Admin admin = (Admin) em.find(Admin.class, adminId);
-		if (admin.getUser().getOrganization().getId() != organizationId)
-			throw new AdminNotFoundException(adminId);
-
-		if (requestAdminId != null) {
-			Admin requestAdmin = em.find(Admin.class, requestAdminId);
-			if (requestAdmin == null)
-				throw new AdminNotFoundException(requestAdminId);
-
-			if (requestAdmin.getRole().getLevel() < admin.getRole().getLevel())
-				throw new SecurityException("remove admin");
-
-			if (requestAdminId == adminId) {
-				throw new CannotRemoveRequestingAdminException(requestAdminId);
-			}
-		}
-
-		em.remove(admin);
-
-		return admin;
-	}
-
-	@Override
-	public void updateAdmin(int organizationId, Integer requestAdminId, Admin targetAdmin) {
+	public Admin updateAdmin(int organizationId, Integer requestAdminId, Admin targetAdmin) {
 		Admin admin = updateAdminInternal(organizationId, requestAdminId, targetAdmin);
 		fireEntityUpdated(admin);
+		return admin;
 	}
 
 	@Transactional
@@ -474,6 +446,39 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		} catch (NoResultException e) {
 			throw new AdminNotFoundException(targetAdmin.getId());
 		}
+	}
+
+	@Override
+	public Admin removeAdmin(int organizationId, Integer requestAdminId, int adminId) {
+		Admin admin = removeAdminInternal(organizationId, requestAdminId, adminId);
+		fireEntityRemoved(admin);
+		return admin;
+	}
+
+	@Transactional
+	private Admin removeAdminInternal(int organizationId, Integer requestAdminId, int adminId) {
+		EntityManager em = entityManagerService.getEntityManager();
+
+		Admin admin = (Admin) em.find(Admin.class, adminId);
+		if (admin.getUser().getOrganization().getId() != organizationId)
+			throw new AdminNotFoundException(adminId);
+
+		if (requestAdminId != null) {
+			Admin requestAdmin = em.find(Admin.class, requestAdminId);
+			if (requestAdmin == null)
+				throw new AdminNotFoundException(requestAdminId);
+
+			if (requestAdmin.getRole().getLevel() < admin.getRole().getLevel())
+				throw new SecurityException("remove admin");
+
+			if (requestAdminId == adminId) {
+				throw new CannotRemoveRequestingAdminException(requestAdminId);
+			}
+		}
+
+		em.remove(admin);
+
+		return admin;
 	}
 
 	private static final char[] chars = new char[62];

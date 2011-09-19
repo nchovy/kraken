@@ -34,7 +34,7 @@ public class AdminSettingPlugin {
 		int organizationId = req.getOrgId();
 		int adminId = req.getSession().getAdminId();
 		String name = req.getString("name");
-		String value = adminSettingApi.getUserSetting(organizationId, adminId, name);
+		String value = adminSettingApi.getAdminSetting(organizationId, adminId, name);
 		resp.put("setting", value);
 	}
 
@@ -45,7 +45,7 @@ public class AdminSettingPlugin {
 		String name = req.getString("name");
 		String value = req.getString("value");
 
-		adminSettingApi.updateAdminSetting(organizationId, adminId, name, value);
+		adminSettingApi.setAdminSetting(organizationId, adminId, name, value);
 	}
 
 	@MsgbusMethod
@@ -54,6 +54,6 @@ public class AdminSettingPlugin {
 		int adminId = req.getSession().getAdminId();
 		String name = req.getString("name");
 
-		adminSettingApi.removeUserSetting(organizationId, adminId, name);
+		adminSettingApi.unsetAdminSetting(organizationId, adminId, name);
 	}
 }
