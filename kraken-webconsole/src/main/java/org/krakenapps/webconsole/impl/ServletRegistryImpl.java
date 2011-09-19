@@ -168,7 +168,8 @@ public class ServletRegistryImpl implements ServletRegistry {
 		if (queryPos > 0)
 			path = path.substring(0, queryPos);
 
-		// path = path.substring(0, path.lastIndexOf("/"));
+		path = path.substring(0, path.lastIndexOf("/"));
+
 		String[] s = path.split("/");
 
 		int count = 0;
