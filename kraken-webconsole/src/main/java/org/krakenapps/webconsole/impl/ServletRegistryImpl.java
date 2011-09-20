@@ -15,6 +15,7 @@
  */
 package org.krakenapps.webconsole.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -40,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.krakenapps.util.DirectoryMap;
 import org.krakenapps.webconsole.MimeTypes;
+import org.krakenapps.webconsole.PageNotFoundException;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,31 +107,25 @@ public class ServletRegistryImpl implements ServletRegistry {
 			HttpServlet servlet = directoryMap.get(servletPath + "/context");
 
 			String pathInfo = req.getUri().substring(servletPath.length());
-			if (pathInfo.isEmpty() || pathInfo.endsWith("/")) {
-				pathInfo += "index.html";
-			}
-
 			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
 			response = new Response(ctx, req, service);
-			response.setContentType(getMimeType(pathInfo));
 
 			servlet.service(request, response);
-		} catch (IOException e) {
-			if (!e.getMessage().equals("404"))
-				return false;
-
-			if (req.getUri().endsWith("/")) {
-				sendNotFound(ctx, req);
-				return false;
+		} catch (PageNotFoundException e) {
+			if (e.getMovedLocation() != null) {
+				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY);
+				resp.setHeader(HttpHeaders.Names.LOCATION, e.getMovedLocation());
+				ctx.getChannel().write(resp);
+				return true;
 			} else {
-				req.setUri(req.getUri() + "/");
-				if (serviceInternal(ctx, req, false)) {
-					HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-							HttpResponseStatus.MOVED_PERMANENTLY);
-					resp.setHeader(HttpHeaders.Names.LOCATION, req.getUri());
-					ctx.getChannel().write(resp);
-				}
+				sendNotFound(ctx, req);
 			}
+			return false;
+		} catch (FileNotFoundException e) {
+			sendNotFound(ctx, req);
+			return false;
+		} catch (IOException e) {
+			return false;
 		}
 
 		return true;
@@ -168,8 +164,6 @@ public class ServletRegistryImpl implements ServletRegistry {
 		if (queryPos > 0)
 			path = path.substring(0, queryPos);
 
-		path = path.substring(0, path.lastIndexOf("/"));
-
 		String[] s = path.split("/");
 
 		int count = 0;
@@ -184,18 +178,6 @@ public class ServletRegistryImpl implements ServletRegistry {
 				n[j++] = s[i];
 
 		return n;
-	}
-
-	private String getMimeType(String path) {
-		String mimeType = MimeTypes.instance().getByFile(path);
-
-		if (mimeType == null)
-			mimeType = "text/html";
-
-		if (mimeType.startsWith("text/"))
-			mimeType += "; charset=utf-8";
-
-		return mimeType;
 	}
 
 	@Override

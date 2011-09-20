@@ -8,6 +8,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.krakenapps.webconsole.impl.Request;
+
 public abstract class ResourceServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
@@ -15,12 +17,28 @@ public abstract class ResourceServlet extends HttpServlet {
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String pathInfo = req.getPathInfo();
+		if (req instanceof Request) {
+			if (pathInfo.endsWith("/"))
+				((Request) req).setPathInfo(pathInfo + "index.html");
+		}
 		InputStream is = getInputStream(req);
 
-		if (is == null)
-			throw new IOException("404");
+		if (is == null || is.available() == 0) {
+			if (req instanceof Request) {
+				if (!pathInfo.endsWith("/")) {
+					((Request) req).setPathInfo(pathInfo + "/index.html");
+					is = getInputStream(req);
+					if (is != null && is.available() > 0)
+						throw new PageNotFoundException(req.getServletPath() + pathInfo + "/");
+				}
+			}
+			throw new PageNotFoundException();
+		}
 
 		try {
+			resp.setContentType(getMimeType(req.getPathInfo()));
+
 			byte[] b = new byte[4096];
 			int len;
 			while ((len = is.read(b)) != -1)
@@ -29,8 +47,19 @@ public abstract class ResourceServlet extends HttpServlet {
 		} catch (IOException e) {
 			throw e;
 		} finally {
-			// resp.getOutputStream().close();
 			is.close();
 		}
+	}
+
+	private String getMimeType(String path) {
+		String mimeType = MimeTypes.instance().getByFile(path);
+
+		if (mimeType == null)
+			mimeType = "text/html";
+
+		if (mimeType.startsWith("text/"))
+			mimeType += "; charset=utf-8";
+
+		return mimeType;
 	}
 }

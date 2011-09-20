@@ -252,6 +252,10 @@ public class Request implements HttpServletRequest {
 		return pathInfo;
 	}
 
+	public void setPathInfo(String pathInfo) {
+		this.pathInfo = pathInfo;
+	}
+
 	@Override
 	public String getPathTranslated() {
 		// TODO Auto-generated method stub

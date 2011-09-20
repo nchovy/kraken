@@ -134,7 +134,11 @@ public class WebSocketServerImpl implements WebSocketServer {
 
 	@Validate
 	public void start() {
-		staticResourceApi.register("/", new BundleResourceServlet(bc.getBundle(), "/WEB-INF"));
+		try {
+			staticResourceApi.register("/", new BundleResourceServlet(bc.getBundle(), "/WEB-INF"));
+		} catch (Exception e) {
+			logger.error("kraken webconsole: prefix register failed", e);
+		}
 		for (WebSocketServerParams params : getBindAddressConfig()) {
 			try {
 				open(params);
