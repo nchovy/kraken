@@ -150,8 +150,10 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		EntityManager em = entityManagerService.getEntityManager();
 		List<User> users = em.createQuery("FROM User u WHERE u.domainController = ?").setParameter(1, domainController)
 				.getResultList();
-		for (User user : users)
-			user.getAdmin().getTrustHosts().size();
+		for (User user : users) {
+			if (user.getAdmin() != null)
+				user.getAdmin().getTrustHosts().size();
+		}
 		return users;
 	}
 
