@@ -56,7 +56,11 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 	@Override
 	public List<Widget> getWidgets(int adminId) {
 		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM Widget w WHERE w.admin.id = ?").setParameter(1, adminId).getResultList();
+		List<Widget> widgets = em.createQuery("FROM Widget w WHERE w.admin.id = ?").setParameter(1, adminId)
+				.getResultList();
+		for (Widget widget : widgets)
+			widget.getWidgetConfigs().size();
+		return widgets;
 	}
 
 	@Override
@@ -104,7 +108,6 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 	public WidgetConfig setConfig(int adminId, int widgetId, String name, String value) throws WidgetNotFoundException {
 		WidgetConfig config = setConfigInternal(adminId, widgetId, name, value);
 		Widget widget = config.getWidget();
-		widget.getWidgetConfigs().size();
 		fireEntityUpdated(widget);
 		return config;
 	}
@@ -132,6 +135,7 @@ public class WidgetApiImpl extends AbstractApi<Widget> implements WidgetApi {
 
 			em.persist(config);
 		}
+		config.getWidget().getWidgetConfigs().size();
 		return config;
 	}
 
