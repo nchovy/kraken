@@ -353,11 +353,13 @@ public class Editor {
 		return lines;
 	}
 
+	@SuppressWarnings("unused")
 	private void drawText(int x, int y, String s) {
 		context.print(new MoveToCode(x, y));
 		context.print(s);
 	}
 
+	@SuppressWarnings("unused")
 	private void drawBox(int x1, int y1, int x2, int y2) {
 		// first line
 		context.print(new MoveToCode(x1, y1));
@@ -386,6 +388,7 @@ public class Editor {
 		context.print("+");
 	}
 
+	@SuppressWarnings("unused")
 	private void drawHorizontalLine(int x1, int x2, int y) {
 		context.print(new MoveToCode(x1, y));
 		context.print("+");
@@ -394,6 +397,7 @@ public class Editor {
 		context.print("+");
 	}
 
+	@SuppressWarnings("unused")
 	private void drawVerticalLine(int x1, int y1, int y2) {
 		context.print(new MoveToCode(x1, y1));
 		for (int i = y1; i <= y2; i++) {

@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
  * 
  */
 public class BundleManagerService implements SynchronousBundleListener, BundleManager {
-	final Logger logger = LoggerFactory.getLogger(BundleManagerService.class.getName());
+	private Logger logger = LoggerFactory.getLogger(BundleManagerService.class);
 
 	private BundleContext context;
 	private BundleConfig config;
@@ -311,7 +311,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 		try {
 			bundle.stop();
 		} catch (BundleException e) {
-			e.printStackTrace();
+			logger.error("kraken core: stopping bundle failed.", e);
 		}
 	}
 
@@ -329,10 +329,70 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 		}
 
 		try {
+			if (!isLocalJar(bundle)) {
+				try {
+					File before = new File(bundle.getLocation().replace("file://", ""));
+					File temp = File.createTempFile(before.getName(), "", before.getParentFile());
+					temp.delete();
+					if (before.renameTo(temp)) {
+						MavenResolver resolver = new MavenResolver(getLocalRepository(),
+								config.getBundleRepositories(), null, getKeyStoreManager());
+						MavenArtifact artifact = getArtifact(bundle);
+						File after = resolver.resolve(artifact);
+						if (after.exists())
+							temp.delete();
+						else
+							temp.renameTo(before);
+					}
+				} catch (MavenResolveException e) {
+					logger.error("kraken core: maven resolve failed.", e);
+				} catch (IOException e) {
+					logger.error("kraken core: create temp file failed.", e);
+				}
+			}
 			bundle.update();
 		} catch (BundleException e) {
-			e.printStackTrace();
+			logger.error("kraken core: updating bundle failed.", e);
 		}
+	}
+
+	private boolean isLocalJar(Bundle bundle) {
+		File location = new File(bundle.getLocation().replace("file://", ""));
+		File krakenDownload = new File(System.getProperty("kraken.download.dir"));
+
+		while (location.getParentFile() != null) {
+			if (location.equals(krakenDownload))
+				return false;
+			location = location.getParentFile();
+		}
+
+		return true;
+	}
+
+	private MavenArtifact getArtifact(Bundle bundle) {
+		File location = new File(bundle.getLocation().replace("file://", ""));
+		File krakenDownload = new File(System.getProperty("kraken.download.dir"));
+
+		String groupId = null;
+		String artifactId = null;
+		Version version = null;
+		while (location.getParentFile() != null) {
+			location = location.getParentFile();
+			if (location.equals(krakenDownload))
+				break;
+
+			String name = location.getName();
+			if (version == null)
+				version = new Version(name);
+			else if (artifactId == null)
+				artifactId = name;
+			else if (groupId == null)
+				groupId = name;
+			else
+				groupId = name + "." + groupId;
+		}
+
+		return new MavenArtifact(groupId, artifactId, version);
 	}
 
 	/*

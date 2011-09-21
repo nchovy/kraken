@@ -17,7 +17,6 @@ package org.krakenapps.logger;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.slf4j.ILoggerFactory;
 import org.slf4j.impl.KrakenLoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
 

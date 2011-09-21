@@ -140,7 +140,7 @@ public class MavenResolver {
 				} catch (Exception e) {
 					String metadataUrl = normalize(repo.getUrl())
 							+ String.format("%s/%s/maven-metadata.xml", artifact.getGroupId().replace(".", "/"),
-							artifact.getArtifactId());
+									artifact.getArtifactId());
 					logger.info("maven resolver: failed to get {} {}", metadataUrl, e.getMessage());
 				}
 			} else
@@ -181,7 +181,7 @@ public class MavenResolver {
 			}
 
 			// download jar
-			if (localJar.exists() == false) {
+//			if (localJar.exists() == false) {
 				try {
 					byte[] binary = download(repo, jarUrl);
 					jarStream = new FileOutputStream(localJar, false);
@@ -190,7 +190,7 @@ public class MavenResolver {
 					logger.info("maven resolver: failed to get {} {}", jarUrl, e.getMessage());
 					return null;
 				}
-			}
+//			}
 
 			return localJar;
 		} catch (MalformedURLException e) {
