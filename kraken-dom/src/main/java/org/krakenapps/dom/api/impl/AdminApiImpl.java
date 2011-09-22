@@ -119,12 +119,14 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			return admin;
 		} else {
 			updateLoginFailures(admin, false);
-			for (LoginCallback callback : callbacks)
-				callback.onLoginFailed(admin, session);
+			LoginFailedException e = null;
 			if (admin.isUseOtp())
-				throw new InvalidOtpPasswordException();
+				e = new InvalidOtpPasswordException();
 			else
-				throw new InvalidPasswordException();
+				e = new InvalidPasswordException();
+			for (LoginCallback callback : callbacks)
+				callback.onLoginFailed(admin, session, e);
+			throw e;
 		}
 	}
 
@@ -139,7 +141,10 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 			if (!found) {
 				updateLoginFailures(admin, false);
-				throw new AccessControlException();
+				LoginFailedException e = new AccessControlException();
+				for (LoginCallback callback : callbacks)
+					callback.onLoginFailed(admin, session, e);
+				throw e;
 			}
 		}
 	}
