@@ -22,6 +22,7 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.radius.server.RadiusServer;
+import org.krakenapps.radius.server.userdatabase.LocalUserRegistry;
 
 @Component(name = "radius-script-factory")
 @Provides
@@ -29,12 +30,15 @@ public class RadiusScriptFactory implements ScriptFactory {
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "alias", value = "radius")
 	private String alias;
-	
+
 	@Requires
 	private RadiusServer server;
 
+	@Requires
+	private LocalUserRegistry userRegistry;
+
 	@Override
 	public Script createScript() {
-		return new RadiusScript(server);
+		return new RadiusScript(server, userRegistry);
 	}
 }

@@ -37,17 +37,22 @@ import org.krakenapps.radius.server.RadiusPortType;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusServer;
 import org.krakenapps.radius.server.RadiusVirtualServer;
+import org.krakenapps.radius.server.userdatabase.LocalUser;
+import org.krakenapps.radius.server.userdatabase.LocalUserRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RadiusScript implements Script {
 	private final Logger logger = LoggerFactory.getLogger(RadiusScript.class.getName());
 
-	private RadiusServer server;
 	private ScriptContext context;
 
-	public RadiusScript(RadiusServer server) {
+	private RadiusServer server;
+	private LocalUserRegistry userRegistry;
+
+	public RadiusScript(RadiusServer server, LocalUserRegistry userRegistry) {
 		this.server = server;
+		this.userRegistry = userRegistry;
 	}
 
 	@Override
@@ -323,5 +328,30 @@ public class RadiusScript implements Script {
 		}
 
 		return selected;
+	}
+
+	public void users(String[] args) {
+		context.println("Local Users");
+		context.println("-------------");
+		for (LocalUser user : userRegistry.getUsers()) {
+			context.println(user.toString());
+		}
+	}
+
+	@ScriptUsage(description = "add user", arguments = {
+			@ScriptArgument(name = "login name", type = "string", description = "login name"),
+			@ScriptArgument(name = "password", type = "string", description = "password") })
+	public void addUser(String[] args) {
+		LocalUser user = new LocalUser();
+		user.setLoginName(args[0]);
+		user.setPassword(args[1]);
+
+		userRegistry.add(user);
+		context.println("user added");
+	}
+
+	@ScriptUsage(description = "add user", arguments = { @ScriptArgument(name = "login name", type = "string", description = "login name") })
+	public void removeUser(String[] args) {
+		userRegistry.remove(args[0]);
 	}
 }
