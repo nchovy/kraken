@@ -72,8 +72,6 @@
 		<module>kraken-syslog-parser</module>
 		<module>kraken-stormbringer</module>
 		<module>kraken-sql-engine</module>
-		<module>kraken-bridge</module>
-		<module>kraken-sleep-proxy</module>
 		<module>kraken-webconsole</module>
 		<module>kraken-msgbus</module>
 		<module>kraken-proxy</module>
