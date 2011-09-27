@@ -18,8 +18,6 @@ package org.krakenapps.ca.impl;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -36,10 +34,11 @@ import java.util.Map;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMWriter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.ca.CertificateAuthority;
+import org.krakenapps.ca.util.CertExporter;
+import org.krakenapps.ca.util.CertImporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +53,13 @@ public class CertificateAuthorityScript implements Script {
 	private CertificateAuthority x509cert;
 	private ScriptContext context;
 	private File home;
-	
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
-			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
-	public CertificateAuthorityScript(CertificateAuthority x509cert) {
-		this.x509cert = x509cert;
-		this.home = x509cert.getCARootDir();
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
+			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+
+	public CertificateAuthorityScript(CertificateAuthority ca) {
+		this.x509cert = ca;
+		this.home = ca.getCARootDir();
 	}
 
 	@Override
@@ -69,56 +68,30 @@ public class CertificateAuthorityScript implements Script {
 	}
 
 	public void exportCaCrt(String[] args) {
-		FileInputStream is = null;
-		FileOutputStream os = null;
-		boolean usePem = false;
-		if (args.length >= 1 && args[0].equals("-pem"))
-			usePem = true;
+		boolean usePem = args.length >= 1 && args[0].equals("-pem");
 		try {
-			KeyStore store = KeyStore.getInstance("JKS");
-
 			context.print("CA Common Name? ");
 			String caCN = context.readLine();
 
 			context.print("CA keystore password? ");
 			String password = context.readPassword();
 
-			is = new FileInputStream(new File(home, caCN + "/CA.jks"));
-			store.load(is, password.toCharArray());
+			File jks = new File(home, caCN + "/CA.jks");
+			KeyStore store = CertImporter.loadJks(jks, password);
 
-			Certificate caCert = store.getCertificate("ca");
-			String extension = ".crt";
+			String extension = usePem ? ".pem" : ".crt";
+			File caDir = new File(home, caCN);
+			File f = new File(caDir, caCN + extension);
+
 			if (usePem)
-				extension = ".pem";
-			os = new FileOutputStream(new File(new File(home, caCN), caCN + extension));
-			if (!!!usePem) {
-				os.write(caCert.getEncoded());
-			} else {
-				PEMWriter writer = new PEMWriter(new PrintWriter(os), "PC");
-				try {
-					writer.writeObject(caCert);
-					writer.writeObject(store.getKey("ca-key", password.toCharArray()));
-				} finally {
-					writer.close();
-				}
-			}
+				CertExporter.writePemFile(store, password, f);
+			else
+				CertExporter.writeCrtFile(store, f);
+
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
 			logger.warn("kraken x509: export ca cert failed", e);
-		} finally {
-			if (is != null)
-				try {
-					is.close();
-				} catch (IOException e) {
-				}
-
-			if (os != null)
-				try {
-					os.close();
-				} catch (IOException e) {
-				}
 		}
-
 	}
 
 	public void createCert(String[] args) {
@@ -241,8 +214,8 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate cert
-			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair,
-					dn, attrs, notBefore, notAfter, signatureAlgorithm);
+			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, attrs,
+					notBefore, notAfter, signatureAlgorithm);
 
 			context.println(cert.toString());
 
@@ -333,8 +306,7 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate
-			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter,
-					signatureAlgorithm);
+			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
 			context.println(cert.toString());
 
 			// save

@@ -2,7 +2,6 @@ package org.krakenapps.ca;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -191,8 +190,6 @@ public class ClientCAUsageTest {
 		}
 
 		private void saveEncryptedPrivateKey(PrivateKey privKey, String pkPassword) {
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
 			// code from http://stackoverflow.com/questions/5127379/how-to-generate-a-rsa-keypair-with-a-privatekey-encrypted-with-password
 			byte[] encodedPrivKey = privKey.getEncoded();
 			int hashIterationCount = 20;
