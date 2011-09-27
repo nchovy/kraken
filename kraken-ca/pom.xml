@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-ca</artifactId>
-	<version>1.2.2</version>
+	<version>1.2.3</version>
 	<packaging>bundle</packaging>
 	<name>Kraken CA</name>
 	<build>
@@ -25,6 +25,7 @@
 						<Bundle-SymbolicName>org.krakenapps.ca</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.ca,
+							org.krakenapps.ca.util,
 							org.krakenapps.ca.msgbus
 						</Export-Package>
 						<Import-Package>
