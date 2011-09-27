@@ -32,6 +32,8 @@ import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 import org.krakenapps.ansicode.ClearScreenCode;
@@ -63,7 +65,7 @@ public class CoreScript implements Script {
 
 	public void cat(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
-		File f = new File(dir, args[0]);
+		File f = canonicalize(dir, args[0]);
 		if (!f.exists()) {
 			context.println("cat: " + f.getName()
 					+ ": No such file or directory");
@@ -92,7 +94,6 @@ public class CoreScript implements Script {
 	}
 
 	public void wget(String[] args) throws MalformedURLException {
-
 		File dir = (File) context.getSession().getProperty("dir");
 
 		URL url = new URL(args[0]);
@@ -126,8 +127,8 @@ public class CoreScript implements Script {
 	public void cp(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
-		File from = new File(dir, args[0]);
-		File to = new File(dir, args[1]);
+		File from = canonicalize(dir, args[0]);
+		File to = canonicalize(dir, args[1]);
 
 		if (!from.exists())
 			context.println("cp: cannot stat '" + from.getName()
@@ -151,7 +152,7 @@ public class CoreScript implements Script {
 		File dir = (File) context.getSession().getProperty("dir");
 
 		for (String token : args) {
-			File f = new File(dir, token);
+			File f = canonicalize(dir, token);
 			if (!f.exists())
 				context.println("rm: cannot remove '" + token
 						+ "': No such file or directory");
@@ -163,8 +164,8 @@ public class CoreScript implements Script {
 	public void mv(String[] args) {
 		File dir = (File) context.getSession().getProperty("dir");
 
-		File from = new File(dir, args[0]);
-		File to = new File(dir, args[1]);
+		File from = canonicalize(dir, args[0]);
+		File to = canonicalize(dir, args[1]);
 
 		if (from.equals(to))
 			context.println("mv: '" + from.getName() + "' and '" + to.getName()
@@ -178,12 +179,33 @@ public class CoreScript implements Script {
 
 	public void ls(String[] args) {
 		File dir = (File) context.getSession().getProperty("dir");
-		for (File f : dir.listFiles()) {
-			context.println(formatFileInfo(f));
+		List<File> targets = new LinkedList<File>();
+		if (args.length == 0)
+			targets.add(dir);
+
+		for (String arg : args)
+			targets.add(canonicalize(dir, arg));
+
+		for (File target : targets) {
+			if (!target.exists()) {
+				context.println("ls: cannot access " + target.getName()
+						+ " :No such file or directory");
+				return;
+			}
+
+			if (targets.size() > 1)
+				context.println(target.getName() + ":");
+
+			for (File f : target.listFiles()) {
+				context.println(formatFileInfo(f));
+			}
 		}
 	}
 
 	public void cd(String[] args) {
+		if (args.length == 0)
+			return;
+
 		File dir = (File) context.getSession().getProperty("dir");
 
 		File newDir = null;
@@ -193,12 +215,19 @@ public class CoreScript implements Script {
 			else
 				newDir = dir;
 		} else
-			newDir = new File(dir, args[0]);
+			newDir = canonicalize(dir, args[0]);
 
 		if (!(newDir.exists() && newDir.isDirectory()))
 			context.println("No such file or directory");
 		else
 			context.getSession().setProperty("dir", newDir);
+	}
+
+	private File canonicalize(File dir, String path) {
+		if (path.startsWith("/"))
+			return new File(path);
+		else
+			return new File(dir, path);
 	}
 
 	public void date(String[] args) {

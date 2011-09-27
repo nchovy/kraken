@@ -50,7 +50,11 @@ public class ScriptSessionImpl implements ScriptSession {
 	@Override
 	public String getPrompt() {
 		File dir = (File) getProperty("dir");
-		return "kraken@" + hostname + " " + dir.getName() + "> ";
+		String workingDirectory = dir.getName();
+		if (workingDirectory == null || workingDirectory.isEmpty())
+			workingDirectory = "/";
+
+		return "kraken@" + hostname + " " + workingDirectory + "> ";
 	}
 
 	@Override
