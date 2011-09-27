@@ -122,10 +122,13 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 	@Transactional
 	public OrganizationParameter getOrgParameter(int orgId, String name) {
 		EntityManager em = entityManagerService.getEntityManager();
-		OrganizationParameter op = (OrganizationParameter) em
-				.createQuery("FROM OrganizationParameter o WHERE o.organization.id = ? AND o.name = ?")
-				.setParameter(1, orgId).setParameter(2, name).getSingleResult();
-
-		return op;
+		try {
+			OrganizationParameter op = (OrganizationParameter) em
+					.createQuery("FROM OrganizationParameter o WHERE o.organization.id = ? AND o.name = ?")
+					.setParameter(1, orgId).setParameter(2, name).getSingleResult();
+			return op;
+		} catch (NoResultException e) {
+			return null;
+		}
 	}
 }
