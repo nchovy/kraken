@@ -42,6 +42,7 @@ import org.krakenapps.ansicode.SetColorCode;
 import org.krakenapps.ansicode.ClearScreenCode.Option;
 import org.krakenapps.ansicode.SetColorCode.Color;
 import org.krakenapps.api.Script;
+import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.main.Kraken;
@@ -335,7 +336,17 @@ public class CoreScript implements Script {
 		return code[b];
 	}
 
+	@ScriptUsage(description = "scp", arguments = {
+			@ScriptArgument(name = "file from", type = "string", description = "local path or user@host:path format"),
+			@ScriptArgument(name = "file to", type = "string", description = "local path or user@host:path format") })
 	public void scp(String[] args) throws JSchException, IOException {
+		if (args[0].contains("@"))
+			scpFrom(args);
+		else
+			scpTo(args);
+	}
+
+	private void scpFrom(String[] args) {
 		// scp from
 		FileOutputStream fos = null;
 		try {
@@ -446,6 +457,87 @@ public class CoreScript implements Script {
 			try {
 				if (fos != null)
 					fos.close();
+			} catch (Exception ee) {
+			}
+		}
+	}
+
+	private void scpTo(String[] args) {
+		FileInputStream fis = null;
+		try {
+			String lfile = args[0];
+			String user = args[1].substring(0, args[1].indexOf('@'));
+			args[1] = args[1].substring(args[1].indexOf('@') + 1);
+			String host = args[1].substring(0, args[1].indexOf(':'));
+			String rfile = args[1].substring(args[1].indexOf(':') + 1);
+
+			JSch jsch = new JSch();
+			Session session = jsch.getSession(user, host, 22);
+
+			// username and password will be given via UserInfo interface.
+			UserInfo ui = new MyUserInfo();
+			session.setUserInfo(ui);
+			session.setConfig("StrictHostKeyChecking", "no");
+			session.connect();
+
+			// exec 'scp -t rfile' remotely
+			String command = "scp -p -t " + rfile;
+			Channel channel = session.openChannel("exec");
+			((ChannelExec) channel).setCommand(command);
+
+			// get I/O streams for remote scp
+			OutputStream out = channel.getOutputStream();
+			InputStream in = channel.getInputStream();
+
+			channel.connect();
+
+			if (checkAck(in) != 0) {
+				System.exit(0);
+			}
+
+			// send "C0644 filesize filename", where filename should not include
+			// '/'
+			long filesize = (new File(lfile)).length();
+			command = "C0644 " + filesize + " ";
+			if (lfile.lastIndexOf('/') > 0) {
+				command += lfile.substring(lfile.lastIndexOf('/') + 1);
+			} else {
+				command += lfile;
+			}
+			command += "\n";
+			out.write(command.getBytes());
+			out.flush();
+			if (checkAck(in) != 0) {
+				System.exit(0);
+			}
+
+			// send a content of lfile
+			fis = new FileInputStream(lfile);
+			byte[] buf = new byte[1024];
+			while (true) {
+				int len = fis.read(buf, 0, buf.length);
+				if (len <= 0)
+					break;
+				out.write(buf, 0, len); // out.flush();
+			}
+			fis.close();
+			fis = null;
+			// send '\0'
+			buf[0] = 0;
+			out.write(buf, 0, 1);
+			out.flush();
+			if (checkAck(in) != 0) {
+				System.exit(0);
+			}
+			out.close();
+
+			channel.disconnect();
+			session.disconnect();
+		} catch (Exception e) {
+			System.out.println(e);
+			try {
+				if (fis != null)
+					fis.close();
 			} catch (Exception ee) {
 			}
 		}
