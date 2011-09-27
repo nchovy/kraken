@@ -54,7 +54,8 @@ public class CertificateAuthorityScript implements Script {
 	private ScriptContext context;
 	private File home;
 
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
+			"SHA224withRSA",
 			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	public CertificateAuthorityScript(CertificateAuthority ca) {
@@ -68,7 +69,16 @@ public class CertificateAuthorityScript implements Script {
 	}
 
 	public void exportCaCrt(String[] args) {
-		boolean usePem = args.length >= 1 && args[0].equals("-pem");
+		boolean usePem = false;
+		boolean exportKey = false;
+		if (args.length >= 1) {
+			for (int i = 0; i < args.length; ++i) {
+				if (args[i].equals("-pem"))
+					usePem = true;
+				if (args[i].equals("-key"))
+					exportKey = true;
+			}
+		}
 		try {
 			context.print("CA Common Name? ");
 			String caCN = context.readLine();
@@ -84,7 +94,7 @@ public class CertificateAuthorityScript implements Script {
 			File f = new File(caDir, caCN + extension);
 
 			if (usePem)
-				CertExporter.writePemFile(store, password, f);
+				CertExporter.writePemFile(store, password, f, exportKey);
 			else
 				CertExporter.writeCrtFile(store, f);
 
@@ -214,7 +224,8 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate cert
-			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, attrs,
+			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair,
+					dn, attrs,
 					notBefore, notAfter, signatureAlgorithm);
 
 			context.println(cert.toString());
@@ -306,7 +317,8 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate
-			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
+			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter,
+					signatureAlgorithm);
 			context.println(cert.toString());
 
 			// save

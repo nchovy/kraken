@@ -33,14 +33,15 @@ public class CertExporter {
 	private CertExporter() {
 	}
 	
-	public static void writePemFile(KeyStore store, String password, File output) throws KeyStoreException, IOException,
+	public static void writePemFile(KeyStore store, String password, File output, boolean exportKey) throws KeyStoreException, IOException,
 			UnrecoverableKeyException, NoSuchAlgorithmException {
 		Certificate caCert = store.getCertificate("ca");
 		OutputStream os = new FileOutputStream(output);
 		PEMWriter writer = new PEMWriter(new PrintWriter(os), "PC");
 		try {
 			writer.writeObject(caCert);
-			writer.writeObject(store.getKey("ca-key", password.toCharArray()));
+			if (exportKey)
+				writer.writeObject(store.getKey("ca-key", password.toCharArray()));
 		} finally {
 			if (writer != null)
 				writer.close();
