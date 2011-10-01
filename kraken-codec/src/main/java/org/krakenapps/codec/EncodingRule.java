@@ -345,6 +345,7 @@ public class EncodingRule {
 		CharBuffer cb = Charset.forName("utf-8").decode(bb);
 		String value = cb.toString();
 		bb.limit(oldLimit);
+
 		return value;
 	}
 
@@ -422,7 +423,7 @@ public class EncodingRule {
 	public static void encodeMap(ByteBuffer bb, Map<String, Object> map, CustomCodec cc) {
 		bb.put(MAP_TYPE);
 
-		int length = preencodeMap(map, cc);
+		int length = preencodeMap(map, 0, cc);
 		encodeRawNumber(bb, int.class, length);
 
 		for (String key : map.keySet()) {
@@ -442,8 +443,13 @@ public class EncodingRule {
 		}
 	}
 
+	/**
+	 * preencodeMap track down recursively and sum all content length
+	 * 
+	 * @return content length except type and length bytes
+	 */
 	@SuppressWarnings("unchecked")
-	private static int preencodeMap(Map<String, Object> map, CustomCodec cc) {
+	private static int preencodeMap(Map<String, Object> map, int depth, CustomCodec cc) {
 		int length = 0;
 
 		for (String key : map.keySet()) {
@@ -454,16 +460,19 @@ public class EncodingRule {
 			if (value instanceof String)
 				length += EncodedStringCache.getEncodedString((String) value).length();
 			else if (value instanceof Map)
-				length += preencodeMap((Map<String, Object>) value, cc);
+				length += preencodeMap((Map<String, Object>) value, depth + 1, cc);
 			else if (value instanceof List)
-				length += preencodeArray((List<?>) value, cc);
+				length += preencodeArray((List<?>) value, depth + 1, cc);
 			else if (value instanceof Object[])
-				length += preencodeArray((Object[]) value, cc);
+				length += preencodeArray((Object[]) value, depth + 1, cc);
 			else
 				length += lengthOf(value, cc);
 		}
 
-		return length;
+		if (depth == 0)
+			return length;
+		else
+			return 1 + lengthOfRawNumber(int.class, length) + length;
 	}
 
 	public static Map<String, Object> decodeMap(ByteBuffer bb) {
@@ -499,7 +508,7 @@ public class EncodingRule {
 	public static void encodeArray(ByteBuffer bb, List<?> array, CustomCodec cc) {
 		bb.put(ARRAY_TYPE);
 
-		int length = preencodeArray(array, cc);
+		int length = preencodeArray(array, 0, cc);
 		encodeRawNumber(bb, int.class, length);
 
 		for (Object obj : array) {
@@ -513,24 +522,32 @@ public class EncodingRule {
 		}
 	}
 
+	/**
+	 * preencodeArray track down recursively and sum all content length
+	 * 
+	 * @return content length except type and length bytes
+	 */
 	@SuppressWarnings("unchecked")
-	private static int preencodeArray(List<?> array, CustomCodec cc) {
+	private static int preencodeArray(List<?> array, int depth, CustomCodec cc) {
 		int length = 0;
 
 		for (Object object : array) {
 			if (object instanceof String)
 				length += EncodedStringCache.getEncodedString((String) object).length();
 			else if (object instanceof Map)
-				length += preencodeMap((Map<String, Object>) object, cc);
+				length += preencodeMap((Map<String, Object>) object, depth + 1, cc);
 			else if (object instanceof List)
-				length += preencodeArray((List<?>) object, cc);
+				length += preencodeArray((List<?>) object, depth + 1, cc);
 			else if (object instanceof Object[])
-				length += preencodeArray((Object[]) object, cc);
+				length += preencodeArray((Object[]) object, depth + 1, cc);
 			else
 				length += lengthOf(object, cc);
 		}
 
-		return length;
+		if (depth == 0)
+			return length;
+		else
+			return 1 + lengthOfRawNumber(int.class, length) + length;
 	}
 
 	public static void encodeArray(ByteBuffer bb, Object[] array) {
@@ -541,8 +558,8 @@ public class EncodingRule {
 		encodeArray(bb, Arrays.asList(array), cc);
 	}
 
-	private static int preencodeArray(Object[] array, CustomCodec cc) {
-		return preencodeArray(Arrays.asList(array), cc);
+	private static int preencodeArray(Object[] array, int depth, CustomCodec cc) {
+		return preencodeArray(Arrays.asList(array), depth, cc);
 	}
 
 	public static Object[] decodeArray(ByteBuffer bb) {
@@ -685,8 +702,6 @@ public class EncodingRule {
 		try {
 			buffer = value.getBytes("utf-8");
 		} catch (UnsupportedEncodingException e) {
-			//
-			e.printStackTrace();
 		}
 		return 1 + lengthOfRawNumber(int.class, buffer.length) + buffer.length;
 	}
