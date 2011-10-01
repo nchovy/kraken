@@ -21,7 +21,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -43,14 +42,12 @@ import org.krakenapps.rpc.RpcSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ChannelPipelineCoverage("all")
 public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEventListener {
 	final Logger logger = LoggerFactory.getLogger(RpcHandler.class.getName());
 	private static final int HIGH_WATERMARK = 10;
 
 	private String guid;
 	private RpcControlService control;
-	private RpcPeerRegistry peerRegistry;
 	private ThreadPoolExecutor executor;
 	private LinkedBlockingQueue<Runnable> queue;
 
@@ -59,13 +56,15 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 
 	public RpcHandler(String guid, RpcPeerRegistry peerRegistry) {
 		this.guid = guid;
-		this.peerRegistry = peerRegistry;
 		this.connMap = new ConcurrentHashMap<Integer, RpcConnectionImpl>();
-		this.control = new RpcControlService(peerRegistry);
+		this.control = new RpcControlService(guid, peerRegistry);
 		this.serviceMap = new ConcurrentHashMap<RpcService, String>();
 	}
 
 	public void start() {
+		if (executor != null)
+			return;
+
 		queue = new LinkedBlockingQueue<Runnable>();
 		executor = new ThreadPoolExecutor(4, 8, 10, TimeUnit.SECONDS, queue, new ThreadFactory() {
 			@Override
@@ -76,8 +75,13 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 	}
 
 	public void stop() {
-		executor.shutdownNow();
+		executor.shutdown();
 		executor = null;
+
+		for (RpcConnection conn : connMap.values())
+			conn.close();
+
+		connMap.clear();
 	}
 
 	public RpcConnection newClientConnection(Channel channel, RpcConnectionProperties props) {
@@ -101,7 +105,7 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
 		// register connection
 		Channel channel = e.getChannel();
-		RpcConnectionImpl newConnection = new RpcConnectionImpl(channel, guid, peerRegistry);
+		RpcConnectionImpl newConnection = new RpcConnectionImpl(channel, guid);
 		InetSocketAddress addr = newConnection.getRemoteAddress();
 		RpcConnectionProperties props = new RpcConnectionProperties(addr.getAddress().getHostAddress(), addr.getPort());
 
@@ -116,7 +120,7 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		// ssl handshake
 		SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
 		if (sslHandler != null) {
-			ChannelFuture cf = sslHandler.handshake(e.getChannel());
+			ChannelFuture cf = sslHandler.handshake();
 			cf.addListener(new SslConnectInitializer(props, sslHandler));
 			return;
 		}
@@ -146,7 +150,10 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			logger.info("kraken-rpc: new peer certificate subject={}, remote={}", peerCommonName,
 					channel.getRemoteAddress());
 
-			executor.submit(this);
+			if (executor != null)
+				executor.submit(this);
+			else
+				logger.trace("kraken-rpc: handler threadpool stopped, drop ssl init");
 		}
 
 		@Override
@@ -189,6 +196,9 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		}
 
 		newConnection.setPeerCert(props.getPeerCert());
+
+		if (props.getPassword() != null)
+			newConnection.setProperty("password", props.getPassword());
 
 		// bind rpc control service by default
 		newConnection.bind("rpc-control", control);
@@ -355,7 +365,10 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			channel.setReadable(false);
 		}
 
-		executor.submit(new MessageHandler(channel, event));
+		if (executor != null)
+			executor.submit(new MessageHandler(channel, event));
+		else
+			logger.trace("kraken-rpc: handler threadpool stopped, drop msg");
 	}
 
 	/**

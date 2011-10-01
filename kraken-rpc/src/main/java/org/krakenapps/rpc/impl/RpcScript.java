@@ -7,6 +7,10 @@ import java.util.Collection;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -28,9 +32,11 @@ public class RpcScript implements Script {
 	private final Logger logger = LoggerFactory.getLogger(RpcScript.class.getName());
 	private ScriptContext context;
 	private RpcAgent agent;
+	private KeyStoreManager keyStoreManager;
 
-	public RpcScript(RpcAgent agent) {
+	public RpcScript(RpcAgent agent, KeyStoreManager keyStoreManager) {
 		this.agent = agent;
+		this.keyStoreManager = keyStoreManager;
 	}
 
 	@Override
@@ -186,9 +192,11 @@ public class RpcScript implements Script {
 			}
 
 			RpcConnection connection = null;
-			if (isSsl)
-				connection = agent.connectSsl(new RpcConnectionProperties(host, port, keyAlias, trustAlias));
-			else
+			if (isSsl) {
+				TrustManagerFactory tmf = keyStoreManager.getTrustManagerFactory(trustAlias, "SunX509");
+				KeyManagerFactory kmf = keyStoreManager.getKeyManagerFactory(keyAlias, "SunX509");
+				connection = agent.connectSsl(new RpcConnectionProperties(host, port, kmf, tmf));
+			} else
 				connection = agent.connect(new RpcConnectionProperties(host, port));
 
 			if (connection != null)

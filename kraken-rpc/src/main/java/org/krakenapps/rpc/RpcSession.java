@@ -18,7 +18,7 @@ public interface RpcSession {
 
 	RpcAsyncResult call(String method, Object[] params, RpcAsyncCallback callback);
 
-	Object call(String method, Object[] params) throws RpcException, InterruptedException;
+	Object call(String method, Object... params) throws RpcException, InterruptedException;
 
 	Object call(String method, Object[] params, long timeout) throws RpcException, InterruptedException;
 

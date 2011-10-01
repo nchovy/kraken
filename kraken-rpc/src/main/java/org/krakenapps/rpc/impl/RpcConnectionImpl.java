@@ -26,7 +26,6 @@ import org.krakenapps.rpc.RpcContext;
 import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcExceptionEvent;
 import org.krakenapps.rpc.RpcMessage;
-import org.krakenapps.rpc.RpcPeerRegistry;
 import org.krakenapps.rpc.RpcPeeringCallback;
 import org.krakenapps.rpc.RpcService;
 import org.krakenapps.rpc.RpcServiceBinding;
@@ -51,7 +50,6 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 	private RpcAsyncTableImpl asyncTable;
 	private String guid;
 	private Set<RpcConnectionEventListener> callbacks;
-	private RpcPeerRegistry peerRegistry;
 
 	private final Lock controlLock = new ReentrantLock();
 	private Condition controlReady = controlLock.newCondition();
@@ -67,10 +65,9 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 	private X509Certificate peerCert;
 
-	public RpcConnectionImpl(Channel channel, String guid, RpcPeerRegistry peerRegistry) {
+	public RpcConnectionImpl(Channel channel, String guid) {
 		this.state = RpcConnectionState.Opened;
 		this.channel = channel;
-		this.peerRegistry = peerRegistry;
 
 		this.bindingMap = new ConcurrentHashMap<String, RpcServiceBinding>();
 		this.sessionMap = new ConcurrentHashMap<Integer, RpcSession>();
@@ -305,8 +302,9 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 				logger.warn("kraken-rpc: event listener should not throw exception", e);
 			}
 		}
+
 		// close socket
-		channel.close();
+		channel.close().awaitUninterruptibly();
 		logger.info("kraken-rpc: connection closed id={}, peer={}", channel.getId(), getRemoteAddress());
 	}
 
@@ -461,6 +459,8 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			String type = (String) tuple[0];
 			peerGuid = (String) tuple[1];
 
+			logger.debug("kraken rpc: non password peering result [type={}, peer={}]", type, peerGuid);
+
 			if (type.equals("success"))
 				onSuccess(tuple);
 			else if (type.equals("challenge"))
@@ -472,7 +472,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			String nonce = (String) tuple[2];
 
 			// hash = sha1(password + nonce)
-			String hash = peerRegistry.calculatePasswordHash(password, nonce);
+			String hash = PasswordUtil.calculatePasswordHash(password, nonce);
 
 			// try authenticate
 			session.call("authenticate", new Object[] { guid, hash }, new PasswordPeering(session, callback));
@@ -510,7 +510,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 			if (peered)
 				setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
-			
+
 			callback.onCompleted(session.getConnection());
 		}
 	}

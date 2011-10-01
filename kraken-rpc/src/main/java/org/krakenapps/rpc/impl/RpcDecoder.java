@@ -5,13 +5,11 @@ import java.nio.ByteBuffer;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.krakenapps.codec.EncodingRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ChannelPipelineCoverage("one")
 public class RpcDecoder extends FrameDecoder {
 	private final Logger logger = LoggerFactory.getLogger(RpcDecoder.class.getName());
 
@@ -66,6 +64,8 @@ public class RpcDecoder extends FrameDecoder {
 			Object decoded = EncodingRule.decode(bb);
 			if (logger.isDebugEnabled())
 				logger.debug("kraken-rpc: decoded one message, remaining {}", buf.readableBytes());
+			
+			buf.markReaderIndex();
 			return decoded;
 		}
 

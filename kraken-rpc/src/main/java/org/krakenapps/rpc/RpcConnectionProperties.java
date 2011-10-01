@@ -3,26 +3,32 @@ package org.krakenapps.rpc;
 import java.net.InetSocketAddress;
 import java.security.cert.X509Certificate;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
 public class RpcConnectionProperties {
 	private String host;
 	private int port;
-	private String keyAlias;
-	private String trustAlias;
-
+	private TrustManagerFactory tmf;
+	private KeyManagerFactory kmf;
 	private X509Certificate peerCert;
 	private String password;
 
 	public RpcConnectionProperties(String host, int port) {
-		this(host, port, "rpc-agent", "rpc-ca");
+		this(host, port, null, null);
 	}
 
-	public RpcConnectionProperties(String host, int port, String keyAlias, String trustAlias) {
+	public RpcConnectionProperties(InetSocketAddress remote) {
+		this(remote.getAddress().getHostAddress(), remote.getPort(), null, null);
+	}
+
+	public RpcConnectionProperties(String host, int port, KeyManagerFactory kmf, TrustManagerFactory tmf) {
 		this.host = host;
 		this.port = port;
-		this.keyAlias = keyAlias;
-		this.trustAlias = trustAlias;
+		this.kmf = kmf;
+		this.tmf = tmf;
 	}
-	
+
 	public InetSocketAddress getRemoteAddress() {
 		return new InetSocketAddress(getHost(), getPort());
 	}
@@ -35,12 +41,12 @@ public class RpcConnectionProperties {
 		return port;
 	}
 
-	public String getKeyAlias() {
-		return keyAlias;
+	public KeyManagerFactory getKeyManagerFactory() {
+		return kmf;
 	}
 
-	public String getTrustAlias() {
-		return trustAlias;
+	public TrustManagerFactory getTrustManagerFactory() {
+		return tmf;
 	}
 
 	public X509Certificate getPeerCert() {

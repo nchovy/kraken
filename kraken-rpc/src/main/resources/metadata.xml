@@ -1,20 +1,4 @@
 <ipojo>
-	<component classname="org.krakenapps.rpc.impl.RpcScriptFactory"
-		name="rpc-script-factory" immediate="true">
-		<requires field="agent" />
-		<provides>
-			<property name="alias" type="string" value="rpc" />
-		</provides>
-	</component>
-
-	<component classname="org.krakenapps.rpc.impl.RpcAgentImpl"
-		name="rpc-agent" immediate="true">
-		<provides/>
-		<requires field="keyStoreManager" />
-		<callback transition="validate" method="start" />
-		<callback transition="invalidate" method="stop" />
-	</component>
-
 	<instance component="rpc-agent" />
 	<instance component="rpc-script-factory" />
 </ipojo>

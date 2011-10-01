@@ -5,11 +5,7 @@ import java.util.Collection;
 public interface RpcPeerRegistry {
 	Collection<String> getPeerGuids();
 
-	void authenticate(String guid, String nonce, String hash);
-	
-	String calculatePasswordHash(String password);
-
-	String calculatePasswordHash(String password, String nonce);
+	RpcPeer authenticate(String guid, String nonce, String hash);
 
 	RpcPeer findPeer(String guid);
 

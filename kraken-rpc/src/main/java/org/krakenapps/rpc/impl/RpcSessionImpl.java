@@ -96,7 +96,7 @@ public class RpcSessionImpl implements RpcSession {
 	}
 
 	@Override
-	public Object call(String method, Object[] params) throws RpcException, InterruptedException {
+	public Object call(String method, Object... params) throws RpcException, InterruptedException {
 		return call(method, params, 0);
 	}
 

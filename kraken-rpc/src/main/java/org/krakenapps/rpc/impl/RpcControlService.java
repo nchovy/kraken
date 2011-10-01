@@ -27,9 +27,12 @@ import org.slf4j.LoggerFactory;
  */
 public class RpcControlService extends SimpleRpcService {
 	private final Logger logger = LoggerFactory.getLogger(RpcControlService.class.getName());
+	
+	private String guid;
 	private RpcPeerRegistry peerRegistry;
 
-	public RpcControlService(RpcPeerRegistry peerRegistry) {
+	public RpcControlService(String guid, RpcPeerRegistry peerRegistry) {
+		this.guid = guid;
 		this.peerRegistry = peerRegistry;
 	}
 
@@ -37,7 +40,7 @@ public class RpcControlService extends SimpleRpcService {
 	public void sessionRequested(RpcSessionEvent e) {
 		logger.debug("kraken-rpc: rpc-control session requested");
 	}
-	
+
 	@RpcMethod(name = "ping")
 	public int ping(int value) {
 		return value;
@@ -53,7 +56,7 @@ public class RpcControlService extends SimpleRpcService {
 		if (conn.getPeerCertificate() == null) {
 			String nonce = UUID.randomUUID().toString();
 			conn.setNonce(nonce);
-			return new Object[] { "challenge", peerGuid, nonce };
+			return new Object[] { "challenge", guid, nonce };
 		}
 
 		RpcPeer peer = peerRegistry.findPeer(peerGuid);
@@ -64,7 +67,7 @@ public class RpcControlService extends SimpleRpcService {
 			trustLevel = RpcTrustLevel.Low;
 
 		conn.setTrustLevel(trustLevel);
-		return new Object[] { "success", peerGuid, trustLevel.getCode() };
+		return new Object[] { "success", guid, trustLevel.getCode() };
 	}
 
 	@RpcMethod(name = "authenticate")
@@ -78,13 +81,11 @@ public class RpcControlService extends SimpleRpcService {
 		RpcPeer peer = null;
 		boolean result = false;
 		try {
-			peer = peerRegistry.findPeer(conn.getPeerGuid());
-			peerRegistry.authenticate(conn.getPeerGuid(), conn.getNonce(), hash);
-
+			peer = peerRegistry.authenticate(conn.getPeerGuid(), conn.getNonce(), hash);
 			conn.setTrustLevel(peer.getTrustLevel());
 			result = true;
 		} catch (IllegalStateException e) {
-			logger.warn("kraken-rpc: auth failed, peer={}", conn.getPeerGuid());
+			logger.warn("kraken-rpc: auth failed, peer=" + conn.getPeerGuid(), e);
 		}
 
 		int trustLevel = peer != null ? peer.getTrustLevel().getCode() : RpcTrustLevel.Low.getCode();

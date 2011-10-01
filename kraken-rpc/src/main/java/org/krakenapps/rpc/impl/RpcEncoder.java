@@ -5,14 +5,12 @@ import java.nio.ByteBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.rpc.RpcMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ChannelPipelineCoverage("one")
 public class RpcEncoder extends OneToOneEncoder {
 	private final Logger logger = LoggerFactory.getLogger(RpcEncoder.class.getName());
 
@@ -29,7 +27,7 @@ public class RpcEncoder extends OneToOneEncoder {
 		if (logger.isDebugEnabled())
 			logger.debug("kraken-rpc: sending id: {}, method: {}, size: {}", new Object[] { rpcMsg.getHeader("id"),
 					rpcMsg.getString("method"), bb.remaining() });
-		
+
 		return ChannelBuffers.wrappedBuffer(bb);
 	}
 }
