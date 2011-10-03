@@ -37,8 +37,11 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 
 public class Response implements HttpServletResponse {
+	private BundleContext bc;
 	private ChannelHandlerContext ctx;
 	private HttpRequest req;
 	private ServletOutputStream os;
@@ -48,7 +51,8 @@ public class Response implements HttpServletResponse {
 	private Set<Cookie> cookies = new HashSet<Cookie>();
 	private boolean service;
 
-	public Response(ChannelHandlerContext ctx, HttpRequest req, boolean service) {
+	public Response(BundleContext bc, ChannelHandlerContext ctx, HttpRequest req, boolean service) {
+		this.bc = bc;
 		this.ctx = ctx;
 		this.req = req;
 		this.os = new ResponseOutputStream();
@@ -94,13 +98,13 @@ public class Response implements HttpServletResponse {
 				else
 					cookie = String.format("%s; %s=%s", cookie, c.getName(), c.getValue());
 			}
-			
+
 			if (cookie != null)
 				headers.put(HttpHeaders.Names.COOKIE, cookie);
 
 			for (String name : headers.keySet())
 				resp.setHeader(name, headers.get(name));
-			
+
 			resp.setContent(buf);
 			HttpHeaders.setContentLength(resp, buf.readableBytes());
 
@@ -179,7 +183,18 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public void sendError(int sc, String msg) throws IOException {
-		// TODO Auto-generated method stub
+		setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		this.status = HttpResponseStatus.valueOf(sc);
+
+		String body = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n" //
+				+ "<html><head><title>" + sc + " " + status.getReasonPhrase()
+				+ "</title></head>\n" //
+				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>" + msg
+				+ "</pre><hr/><address>Kraken Web Console/"
+				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION) + "</address></body></html>";
+
+		writer.append(body);
+		writer.close();
 	}
 
 	@Override

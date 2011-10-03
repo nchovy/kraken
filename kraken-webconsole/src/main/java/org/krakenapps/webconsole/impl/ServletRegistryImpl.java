@@ -40,9 +40,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.krakenapps.util.DirectoryMap;
-import org.krakenapps.webconsole.MimeTypes;
 import org.krakenapps.webconsole.PageNotFoundException;
 import org.krakenapps.webconsole.ServletRegistry;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,9 +50,15 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class ServletRegistryImpl implements ServletRegistry {
 	private static final long serialVersionUID = 1L;
-	private Logger logger = LoggerFactory.getLogger(ServletRegistryImpl.class);
 	private static final String CONTEXT_ITEM = "/context";
+	private final Logger logger = LoggerFactory.getLogger(ServletRegistryImpl.class);
+
+	private BundleContext bc;
 	private DirectoryMap<HttpServlet> directoryMap;
+
+	public ServletRegistryImpl(BundleContext bc) {
+		this.bc = bc;
+	}
 
 	@Validate
 	public void start() {
@@ -95,8 +101,8 @@ public class ServletRegistryImpl implements ServletRegistry {
 		}
 	}
 
-	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service)
-			throws ServletException, IOException {
+	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service) throws ServletException,
+			IOException {
 		ServletResponse response = null;
 
 		try {
@@ -108,7 +114,7 @@ public class ServletRegistryImpl implements ServletRegistry {
 
 			String pathInfo = req.getUri().substring(servletPath.length());
 			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
-			response = new Response(ctx, req, service);
+			response = new Response(bc, ctx, req, service);
 
 			servlet.service(request, response);
 		} catch (PageNotFoundException e) {
