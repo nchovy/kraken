@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -32,8 +33,10 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 @SuppressWarnings("rawtypes")
@@ -54,17 +57,22 @@ public class Request implements HttpServletRequest {
 		this.servletPath = servletPath;
 		this.pathInfo = pathInfo;
 		this.queryString = "";
+
+		ChannelBuffer content = req.getContent();
+
+		if (req.getMethod().equals(HttpMethod.POST)) {
+			String body = new String(content.array(), content.readerIndex(), content.readableBytes(), Charset.forName("utf-8"));
+			setParams(body);
+		}
+
 		if (pathInfo.contains("?")) {
 			this.queryString = pathInfo.substring(pathInfo.indexOf("?") + 1);
 			this.pathInfo = pathInfo.substring(0, pathInfo.indexOf("?"));
 			String params = pathInfo.substring(pathInfo.indexOf("?") + 1);
-			for (String param : params.split("&")) {
-				String name = param.substring(0, param.indexOf("="));
-				String value = param.substring(param.indexOf("=") + 1);
-				parameters.put(name, value);
-			}
+			setParams(params);
 		}
-		this.is = new RequestInputStream(new ByteArrayInputStream(req.getContent().array(), 0, req.getContent().readableBytes()));
+
+		this.is = new RequestInputStream(new ByteArrayInputStream(content.array(), 0, content.readableBytes()));
 		List<String> cs = req.getHeaders(HttpHeaders.Names.COOKIE);
 		this.cookies = new Cookie[cs.size()];
 		for (int i = 0; i < cs.size(); i++) {
@@ -79,6 +87,17 @@ public class Request implements HttpServletRequest {
 				name = s.trim();
 			}
 			this.cookies[i] = new Cookie(name, value);
+		}
+	}
+
+	private void setParams(String params) {
+		if (params == null || params.isEmpty())
+			return;
+
+		for (String param : params.split("&")) {
+			String name = param.substring(0, param.indexOf("="));
+			String value = param.substring(param.indexOf("=") + 1);
+			parameters.put(name, value);
 		}
 	}
 
