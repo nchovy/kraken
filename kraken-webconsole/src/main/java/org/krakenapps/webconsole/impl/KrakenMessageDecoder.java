@@ -77,6 +77,9 @@ public class KrakenMessageDecoder {
 		}
 
 		try {
+			if (text.equals("ping")) {
+				return null;
+			}
 			JSONTokener tokenizer = new JSONTokener(new StringReader(text));
 			JSONArray container = (JSONArray) tokenizer.nextValue();
 			JSONObject header = container.getJSONObject(0);
