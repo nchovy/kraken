@@ -107,7 +107,7 @@ public class NtpClient {
 		try {
 			ServerTime time = getTime();
 			setSystemTime(addOffset(time));
-			logger.info("kraken ntp: The time has been successfully synchronized with {} on {}", timeServer,
+			logger.trace("kraken ntp: The time has been successfully synchronized with {} on {}", timeServer,
 					new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(time.getTransmit()));
 			return time.getTransmit();
 		} catch (SocketTimeoutException e) {
