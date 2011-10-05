@@ -346,8 +346,10 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 					}
 				} catch (MavenResolveException e) {
 					logger.error("kraken core: maven resolve failed.", e);
+					throw new RuntimeException("maven resolve failed. (" + e.getMessage() + ")");
 				} catch (IOException e) {
 					logger.error("kraken core: create temp file failed.", e);
+					throw new RuntimeException("create temp file failed.");
 				}
 			}
 			bundle.update();

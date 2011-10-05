@@ -288,8 +288,13 @@ public class BundleScript implements Script {
 		try {
 			for (String arg : args) {
 				long bundleId = Long.parseLong(arg);
-				manager.updateBundle(bundleId);
-				context.println("bundle " + bundleId + " updated.");
+				try {
+					manager.updateBundle(bundleId);
+					context.println("bundle " + bundleId + " updated.");
+				} catch (RuntimeException re) {
+					context.println("failed to update bundle " + bundleId);
+					context.println("reason: " + re.getMessage());
+				}
 			}
 		} catch (Exception e) {
 			context.println(e.getMessage());
