@@ -38,6 +38,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class Request implements HttpServletRequest {
@@ -50,6 +52,7 @@ public class Request implements HttpServletRequest {
 	private Map<String, Object> attributes = new HashMap<String, Object>();
 	private Map<String, String> parameters = new HashMap<String, String>();
 	private Cookie[] cookies;
+	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
 	public Request(ChannelHandlerContext ctx, HttpRequest req, String servletPath, String pathInfo) {
 		this.ctx = ctx;
@@ -60,9 +63,14 @@ public class Request implements HttpServletRequest {
 
 		ChannelBuffer content = req.getContent();
 
+		String contentType = req.getHeader("Content-Type");
+
 		if (req.getMethod().equals(HttpMethod.POST)) {
-			String body = new String(content.array(), content.readerIndex(), content.readableBytes(), Charset.forName("utf-8"));
-			setParams(body);
+			if (!(contentType != null && contentType.equals("application/octet-stream"))) {
+				String body = new String(
+						content.array(), content.readerIndex(), content.readableBytes(), Charset.forName("utf-8"));
+				setParams(body);
+			}
 		}
 
 		if (pathInfo.contains("?")) {
@@ -95,8 +103,10 @@ public class Request implements HttpServletRequest {
 			return;
 
 		for (String param : params.split("&")) {
+			logger.trace("param: {}", param);
 			String name = param.substring(0, param.indexOf("="));
 			String value = param.substring(param.indexOf("=") + 1);
+			logger.trace("name: {}, value: {}");
 			parameters.put(name, value);
 		}
 	}
