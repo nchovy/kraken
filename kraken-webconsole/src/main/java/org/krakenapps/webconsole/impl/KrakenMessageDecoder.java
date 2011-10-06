@@ -45,6 +45,9 @@ public class KrakenMessageDecoder {
 	public static Message decode(Session session, String text) {
 		Logger logger = LoggerFactory.getLogger(KrakenMessageDecoder.class.getName());
 		Charset utf8 = Charset.forName("utf-8");
+		
+		if (text.equals("ping"))
+			return null;
 
 		// decrypt if msg is encrypted
 		if (session.has("enc_key")) {
@@ -77,9 +80,6 @@ public class KrakenMessageDecoder {
 		}
 
 		try {
-			if (text.equals("ping")) {
-				return null;
-			}
 			JSONTokener tokenizer = new JSONTokener(new StringReader(text));
 			JSONArray container = (JSONArray) tokenizer.nextValue();
 			JSONObject header = container.getJSONObject(0);
