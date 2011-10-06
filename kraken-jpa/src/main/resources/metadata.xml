@@ -38,7 +38,15 @@
 		</provides>
 		<requires field="bundleManager" />
 	</component>
+	<component className="org.krakenapps.jpa.impl.ConnectionKeeper"
+		name="jpa-conn-keeper" immediate="true" factory="false">
+		<provides />
+		<requires field="jpa" />
+		<callback transition="validate" method="start" />
+		<callback transition="invalidate" method="stop" />
+	</component>
 	<instance component="jpa-service" />
 	<instance component="jpa-thread-local-entity-manager" />
 	<instance component="jpa-script-factory" />
+	<instance component="jpa-conn-keeper" />
 </iPOJO>
