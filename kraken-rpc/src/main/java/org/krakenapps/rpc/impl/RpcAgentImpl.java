@@ -30,6 +30,7 @@ import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.rpc.RpcClient;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcAgent;
+import org.krakenapps.rpc.RpcConnectionEventListener;
 import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcPeerRegistry;
 import org.osgi.framework.BundleContext;
@@ -242,5 +243,15 @@ public class RpcAgentImpl implements RpcAgent {
 	@Override
 	public RpcPeerRegistry getPeerRegistry() {
 		return peerRegistry;
+	}
+
+	@Override
+	public void addConnectionListener(RpcConnectionEventListener listener) {
+		handler.addConnectionListener(listener);
+	}
+
+	@Override
+	public void removeConnectionListener(RpcConnectionEventListener listener) {
+		handler.removeConnectionListener(listener);
 	}
 }
