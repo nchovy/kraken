@@ -9,11 +9,10 @@
 		<version>1.0.0</version>
 	</parent>
 	<groupId>org.krakenapps</groupId>
-	<artifactId>kraken-logdb-client</artifactId>
+	<artifactId>kraken-logdb</artifactId>
 	<version>0.1.0</version>
 	<packaging>bundle</packaging>
-	<name>Kraken LogDB Client</name>
-
+	<name>Kraken Log DB</name>
 	<build>
 		<plugins>
 			<plugin>
@@ -23,8 +22,14 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>kraken-logdb-client</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logdb.client</Export-Package>
+						<Bundle-SymbolicName>org.krakenapps.logdb</Bundle-SymbolicName>
+						<Export-Package>org.krkaenapps.logdb</Export-Package>
+						<Private-Package>
+							org.krakenapps.logdb.impl,
+							org.krakenapps.logdb.query,
+							org.krakenapps.logdb.query.command,
+							org.krakenapps.logdb.query.parser
+						</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
@@ -43,17 +48,36 @@
 			</plugin>
 		</plugins>
 	</build>
-
 	<dependencies>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-api</artifactId>
+			<version>1.7.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.ipojo</artifactId>
+			<version>1.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
+			<version>1.4.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-rpc</artifactId>
 			<version>1.2.1</version>
 		</dependency>
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-simple</artifactId>
-			<version>1.5.6</version>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-logstorage</artifactId>
+			<version>1.4.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-msgbus</artifactId>
+			<version>1.1.3</version>
 		</dependency>
 	</dependencies>
 </project>
