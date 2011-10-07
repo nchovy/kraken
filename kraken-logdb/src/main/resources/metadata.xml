@@ -2,6 +2,7 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 	<instance component="logdb-rpc" />
-	<instance component="log-query-plugin" />
-	<instance component="log-query-service" />
+	<instance component="logdb-script-factory" />
+	<instance component="logdb-msgbus" />
+	<instance component="logdb-query" />
 </ipojo>

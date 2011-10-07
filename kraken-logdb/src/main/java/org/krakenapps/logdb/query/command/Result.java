@@ -31,13 +31,15 @@ import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.query.command.Result;
 
 public class Result extends LogQueryCommand {
-	private FileBufferList<Map<String, Object>> result = new FileBufferList<Map<String, Object>>();
-	private Set<LogQueryCallback> callbacks = new HashSet<LogQueryCallback>();
-	private Queue<LogQueryCallbackInfo> callbackQueue = new PriorityQueue<Result.LogQueryCallbackInfo>(11,
-			new CallbackInfoComparator());
+	private FileBufferList<Map<String, Object>> result;
+	private Set<LogQueryCallback> callbacks;
+	private Queue<LogQueryCallbackInfo> callbackQueue;
 	private Integer nextCallback;
 
 	public Result() throws IOException {
+		result = new FileBufferList<Map<String, Object>>();
+		callbacks = new HashSet<LogQueryCallback>();
+		callbackQueue = new PriorityQueue<Result.LogQueryCallbackInfo>(11, new CallbackInfoComparator());
 	}
 
 	private class LogQueryCallbackInfo {
@@ -118,7 +120,7 @@ public class Result extends LogQueryCommand {
 
 		while (nextCallback != null && result.size() >= nextCallback) {
 			LogQueryCallback callback = callbackQueue.poll().callback;
-			callback.pageLoadedCallback(result);
+			callback.onPageLoaded(result);
 			if (callbackQueue.isEmpty())
 				nextCallback = null;
 			else
@@ -159,6 +161,6 @@ public class Result extends LogQueryCommand {
 	public void eof() {
 		super.eof();
 		for (LogQueryCallback callback : callbacks)
-			callback.eofCallback();
+			callback.onEof();
 	}
 }

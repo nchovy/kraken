@@ -24,7 +24,7 @@ public interface LogQueryCallback {
 
 	int limit();
 
-	void pageLoadedCallback(FileBufferList<Map<String, Object>> result);
+	void onPageLoaded(FileBufferList<Map<String, Object>> result);
 
-	void eofCallback();
+	void onEof();
 }

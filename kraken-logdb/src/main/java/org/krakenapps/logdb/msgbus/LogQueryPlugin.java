@@ -30,6 +30,7 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogTimelineCallback;
+import org.krakenapps.logdb.impl.LogQueryHelper;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.PushApi;
@@ -42,7 +43,7 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "log-query-plugin")
+@Component(name = "logdb-msgbus")
 @MsgbusPlugin
 public class LogQueryPlugin {
 	@Requires
@@ -55,14 +56,7 @@ public class LogQueryPlugin {
 
 	@MsgbusMethod
 	public void queries(Request req, Response resp) {
-		List<Object> result = new ArrayList<Object>();
-		for (LogQuery lq : service.getQueries()) {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("id", lq.getId());
-			m.put("query_string", lq.getQueryString());
-			m.put("is_end", lq.isEnd());
-			result.add(m);
-		}
+		List<Object> result = LogQueryHelper.getQueries(service);
 		resp.put("queries", result);
 	}
 
@@ -71,9 +65,11 @@ public class LogQueryPlugin {
 		LogQuery query = service.createQuery(req.getString("query"));
 		resp.put("id", query.getId());
 
+		// for query cancellation at session close
 		Session session = req.getSession();
 		if (!queries.containsKey(session))
 			queries.put(session, new ArrayList<LogQuery>());
+
 		queries.get(session).add(query);
 	}
 
@@ -85,6 +81,7 @@ public class LogQueryPlugin {
 
 	@MsgbusMethod
 	public void startQuery(Request req, Response resp) {
+		Integer orgId = req.getOrgId();
 		int id = req.getInteger("id");
 		int offset = req.getInteger("offset");
 		int limit = req.getInteger("limit");
@@ -95,12 +92,13 @@ public class LogQueryPlugin {
 			if (!query.isEnd())
 				throw new MsgbusException("0", "already running");
 
-			LogQueryCallback queryCallback = new LogQueryCallbackImpl(req.getOrgId(), query, offset, limit);
-			query.registerQueryCallback(queryCallback);
+			LogQueryCallback qc = new MsgbusLogQueryCallback(orgId, query, offset, limit);
+			query.registerQueryCallback(qc);
+
 			if (timelineLimit != null) {
-				LogTimelineCallback timelineCallback = new LogTimelineCallbackImpl(req.getOrgId(), query,
-						timelineLimit.intValue());
-				query.registerTimelineCallback(timelineCallback);
+				int size = timelineLimit.intValue();
+				LogTimelineCallback tc = new MsgbusTimelineCallback(orgId, query, size);
+				query.registerTimelineCallback(tc);
 			}
 
 			new Thread(query, "Log Query " + id).start();
@@ -113,7 +111,7 @@ public class LogQueryPlugin {
 		int offset = req.getInteger("offset");
 		int limit = req.getInteger("limit");
 
-		Map<String, Object> m = getResultData(id, offset, limit);
+		Map<String, Object> m = LogQueryHelper.getResultData(service, id, offset, limit);
 		if (m != null)
 			resp.putAll(m);
 	}
@@ -130,13 +128,13 @@ public class LogQueryPlugin {
 		queries.remove(session);
 	}
 
-	private class LogQueryCallbackImpl implements LogQueryCallback {
+	private class MsgbusLogQueryCallback implements LogQueryCallback {
 		private int orgId;
 		private LogQuery query;
 		private int offset;
 		private int limit;
 
-		private LogQueryCallbackImpl(int orgId, LogQuery query, int offset, int limit) {
+		private MsgbusLogQueryCallback(int orgId, LogQuery query, int offset, int limit) {
 			this.orgId = orgId;
 			this.query = query;
 			this.offset = offset;
@@ -154,15 +152,15 @@ public class LogQueryPlugin {
 		}
 
 		@Override
-		public void pageLoadedCallback(FileBufferList<Map<String, Object>> result) {
-			Map<String, Object> m = getResultData(query.getId(), offset, limit);
+		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
+			Map<String, Object> m = LogQueryHelper.getResultData(service, query.getId(), offset, limit);
 			m.put("id", query.getId());
 			m.put("type", "page_loaded");
 			pushApi.push(orgId, "logstorage-query-" + query.getId(), m);
 		}
 
 		@Override
-		public void eofCallback() {
+		public void onEof() {
 			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("id", query.getId());
 			m.put("type", "eof");
@@ -172,21 +170,8 @@ public class LogQueryPlugin {
 		}
 	}
 
-	private Map<String, Object> getResultData(int id, int offset, int limit) {
-		LogQuery query = service.getQuery(id);
-		if (query != null) {
-			Map<String, Object> m = new HashMap<String, Object>();
-
-			m.put("result", query.getResult(offset, limit));
-			m.put("count", query.getResult().size());
-
-			return m;
-		}
-		return null;
-	}
-
-	private class LogTimelineCallbackImpl implements LogTimelineCallback {
-		private Logger logger = LoggerFactory.getLogger(LogTimelineCallbackImpl.class);
+	private class MsgbusTimelineCallback implements LogTimelineCallback {
+		private Logger logger = LoggerFactory.getLogger(MsgbusTimelineCallback.class);
 		private final long CALLBACK_INTERVAL = 2000;
 		private int orgId;
 		private LogQuery query;
@@ -199,11 +184,11 @@ public class LogQueryPlugin {
 		private int spansIndex = 0;
 		private long lastCallbackTime;
 
-		private LogTimelineCallbackImpl(int orgId, LogQuery query) {
+		private MsgbusTimelineCallback(int orgId, LogQuery query) {
 			this(orgId, query, 10);
 		}
 
-		private LogTimelineCallbackImpl(int orgId, LogQuery query, int size) {
+		private MsgbusTimelineCallback(int orgId, LogQuery query, int size) {
 			this.orgId = orgId;
 			this.query = query;
 			this.size = size;

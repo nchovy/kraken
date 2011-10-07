@@ -187,4 +187,10 @@ public class LogQueryImpl implements LogQuery {
 	public void unregisterTimelineCallback(LogTimelineCallback callback) {
 		timelineCallbacks.remove(callback);
 	}
+
+	@Override
+	public String toString() {
+		return "id=" + id + ", query=" + queryString;
+	}
+
 }

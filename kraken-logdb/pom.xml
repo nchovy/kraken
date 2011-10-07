@@ -23,12 +23,13 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logdb</Bundle-SymbolicName>
-						<Export-Package>org.krkaenapps.logdb</Export-Package>
+						<Export-Package>org.krakenapps.logdb</Export-Package>
 						<Private-Package>
 							org.krakenapps.logdb.impl,
 							org.krakenapps.logdb.query,
 							org.krakenapps.logdb.query.command,
-							org.krakenapps.logdb.query.parser
+							org.krakenapps.logdb.query.parser,
+							org.krakenapps.logdb.msgbus
 						</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

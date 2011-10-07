@@ -22,15 +22,15 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.logstorage.LogQuery;
-import org.krakenapps.logstorage.LogQueryService;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.LookupHandler;
-import org.krakenapps.logstorage.query.FileBufferList;
-import org.krakenapps.logstorage.query.LogQueryImpl;
+import org.krakenapps.logdb.LogQuery;
+import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.LookupHandler;
+import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logdb.query.LogQueryImpl;
 
-@Component(name = "log-query-service")
+@Component(name = "logdb-query")
 @Provides
 public class LogQueryServiceImpl implements LogQueryService {
 	@Requires
