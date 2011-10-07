@@ -30,6 +30,10 @@ import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.TableMetadata;
+import org.krakenapps.logstorage.engine.LogTable;
 import org.krakenapps.rpc.RpcContext;
 import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcMethod;
@@ -49,6 +53,24 @@ public class LogRpcService extends SimpleRpcService {
 
 	@Requires
 	private LogQueryService qs;
+
+	@Requires
+	private LogTableRegistry tableRegistry;
+
+	@Requires
+	private LogStorage logStorage;
+
+	@RpcMethod(name = "createTable")
+	public void createTable(String tableName, Map<String, Object> options) {
+		tableRegistry.createTable(tableName, null);
+		logger.info("kraken logdb: created table [{}] from [{}]", tableName, RpcContext.getConnection());
+	}
+
+	@RpcMethod(name = "dropTable")
+	public void dropTable(String tableName) {
+		tableRegistry.dropTable(tableName);
+		logger.info("kraken logdb: dropped table [{}] from [{}]", tableName, RpcContext.getConnection());
+	}
 
 	@RpcMethod(name = "getQueries")
 	public List<Object> getQueries() {
