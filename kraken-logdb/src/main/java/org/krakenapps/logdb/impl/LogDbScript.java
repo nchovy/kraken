@@ -51,11 +51,16 @@ public class LogDbScript implements Script {
 
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		for (LogQuery query : queries) {
-			long sec = new Date().getTime() - query.getLastStarted().getTime();
-			context.println(String.format("[%d] %s \t/ %s, %d seconds ago", query.getId(), query.getQueryString(),
-					sdf.format(query.getLastStarted()), sec / 1000));
+			String when = " \t/ not started yet";
+			if (query.getLastStarted() != null) {
+				long sec = new Date().getTime() - query.getLastStarted().getTime();
+				when = String.format(" \t/ %s, %d seconds ago", sdf.format(query.getLastStarted()), sec / 1000);
+			}
+
+			context.println(String.format("[%d] %s%s", query.getId(), query.getQueryString(), when));
+
 			for (LogQueryCommand cmd : query.getCommands()) {
-				context.println(String.format("    [%s] %s \t/ %d write data(s) to next query", cmd.getStatus(),
+				context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
 						cmd.getQueryString(), cmd.getPushCount()));
 			}
 		}

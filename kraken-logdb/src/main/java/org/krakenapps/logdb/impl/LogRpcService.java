@@ -70,7 +70,7 @@ public class LogRpcService extends SimpleRpcService {
 		tableRegistry.dropTable(tableName);
 		logger.info("kraken logdb: dropped table [{}] from [{}]", tableName, RpcContext.getConnection());
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@RpcMethod(name = "writeLogs")
 	public void writeLogs(Object[] logs) {
@@ -117,7 +117,7 @@ public class LogRpcService extends SimpleRpcService {
 		int id = (Integer) options.get("id");
 		int offset = (Integer) options.get("offset");
 		int limit = (Integer) options.get("limit");
-		Integer timelineLimit = (Integer) options.get("timeline_limit");
+		Integer timelineSize = (Integer) options.get("timeline_size");
 
 		// TODO: general rpc callback infra
 
@@ -129,8 +129,8 @@ public class LogRpcService extends SimpleRpcService {
 			LogQueryCallback qc = new RpcQueryCallback(session, query, offset, limit);
 			query.registerQueryCallback(qc);
 
-			if (timelineLimit != null) {
-				int size = timelineLimit.intValue();
+			if (timelineSize != null) {
+				int size = timelineSize.intValue();
 				LogTimelineCallback tc = new RpcTimelineCallback(session, query, size);
 				query.registerTimelineCallback(tc);
 			}

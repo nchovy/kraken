@@ -1,6 +1,7 @@
 package org.krakenapps.logdb.client;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,7 +31,9 @@ public class LogDbClient {
 		try {
 			Log log = new Log("test", "hello world");
 			client.connect();
-			client.write(log);
+			LogQueryStatus q = client.createQuery("table test");
+			client.startQuery(q, 0, 10, 5);
+			System.out.println(q);
 		} finally {
 			client.close();
 		}
@@ -58,7 +61,7 @@ public class LogDbClient {
 		session = conn.createSession("logdb");
 	}
 
-	public void write(Log log) {
+	public void write(Log log) throws RpcException, InterruptedException {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("table", log.getTableName());
 		m.put("date", log.getDate());
@@ -69,41 +72,64 @@ public class LogDbClient {
 			flush();
 	}
 
+	public LogQueryStatus createQuery(String query) throws RpcException, InterruptedException {
+		int id = (Integer) session.call("createQuery", query);
+		LogQueryStatus q = new LogQueryStatus(id, query, false);
+		return q;
+	}
+
+	public void startQuery(LogQueryStatus query, int offset, int limit, int timelineSize) throws RpcException,
+			InterruptedException {
+		Map<String, Object> options = new HashMap<String, Object>();
+		options.put("id", query.getId());
+		options.put("offset", offset);
+		options.put("limit", limit);
+		options.put("timeline_size", timelineSize);
+
+		session.call("startQuery", options);
+	}
+
+	public void removeQuery(LogQueryStatus query) throws RpcException, InterruptedException {
+		session.call("removeQuery", query.getId());
+	}
+
+	@SuppressWarnings("unchecked")
+	public LogQueryResult getResult(LogQueryStatus query, int offset, int limit) throws RpcException,
+			InterruptedException {
+
+		Map<String, Object> m = (Map<String, Object>) session.call("getResult", query.getId(), offset, limit);
+		int totalCount = (Integer) m.get("count");
+		Object[] result = (Object[]) m.get("result");
+
+		return new LogQueryResult(offset, limit, totalCount, Arrays.asList(result));
+	}
+
 	/**
 	 * flush logs
+	 * 
+	 * @throws InterruptedException
+	 * @throws RpcException
 	 */
-	public void flush() {
-		try {
-			if (logs.isEmpty())
-				return;
+	public void flush() throws RpcException, InterruptedException {
+		if (logs.isEmpty())
+			return;
 
-			if (logger.isTraceEnabled())
-				logger.trace("kraken logdb client: flushing {} logs", logs.size());
+		if (logger.isTraceEnabled())
+			logger.trace("kraken logdb client: flushing {} logs", logs.size());
 
-			session.call("writeLogs", logs);
-			logs.clear();
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
-		}
+		session.call("writeLogs", logs);
+		logs.clear();
 	}
 
-	public void createTable(String tableName) {
-		try {
-			session.call("createTable", tableName, null);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
-		}
+	public void createTable(String tableName) throws RpcException, InterruptedException {
+		session.call("createTable", tableName, null);
 	}
 
-	public void dropTable(String tableName) {
-		try {
-			session.call("dropTable", tableName);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
-		}
+	public void dropTable(String tableName) throws RpcException, InterruptedException {
+		session.call("dropTable", tableName);
 	}
 
-	public void close() {
+	public void close() throws RpcException, InterruptedException {
 		try {
 			flush();
 		} finally {
