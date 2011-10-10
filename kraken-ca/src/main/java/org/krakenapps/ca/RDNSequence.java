@@ -1,4 +1,5 @@
 package org.krakenapps.ca;
+
 import java.nio.ByteBuffer;
 
 public class RDNSequence {
@@ -7,29 +8,42 @@ public class RDNSequence {
 	private String value;
 
 	private static final int DN_MAXIMUM_LENGTH = 131;
-	
+
 	public static void main(String[] args) {
 		RDNSequence rdn = new RDNSequence("C", "US");
 		RDNSequence rdn2 = new RDNSequence("O", "VeriSign, Inc.");
 		RDNSequence rdn3 = new RDNSequence("OU", "Class 3 Public Primary Certification Authority");
-		
+
 		System.out.println("===================================");
-		for(byte b: rdn.getBytes())
+		for (byte b : rdn.getBytes())
 			System.out.printf("%02x ", b);
 		System.out.println("\n\n===================================");
-		for(byte b: rdn2.getBytes())
+		for (byte b : rdn2.getBytes())
 			System.out.printf("%02x ", b);
 		System.out.println("\n\n===================================");
-		for(byte b: rdn3.getBytes())
+		for (byte b : rdn3.getBytes())
 			System.out.printf("%02x ", b);
 	}
-	
+
 	public RDNSequence(String dn, String value) {
 		this.dn = dn;
 		this.value = value;
 	}
 
 	public byte[] getBytes() {
+		byte[] rdnBytes = getRDNBytes();
+		byte[] b = new byte[2 + rdnBytes.length];
+		b[0] = 0x31;
+		b[1] = (byte) rdnBytes.length;
+		int i = 2;
+		for (byte b1 : rdnBytes) {
+			b[i] = b1;
+			i++;
+		}
+		return b;
+	}
+
+	private byte[] getRDNBytes() {
 		ByteBuffer bb = ByteBuffer.allocate(DN_MAXIMUM_LENGTH);
 		bb.put((byte) 0x30);
 
