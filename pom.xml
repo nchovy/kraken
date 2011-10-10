@@ -104,6 +104,7 @@
 		<module>kraken-radius</module>
 		<module>kraken-grid</module>
     <module>kraken-logdb-client</module>
+    <module>kraken-logdb</module>
   </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>

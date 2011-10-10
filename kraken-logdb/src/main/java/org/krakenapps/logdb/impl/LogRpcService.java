@@ -20,11 +20,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
@@ -33,10 +35,13 @@ import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcContext;
 import org.krakenapps.rpc.RpcException;
+import org.krakenapps.rpc.RpcExceptionEvent;
 import org.krakenapps.rpc.RpcMethod;
 import org.krakenapps.rpc.RpcSession;
+import org.krakenapps.rpc.RpcSessionEvent;
 import org.krakenapps.rpc.SimpleRpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +63,42 @@ public class LogRpcService extends SimpleRpcService {
 
 	@Requires
 	private LogStorage logStorage;
+
+	private Map<RpcSession, ClientContext> contexts;
+
+	@Validate
+	public void start() {
+		contexts = new ConcurrentHashMap<RpcSession, LogRpcService.ClientContext>();
+	}
+
+	@Override
+	public void sessionOpened(RpcSessionEvent ev) {
+		try {
+			RpcConnection conn = ev.getSession().getConnection();
+			ClientContext ctx = new ClientContext();
+			ctx.clientSession = conn.createSession("logdb-client");
+
+			contexts.put(ev.getSession(), ctx);
+			logger.info("kraken logdb: created client context for [{}]", conn);
+		} catch (Exception e) {
+			logger.error("kraken logdb: cannot open logdb-client service", e);
+		}
+	}
+
+	@Override
+	public void exceptionCaught(RpcExceptionEvent e) {
+		logger.error("kraken logdb: rpc error", e.getCause());
+	}
+
+	@Override
+	public void sessionClosed(RpcSessionEvent e) {
+		RpcSession session = e.getSession();
+		RpcConnection conn = session.getConnection();
+
+		ClientContext ctx = contexts.remove(session);
+		ctx.clientSession.close();
+		logger.info("kraken logdb: removed client context for [{}]", conn);
+	}
 
 	@RpcMethod(name = "createTable")
 	public void createTable(String tableName, Map<String, Object> options) {
@@ -102,11 +143,20 @@ public class LogRpcService extends SimpleRpcService {
 	@RpcMethod(name = "createQuery")
 	public int createQuery(String query) {
 		LogQuery q = qs.createQuery(query);
+
+		ClientContext ctx = contexts.get(RpcContext.getSession());
+		ctx.queries.put(q.getId(), q);
 		return q.getId();
 	}
 
 	@RpcMethod(name = "removeQuery")
 	public void removeQuery(int id) {
+		// check ownership
+		ClientContext ctx = contexts.get(RpcContext.getSession());
+		if (!ctx.queries.containsKey(id))
+			throw new RpcException("no permission");
+
+		// remove query
 		qs.removeQuery(id);
 	}
 
@@ -169,14 +219,38 @@ public class LogRpcService extends SimpleRpcService {
 
 		@Override
 		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
-			logger.info("kraken logdb: page loaded for query [{}], offset [{}], limit [{}]", new Object[] { query,
-					offset, limit });
+			try {
+				logger.info("kraken logdb: page loaded for query [{}], offset [{}], limit [{}]", new Object[] { query,
+						offset, limit });
+
+				Map<String, Object> params = getMetadata();
+				ClientContext ctx = contexts.get(session);
+				ctx.clientSession.post("onPageLoaded", new Object[] { params });
+			} catch (Exception e) {
+				logger.error("kraken logdb: cannot post onPageLoaded", e);
+			}
 		}
 
 		@Override
 		public void onEof() {
-			logger.info("kraken logdb: eof for query [{}], offset [{}], limit [{}]", new Object[] { query, offset,
-					limit });
+			try {
+				logger.info("kraken logdb: eof for query [{}], offset [{}], limit [{}]", new Object[] { query, offset,
+						limit });
+
+				Map<String, Object> params = getMetadata();
+				ClientContext ctx = contexts.get(session);
+				ctx.clientSession.post("onEof", new Object[] { params });
+			} catch (Exception e) {
+				logger.error("kraken logdb: cannot post onEof", e);
+			}
+		}
+
+		private Map<String, Object> getMetadata() {
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("id", query.getId());
+			params.put("offset", offset);
+			params.put("limit", limit);
+			return params;
 		}
 	}
 
@@ -208,5 +282,10 @@ public class LogRpcService extends SimpleRpcService {
 		@Override
 		public void callback() {
 		}
+	}
+
+	private static class ClientContext {
+		RpcSession clientSession;
+		Map<Integer, LogQuery> queries = new ConcurrentHashMap<Integer, LogQuery>();
 	}
 }

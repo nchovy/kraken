@@ -3,6 +3,7 @@ package org.krakenapps.logdb.client;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ public class LogDbClient {
 	private RpcClient client;
 	private RpcSession session;
 	private int bufferSize;
+	private LogDbClientRpcService service;
 
 	private List<Object> logs = new LinkedList<Object>();
 
@@ -32,8 +34,21 @@ public class LogDbClient {
 			Log log = new Log("test", "hello world");
 			client.connect();
 			LogQueryStatus q = client.createQuery("table test");
-			client.startQuery(q, 0, 10, 5);
 			System.out.println(q);
+
+			client.startQuery(q, 0, 10, 5);
+			Thread.sleep(2000);
+
+			LogQueryResult r = client.getResult(q, 0, 10);
+			System.out.println("total " + r.getTotalCount());
+			Iterator<Object> it = r.getResult();
+
+			while (it.hasNext()) {
+				Map<String, Object> m = (Map<String, Object>) it.next();
+				System.out.println(m.get("_id") + ", " + m.get("line"));
+			}
+
+			client.removeQuery(q);
 		} finally {
 			client.close();
 		}
@@ -58,6 +73,7 @@ public class LogDbClient {
 
 		client = new RpcClient(guid);
 		RpcConnection conn = client.connect(props);
+		conn.bind("logdb-client", service);
 		session = conn.createSession("logdb");
 	}
 

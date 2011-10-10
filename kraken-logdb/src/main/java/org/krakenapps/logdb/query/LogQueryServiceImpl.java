@@ -58,8 +58,11 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 		if (!lq.isEnd())
 			lq.cancel();
+
 		FileBufferList<Map<String, Object>> fbl = (FileBufferList<Map<String, Object>>) lq.getResult();
-		fbl.close();
+		if (fbl != null)
+			fbl.close();
+
 		queries.remove(id);
 	}
 
