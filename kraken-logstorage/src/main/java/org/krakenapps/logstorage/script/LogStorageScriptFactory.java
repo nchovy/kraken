@@ -21,7 +21,6 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.logstorage.LogQueryService;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.osgi.service.prefs.PreferencesService;
@@ -40,14 +39,11 @@ public class LogStorageScriptFactory implements ScriptFactory {
 	private LogStorage storage;
 
 	@Requires
-	private LogQueryService logQueryService;
-
-	@Requires
 	private PreferencesService prefsvc;
 
 	@Override
 	public Script createScript() {
-		return new LogStorageScript(tableRegistry, storage, logQueryService, prefsvc);
+		return new LogStorageScript(tableRegistry, storage, prefsvc);
 	}
 
 }
