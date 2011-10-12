@@ -210,7 +210,7 @@ public class Timechart extends LogQueryCommand {
 		public Object getResult() {
 			if (super.getResult() == null)
 				return null;
-			return (Double) super.getResult() / ((double) amount / (double) getTimeLength());
+			return NumberUtil.div(super.getResult(), (double) amount / (double) getTimeLength());
 		}
 	}
 

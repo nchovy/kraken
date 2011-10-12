@@ -25,7 +25,7 @@ import org.krakenapps.logdb.LogQueryService;
 
 @Component(name = "logdb-script-factory")
 @Provides
-public class LogDbScriptFactory implements ScriptFactory {
+public class LogDBScriptFactory implements ScriptFactory {
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "alias", value = "logdb")
 	private String alias;
@@ -35,7 +35,7 @@ public class LogDbScriptFactory implements ScriptFactory {
 
 	@Override
 	public Script createScript() {
-		return new LogDbScript(qs);
+		return new LogDBScript(qs);
 	}
 
 }

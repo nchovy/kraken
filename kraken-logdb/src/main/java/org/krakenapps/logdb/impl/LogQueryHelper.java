@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQuery;
+import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.query.command.Fields;
 
 public class LogQueryHelper {
 	private LogQueryHelper() {
@@ -46,6 +48,16 @@ public class LogQueryHelper {
 
 			m.put("result", query.getResult(offset, limit));
 			m.put("count", query.getResult().size());
+
+			Fields fields = null;
+			for (LogQueryCommand command : query.getCommands()) {
+				if (command instanceof Fields) {
+					if (!((Fields) command).isRemove())
+						fields = (Fields) command;
+				}
+			}
+			if (fields != null)
+				m.put("fields", fields.getFields());
 
 			return m;
 		}

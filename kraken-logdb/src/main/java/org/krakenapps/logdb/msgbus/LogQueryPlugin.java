@@ -17,8 +17,6 @@ package org.krakenapps.logdb.msgbus;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -88,21 +86,23 @@ public class LogQueryPlugin {
 		Integer timelineLimit = req.getInteger("timeline_limit");
 
 		LogQuery query = service.getQuery(id);
-		if (query != null) {
-			if (!query.isEnd())
-				throw new MsgbusException("0", "already running");
 
-			LogQueryCallback qc = new MsgbusLogQueryCallback(orgId, query, offset, limit);
-			query.registerQueryCallback(qc);
+		if (query == null)
+			throw new MsgbusException("0", "query not found");
 
-			if (timelineLimit != null) {
-				int size = timelineLimit.intValue();
-				LogTimelineCallback tc = new MsgbusTimelineCallback(orgId, query, size);
-				query.registerTimelineCallback(tc);
-			}
+		if (!query.isEnd())
+			throw new MsgbusException("0", "already running");
 
-			new Thread(query, "Log Query " + id).start();
+		LogQueryCallback qc = new MsgbusLogQueryCallback(orgId, query, offset, limit);
+		query.registerQueryCallback(qc);
+
+		if (timelineLimit != null) {
+			int size = timelineLimit.intValue();
+			LogTimelineCallback tc = new MsgbusTimelineCallback(orgId, query, size);
+			query.registerTimelineCallback(tc);
 		}
+
+		new Thread(query, "Log Query " + id).start();
 	}
 
 	@MsgbusMethod
@@ -170,19 +170,11 @@ public class LogQueryPlugin {
 		}
 	}
 
-	private class MsgbusTimelineCallback implements LogTimelineCallback {
+	private class MsgbusTimelineCallback extends LogTimelineCallback {
 		private Logger logger = LoggerFactory.getLogger(MsgbusTimelineCallback.class);
-		private final long CALLBACK_INTERVAL = 2000;
 		private int orgId;
 		private LogQuery query;
 		private int size;
-		private Map<Long, Integer> timeline = new HashMap<Long, Integer>();
-		private SpanValue[] spans = new SpanValue[] { new SpanValue(Calendar.MINUTE, 1),
-				new SpanValue(Calendar.MINUTE, 10), new SpanValue(Calendar.HOUR_OF_DAY, 1),
-				new SpanValue(Calendar.DAY_OF_YEAR, 1), new SpanValue(Calendar.WEEK_OF_YEAR, 1),
-				new SpanValue(Calendar.MONTH, 1) };
-		private int spansIndex = 0;
-		private long lastCallbackTime;
 
 		private MsgbusTimelineCallback(int orgId, LogQuery query) {
 			this(orgId, query, 10);
@@ -200,155 +192,21 @@ public class LogQueryPlugin {
 		}
 
 		@Override
-		public void setSize(int size) {
-			this.size = size;
-		}
-
-		@Override
-		public void put(Date date) {
-			long time = date.getTime();
-			time = time - time % 86400;
-			if (timeline.containsKey(time))
-				timeline.put(time, timeline.get(time) + 1);
-			else
-				timeline.put(time, 1);
-
-			if (System.currentTimeMillis() > lastCallbackTime + CALLBACK_INTERVAL) {
-				callback();
-				lastCallbackTime = System.currentTimeMillis();
-			}
-		}
-
-		@Override
-		public void callback() {
-			int[] values = new int[size];
-			Long beginTime = null;
-
-			if (timeline.isEmpty())
-				return;
-
-			if (spansIndex >= spans.length)
-				return;
-
-			long[] index = new long[size];
-			while (true) {
-				List<Long> keys = new ArrayList<Long>(timeline.keySet());
-				Collections.sort(keys, Collections.reverseOrder());
-				Calendar c = Calendar.getInstance();
-				c.setTimeInMillis(spans[spansIndex].getBaseTime(keys.get(0)));
-				for (int i = size - 1; i >= 0; i--) {
-					index[i] = c.getTimeInMillis();
-					c.add(spans[spansIndex].field, -spans[spansIndex].amount);
-				}
-				beginTime = index[0];
-				if (keys.get(keys.size() - 1) < beginTime) {
-					if (++spansIndex >= spans.length)
-						return;
-					continue;
-				}
-
-				int indexPos = size - 1;
-				for (Long key : keys) {
-					while (key < index[indexPos])
-						indexPos--;
-					values[indexPos] += timeline.get(key);
-				}
-
-				Map<Long, Integer> newTimeline = new HashMap<Long, Integer>();
-				for (int i = 0; i < size; i++)
-					newTimeline.put(index[i], values[i]);
-				timeline = newTimeline;
-
-				break;
-			}
-
+		protected void callback(Date beginTime, SpanValue spanValue, int[] values) {
 			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("id", query.getId());
-			m.put("span_field", spans[spansIndex].getFieldName());
-			m.put("span_amount", spans[spansIndex].amount);
-			m.put("begin", new Date(beginTime));
+			m.put("span_field", spanValue.getFieldName());
+			m.put("span_amount", spanValue.getAmount());
+			m.put("begin", beginTime);
 			m.put("values", values);
 			m.put("count", query.getResult().size());
 			pushApi.push(orgId, "logstorage-query-timeline-" + query.getId(), m);
 
-			logger.trace("kraken logstorage: timeline callback => "
-					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
-					new Object[] { query.getId(), spans[spansIndex].getFieldName(), spans[spansIndex].amount,
-							new Date(beginTime), Arrays.toString(values), query.getResult().size() });
-		}
-
-		private class SpanValue {
-			private int field;
-			private int amount;
-
-			private SpanValue(int field, int amount) {
-				this.field = field;
-				this.amount = amount;
-			}
-
-			public String getFieldName() {
-				switch (field) {
-				case Calendar.MINUTE:
-					return "Minute";
-				case Calendar.HOUR_OF_DAY:
-					return "Hour";
-				case Calendar.DAY_OF_YEAR:
-					return "Day";
-				case Calendar.WEEK_OF_YEAR:
-					return "Week";
-				case Calendar.MONTH:
-					return "Month";
-				}
-				return Integer.toString(field);
-			}
-
-			public long getBaseTime(long time) {
-				switch (field) {
-				case Calendar.MINUTE:
-				case Calendar.HOUR_OF_DAY:
-				case Calendar.DAY_OF_YEAR:
-				case Calendar.WEEK_OF_YEAR:
-					time += 291600000L; // base to Monday, 00:00:00
-					time -= time % (getMillis() * amount);
-					time -= 291600000L;
-					return time;
-
-				case Calendar.MONTH:
-					Calendar c = Calendar.getInstance();
-					c.setTimeInMillis(time);
-					c.set(Calendar.MILLISECOND, 0);
-					c.set(Calendar.SECOND, 0);
-					c.set(Calendar.MINUTE, 0);
-					c.set(Calendar.HOUR_OF_DAY, 0);
-					c.set(Calendar.DAY_OF_MONTH, 1);
-					int monthOffset = c.get(Calendar.YEAR) * 12;
-					int month = monthOffset + c.get(Calendar.MONTH);
-					month -= month % amount;
-					month -= monthOffset;
-					if (month >= 0)
-						c.set(Calendar.MONTH, month);
-					else {
-						c.set(Calendar.YEAR, c.get(Calendar.YEAR) - 1);
-						c.set(Calendar.MONTH, month + 12);
-					}
-					return c.getTimeInMillis();
-				}
-				return time;
-			}
-
-			private long getMillis() {
-				switch (field) {
-				case Calendar.MINUTE:
-					return 60 * 1000L;
-				case Calendar.HOUR_OF_DAY:
-					return 60 * 60 * 1000L;
-				case Calendar.DAY_OF_YEAR:
-					return 24 * 60 * 60 * 1000L;
-				case Calendar.WEEK_OF_YEAR:
-					return 7 * 24 * 60 * 60 * 1000L;
-				}
-				return -1;
-			}
+			logger.trace(
+					"kraken logstorage: timeline callback => "
+							+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
+					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
+							Arrays.toString(values), query.getResult().size() });
 		}
 	}
 }

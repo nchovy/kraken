@@ -254,7 +254,7 @@ public class LogRpcService extends SimpleRpcService {
 		}
 	}
 
-	private class RpcTimelineCallback implements LogTimelineCallback {
+	private class RpcTimelineCallback extends LogTimelineCallback {
 		private RpcSession session;
 		private LogQuery query;
 		private int size;
@@ -271,16 +271,7 @@ public class LogRpcService extends SimpleRpcService {
 		}
 
 		@Override
-		public void setSize(int size) {
-			this.size = size;
-		}
-
-		@Override
-		public void put(Date date) {
-		}
-
-		@Override
-		public void callback() {
+		protected void callback(Date beginTime, SpanValue spanValue, int[] values) {
 		}
 	}
 

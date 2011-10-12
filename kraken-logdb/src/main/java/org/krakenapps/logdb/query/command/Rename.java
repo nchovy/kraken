@@ -17,7 +17,7 @@ package org.krakenapps.logdb.query.command;
 
 import java.util.Map;
 
-import org.krakenapps.logstorage.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommand;
 
 public class Rename extends LogQueryCommand {
 	private String from;

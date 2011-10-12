@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.krakenapps.logstorage.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommand;
 
 public class Fields extends LogQueryCommand {
 	private boolean remove;
@@ -43,19 +43,23 @@ public class Fields extends LogQueryCommand {
 			Map<String, Object> newMap = new HashMap<String, Object>();
 			for (String field : fields) {
 				Object data = getData(field, m);
-				if (data != null)
-					newMap.put(field, data);
+				newMap.put(field, data);
 			}
-
 			m = newMap;
-			m.put("_fields", fields);
 		}
-
 		write(m);
 	}
 
 	@Override
 	public boolean isReducer() {
 		return (remove == fields.contains(dateColumnName));
+	}
+
+	public boolean isRemove() {
+		return remove;
+	}
+
+	public List<String> getFields() {
+		return fields;
 	}
 }

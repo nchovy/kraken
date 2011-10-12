@@ -31,11 +31,11 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.query.FileBufferList;
 
-public class LogDbScript implements Script {
+public class LogDBScript implements Script {
 	private LogQueryService qs;
 	private ScriptContext context;
 
-	public LogDbScript(LogQueryService qs) {
+	public LogDBScript(LogQueryService qs) {
 		this.qs = qs;
 	}
 
@@ -59,10 +59,13 @@ public class LogDbScript implements Script {
 
 			context.println(String.format("[%d] %s%s", query.getId(), query.getQueryString(), when));
 
-			for (LogQueryCommand cmd : query.getCommands()) {
-				context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
-						cmd.getQueryString(), cmd.getPushCount()));
-			}
+			if (query.getCommands() != null) {
+				for (LogQueryCommand cmd : query.getCommands()) {
+					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
+							cmd.getQueryString(), cmd.getPushCount()));
+				}
+			} else
+				context.println("    null");
 		}
 	}
 

@@ -2,7 +2,7 @@ package org.krakenapps.logdb.query.command;
 
 import java.util.Map;
 
-import org.krakenapps.logstorage.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommand;
 
 public class Drop extends LogQueryCommand {
 	@Override
