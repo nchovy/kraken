@@ -27,6 +27,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.dom.api.AbstractApi;
 import org.krakenapps.dom.api.OrganizationParameterApi;
+import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationParameter;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
@@ -87,7 +88,10 @@ public class OrganizationParameterApiImpl extends AbstractApi<OrganizationParame
 		if (orgParameter == null) {
 			EntityManager em = entityManagerService.getEntityManager();
 			orgParameter = new OrganizationParameter();
-			orgParameter.setOrganization(em.find(Organization.class, orgId));
+			Organization org = em.find(Organization.class, orgId);
+			if (org == null)
+				throw new OrganizationNotFoundException(orgId);
+			orgParameter.setOrganization(org);
 			orgParameter.setName(name);
 			orgParameter.setValue(value);
 			em.persist(orgParameter);

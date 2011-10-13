@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -47,7 +48,7 @@ public class LdapOrganizationalUnit implements Marshalable {
 	@Column(name = "created_at", nullable = false)
 	private Date createDateTime;
 
-	@OneToOne
+	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "org_unit")
 	private OrganizationUnit organizationUnit;
 

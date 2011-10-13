@@ -77,19 +77,34 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 	@Override
 	public Admin login(Session session, String nick, String hash, boolean force) throws LoginFailedException {
-		Admin admin = getAdmin(nick, session);
+		Admin admin = getAdminByLoginName(nick);
+		if (admin == null)
+			throw new AdminNotFoundException(nick);
 
-		// check acl (trust host)
-		checkAcl(session, admin);
+		try {
+			checkAcl(session, admin);
 
-		// check password
-		String password = null;
-		if (otpApi != null && admin.isUseOtp())
-			password = Sha1.hash(otpApi.getOtpValue(admin.getOtpSeed()));
-		else
-			password = admin.getUser().getPassword();
+			if (!admin.isEnabled()) {
+				Date failed = admin.getLastLoginFailedDateTime();
+				Calendar c = Calendar.getInstance();
+				c.add(Calendar.MINUTE, -3);
+				if (failed != null && failed.after(c.getTime()))
+					throw new AdminLockedException();
+			}
 
-		if (hash.equals(Sha1.hash(password + session.getString("nonce")))) {
+			String password = null;
+			if (otpApi != null && admin.isUseOtp())
+				password = Sha1.hash(otpApi.getOtpValue(admin.getOtpSeed()));
+			else
+				password = admin.getUser().getPassword();
+
+			if (!hash.equals(Sha1.hash(password + session.getString("nonce")))) {
+				if (admin.isUseOtp())
+					throw new InvalidPasswordException();
+				else
+					throw new InvalidOtpPasswordException();
+			}
+
 			String maxSession = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
 					"max_sessions");
 			if (maxSession != null) {
@@ -112,20 +127,23 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			}
 
 			updateLoginFailures(admin, true);
-			for (LoginCallback callback : callbacks)
-				callback.onLoginSuccess(admin, session);
 			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
 					.getLoginName()));
-			return admin;
-		} else {
-			updateLoginFailures(admin, false);
-			LoginFailedException e = null;
-			if (admin.isUseOtp())
-				e = new InvalidOtpPasswordException();
-			else
-				e = new InvalidPasswordException();
+
 			for (LoginCallback callback : callbacks)
-				callback.onLoginFailed(admin, session, e);
+				callback.onLoginSuccess(admin, session);
+
+			return admin;
+		} catch (LoginFailedException e) {
+			updateLoginFailures(admin, false);
+
+			for (LoginCallback callback : callbacks) {
+				if (e instanceof AdminLockedException)
+					callback.onLoginLocked(admin, session);
+				else
+					callback.onLoginFailed(admin, session, e);
+			}
+
 			throw e;
 		}
 	}
@@ -139,13 +157,8 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 				if (h.getIp() != null && h.getIp().equals(remote))
 					found = true;
 
-			if (!found) {
-				updateLoginFailures(admin, false);
-				LoginFailedException e = new AccessControlException();
-				for (LoginCallback callback : callbacks)
-					callback.onLoginFailed(admin, session, e);
-				throw e;
-			}
+			if (!found)
+				throw new AccessControlException();
 		}
 	}
 
@@ -235,6 +248,7 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		admin = em.find(Admin.class, admin.getId());
 
 		if (success) {
+			admin.setLastLoginDateTime(new Date());
 			admin.setLoginFailures(0);
 			admin.setEnabled(true);
 		} else {
@@ -245,31 +259,6 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 		}
 
 		em.merge(admin);
-	}
-
-	@Transactional
-	private Admin getAdmin(String nick, Session session) {
-		try {
-			Admin admin = getAdminByLoginName(nick);
-			if (!admin.isEnabled()) {
-				Date failed = admin.getLastLoginFailedDateTime();
-				Calendar c = Calendar.getInstance();
-				c.add(Calendar.SECOND, -10);
-				if (failed != null && failed.after(c.getTime())) {
-					for (LoginCallback callback : callbacks)
-						callback.onLoginLocked(admin, session);
-					throw new AdminLockedException();
-				} else
-					updateLoginFailures(admin, true);
-			}
-			admin.setLastLoginDateTime(new Date());
-
-			EntityManager em = entityManagerService.getEntityManager();
-			em.merge(admin);
-			return admin;
-		} catch (NoResultException e) {
-			throw new AdminNotFoundException(nick);
-		}
 	}
 
 	@Override
