@@ -68,8 +68,8 @@ public class JLdapService implements LdapService {
 				int syncInterval = p.getInt("sync_interval", 10 * 60 * 1000);
 				Date lastSync = new Date(p.getLong("last_sync", 0));
 
-				LdapProfile profile = new LdapProfile(name, dc, LdapProfile.DEFAULT_PORT, account, password,
-						syncInterval, lastSync);
+				LdapProfile profile = new LdapProfile(name, dc, LdapProfile.DEFAULT_PORT, account, password, syncInterval,
+						lastSync);
 				profiles.add(profile);
 			}
 		} catch (BackingStoreException e) {
@@ -162,14 +162,14 @@ public class JLdapService implements LdapService {
 			lc.connect(profile.getDc(), profile.getPort());
 
 			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
-					"(&(userPrincipalName=*))", null, false);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(&(userPrincipalName=*))",
+					null, false);
 
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
 					logger.debug("kraken-ldap: fetch entry [{}]", entry);
-					
+
 					DomainUserAccount account = parseUserAccount(entry);
 					if (account != null)
 						accounts.add(account);
@@ -209,7 +209,7 @@ public class JLdapService implements LdapService {
 				try {
 					LDAPEntry entry = r.next();
 					logger.debug("kraken-ldap: fetch org unit entry [{}]", entry);
-					
+
 					DomainOrganizationalUnit ou = parseOrganizationUnit(entry);
 					if (ou != null)
 						ous.add(ou);
@@ -239,6 +239,7 @@ public class JLdapService implements LdapService {
 
 	@Override
 	public boolean verifyPassword(LdapProfile profile, String account, String password, int timeout) {
+		boolean bindStatus = false;
 		if (password == null || password.isEmpty())
 			return false;
 
@@ -249,8 +250,10 @@ public class JLdapService implements LdapService {
 			lc.connect(profile.getDc(), profile.getPort());
 
 			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(sAMAccountName="
-					+ account + ")", null, false);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(sAMAccountName=" + account
+					+ ")", null, false);
+
+			bindStatus = true;
 
 			// query for verification
 			LDAPEntry entry = r.next();
@@ -261,6 +264,9 @@ public class JLdapService implements LdapService {
 			lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
 			return true;
 		} catch (Exception e) {
+			if (!bindStatus)
+				throw new IllegalArgumentException("check ldap profile: " + profile.getName(), e);
+
 			return false;
 		} finally {
 			if (lc.isConnected())

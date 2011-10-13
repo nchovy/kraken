@@ -39,8 +39,12 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Response implements HttpServletResponse {
+	private final Logger logger = LoggerFactory.getLogger(Response.class.getName());
+
 	private BundleContext bc;
 	private ChannelHandlerContext ctx;
 	private HttpRequest req;
@@ -49,18 +53,17 @@ public class Response implements HttpServletResponse {
 	private HttpResponseStatus status = HttpResponseStatus.OK;
 	private Map<String, Object> headers = new HashMap<String, Object>();
 	private Set<Cookie> cookies = new HashSet<Cookie>();
-	private boolean service;
 
-	public Response(BundleContext bc, ChannelHandlerContext ctx, HttpRequest req, boolean service) {
+	public Response(BundleContext bc, ChannelHandlerContext ctx, HttpRequest req) {
 		this.bc = bc;
 		this.ctx = ctx;
 		this.req = req;
 		this.os = new ResponseOutputStream();
-		this.service = service;
 		this.writer = new PrintWriter(os);
 	}
 
 	private class ResponseOutputStream extends ServletOutputStream {
+		private boolean closed = false;
 		private ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
 
 		@Override
@@ -80,15 +83,12 @@ public class Response implements HttpServletResponse {
 
 		@Override
 		public void close() throws IOException {
-			flush();
-			super.close();
-		}
-
-		@Override
-		public void flush() throws IOException {
-			if (!service)
+			if (closed)
 				return;
 
+			closed = true;
+
+			// send response if not sent
 			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
 			String cookie = null;
@@ -105,14 +105,25 @@ public class Response implements HttpServletResponse {
 			for (String name : headers.keySet())
 				resp.setHeader(name, headers.get(name));
 
-			resp.setContent(buf);
-			HttpHeaders.setContentLength(resp, buf.readableBytes());
+			logger.debug("kraken webconsole: flush response [{}]", buf.readableBytes());
+
+			ChannelBuffer dup = buf.duplicate();
+			buf.clear();
+
+			resp.setContent(dup.duplicate());
+			HttpHeaders.setContentLength(resp, dup.readableBytes());
 
 			ChannelFuture f = ctx.getChannel().write(resp);
 			if (!HttpHeaders.isKeepAlive(req) || !resp.getStatus().equals(HttpResponseStatus.OK)) {
 				f.addListener(ChannelFutureListener.CLOSE);
 			}
 		}
+
+		@Override
+		public void flush() throws IOException {
+			// do not move flush code here (header should not sent twice)
+		}
+
 	}
 
 	@Override
@@ -187,11 +198,14 @@ public class Response implements HttpServletResponse {
 		this.status = HttpResponseStatus.valueOf(sc);
 
 		String body = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n" //
-				+ "<html><head><title>" + sc + " " + status.getReasonPhrase()
+				+ "<html><head><title>" + sc + " "
+				+ status.getReasonPhrase()
 				+ "</title></head>\n" //
-				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>" + msg
+				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>"
+				+ msg
 				+ "</pre><hr/><address>Kraken Web Console/"
-				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION) + "</address></body></html>";
+				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION)
+				+ "</address></body></html>";
 
 		writer.append(body);
 		writer.close();
@@ -204,7 +218,9 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public void sendRedirect(String location) throws IOException {
-		// TODO Auto-generated method stub
+		this.status = HttpResponseStatus.MOVED_PERMANENTLY;
+		setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		setHeader(HttpHeaders.Names.LOCATION, location);
 	}
 
 	@Override
@@ -233,4 +249,7 @@ public class Response implements HttpServletResponse {
 		this.status = HttpResponseStatus.valueOf(sc);
 	}
 
+	public void close() {
+		writer.close();
+	}
 }
