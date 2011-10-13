@@ -111,9 +111,9 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 			if (!hash.equals(Sha1.hash(password + session.getString("nonce")))) {
 				if (admin.isUseOtp())
-					throw new InvalidPasswordException();
-				else
 					throw new InvalidOtpPasswordException();
+				else
+					throw new InvalidPasswordException();
 			}
 
 			String maxSession = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
