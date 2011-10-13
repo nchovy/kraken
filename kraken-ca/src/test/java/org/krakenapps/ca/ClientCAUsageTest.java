@@ -51,7 +51,7 @@ public class ClientCAUsageTest {
 		System.out.println(System.getProperty("kraken.data.dir"));
 
 		CertificateAuthority ca = new CertificateAuthorityImpl();
-		
+
 		File caRootDir = ca.getCARootDir();
 
 		String caCN = "local";
@@ -62,8 +62,7 @@ public class ClientCAUsageTest {
 		assertTrue(caFile.exists());
 
 		// TODO: new private keypair from local CA
-		PrivateCertificateCreationContext ctx = createCertificate(ca, caCN, caPassword, caPkPass, "stania",
-				"stania", "staniapass", 365);
+		PrivateCertificateCreationContext ctx = createCertificate(ca, caCN, caPassword, caPkPass, "stania", "stania", "staniapass", 365);
 		X509Certificate certficate = ctx.getCertficiate();
 		byte[] encodedEncryptedPrivateKey = ctx.getEncodedEncryptedPrivateKey();
 
@@ -177,8 +176,7 @@ public class ClientCAUsageTest {
 
 			// TODO generate create cert
 			try {
-				certificate = ca.createCertificate((java.security.cert.X509Certificate) caCert, caKey, keyPair, dn,
-						new HashMap<String, String>(), notBefore, notAfter, sigAlgorithm.toString());
+				certificate = ca.createCertificate((java.security.cert.X509Certificate) caCert, caKey, keyPair, dn, new HashMap<String, String>(), notBefore, notAfter, sigAlgorithm.toString());
 			} catch (Exception e) {
 				throw e;
 			} finally {
@@ -190,7 +188,8 @@ public class ClientCAUsageTest {
 		}
 
 		private void saveEncryptedPrivateKey(PrivateKey privKey, String pkPassword) {
-			// code from http://stackoverflow.com/questions/5127379/how-to-generate-a-rsa-keypair-with-a-privatekey-encrypted-with-password
+			// code from
+			// http://stackoverflow.com/questions/5127379/how-to-generate-a-rsa-keypair-with-a-privatekey-encrypted-with-password
 			byte[] encodedPrivKey = privKey.getEncoded();
 			int hashIterationCount = 20;
 			Random random = new Random();
@@ -268,15 +267,7 @@ public class ClientCAUsageTest {
 		}
 	}
 
-	private PrivateCertificateCreationContext createCertificate(
-			CertificateAuthority ca,
-			String caCN,
-			String caKeystorePass,
-			String caPrivKeyPass,
-			String issueeCN,
-			String keypairAlias,
-			String pkPassword,
-			int days) {
+	private PrivateCertificateCreationContext createCertificate(CertificateAuthority ca, String caCN, String caKeystorePass, String caPrivKeyPass, String issueeCN, String keypairAlias, String pkPassword, int days) {
 		PrivateCertificateCreationContext ctx = new PrivateCertificateCreationContext(ca);
 
 		try {

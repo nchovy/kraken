@@ -1,16 +1,10 @@
-package org.krakenapps.ca;
+package org.krakenapps.ca.crl;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BERUtil {
-	public static void main(String[] args) {
-		byte[] b = encodingOID("1.2.840.113549.1.1.5");
-		for (byte b1 : b)
-			System.out.printf("%02x ", b1);
-	}
-
 	public static byte[] encodingOID(String oid) {
 		ByteBuffer bb = ByteBuffer.allocate(20);
 
@@ -37,14 +31,14 @@ public class BERUtil {
 						s = binaryString.substring(j - 6, j + 1);
 
 					int mask;
-					if(j == lastIndex) 
+					if (j == lastIndex)
 						mask = 0;
 					else
 						mask = 0x80;
-					
-					int result = mask | ((byte) Integer.parseInt(s, 2)); 
+
+					int result = mask | ((byte) Integer.parseInt(s, 2));
 					elements.add(Integer.toBinaryString(result));
-					
+
 					j -= 7;
 				}
 

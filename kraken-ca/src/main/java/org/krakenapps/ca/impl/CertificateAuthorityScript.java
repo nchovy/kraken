@@ -28,6 +28,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,9 +55,7 @@ public class CertificateAuthorityScript implements Script {
 	private ScriptContext context;
 	private File home;
 
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
-			"SHA224withRSA",
-			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	public CertificateAuthorityScript(CertificateAuthority ca) {
 		this.x509cert = ca;
@@ -224,9 +223,7 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate cert
-			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair,
-					dn, attrs,
-					notBefore, notAfter, signatureAlgorithm);
+			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, attrs, notBefore, notAfter, signatureAlgorithm, null);
 
 			context.println(cert.toString());
 
@@ -244,6 +241,165 @@ public class CertificateAuthorityScript implements Script {
 				context.println("");
 				context.println("Writing pfx file to " + f.getAbsolutePath());
 				x509cert.exportPkcs12(alias, f, keyPair, password, cert, caCert);
+			} finally {
+				context.turnEchoOn();
+			}
+
+			context.println("Completed");
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("Interrupted");
+		} catch (Exception e) {
+			context.println("Error: " + e.getMessage());
+			logger.warn("kraken x509: create cert failed", e);
+		}
+	}
+
+	// added by mindori
+	public void issueCert(String[] args) {
+		try {
+			context.print("CA Common Name? ");
+			String caCN = context.readLine();
+
+			File caFile = new File(home, caCN + "/CA.jks");
+			if (!caFile.exists()) {
+				context.println("CA keystore not found");
+				return;
+			}
+
+			Certificate caCert = null;
+			RSAPrivateKey caKey = null;
+			FileInputStream fs = new FileInputStream(caFile);
+			KeyStore store = KeyStore.getInstance("JKS");
+			
+			String password;
+			String keyPassword;
+			try {
+				context.print("CA keystore password? ");
+				password = context.readPassword();
+				store.load(fs, password.toCharArray());
+
+				context.print("CA private-key password? ");
+				keyPassword = context.readPassword();
+
+				caCert = store.getCertificate("ca");
+				caKey = (RSAPrivateKey) store.getKey("ca-key", keyPassword.toCharArray());
+			} catch (InterruptedException e) {
+				throw e;
+			} catch (Exception e) {
+				context.println("CA keystore open failed: " + e.getMessage());
+				logger.warn("kraken x509: ca keystore open failed", e);
+				return;
+			} finally {
+				fs.close();
+			}
+
+			context.print("Common Name (CN)? ");
+			String cn = context.readLine();
+
+			context.print("Organization Unit (OU)? ");
+			String ou = context.readLine();
+
+			context.print("Organization (O)? ");
+			String o = context.readLine();
+
+			context.print("City (L)? ");
+			String l = context.readLine();
+
+			context.print("State (ST)? ");
+			String st = context.readLine();
+
+			context.print("Country Code (C)? ");
+			String c = context.readLine();
+
+			// select signature algorithm
+			context.println("Select Signature Algorithm:");
+			int i = 1;
+			for (String sig : sigAlgorithms) {
+				context.printf("[%d] %s\n", i, sig);
+				i++;
+			}
+
+			context.printf("Select [1~%d] (default %d)? ", sigAlgorithms.length, sigAlgorithms.length);
+			String sigSelect = context.readLine();
+
+			int select;
+			if (sigSelect.isEmpty())
+				select = sigAlgorithms.length - 1;
+			else
+				select = Integer.parseInt(sigSelect) - 1;
+
+			String signatureAlgorithm = sigAlgorithms[select];
+
+			String dn = String.format("CN=%s, OU=%s, O=%s, L=%s, ST=%s, C=%s", cn, ou, o, l, st, c);
+
+			// valid duration
+			context.print("Days (default 365)?");
+			String daysLine = context.readLine();
+			int days = 0;
+			if (daysLine.isEmpty())
+				days = 365;
+			else
+				days = Integer.parseInt(daysLine);
+
+			// attributes
+			Map<String, String> attrs = new HashMap<String, String>();
+			while (true) {
+				context.print("Attribute Name (press enter to skip)? ");
+				String name = context.readLine();
+				if (name.isEmpty())
+					break;
+
+				context.print("Attribute Value? ");
+				String value = context.readLine();
+
+				DERObjectIdentifier oid = (DERObjectIdentifier) X509Name.DefaultLookUp.get(name);
+				if (oid == null) {
+					try {
+						oid = new DERObjectIdentifier(name);
+					} catch (Exception e) {
+						context.println("Error: invalid oid will be ignored.");
+					}
+				}
+
+				if (oid != null)
+					attrs.put(name, value);
+			}
+
+			// key pair generation
+			context.println("Generating key pairs...");
+			KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
+			KeyPair keyPair = keyPairGen.generateKeyPair();
+
+			Date notBefore = new Date();
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(notBefore);
+			cal.add(Calendar.DAY_OF_YEAR, days);
+			Date notAfter = cal.getTime();
+
+			// input CRL DP
+			context.print("CRL Distrbution Point(https)?");
+			String dp = context.readLine();
+			
+			// generate cert
+			Enumeration<String> s = store.aliases();
+			X509Certificate cert = x509cert.issueCertificate(caCN, password, s.nextElement(), keyPassword, dn, signatureAlgorithm, days, dp);
+			context.println(cert.toString());
+
+			// save pfx or p12 file
+			File pfxBase = new File(home, caCN);
+			pfxBase.mkdirs();
+			File f = new File(pfxBase, cn + ".pfx");
+
+			context.print("Key Alias? ");
+			String alias = context.readLine();
+			context.print("Key password? ");
+			context.turnEchoOff();
+			try {
+				String pw = context.readLine();
+				context.println("");
+				context.println("Writing pfx file to " + f.getAbsolutePath());
+				x509cert.exportPkcs12(alias, f, keyPair, pw, cert, caCert);
 			} finally {
 				context.turnEchoOn();
 			}
@@ -317,8 +473,7 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate
-			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter,
-					signatureAlgorithm);
+			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
 			context.println(cert.toString());
 
 			// save

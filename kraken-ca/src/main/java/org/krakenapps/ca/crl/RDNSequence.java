@@ -1,29 +1,12 @@
-package org.krakenapps.ca;
+package org.krakenapps.ca.crl;
 
 import java.nio.ByteBuffer;
 
 public class RDNSequence {
-	// "CN=local, OU=RND, O=FutureSystems, L=Guro, ST=Seoul, C=KR"
 	private String dn;
 	private String value;
 
 	private static final int DN_MAXIMUM_LENGTH = 131;
-
-	public static void main(String[] args) {
-		RDNSequence rdn = new RDNSequence("C", "US");
-		RDNSequence rdn2 = new RDNSequence("O", "VeriSign, Inc.");
-		RDNSequence rdn3 = new RDNSequence("OU", "Class 3 Public Primary Certification Authority");
-
-		System.out.println("===================================");
-		for (byte b : rdn.getBytes())
-			System.out.printf("%02x ", b);
-		System.out.println("\n\n===================================");
-		for (byte b : rdn2.getBytes())
-			System.out.printf("%02x ", b);
-		System.out.println("\n\n===================================");
-		for (byte b : rdn3.getBytes())
-			System.out.printf("%02x ", b);
-	}
 
 	public RDNSequence(String dn, String value) {
 		this.dn = dn;
