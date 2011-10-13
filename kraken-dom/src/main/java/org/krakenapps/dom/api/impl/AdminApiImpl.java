@@ -86,8 +86,19 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 			if (!admin.isEnabled()) {
 				Date failed = admin.getLastLoginFailedDateTime();
+
+				int lockTime = 180;
+				String time = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
+						"login_lock_time");
+				if (time != null) {
+					try {
+						lockTime = Integer.parseInt(time);
+					} catch (NumberFormatException e) {
+					}
+				}
+
 				Calendar c = Calendar.getInstance();
-				c.add(Calendar.MINUTE, -3);
+				c.add(Calendar.SECOND, lockTime);
 				if (failed != null && failed.after(c.getTime()))
 					throw new AdminLockedException();
 			}
