@@ -92,7 +92,7 @@ public class ServletRegistryImpl implements ServletRegistry {
 	@Override
 	public void service(ChannelHandlerContext ctx, HttpRequest req) {
 		try {
-			if (!serviceInternal(ctx, req, true))
+			if (!serviceInternal(ctx, req))
 				sendNotFound(ctx, req);
 		} catch (ServletException e) {
 			logger.error("kraken webconsole: servlet service error.", e);
@@ -101,9 +101,9 @@ public class ServletRegistryImpl implements ServletRegistry {
 		}
 	}
 
-	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req, boolean service) throws ServletException,
+	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req) throws ServletException,
 			IOException {
-		ServletResponse response = null;
+		Response response = null;
 
 		try {
 			String servletPath = findServlet(req.getUri());
@@ -114,9 +114,10 @@ public class ServletRegistryImpl implements ServletRegistry {
 
 			String pathInfo = req.getUri().substring(servletPath.length());
 			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
-			response = new Response(bc, ctx, req, service);
+			response = new Response(bc, ctx, req);
 
 			servlet.service(request, response);
+
 		} catch (PageNotFoundException e) {
 			if (e.getMovedLocation() != null) {
 				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY);
@@ -132,6 +133,9 @@ public class ServletRegistryImpl implements ServletRegistry {
 			return false;
 		} catch (IOException e) {
 			return false;
+		} finally {
+			if (response != null)
+				response.close();
 		}
 
 		return true;
