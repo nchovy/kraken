@@ -23,18 +23,18 @@ import org.krakenapps.logdb.LookupHandler;
 
 public class Lookup extends LogQueryCommand {
 	private LogQueryService service;
-	private String tableName;
+	private String handlerName;
 	private String srcField;
 	private String localSrcField;
 	private String dstField;
 	private String localDstField;
 
-	public Lookup(String tableName, String srcField, String dstField) {
-		this(tableName, srcField, srcField, dstField, dstField);
+	public Lookup(String handlerName, String srcField, String dstField) {
+		this(handlerName, srcField, srcField, dstField, dstField);
 	}
 
-	public Lookup(String tableName, String localSrcField, String srcField, String dstField, String localDstField) {
-		this.tableName = tableName;
+	public Lookup(String handlerName, String localSrcField, String srcField, String dstField, String localDstField) {
+		this.handlerName = handlerName;
 		this.srcField = srcField;
 		this.localSrcField = localSrcField;
 		this.dstField = dstField;
@@ -48,7 +48,7 @@ public class Lookup extends LogQueryCommand {
 	@Override
 	public void push(Map<String, Object> m) {
 		Object value = getData(localSrcField, m);
-		LookupHandler handler = service.getLookupHandler(tableName);
+		LookupHandler handler = service.getLookupHandler(handlerName);
 		if (handler != null)
 			m.put(localDstField, handler.lookup(srcField, dstField, value));
 		write(m);

@@ -36,10 +36,10 @@ public class LookupParser implements QueryParser {
 
 	@Override
 	public Object parse(Binding b) {
-		String tableName = (String) b.getChildren()[2].getValue();
+		String handlerName = (String) b.getChildren()[2].getValue();
 		LookupField src = (LookupField) b.getChildren()[3].getValue();
 		LookupField dst = (LookupField) b.getChildren()[5].getValue();
-		return new Lookup(tableName, src.first, src.second, dst.first, dst.second);
+		return new Lookup(handlerName, src.first, src.second, dst.first, dst.second);
 	}
 
 	private class LookupField {
