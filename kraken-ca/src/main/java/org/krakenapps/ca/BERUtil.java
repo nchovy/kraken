@@ -1,4 +1,4 @@
-package org.krakenapps.ca.crl;
+package org.krakenapps.ca;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
