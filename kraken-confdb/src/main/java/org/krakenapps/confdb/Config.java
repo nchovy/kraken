@@ -8,4 +8,10 @@ public interface Config {
 	int getId();
 
 	long getRevision();
+	
+	long getPrevRevision();
+	
+	Object getDocument();
+	
+	void setDocument(Object doc);
 }

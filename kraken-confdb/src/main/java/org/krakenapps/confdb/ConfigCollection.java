@@ -1,15 +1,15 @@
 package org.krakenapps.confdb;
 
-import java.util.Iterator;
-
 public interface ConfigCollection {
 	String getName();
 
-	Iterator<Config> find(Predicate pred);
+	ConfigIterator findAll();
+
+	ConfigIterator find(Predicate pred);
 
 	Config findOne(Predicate pred);
 
-	Config add(Object o);
+	Config add(Object doc);
 
 	Config update(Config c);
 
@@ -19,7 +19,7 @@ public interface ConfigCollection {
 
 	Config remove(Config c, boolean ignoreConflict);
 
-	void addHook(ActionType type, ConfigListener listener);
+	void addHook(CommitOp op, ConfigListener listener);
 
-	void removeHook(ActionType type, ConfigListener listener);
+	void removeHook(CommitOp op, ConfigListener listener);
 }
