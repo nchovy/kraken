@@ -26,17 +26,17 @@ import java.util.Date;
 import java.util.Map;
 
 public interface CertificateAuthority {
-	X509Certificate createSelfSignedCertificate(KeyPair keyPair, String dn, Date notBefore, Date notAfter,
-			String signatureAlgorithm) throws Exception;
+	X509Certificate createSelfSignedCertificate(KeyPair keyPair, String dn, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception;
 
-	X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn,
-			Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception;
+	X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception;
 
-	void exportPkcs12(String alias, File f, KeyPair keyPair, String keyPassword, Certificate cert, Certificate caCert)
-			throws Exception;
+	// added by mindori
+	X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm, String crlDpUrl) throws Exception;
+
+	void exportPkcs12(String alias, File f, KeyPair keyPair, String keyPassword, Certificate cert, Certificate caCert) throws Exception;
 
 	Collection<X509Certificate> getRootCertificates();
-	
+
 	X509Certificate getRootCertificate(String caCommonName);
 
 	Collection<String> getCertificates(String caCommonName);
@@ -45,11 +45,12 @@ public interface CertificateAuthority {
 
 	byte[] getPfxFile(String caCommonName, String keyAlias, String keyPassword) throws IOException;
 
-	X509Certificate issueSelfSignedCertificate(String dn, String signatureAlgorithm, int days, String password)
-			throws Exception;
+	X509Certificate issueSelfSignedCertificate(String dn, String signatureAlgorithm, int days, String password) throws Exception;
 
-	X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword,
-			String dn, String signatureAlgorithm, int days) throws Exception;
+	X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days) throws Exception;
+
+	// added by mindori
+	X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days, String crlDpUrl) throws Exception;
 
 	File getCARootDir();
 }

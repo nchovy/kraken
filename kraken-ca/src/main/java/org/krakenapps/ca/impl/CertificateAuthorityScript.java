@@ -16,6 +16,7 @@
 package org.krakenapps.ca.impl;
 
 import java.io.File;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.KeyPair;
@@ -37,6 +38,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.ca.CertificateAuthority;
+import org.krakenapps.ca.crl.RevokedCertificatesManager;
 import org.krakenapps.ca.util.CertExporter;
 import org.krakenapps.ca.util.CertImporter;
 import org.slf4j.Logger;
@@ -54,9 +56,8 @@ public class CertificateAuthorityScript implements Script {
 	private ScriptContext context;
 	private File home;
 
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
-			"SHA224withRSA",
-			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] reasonCode = new String[] { "unspecified", "keyCompromise", "caCompromise", "AffiliationChanged", "superseded", "cessationOfOperation", "certificateHold", "removeFromCRL" };
 
 	public CertificateAuthorityScript(CertificateAuthority ca) {
 		this.x509cert = ca;
@@ -188,6 +189,9 @@ public class CertificateAuthorityScript implements Script {
 			else
 				days = Integer.parseInt(daysLine);
 
+			context.print("CRL Distribution Point (http)?");
+			String dp = context.readLine();
+
 			// attributes
 			Map<String, String> attrs = new HashMap<String, String>();
 			while (true) {
@@ -224,9 +228,7 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate cert
-			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair,
-					dn, attrs,
-					notBefore, notAfter, signatureAlgorithm);
+			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, attrs, notBefore, notAfter, signatureAlgorithm, dp);
 
 			context.println(cert.toString());
 
@@ -317,8 +319,7 @@ public class CertificateAuthorityScript implements Script {
 			Date notAfter = cal.getTime();
 
 			// generate
-			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter,
-					signatureAlgorithm);
+			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
 			context.println(cert.toString());
 
 			// save
@@ -373,6 +374,41 @@ public class CertificateAuthorityScript implements Script {
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
 			logger.warn("kraken x509: failed to create CA root", e);
+		}
+	}
+
+	public void revoke(String[] args) {
+		try {
+			context.print("Serial Number (Hex String)?");
+			String serial = context.readLine();
+
+			context.println("Select Reason Code:");
+			int i = 0;
+			for (String sig : reasonCode) {
+				context.printf("[%d] %s\n", i, sig);
+				if (i == 6)
+					i = i + 2; // reason code increase 6 -> 8
+				else
+					i++;
+			}
+
+			context.printf("Select [0, 1, 2, 3, 4, 5, 6, 8] (default 0)? ");
+			String reasonSelect = context.readLine();
+
+			int select;
+			if (reasonSelect.isEmpty())
+				select = 0;
+			else
+				select = Integer.parseInt(reasonSelect);
+			
+			RevokedCertificatesManager manager = new RevokedCertificatesManager();
+			manager.revoke(serial, select);
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("interrupted");
+		} catch (Exception e) {
+			context.println("Error: " + e.getMessage());
+			logger.warn("kraken x509: failed to revoke certificate", e);
 		}
 	}
 }

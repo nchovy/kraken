@@ -16,6 +16,7 @@
 package org.krakenapps.ca.impl;
 
 import java.io.BufferedReader;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -42,8 +43,17 @@ import java.util.Vector;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.DERBMPString;
+import org.bouncycastle.asn1.DERIA5String;
 import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.x509.CRLDistPoint;
+import org.bouncycastle.asn1.x509.DistributionPoint;
+import org.bouncycastle.asn1.x509.DistributionPointName;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.bouncycastle.jce.X509Principal;
 import org.bouncycastle.jce.interfaces.PKCS12BagAttributeCarrier;
@@ -66,8 +76,7 @@ import org.slf4j.LoggerFactory;
 public class CertificateAuthorityImpl implements CertificateAuthority {
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityImpl.class.getName());
 	private final File home = getCARootDir();
-	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
-			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	public File getCARootDir() {
 		return new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
@@ -80,8 +89,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public X509Certificate createSelfSignedCertificate(KeyPair keyPair, String dn, Date notBefore, Date notAfter,
-			String signatureAlgorithm) throws Exception {
+	public X509Certificate createSelfSignedCertificate(KeyPair keyPair, String dn, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception {
 		X509V1CertificateGenerator certGen = new X509V1CertificateGenerator();
 
 		certGen.setSerialNumber(new BigInteger("1"));
@@ -96,8 +104,13 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn,
-			Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception {
+	public X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception {
+		return createCertificate(caCert, caKey, keyPair, dn, attrs, notBefore, notAfter, signatureAlgorithm, null);
+	}
+
+	// added by mindori
+	@Override
+	public X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm, String crlDpUrl) throws Exception {
 		X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
 		Vector<Object> oids = new Vector<Object>();
 		Vector<Object> values = new Vector<Object>();
@@ -123,6 +136,22 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		certGen.setPublicKey(keyPair.getPublic());
 		certGen.setSignatureAlgorithm(signatureAlgorithm);
 
+		if (crlDpUrl != null) {
+			GeneralName gn = new GeneralName(6, new DERIA5String(crlDpUrl));
+
+			ASN1EncodableVector vec = new ASN1EncodableVector();
+			vec.add(gn);
+
+			GeneralNames gns = new GeneralNames(new DERSequence(vec));
+			DistributionPointName dpn = new DistributionPointName(0, gns);
+
+			List<DistributionPoint> l = new ArrayList<DistributionPoint>();
+			l.add(new DistributionPoint(dpn, null, null));
+
+			CRLDistPoint crlDp = new CRLDistPoint(l.toArray(new DistributionPoint[0]));
+			certGen.addExtension(X509Extensions.CRLDistributionPoints.getId(), false, crlDp);
+		}
+
 		return certGen.generate(caKey, "BC");
 	}
 
@@ -141,12 +170,10 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		}
 	}
 
-	public void exportPkcs12(String alias, File f, KeyPair keyPair, String keyPassword, Certificate cert,
-			Certificate caCert) throws Exception {
+	public void exportPkcs12(String alias, File f, KeyPair keyPair, String keyPassword, Certificate cert, Certificate caCert) throws Exception {
 		PKCS12BagAttributeCarrier bagAttr = (PKCS12BagAttributeCarrier) keyPair.getPrivate();
 		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.20"), new DERBMPString(alias));
-		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.21"), new SubjectKeyIdentifierStructure(
-				keyPair.getPublic()));
+		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.21"), new SubjectKeyIdentifierStructure(keyPair.getPublic()));
 
 		KeyStore pfx = KeyStore.getInstance("PKCS12", "BC");
 		pfx.load(null, null);
@@ -299,8 +326,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public X509Certificate issueSelfSignedCertificate(String dn, String signatureAlgorithm, int days, String password)
-			throws Exception {
+	public X509Certificate issueSelfSignedCertificate(String dn, String signatureAlgorithm, int days, String password) throws Exception {
 		String cn = parseCN(dn);
 
 		// check availability of signature algorithm
@@ -344,8 +370,13 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias,
-			String keyPassword, String dn, String signatureAlgorithm, int days) throws Exception {
+	public X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days) throws Exception {
+		return issueCertificate(caCommonName, caPassword, keyAlias, keyPassword, dn, signatureAlgorithm, days, null);
+	}
+
+	// added by mindori
+	@Override
+	public X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days, String crlDpUrl) throws Exception {
 		File caFile = new File(home, caCommonName + "/CA.jks");
 		if (!caFile.exists())
 			throw new IOException(caFile.getAbsolutePath() + " not found");
@@ -377,8 +408,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		Date notAfter = cal.getTime();
 
 		// generate cert
-		X509Certificate cert = createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, null,
-				notBefore, notAfter, signatureAlgorithm);
+		X509Certificate cert = createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, null, notBefore, notAfter, signatureAlgorithm, crlDpUrl);
 
 		logger.info("kraken ca: generated new certificate [{}]", cert.getSubjectX500Principal().getName());
 

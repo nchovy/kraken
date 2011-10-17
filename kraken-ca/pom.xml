@@ -25,6 +25,7 @@
 						<Bundle-SymbolicName>org.krakenapps.ca</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.ca,
+							org.krakenapps.ca.crl,
 							org.krakenapps.ca.util,
 							org.krakenapps.ca.msgbus
 						</Export-Package>
@@ -68,7 +69,7 @@
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk16</artifactId>
-			<version>1.45</version>
+			<version>1.46</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -83,4 +84,3 @@
 		</dependency>
 	</dependencies>
 </project>
-
