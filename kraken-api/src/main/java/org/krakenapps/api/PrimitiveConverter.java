@@ -1,0 +1,103 @@
+package org.krakenapps.api;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PrimitiveConverter {
+
+	public static Map<String, Object> serialize(Object o) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		Class<?> c = o.getClass();
+
+		for (Field f : c.getDeclaredFields()) {
+			try {
+				String fieldName = toUnderscoreName(f.getName());
+				f.setAccessible(true);
+				m.put(fieldName, f.get(o));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		return m;
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static <T> T parse(Class<T> clazz, Map<String, Object> m) {
+		try {
+			T n = clazz.newInstance();
+
+			for (Field f : clazz.getDeclaredFields()) {
+				CollectionTypeHint hint = f.getAnnotation(CollectionTypeHint.class);
+				Class<?> fieldType = f.getType();
+				String fieldName = toUnderscoreName(f.getName());
+
+				Object value = m.get(fieldName);
+				f.setAccessible(true);
+
+				if (contains(fieldType, List.class) && value instanceof List) {
+					if (hint != null)
+						f.set(n, parseList(hint.value(), (List) value));
+					else
+						f.set(n, value);
+				} else if (!fieldType.isInstance(Map.class) && value instanceof Map) {
+					f.set(n, parse(fieldType, (Map) value));
+				} else {
+					f.set(n, value);
+				}
+			}
+
+			return n;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private static boolean contains(Class<?> clazz, Class<?> iface) {
+		if (clazz.equals(iface))
+			return true;
+		
+		Class<?>[] clazzes = clazz.getInterfaces();
+		for (int i = 0; i < clazzes.length; i++)
+			if (clazzes[i].equals(iface))
+				return true;
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> List<T> parseList(Class<T> clazz, List<Object> l) {
+		List<T> list = new ArrayList<T>();
+		for (Object o : l) {
+			if (o instanceof Map) {
+				T v = parse(clazz, (Map<String, Object>) o);
+				list.add(v);
+			} else
+				list.add((T) o);
+		}
+
+		return list;
+	}
+
+	public static String toUnderscoreName(String s) {
+		final int tolower = 'a' - 'A';
+		StringBuilder sb = new StringBuilder(s.length() * 2);
+
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c >= 'A' && c <= 'Z') {
+				if (i != 0)
+					sb.append("_");
+
+				sb.append((char) (c + tolower));
+			} else
+				sb.append(c);
+		}
+
+		return sb.toString();
+	}
+
+}
