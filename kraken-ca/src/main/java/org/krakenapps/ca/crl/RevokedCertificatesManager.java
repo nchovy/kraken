@@ -37,6 +37,9 @@ public class RevokedCertificatesManager {
 	}
 
 	public void revoke(String serialNumber, int reasonCode) throws Exception {
+		if (isAlreadyRevoked(serialNumber))
+			throw new Exception("kraken-ca: already revoked");
+		
 		SimpleDateFormat sdf = new SimpleDateFormat("yy-mm-dd HH:mm:ss");
 		Date date = new Date();
 		String dateStr = sdf.format(date);
