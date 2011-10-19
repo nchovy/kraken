@@ -1,6 +1,7 @@
 package org.krakenapps.confdb.file;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.krakenapps.confdb.ConfigDatabase;
 
@@ -11,7 +12,7 @@ public class FileConfigDatabaseManager {
 		this.baseDir = baseDir;
 	}
 
-	public ConfigDatabase open(String name) {
+	public ConfigDatabase open(String name) throws IOException {
 		return new FileConfigDatabase(baseDir, name);
 	}
 }

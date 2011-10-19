@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import org.krakenapps.confdb.CommitOp;
 
-public class CollectionLog {
+public class RevLog {
 	/**
 	 * revision of database for conflict check (8byte)
 	 */
@@ -108,8 +108,8 @@ public class CollectionLog {
 		bb.flip();
 	}
 
-	public static CollectionLog deserialize(ByteBuffer bb) {
-		CollectionLog log = new CollectionLog();
+	public static RevLog deserialize(ByteBuffer bb) {
+		RevLog log = new RevLog();
 		log.setRev(bb.getLong());
 		log.setPrevRev(bb.getLong());
 		log.setOperation(CommitOp.parse(bb.get()));

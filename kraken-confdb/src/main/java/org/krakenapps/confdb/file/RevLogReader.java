@@ -1,25 +1,18 @@
 package org.krakenapps.confdb.file;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
-import org.krakenapps.confdb.ConfigCollection;
-import org.krakenapps.confdb.ConfigDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CollectionLogReader {
+class RevLogReader {
 	private static final int COL_LOG_SIZE = 34;
 
-	private final Logger logger = LoggerFactory.getLogger(CollectionLogReader.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(RevLogReader.class.getName());
 
-	private FileConfigDatabase db;
-	
-	private FileConfigCollection col;
-	
 	/**
 	 * collection log file handle
 	 */
@@ -35,19 +28,10 @@ class CollectionLogReader {
 	 */
 	private byte[] buffer;
 
-	public CollectionLogReader(FileConfigDatabase db, FileConfigCollection col, File logFile, File docFile)
-			throws FileNotFoundException {
+	public RevLogReader(File logFile, File docFile) throws IOException {
 		this.logRaf = new RandomAccessFile(logFile, "r");
 		this.docRaf = new RandomAccessFile(docFile, "r");
 		this.buffer = new byte[COL_LOG_SIZE];
-	}
-	
-	public ConfigDatabase getDatabase() {
-		return db;
-	}
-	
-	public ConfigCollection getCollection() {
-		return col;
 	}
 
 	public long count() throws IOException {
@@ -55,9 +39,9 @@ class CollectionLogReader {
 		return logRaf.length() / COL_LOG_SIZE;
 	}
 
-	public CollectionLog findRev(long rev) throws IOException {
+	public RevLog findRev(long rev) throws IOException {
 		for (long i = count() - 1; i >= 0; i--) {
-			CollectionLog log = read(i);
+			RevLog log = read(i);
 			if (log.getRev() == rev)
 				return log;
 		}
@@ -65,13 +49,22 @@ class CollectionLogReader {
 		return null;
 	}
 
-	public CollectionLog read(long index) throws IOException {
+	/**
+	 * read() does not return doc binary data. You should explicitly read doc
+	 * binary using readDoc()
+	 * 
+	 * @param index
+	 *            the index of items
+	 * @return the revision log
+	 * @throws IOException
+	 */
+	public RevLog read(long index) throws IOException {
 		// TODO: consider file header size
 
 		logRaf.seek(index * COL_LOG_SIZE);
 		logRaf.read(buffer);
 		ByteBuffer bb = ByteBuffer.wrap(buffer);
-		return CollectionLog.deserialize(bb);
+		return RevLog.deserialize(bb);
 	}
 
 	public byte[] readDoc(long offset, int length) throws IOException {

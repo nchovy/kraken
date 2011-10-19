@@ -12,14 +12,14 @@ import org.krakenapps.confdb.ConfigIterator;
 
 import static org.junit.Assert.*;
 
-public class CollectionLogTest {
+public class RevLogTest {
 	private File logFile;
 	private File datFile;
 
 	private FileConfigDatabase db;
 	private FileConfigCollection col;
-	private CollectionLogWriter writer;
-	private CollectionLogReader reader;
+	private RevLogWriter writer;
+	private RevLogReader reader;
 
 	@Before
 	public void setup() throws IOException {
@@ -34,8 +34,8 @@ public class CollectionLogTest {
 		logFile.delete();
 		datFile.delete();
 
-		writer = new CollectionLogWriter(logFile, datFile);
-		reader = new CollectionLogReader(db, col, logFile, datFile);
+		writer = new RevLogWriter(logFile, datFile);
+		reader = new RevLogReader(logFile, datFile);
 	}
 
 	@After
@@ -95,23 +95,23 @@ public class CollectionLogTest {
 		writer.close();
 
 		// test non-existing revision
-		CollectionLog read1 = reader.findRev(1000);
+		RevLog read1 = reader.findRev(1000);
 		assertNull(read1);
 
-		CollectionLog read2 = reader.findRev(-1000);
+		RevLog read2 = reader.findRev(-1000);
 		assertNull(read2);
 	}
 
 	@Test
 	public void testFindRev() throws IOException {
-		CollectionLog log1 = newLog(1, 0, "hello world");
-		CollectionLog log2 = newLog(2, 1, "goodbye world");
+		RevLog log1 = newLog(1, 0, "hello world");
+		RevLog log2 = newLog(2, 1, "goodbye world");
 
 		int doc1 = writer.write(log1);
 		int doc2 = writer.write(log2);
 
-		CollectionLog read1 = reader.findRev(1);
-		CollectionLog read2 = reader.findRev(2);
+		RevLog read1 = reader.findRev(1);
+		RevLog read2 = reader.findRev(2);
 
 		assertEquals(doc1, read1.getDocId());
 		assertEquals(doc2, read2.getDocId());
@@ -119,11 +119,11 @@ public class CollectionLogTest {
 
 	@Test
 	public void testFirstCommit() throws IOException {
-		CollectionLog log = newLog(1, 0, "goodbye world");
+		RevLog log = newLog(1, 0, "goodbye world");
 
 		writer.write(log);
 
-		CollectionLog read = reader.read(0);
+		RevLog read = reader.read(0);
 
 		assertEquals(1, read.getRev());
 		assertEquals(0, read.getPrevRev());
@@ -131,8 +131,8 @@ public class CollectionLogTest {
 		assertEquals(CommitOp.CreateDoc, read.getOperation());
 	}
 
-	private CollectionLog newLog(int rev, int prev, String doc) {
-		CollectionLog log = new CollectionLog();
+	private RevLog newLog(int rev, int prev, String doc) {
+		RevLog log = new RevLog();
 		log.setRev(rev);
 		log.setPrevRev(prev);
 		log.setOperation(CommitOp.CreateDoc);

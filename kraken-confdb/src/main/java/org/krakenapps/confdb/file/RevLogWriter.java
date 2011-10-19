@@ -9,8 +9,8 @@ import org.krakenapps.confdb.CommitOp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CollectionLogWriter {
-	private final Logger logger = LoggerFactory.getLogger(CollectionLogReader.class.getName());
+public class RevLogWriter {
+	private final Logger logger = LoggerFactory.getLogger(RevLogReader.class.getName());
 	private static final int COL_LOG_SIZE = 34;
 
 	/**
@@ -28,7 +28,10 @@ public class CollectionLogWriter {
 	 */
 	private byte[] buffer;
 
-	public CollectionLogWriter(File logFile, File datFile) throws IOException {
+	public RevLogWriter(File logFile, File datFile) throws IOException {
+		logFile.getParentFile().mkdirs();
+		datFile.getParentFile().mkdirs();
+		
 		this.logRaf = new RandomAccessFile(logFile, "rw");
 		this.datRaf = new RandomAccessFile(datFile, "rw");
 		this.buffer = new byte[COL_LOG_SIZE];
@@ -36,7 +39,7 @@ public class CollectionLogWriter {
 		// TODO: check signature and collection metadata (e.g. version, name)
 	}
 
-	public int write(CollectionLog log) throws IOException {
+	public int write(RevLog log) throws IOException {
 		byte[] doc = log.getDoc();
 
 		// append doc binary data

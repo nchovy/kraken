@@ -21,11 +21,16 @@ import org.krakenapps.confdb.Predicate;
  * 
  */
 class FileConfigIterator implements ConfigIterator {
-	private CollectionLogReader reader;
-	private Iterator<CollectionLog> it;
+	private ConfigDatabase db;
+	private ConfigCollection col;
+	private RevLogReader reader;
+	private Iterator<RevLog> it;
 	private Predicate pred;
 
-	public FileConfigIterator(CollectionLogReader reader, List<CollectionLog> snapshot, Predicate pred) {
+	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot,
+			Predicate pred) {
+		this.db = db;
+		this.col = col;
 		this.reader = reader;
 		this.it = snapshot.iterator();
 		this.pred = pred;
@@ -45,9 +50,7 @@ class FileConfigIterator implements ConfigIterator {
 			if (!it.hasNext())
 				throw new NoSuchElementException("no more config item in collection");
 
-			ConfigDatabase db = reader.getDatabase();
-			ConfigCollection col = reader.getCollection();
-			CollectionLog log = it.next();
+			RevLog log = it.next();
 
 			// fetch doc binary and decode it
 			byte[] b = reader.readDoc(log.getDocOffset(), log.getDocLength());

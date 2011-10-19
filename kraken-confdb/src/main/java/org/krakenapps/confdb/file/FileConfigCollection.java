@@ -66,16 +66,16 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	private ConfigIterator getIterator(Predicate pred) throws IOException {
-		CollectionLogReader reader = new CollectionLogReader(db, this, logFile, datFile);
-		List<CollectionLog> snapshot = getSnapshot(reader);
-		return new FileConfigIterator(reader, snapshot, pred);
+		RevLogReader reader = new RevLogReader(logFile, datFile);
+		List<RevLog> snapshot = getSnapshot(reader);
+		return new FileConfigIterator(db, this, reader, snapshot, pred);
 	}
 
-	private List<CollectionLog> getSnapshot(CollectionLogReader reader) throws IOException {
-		Map<Integer, CollectionLog> m = new TreeMap<Integer, CollectionLog>();
+	private List<RevLog> getSnapshot(RevLogReader reader) throws IOException {
+		Map<Integer, RevLog> m = new TreeMap<Integer, RevLog>();
 
 		for (long index = 0; index < reader.count(); index++) {
-			CollectionLog log = reader.read(index);
+			RevLog log = reader.read(index);
 			System.out.println(log);
 
 			if (log.getOperation() == CommitOp.DeleteDoc)
@@ -84,7 +84,7 @@ public class FileConfigCollection implements ConfigCollection {
 				m.put(log.getDocId(), log);
 		}
 
-		return new ArrayList<CollectionLog>(m.values());
+		return new ArrayList<RevLog>(m.values());
 	}
 
 	@Override
@@ -95,23 +95,34 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config add(Object doc) {
-		CollectionLogWriter writer = null;
+		return add(doc, null, null);
+	}
+
+	@Override
+	public Config add(Object doc, String committer, String log) {
+		RevLogWriter writer = null;
 		try {
-			writer = new CollectionLogWriter(logFile, datFile);
+			db.lock();
+			writer = new RevLogWriter(logFile, datFile);
 
 			// TODO: check previous revision, is need update?
 
 			ByteBuffer bb = encodeDocument(doc);
-			CollectionLog log = newLog(0, 0, CommitOp.CreateDoc, bb.array());
+			RevLog revlog = newLog(0, 0, CommitOp.CreateDoc, bb.array());
 
 			// write collection log
-			int id = writer.write(log);
-			return new FileConfig(db, this, id, log.getRev(), log.getPrevRev(), doc);
+			int id = writer.write(revlog);
+
+			// write db changelog
+			db.commit(CommitOp.CreateDoc, meta, id, committer, log);
+			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
 		} finally {
 			if (writer != null)
 				writer.close();
+
+			db.unlock();
 		}
 	}
 
@@ -129,9 +140,10 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config update(Config c, boolean ignoreConflict) {
-		CollectionLogWriter writer = null;
+		RevLogWriter writer = null;
 		try {
-			writer = new CollectionLogWriter(logFile, datFile);
+			db.lock();
+			writer = new RevLogWriter(logFile, datFile);
 
 			Iterator<Config> it = getIterator(null);
 
@@ -145,7 +157,7 @@ public class FileConfigCollection implements ConfigCollection {
 			}
 
 			ByteBuffer bb = encodeDocument(c.getDocument());
-			CollectionLog log = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
+			RevLog log = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
 
 			// write collection log
 			int id = writer.write(log);
@@ -155,7 +167,15 @@ public class FileConfigCollection implements ConfigCollection {
 		} finally {
 			if (writer != null)
 				writer.close();
+
+			db.unlock();
 		}
+	}
+
+	@Override
+	public Config update(Config c, boolean ignoreConflict, String committer, String log) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override
@@ -165,26 +185,34 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config remove(Config c, boolean ignoreConflict) {
-		CollectionLogWriter writer = null;
+		return remove(c, ignoreConflict, null, null);
+	}
+
+	@Override
+	public Config remove(Config c, boolean ignoreConflict, String committer, String log) {
+		RevLogWriter writer = null;
 		try {
-			writer = new CollectionLogWriter(logFile, datFile);
+			db.lock();
+			writer = new RevLogWriter(logFile, datFile);
 
 			// TODO: check conflict
-			CollectionLog log = newLog(c.getId(), c.getRevision(), CommitOp.DeleteDoc, null);
+			RevLog revlog = newLog(c.getId(), c.getRevision(), CommitOp.DeleteDoc, null);
 
 			// write collection log
-			int id = writer.write(log);
-			return new FileConfig(db, this, id, log.getRev(), log.getPrevRev(), null);
+			int id = writer.write(revlog);
+			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);
 		} finally {
 			if (writer != null)
 				writer.close();
+
+			db.unlock();
 		}
 	}
 
-	private CollectionLog newLog(int id, long prev, CommitOp op, byte[] doc) {
-		CollectionLog log = new CollectionLog();
+	private RevLog newLog(int id, long prev, CommitOp op, byte[] doc) {
+		RevLog log = new RevLog();
 		log.setDocId(id);
 		log.setRev(db.getNextRevision());
 		log.setPrevRev(prev);
