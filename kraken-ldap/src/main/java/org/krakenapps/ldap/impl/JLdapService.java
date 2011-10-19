@@ -15,7 +15,12 @@
  */
 package org.krakenapps.ldap.impl;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
@@ -43,6 +48,7 @@ import com.novell.ldap.LDAPAttributeSet;
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPEntry;
 import com.novell.ldap.LDAPException;
+import com.novell.ldap.LDAPJSSESecureSocketFactory;
 import com.novell.ldap.LDAPReferralException;
 import com.novell.ldap.LDAPSearchResults;
 import com.novell.ldap.LDAPSocketFactory;
@@ -63,12 +69,15 @@ public class JLdapService implements LdapService {
 			for (String name : root.childrenNames()) {
 				Preferences p = root.node(name);
 				String dc = p.get("dc", null);
+				String keystore = p.get("keystore", null);
+				int port = p.getInt("port", (keystore == null) ? LdapProfile.DEFAULT_PORT
+						: LdapProfile.DEFAULT_SSL_PORT);
 				String account = p.get("account", null);
 				String password = p.get("password", null);
 				int syncInterval = p.getInt("sync_interval", 10 * 60 * 1000);
 				Date lastSync = new Date(p.getLong("last_sync", 0));
 
-				LdapProfile profile = new LdapProfile(name, dc, LdapProfile.DEFAULT_PORT, account, password, syncInterval,
+				LdapProfile profile = new LdapProfile(name, dc, port, account, password, keystore, syncInterval,
 						lastSync);
 				profiles.add(profile);
 			}
@@ -77,6 +86,24 @@ public class JLdapService implements LdapService {
 		}
 
 		return profiles;
+	}
+
+	@Override
+	public LdapProfile getProfile(String name) {
+		try {
+			Preferences root = prefsvc.getSystemPreferences();
+			if (!root.nodeExists(name))
+				return null;
+
+			Preferences p = root.node(name);
+			String dc = p.get("dc", null);
+			String account = p.get("account", null);
+			String password = p.get("password", null);
+
+			return new LdapProfile(name, dc, account, password);
+		} catch (BackingStoreException e) {
+			throw new IllegalStateException("io error", e);
+		}
 	}
 
 	@Override
@@ -136,34 +163,65 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public LdapProfile getProfile(String name) {
-		try {
-			Preferences root = prefsvc.getSystemPreferences();
-			if (!root.nodeExists(name))
-				return null;
+	public Collection<String> getCACerts() {
+		File keystoreDir = new File(System.getProperty("kraken.data.dir"), "kraken-ldap");
+		if (!keystoreDir.exists())
+			return new ArrayList<String>();
 
-			Preferences p = root.node(name);
-			String dc = p.get("dc", null);
-			String account = p.get("account", null);
-			String password = p.get("password", null);
-
-			return new LdapProfile(name, dc, account, password);
-		} catch (BackingStoreException e) {
-			throw new IllegalStateException("io error", e);
+		List<String> keystores = new ArrayList<String>();
+		for (File keystore : keystoreDir.listFiles()) {
+			if (keystore.isFile() && keystore.getName().endsWith(".crt"))
+				keystores.add(keystore.getName());
 		}
+		return keystores;
+	}
+
+	@Override
+	public void importCACert(String alias, InputStream is) throws IOException {
+		File keystore = new File(System.getProperty("kraken.data.dir"), "kraken-ldap/" + alias + ".crt");
+		if (keystore.exists())
+			throw new IllegalStateException("alias already exist");
+
+		OutputStream os = new FileOutputStream(keystore);
+		try {
+			byte[] b = new byte[4096];
+			while (true) {
+				int len = is.read(b);
+				if (len == -1)
+					break;
+				os.write(b, 0, len);
+			}
+		} finally {
+			if (is != null) {
+				try {
+					is.close();
+				} catch (IOException e) {
+				}
+			}
+			if (os != null) {
+				try {
+					os.close();
+				} catch (IOException e) {
+				}
+			}
+		}
+	}
+
+	@Override
+	public void removeCACert(String alias) {
+		File keystore = new File(System.getProperty("kraken.data.dir"), "kraken-ldap/" + alias + ".crt");
+		if (keystore.exists())
+			keystore.delete();
 	}
 
 	@Override
 	public Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile) {
 		List<DomainUserAccount> accounts = new ArrayList<DomainUserAccount>();
 
-		LDAPConnection lc = new LDAPConnection();
+		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
-			lc.connect(profile.getDc(), profile.getPort());
-
-			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(&(userPrincipalName=*))",
-					null, false);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
+					"(&(userPrincipalName=*))", null, false);
 
 			while (r.hasMore()) {
 				try {
@@ -197,11 +255,8 @@ public class JLdapService implements LdapService {
 	public Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile) {
 		List<DomainOrganizationalUnit> ous = new ArrayList<DomainOrganizationalUnit>();
 
-		LDAPConnection lc = new LDAPConnection();
+		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
-			lc.connect(profile.getDc(), LDAPConnection.DEFAULT_PORT);
-
-			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
 			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
 					"(&(objectClass=organizationalUnit)(!(isCriticalSystemObject=*)))", null, false);
 
@@ -243,15 +298,11 @@ public class JLdapService implements LdapService {
 		if (password == null || password.isEmpty())
 			return false;
 
-		LDAPConnection.setSocketFactory(new JLdapSocketFactory(timeout));
-		LDAPConnection lc = new LDAPConnection();
+		LDAPConnection lc = openLdapConnection(profile, timeout);
 
 		try {
-			lc.connect(profile.getDc(), profile.getPort());
-
-			lc.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(sAMAccountName=" + account
-					+ ")", null, false);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(sAMAccountName="
+					+ account + ")", null, false);
 
 			bindStatus = true;
 
@@ -269,12 +320,39 @@ public class JLdapService implements LdapService {
 
 			return false;
 		} finally {
-			if (lc.isConnected())
+			if (lc.isConnected()) {
 				try {
 					lc.disconnect();
 				} catch (LDAPException e) {
 					logger.error("kraken ldap: disconnect failed", e);
 				}
+			}
+		}
+	}
+
+	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
+		try {
+			if (profile.getKeystore() != null) {
+				File keystore = new File(System.getProperty("kraken.data.dir"), "kraken-ldap/" + profile.getKeystore()
+						+ ".crt");
+				if (!keystore.exists())
+					throw new IllegalStateException("keystore file not exist");
+				System.setProperty("javax.net.ssl.trustStore", keystore.getAbsolutePath());
+				LDAPConnection.setSocketFactory(new LDAPJSSESecureSocketFactory());
+			} else
+				LDAPConnection.setSocketFactory(new JLdapSocketFactory(timeout));
+
+			LDAPConnection conn = new LDAPConnection(timeout);
+			conn.connect(profile.getDc(), profile.getPort());
+			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
+
+			return conn;
+		} catch (UnsupportedEncodingException e) {
+			logger.error("kraken ldap: JVM unsupported utf-8 encoding");
+			return null;
+		} catch (Exception e) {
+			logger.error("kraken ldap: ldap profile [{}] connection failed", profile.getName());
+			return null;
 		}
 	}
 
@@ -383,16 +461,17 @@ public class JLdapService implements LdapService {
 	}
 
 	private static class JLdapSocketFactory implements LDAPSocketFactory {
-		private int timeout;
+		private Integer timeout;
 
-		public JLdapSocketFactory(int timeout) {
+		public JLdapSocketFactory(Integer timeout) {
 			this.timeout = timeout;
 		}
 
 		@Override
 		public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
 			Socket socket = new Socket(host, port);
-			socket.setSoTimeout(timeout);
+			if (timeout != null)
+				socket.setSoTimeout(timeout);
 			return socket;
 		}
 	}

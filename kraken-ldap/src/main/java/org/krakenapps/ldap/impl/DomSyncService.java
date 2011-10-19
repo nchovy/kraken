@@ -130,7 +130,7 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 					}
 
 					LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
-							p.getPassword(), p.getSyncInterval(), now);
+							p.getPassword(), p.getKeystore(), p.getSyncInterval(), now);
 					ldap.updateProfile(newProfile);
 				}
 			} catch (Exception e) {
