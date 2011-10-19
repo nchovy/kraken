@@ -3,7 +3,6 @@ package org.krakenapps.confdb.file;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.ConfigCollection;
@@ -140,6 +138,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ChangeLog change = new ChangeLog();
 		change.setCommitter(committer);
 		change.setMessage(log);
+		change.getChangeset().add(new ConfigChange(op, col.getName(), col.getId(), docId));
 
 		RevLog cl = new RevLog();
 		cl.setRev(getNextRevision());

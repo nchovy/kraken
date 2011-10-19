@@ -148,6 +148,11 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config update(Config c, boolean ignoreConflict) {
+		return update(c, ignoreConflict, null, null);
+	}
+
+	@Override
+	public Config update(Config c, boolean ignoreConflict, String committer, String log) {
 		RevLogWriter writer = null;
 		ConfigIterator it = null;
 		try {
@@ -166,11 +171,12 @@ public class FileConfigCollection implements ConfigCollection {
 			}
 
 			ByteBuffer bb = encodeDocument(c.getDocument());
-			RevLog log = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
+			RevLog revlog = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
 
 			// write collection log
-			int id = writer.write(log);
-			return new FileConfig(db, this, id, log.getRev(), log.getPrevRev(), c.getDocument());
+			int id = writer.write(revlog);
+			db.commit(CommitOp.UpdateDoc, meta, id, committer, log);
+			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
 		} finally {
@@ -182,12 +188,6 @@ public class FileConfigCollection implements ConfigCollection {
 
 			db.unlock();
 		}
-	}
-
-	@Override
-	public Config update(Config c, boolean ignoreConflict, String committer, String log) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
@@ -212,6 +212,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
+			db.commit(CommitOp.DeleteDoc, meta, id, committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);

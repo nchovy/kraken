@@ -1,14 +1,23 @@
 package org.krakenapps.api;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class PrimitiveConverter {
+	public static Object serialize(Collection<?> c) {
+		List<Object> l = new ArrayList<Object>();
+		for (Object o : c)
+			l.add(serialize(o));
 
-	public static Map<String, Object> serialize(Object o) {
+		return l;
+	}
+
+	public static Object serialize(Object o) {
 		Map<String, Object> m = new HashMap<String, Object>();
 		Class<?> c = o.getClass();
 
@@ -16,7 +25,12 @@ public class PrimitiveConverter {
 			try {
 				String fieldName = toUnderscoreName(f.getName());
 				f.setAccessible(true);
-				m.put(fieldName, f.get(o));
+				Object value = f.get(o);
+
+				if (value instanceof Enum)
+					m.put(fieldName, value.toString());
+				else
+					m.put(fieldName, value);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -25,10 +39,21 @@ public class PrimitiveConverter {
 		return m;
 	}
 
+	@SuppressWarnings("unchecked")
+	public static <T> List<T> parse(Class<T> clazz, List<?> c) {
+		List<T> l = new ArrayList<T>();
+		for (Object o : c)
+			l.add(parse(clazz, (Map<String, Object>) o));
+
+		return l;
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T parse(Class<T> clazz, Map<String, Object> m) {
 		try {
-			T n = clazz.newInstance();
+			Constructor c = clazz.getConstructor();
+			c.setAccessible(true);
+			T n = (T) c.newInstance();
 
 			for (Field f : clazz.getDeclaredFields()) {
 				CollectionTypeHint hint = f.getAnnotation(CollectionTypeHint.class);
@@ -38,7 +63,14 @@ public class PrimitiveConverter {
 				Object value = m.get(fieldName);
 				f.setAccessible(true);
 
-				if (contains(fieldType, List.class) && value instanceof List) {
+				if (fieldType.isEnum() && value instanceof String) {
+					Object found = null;
+					for (Object o : fieldType.getEnumConstants())
+						if (o.toString().equals(value))
+							found = o;
+
+					f.set(n, found);
+				} else if (contains(fieldType, List.class) && value instanceof List) {
 					if (hint != null)
 						f.set(n, parseList(hint.value(), (List) value));
 					else
@@ -60,7 +92,7 @@ public class PrimitiveConverter {
 	private static boolean contains(Class<?> clazz, Class<?> iface) {
 		if (clazz.equals(iface))
 			return true;
-		
+
 		Class<?>[] clazzes = clazz.getInterfaces();
 		for (int i = 0; i < clazzes.length; i++)
 			if (clazzes[i].equals(iface))

@@ -11,6 +11,16 @@ class ConfigChange {
 
 	private int docId;
 
+	public ConfigChange() {
+	}
+
+	public ConfigChange(CommitOp operation, String colName, int colId, int docId) {
+		this.operation = operation;
+		this.colName = colName;
+		this.colId = colId;
+		this.docId = docId;
+	}
+
 	public CommitOp getOperation() {
 		return operation;
 	}
@@ -41,5 +51,10 @@ class ConfigChange {
 
 	public void setDocId(int docId) {
 		this.docId = docId;
+	}
+
+	@Override
+	public String toString() {
+		return "op=" + operation + ", col=" + colName + ", doc=" + docId;
 	}
 }

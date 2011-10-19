@@ -1,8 +1,14 @@
 package org.krakenapps.confdb;
 
+import java.util.Map;
+
 public class Predicates {
 	public static Predicate eq(Object o) {
 		return new EqObject(o);
+	}
+	
+	public static Predicate key(String key, Object value) {
+		return new KeyMatch(key, value);
 	}
 
 	public static Predicate and(Predicate lhs, Predicate rhs) {
@@ -28,9 +34,32 @@ public class Predicates {
 
 	private static class KeyMatch implements Predicate {
 
+		private String key;
+		private Object value;
+		
+		public KeyMatch(String key, Object value) {
+			this.key = key;
+			this.value = value;
+		}
+
 		@Override
 		public boolean eval(Config c) {
-			return false;
+			Object doc = c.getDocument();
+			if (!(doc instanceof Map))
+				return false;
+
+			Map<String, Object> m = (Map<String, Object>) doc;
+			if (!m.containsKey(key))
+				return false;
+
+			Object v = m.get(key);
+			if (v == null && value != null)
+				return false;
+
+			if (v == null && value == null)
+				return true;
+
+			return v.equals(value);
 		}
 	}
 

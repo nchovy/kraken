@@ -42,10 +42,11 @@ public class PrimitiveConverterTest {
 		assertEquals("eggplant", vegetables.get(3));
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void testToPrimitive() {
 		Sample s = new Sample("qoo", 123);
-		Map<String, Object> o = PrimitiveConverter.serialize(s);
+		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
 		assertEquals("qoo", o.get("foo"));
 		assertEquals(123, o.get("bar"));
 	}

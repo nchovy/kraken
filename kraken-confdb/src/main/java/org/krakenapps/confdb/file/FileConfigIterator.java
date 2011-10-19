@@ -54,10 +54,10 @@ class FileConfigIterator implements ConfigIterator {
 
 	@Override
 	public Config next() {
-		if (!it.hasNext())
+		if (!it.hasNext() && !loaded)
 			throw new NoSuchElementException("no more config item in collection");
 
-		if (it.hasNext() && loaded == false)
+		if (it.hasNext() && !loaded)
 			if (!hasNext())
 				throw new NoSuchElementException("no more config item in collection");
 
