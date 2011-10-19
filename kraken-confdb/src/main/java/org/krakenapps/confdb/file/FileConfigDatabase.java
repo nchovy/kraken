@@ -96,7 +96,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			if (col == null)
 				col = createCollection(name);
 
-			return new FileConfigCollection(this, col);
+			return new FileConfigCollection(this, manifest, col);
 		} catch (IOException e) {
 			logger.error("kraken confdb: cannot open collection file", e);
 			return null;
@@ -183,13 +183,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	public void commit(CommitOp op, CollectionEntry col, int docId, long rev, String committer, String log)
+	public Manifest commit(CommitOp op, CollectionEntry col, int docId, long rev, String committer, String log)
 			throws IOException {
-		int manifestId = writeManifestLog(op, col, docId, rev);
-		writeChangeLog(manifestId, op, col, docId, committer, log);
+		Manifest manifest = writeManifestLog(op, col, docId, rev);
+		writeChangeLog(manifest.getId(), op, col, docId, committer, log);
+		return manifest;
 	}
 
-	private int writeManifestLog(CommitOp op, CollectionEntry col, int docId, long rev) throws IOException {
+	private Manifest writeManifestLog(CommitOp op, CollectionEntry col, int docId, long rev) throws IOException {
 		Manifest manifest = getManifest(changeset);
 		ConfigEntry entry = new ConfigEntry(col.getId(), docId, rev);
 
@@ -210,15 +211,16 @@ public class FileConfigDatabase implements ConfigDatabase {
 		RevLogWriter writer = null;
 		try {
 			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
-			return writer.write(log);
+			manifest.setId(writer.write(log));
+			return manifest;
 		} finally {
 			if (writer != null)
 				writer.close();
 		}
 	}
 
-	private void writeChangeLog(int manifestId, CommitOp op, CollectionEntry col, int docId, String committer, String log)
-			throws IOException {
+	private void writeChangeLog(int manifestId, CommitOp op, CollectionEntry col, int docId, String committer,
+			String log) throws IOException {
 		ChangeLog change = new ChangeLog();
 		change.setManifestId(manifestId);
 		change.setCommitter(committer);

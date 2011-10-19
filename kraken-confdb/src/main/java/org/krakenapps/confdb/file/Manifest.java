@@ -27,13 +27,23 @@ import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
 
 class Manifest {
+	private int id;
+
 	@CollectionTypeHint(CollectionEntry.class)
 	private List<CollectionEntry> cols = new ArrayList<CollectionEntry>();
 
 	@CollectionTypeHint(ConfigEntry.class)
 	private List<ConfigEntry> configs = new ArrayList<ConfigEntry>();
-	
+
 	public Manifest() {
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
 	}
 
 	public void add(CollectionEntry e) {
@@ -82,6 +92,14 @@ class Manifest {
 				return e.getName();
 
 		return null;
+	}
+
+	public boolean containsDoc(int colId, RevLog log) {
+		for (ConfigEntry e : configs)
+			if (e.getColId() == colId && e.getDocId() == log.getDocId() && e.getRev() == log.getRev())
+				return true;
+
+		return false;
 	}
 
 	public byte[] serialize() {

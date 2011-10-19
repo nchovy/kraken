@@ -20,8 +20,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CommitOp;
@@ -39,6 +37,11 @@ public class FileConfigCollection implements ConfigCollection {
 	private FileConfigDatabase db;
 
 	/**
+	 * TODO: manifest should be updated when you commit
+	 */
+	private Manifest manifest;
+
+	/**
 	 * collection metadata
 	 */
 	private CollectionEntry col;
@@ -47,7 +50,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 	private File datFile;
 
-	public FileConfigCollection(FileConfigDatabase db, CollectionEntry col) throws IOException {
+	public FileConfigCollection(FileConfigDatabase db, Manifest manifest, CollectionEntry col) throws IOException {
 		File dbDir = db.getDbDirectory();
 		boolean created = dbDir.mkdirs();
 		if (created)
@@ -55,6 +58,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 		this.db = db;
 		this.col = col;
+		this.manifest = manifest;
 
 		logFile = new File(dbDir, "col" + col.getId() + ".log");
 		datFile = new File(dbDir, "col" + col.getId() + ".dat");
@@ -102,18 +106,15 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	private List<RevLog> getSnapshot(RevLogReader reader) throws IOException {
-		Map<Integer, RevLog> m = new TreeMap<Integer, RevLog>();
+		List<RevLog> snapshot = new ArrayList<RevLog>();
 
 		for (long index = 0; index < reader.count(); index++) {
 			RevLog log = reader.read(index);
-
-			if (log.getOperation() == CommitOp.DeleteDoc)
-				m.remove(log.getDocId());
-			else if (log.getOperation() == CommitOp.CreateDoc || log.getOperation() == CommitOp.UpdateDoc)
-				m.put(log.getDocId(), log);
+			if (manifest.containsDoc(col.getId(), log))
+				snapshot.add(log);
 		}
 
-		return new ArrayList<RevLog>(m.values());
+		return snapshot;
 	}
 
 	@Override
@@ -137,7 +138,7 @@ public class FileConfigCollection implements ConfigCollection {
 			int docId = writer.write(revlog);
 
 			// write db changelog
-			db.commit(CommitOp.CreateDoc, col, docId, revlog.getRev(), committer, log);
+			manifest = db.commit(CommitOp.CreateDoc, col, docId, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, docId, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
@@ -190,7 +191,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
-			db.commit(CommitOp.UpdateDoc, col, id, revlog.getRev(), committer, log);
+			manifest = db.commit(CommitOp.UpdateDoc, col, id, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
@@ -227,7 +228,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
-			db.commit(CommitOp.DeleteDoc, col, id, revlog.getRev(), committer, log);
+			manifest = db.commit(CommitOp.DeleteDoc, col, id, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);

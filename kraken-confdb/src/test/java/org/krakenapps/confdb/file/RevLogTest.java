@@ -78,9 +78,8 @@ public class RevLogTest {
 		c1.setDocument("hello, world");
 		col.update(c1);
 
-		ConfigIterator it = col.find(null);
-		assertEquals("hello, world", it.next().getDocument());
-		it.close();
+		assertNull(col.findOne(Predicates.eq("hello world")));
+		assertNotNull(col.findOne(Predicates.eq("hello, world")));
 	}
 
 	@Test
