@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
@@ -27,7 +26,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private File dbDir;
 	private String name;
 
-	private AtomicLong revCounter;
+	/**
+	 * changeset revision
+	 */
+	private Integer changeset;
 
 	private File changeLogFile;
 	private File changeDatFile;
@@ -35,12 +37,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private File manifestDatFile;
 
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
+		this(baseDir, name, null);
+	}
+
+	public FileConfigDatabase(File baseDir, String name, Integer rev) throws IOException {
 		this.baseDir = baseDir;
 		this.name = name;
 		this.dbDir = new File(baseDir, name);
-
-		// TODO: load last revision
-		this.revCounter = new AtomicLong();
+		this.changeset = rev;
 
 		changeLogFile = new File(dbDir, "changeset.log");
 		changeDatFile = new File(dbDir, "changeset.dat");
@@ -70,7 +74,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public ConfigCollection ensureCollection(String name) {
 		try {
-			Manifest manifest = getHeadManifest();
+			Manifest manifest = getManifest(changeset);
 			CollectionEntry col = manifest.getCollectionEntry(name);
 
 			// create new collection if not exists
@@ -86,7 +90,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	public Set<String> getCollectionNames() {
 		try {
-			Manifest manifest = getHeadManifest();
+			Manifest manifest = getManifest(changeset);
 			return manifest.getCollectionNames();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
@@ -98,7 +102,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			lock();
 
 			// reload (manifest can be updated)
-			Manifest manifest = getHeadManifest();
+			Manifest manifest = getManifest(changeset);
 			int newColId = manifest.nextCollectionId();
 
 			commit(CommitOp.CreateCol, new CollectionEntry(newColId, name), 0, 0, null, null);
@@ -121,12 +125,38 @@ public class FileConfigDatabase implements ConfigDatabase {
 		return new File(baseDir, name);
 	}
 
-	private Manifest getHeadManifest() throws IOException {
+	private Manifest getManifest(Integer rev) throws IOException {
+		// read last changelog and get manifest doc id
+		int manifestId = 0;
 		RevLogReader reader = null;
 		try {
+			reader = new RevLogReader(changeLogFile, changeDatFile);
+			RevLog revlog = null;
+
+			if (rev == null) {
+				long count = reader.count();
+				revlog = reader.read(count - 1);
+			} else {
+				revlog = reader.findDoc(rev);
+			}
+
+			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
+			ChangeLog change = ChangeLog.deserialize(doc);
+			manifestId = change.getManifestId();
+		} catch (FileNotFoundException e) {
+			// changeset can be empty
+			return new Manifest();
+		} finally {
+			if (reader != null) {
+				reader.close();
+				reader = null;
+			}
+		}
+
+		// read manifest
+		try {
 			reader = new RevLogReader(manifestLogFile, manifestDatFile);
-			long count = reader.count();
-			RevLog revlog = reader.read(count - 1);
+			RevLog revlog = reader.findDoc(manifestId);
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
 			Map<String, Object> m = EncodingRule.decodeMap(ByteBuffer.wrap(doc));
 			return PrimitiveConverter.parse(Manifest.class, m);
@@ -138,18 +168,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	public long getNextRevision() {
-		return revCounter.incrementAndGet();
-	}
-
 	public void commit(CommitOp op, CollectionEntry col, int docId, long rev, String committer, String log)
 			throws IOException {
-		writeManifestLog(op, col, docId, rev);
-		writeChangeLog(op, col, docId, committer, log);
+		int manifestId = writeManifestLog(op, col, docId, rev);
+		writeChangeLog(manifestId, op, col, docId, committer, log);
 	}
 
-	private void writeManifestLog(CommitOp op, CollectionEntry col, int docId, long rev) throws IOException {
-		Manifest manifest = getHeadManifest();
+	private int writeManifestLog(CommitOp op, CollectionEntry col, int docId, long rev) throws IOException {
+		Manifest manifest = getManifest(changeset);
 		ConfigEntry entry = new ConfigEntry(col.getId(), docId, rev);
 
 		if (op == CommitOp.CreateDoc || op == CommitOp.UpdateDoc)
@@ -162,29 +188,30 @@ public class FileConfigDatabase implements ConfigDatabase {
 			manifest.remove(col);
 
 		RevLog log = new RevLog();
-		log.setRev(getNextRevision());
+		log.setRev(1);
 		log.setOperation(CommitOp.CreateDoc);
 		log.setDoc(manifest.serialize());
 
 		RevLogWriter writer = null;
 		try {
 			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
-			writer.write(log);
+			return writer.write(log);
 		} finally {
 			if (writer != null)
 				writer.close();
 		}
 	}
 
-	private void writeChangeLog(CommitOp op, CollectionEntry col, int docId, String committer, String log)
+	private void writeChangeLog(int manifestId, CommitOp op, CollectionEntry col, int docId, String committer, String log)
 			throws IOException {
 		ChangeLog change = new ChangeLog();
+		change.setManifestId(manifestId);
 		change.setCommitter(committer);
 		change.setMessage(log);
 		change.getChangeSet().add(new ConfigChange(op, col.getName(), col.getId(), docId));
 
 		RevLog cl = new RevLog();
-		cl.setRev(getNextRevision());
+		cl.setRev(1);
 		cl.setOperation(CommitOp.CreateDoc);
 		cl.setDoc(change.serialize());
 
@@ -234,6 +261,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void purge() throws IOException {
 		try {
 			lock();
+
 			// TODO: retry until deleted (other process may hold it)
 
 			// delete all collections

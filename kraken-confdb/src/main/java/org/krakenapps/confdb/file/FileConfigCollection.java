@@ -26,28 +26,28 @@ public class FileConfigCollection implements ConfigCollection {
 	/**
 	 * collection metadata
 	 */
-	private CollectionEntry meta;
+	private CollectionEntry col;
 
 	private File logFile;
 
 	private File datFile;
 
-	public FileConfigCollection(FileConfigDatabase db, CollectionEntry meta) throws IOException {
+	public FileConfigCollection(FileConfigDatabase db, CollectionEntry col) throws IOException {
 		File dbDir = db.getDbDirectory();
 		boolean created = dbDir.mkdirs();
 		if (created)
 			logger.info("kraken confdb: created database dir [{}]", dbDir.getAbsolutePath());
 
 		this.db = db;
-		this.meta = meta;
+		this.col = col;
 
-		logFile = new File(dbDir, "col" + meta.getId() + ".log");
-		datFile = new File(dbDir, "col" + meta.getId() + ".dat");
+		logFile = new File(dbDir, "col" + col.getId() + ".log");
+		datFile = new File(dbDir, "col" + col.getId() + ".dat");
 	}
 
 	@Override
 	public String getName() {
-		return meta.getName();
+		return col.getName();
 	}
 
 	@Override
@@ -122,7 +122,7 @@ public class FileConfigCollection implements ConfigCollection {
 			int docId = writer.write(revlog);
 
 			// write db changelog
-			db.commit(CommitOp.CreateDoc, meta, docId, revlog.getRev(), committer, log);
+			db.commit(CommitOp.CreateDoc, col, docId, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, docId, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
@@ -171,11 +171,11 @@ public class FileConfigCollection implements ConfigCollection {
 			}
 
 			ByteBuffer bb = encodeDocument(c.getDocument());
-			RevLog revlog = newLog(c.getId(), c.getRevision() + 1, CommitOp.UpdateDoc, bb.array());
+			RevLog revlog = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
 
 			// write collection log
 			int id = writer.write(revlog);
-			db.commit(CommitOp.UpdateDoc, meta, id, revlog.getRev(), committer, log);
+			db.commit(CommitOp.UpdateDoc, col, id, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
@@ -212,7 +212,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
-			db.commit(CommitOp.DeleteDoc, meta, id, revlog.getRev(), committer, log);
+			db.commit(CommitOp.DeleteDoc, col, id, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);
@@ -227,7 +227,7 @@ public class FileConfigCollection implements ConfigCollection {
 	private RevLog newLog(int id, long prev, CommitOp op, byte[] doc) {
 		RevLog log = new RevLog();
 		log.setDocId(id);
-		log.setRev(db.getNextRevision());
+		log.setRev(prev + 1);
 		log.setPrevRev(prev);
 		log.setOperation(op);
 		log.setDoc(doc);

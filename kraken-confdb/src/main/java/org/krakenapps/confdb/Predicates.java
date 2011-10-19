@@ -42,6 +42,7 @@ public class Predicates {
 			this.value = value;
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public boolean eval(Config c) {
 			Object doc = c.getDocument();

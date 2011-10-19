@@ -40,12 +40,11 @@ public class RevLogTest {
 	}
 
 	@After
-	public void teardown() {
+	public void teardown() throws IOException {
 		writer.close();
 		reader.close();
 
-		logFile.delete();
-		datFile.delete();
+		db.purge();
 	}
 
 	@Test

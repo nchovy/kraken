@@ -39,6 +39,16 @@ class RevLogReader {
 		return logRaf.length() / REV_LOG_SIZE;
 	}
 
+	public RevLog findDoc(int docId) throws IOException {
+		for (long i = count() - 1; i >= 0; i--) {
+			RevLog log = read(i);
+			if (log.getDocId() == docId)
+				return log;
+		}
+
+		return null;
+	}
+
 	public RevLog findRev(long rev) throws IOException {
 		for (long i = count() - 1; i >= 0; i--) {
 			RevLog log = read(i);

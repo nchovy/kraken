@@ -29,6 +29,8 @@ class ChangeLog implements CommitLog {
 
 	private String message;
 
+	private int manifestId;
+
 	@CollectionTypeHint(ConfigChange.class)
 	private List<ConfigChange> changeset = new ArrayList<ConfigChange>();
 
@@ -77,12 +79,21 @@ class ChangeLog implements CommitLog {
 		this.changeset = changeset;
 	}
 
+	public int getManifestId() {
+		return manifestId;
+	}
+
+	public void setManifestId(int manifestId) {
+		this.manifestId = manifestId;
+	}
+
 	public byte[] serialize() {
 		Map<String, Object> m = new HashMap<String, Object>();
 		// "rev" is doc id of revision log (do not require serialize)
 		m.put("created", created);
 		m.put("committer", committer);
 		m.put("msg", message);
+		m.put("manifest_id", manifestId);
 		m.put("changeset", PrimitiveConverter.serialize(changeset));
 
 		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOf(m));
@@ -98,6 +109,7 @@ class ChangeLog implements CommitLog {
 		c.setCreated((Date) m.get("created"));
 		c.setCommitter((String) m.get("committer"));
 		c.setMessage((String) m.get("msg"));
+		c.setManifestId((Integer) m.get("manifest_id"));
 		List<Object> list = Arrays.asList((Object[]) m.get("changeset"));
 		c.setChangeSet(PrimitiveConverter.parse(ConfigChange.class, list));
 		return c;
