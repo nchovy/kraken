@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicates;
 
 import static org.junit.Assert.*;
 
@@ -29,6 +30,33 @@ public class DatabaseTest {
 	@After
 	public void teardown() throws IOException {
 		db.purge();
+	}
+
+	@Test
+	public void testFlashback() throws IOException {
+		List<CommitLog> logs = db.getCommitLogs();
+		assertEquals(1, logs.size());
+
+		col.add("hello world", "xeraph", "first commit");
+		col.add("goodbye world", "xeraph", "second commit");
+
+		assertNotNull(col.findOne(Predicates.eq("hello world")));
+		assertNotNull(col.findOne(Predicates.eq("goodbye world")));
+
+		// back to the revision 2
+		File workingDir = new File(System.getProperty("user.dir"));
+		db = new FileConfigDatabase(workingDir, "testdb2", 2);
+		col = (FileConfigCollection) db.ensureCollection("testcol2");
+
+		assertNotNull(col.findOne(Predicates.eq("hello world")));
+		assertNull(col.findOne(Predicates.eq("goodbye world")));
+
+		// back to the revision 1 (just created)
+		db = new FileConfigDatabase(workingDir, "testdb2", 1);
+		col = (FileConfigCollection) db.ensureCollection("testcol2");
+
+		assertNull(col.findOne(Predicates.eq("hello world")));
+		assertNull(col.findOne(Predicates.eq("goodbye world")));
 	}
 
 	@Test
