@@ -26,13 +26,13 @@ public class FileConfigCollection implements ConfigCollection {
 	/**
 	 * collection metadata
 	 */
-	private CollectionMetadata meta;
+	private CollectionEntry meta;
 
 	private File logFile;
 
 	private File datFile;
 
-	public FileConfigCollection(FileConfigDatabase db, CollectionMetadata meta) throws IOException {
+	public FileConfigCollection(FileConfigDatabase db, CollectionEntry meta) throws IOException {
 		File dbDir = db.getDbDirectory();
 		boolean created = dbDir.mkdirs();
 		if (created)
@@ -119,11 +119,11 @@ public class FileConfigCollection implements ConfigCollection {
 			RevLog revlog = newLog(0, 0, CommitOp.CreateDoc, bb.array());
 
 			// write collection log
-			int id = writer.write(revlog);
+			int docId = writer.write(revlog);
 
 			// write db changelog
-			db.commit(CommitOp.CreateDoc, meta, id, committer, log);
-			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), doc);
+			db.commit(CommitOp.CreateDoc, meta, docId, revlog.getRev(), committer, log);
+			return new FileConfig(db, this, docId, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
 		} finally {
@@ -171,11 +171,11 @@ public class FileConfigCollection implements ConfigCollection {
 			}
 
 			ByteBuffer bb = encodeDocument(c.getDocument());
-			RevLog revlog = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
+			RevLog revlog = newLog(c.getId(), c.getRevision() + 1, CommitOp.UpdateDoc, bb.array());
 
 			// write collection log
 			int id = writer.write(revlog);
-			db.commit(CommitOp.UpdateDoc, meta, id, committer, log);
+			db.commit(CommitOp.UpdateDoc, meta, id, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
@@ -212,7 +212,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
-			db.commit(CommitOp.DeleteDoc, meta, id, committer, log);
+			db.commit(CommitOp.DeleteDoc, meta, id, revlog.getRev(), committer, log);
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);

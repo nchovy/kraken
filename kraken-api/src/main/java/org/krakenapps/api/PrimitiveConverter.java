@@ -3,6 +3,7 @@ package org.krakenapps.api;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +30,14 @@ public class PrimitiveConverter {
 
 				if (value instanceof Enum)
 					m.put(fieldName, value.toString());
-				else
+				else if (value instanceof List) {
+					List<?> l = (List<?>) value;
+					List<Object> l2 = new ArrayList<Object>(l.size());
+					for (Object el : l)
+						l2.add(serialize(el));
+
+					m.put(fieldName, l2);
+				} else
 					m.put(fieldName, value);
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -70,11 +78,16 @@ public class PrimitiveConverter {
 							found = o;
 
 					f.set(n, found);
-				} else if (contains(fieldType, List.class) && value instanceof List) {
-					if (hint != null)
-						f.set(n, parseList(hint.value(), (List) value));
-					else
-						f.set(n, value);
+				} else if (contains(fieldType, List.class)) {
+					if (value instanceof Object[])
+						value = Arrays.asList((Object[]) value);
+
+					if (value instanceof List) {
+						if (hint != null)
+							f.set(n, parseList(hint.value(), (List) value));
+						else
+							f.set(n, value);
+					}
 				} else if (!fieldType.isInstance(Map.class) && value instanceof Map) {
 					f.set(n, parse(fieldType, (Map) value));
 				} else {

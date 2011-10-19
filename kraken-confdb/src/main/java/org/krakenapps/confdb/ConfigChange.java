@@ -1,8 +1,12 @@
-package org.krakenapps.confdb.file;
+package org.krakenapps.confdb;
 
-import org.krakenapps.confdb.CommitOp;
-
-class ConfigChange {
+/**
+ * changed config entry for changeset log
+ * 
+ * @author xeraph
+ * 
+ */
+public class ConfigChange {
 	private CommitOp operation;
 
 	private String colName;

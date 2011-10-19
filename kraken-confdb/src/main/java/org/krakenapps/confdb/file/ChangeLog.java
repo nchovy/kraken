@@ -12,6 +12,7 @@ import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CommitLog;
+import org.krakenapps.confdb.ConfigChange;
 
 /**
  * database level change set log
@@ -20,6 +21,10 @@ import org.krakenapps.confdb.CommitLog;
  * 
  */
 class ChangeLog implements CommitLog {
+	private long rev;
+
+	private Date created = new Date();
+
 	private String committer;
 
 	private String message;
@@ -28,15 +33,21 @@ class ChangeLog implements CommitLog {
 	private List<ConfigChange> changeset = new ArrayList<ConfigChange>();
 
 	@Override
-	public int getRev() {
-		// TODO:
-		return 0;
+	public long getRev() {
+		return rev;
+	}
+
+	public void setRev(long rev) {
+		this.rev = rev;
 	}
 
 	@Override
 	public Date getCreated() {
-		// TODO:
-		return new Date();
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
 	}
 
 	@Override
@@ -57,16 +68,19 @@ class ChangeLog implements CommitLog {
 		this.message = message;
 	}
 
-	public List<ConfigChange> getChangeset() {
+	@Override
+	public List<ConfigChange> getChangeSet() {
 		return changeset;
 	}
 
-	public void setChangeset(List<ConfigChange> changeset) {
+	public void setChangeSet(List<ConfigChange> changeset) {
 		this.changeset = changeset;
 	}
 
 	public byte[] serialize() {
 		Map<String, Object> m = new HashMap<String, Object>();
+		// "rev" is doc id of revision log (do not require serialize)
+		m.put("created", created);
 		m.put("committer", committer);
 		m.put("msg", message);
 		m.put("changeset", PrimitiveConverter.serialize(changeset));
@@ -81,10 +95,11 @@ class ChangeLog implements CommitLog {
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
 
 		ChangeLog c = new ChangeLog();
+		c.setCreated((Date) m.get("created"));
 		c.setCommitter((String) m.get("committer"));
 		c.setMessage((String) m.get("msg"));
 		List<Object> list = Arrays.asList((Object[]) m.get("changeset"));
-		c.setChangeset(PrimitiveConverter.parse(ConfigChange.class, list));
+		c.setChangeSet(PrimitiveConverter.parse(ConfigChange.class, list));
 		return c;
 	}
 

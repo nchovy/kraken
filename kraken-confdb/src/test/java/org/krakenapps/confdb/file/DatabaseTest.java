@@ -27,26 +27,23 @@ public class DatabaseTest {
 	}
 
 	@After
-	public void teardown() {
+	public void teardown() throws IOException {
 		db.purge();
-
-		// TODO: remove after manifest implementation
-		new File(db.getDbDirectory(), "col1.log").delete();
-		new File(db.getDbDirectory(), "col1.dat").delete();
 	}
 
 	@Test
 	public void testCommitLog() {
+		// first commit log is "create collection"
 		List<CommitLog> logs = db.getCommitLogs();
-		assertEquals(0, logs.size());
+		assertEquals(1, logs.size());
 
 		col.add("hello world", "xeraph", "first commit");
 		col.add("goodbye world", "xeraph", "second commit");
 
 		logs = db.getCommitLogs();
-		assertEquals(2, logs.size());
-		CommitLog log1 = logs.get(0);
-		CommitLog log2 = logs.get(1);
+		assertEquals(3, logs.size());
+		CommitLog log1 = logs.get(1);
+		CommitLog log2 = logs.get(2);
 
 		// TODO: test rev id and created timestamp
 		assertEquals("xeraph", log1.getCommitter());
@@ -69,16 +66,16 @@ public class DatabaseTest {
 	@Test
 	public void testUpdate() {
 		List<CommitLog> logs = db.getCommitLogs();
-		assertEquals(0, logs.size());
+		assertEquals(1, logs.size());
 
 		Config c = col.add("hello world", "xeraph", "first commit");
 		c.setDocument("hello, world");
 		col.update(c, false, "stania", "added missing comma");
 
 		logs = db.getCommitLogs();
-		assertEquals(2, logs.size());
-		CommitLog log1 = logs.get(0);
-		CommitLog log2 = logs.get(1);
+		assertEquals(3, logs.size());
+		CommitLog log1 = logs.get(1);
+		CommitLog log2 = logs.get(2);
 
 		// TODO: test rev id and created timestamp
 		assertEquals("xeraph", log1.getCommitter());
@@ -100,15 +97,15 @@ public class DatabaseTest {
 	@Test
 	public void testDelete() {
 		List<CommitLog> logs = db.getCommitLogs();
-		assertEquals(0, logs.size());
+		assertEquals(1, logs.size());
 
 		Config c = col.add("hello world", "xeraph", "first commit");
 		col.remove(c, false, "stania", "removed hello world");
 
 		logs = db.getCommitLogs();
-		assertEquals(2, logs.size());
-		CommitLog log1 = logs.get(0);
-		CommitLog log2 = logs.get(1);
+		assertEquals(3, logs.size());
+		CommitLog log1 = logs.get(1);
+		CommitLog log2 = logs.get(2);
 
 		// TODO: test rev id and created timestamp
 		assertEquals("xeraph", log1.getCommitter());

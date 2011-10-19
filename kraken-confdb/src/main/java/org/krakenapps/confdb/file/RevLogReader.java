@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RevLogReader {
-	private static final int COL_LOG_SIZE = 34;
+	private static final int REV_LOG_SIZE = 34;
 
 	private final Logger logger = LoggerFactory.getLogger(RevLogReader.class.getName());
 
@@ -31,12 +31,12 @@ class RevLogReader {
 	public RevLogReader(File logFile, File docFile) throws IOException {
 		this.logRaf = new RandomAccessFile(logFile, "r");
 		this.docRaf = new RandomAccessFile(docFile, "r");
-		this.buffer = new byte[COL_LOG_SIZE];
+		this.buffer = new byte[REV_LOG_SIZE];
 	}
 
 	public long count() throws IOException {
 		// TODO: consider file header size
-		return logRaf.length() / COL_LOG_SIZE;
+		return logRaf.length() / REV_LOG_SIZE;
 	}
 
 	public RevLog findRev(long rev) throws IOException {
@@ -61,7 +61,7 @@ class RevLogReader {
 	public RevLog read(long index) throws IOException {
 		// TODO: consider file header size
 
-		logRaf.seek(index * COL_LOG_SIZE);
+		logRaf.seek(index * REV_LOG_SIZE);
 		logRaf.read(buffer);
 		ByteBuffer bb = ByteBuffer.wrap(buffer);
 		return RevLog.deserialize(bb);
