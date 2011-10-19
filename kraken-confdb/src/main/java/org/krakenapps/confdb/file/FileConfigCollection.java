@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -57,6 +56,22 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	@Override
+	public Config findOne(Predicate pred) {
+		ConfigIterator it = null;
+		Config c = null;
+
+		try {
+			it = find(pred);
+			if (it.hasNext())
+				c = it.next();
+
+			return c;
+		} finally {
+			it.close();
+		}
+	}
+
+	@Override
 	public ConfigIterator find(Predicate pred) {
 		try {
 			return getIterator(pred);
@@ -76,7 +91,6 @@ public class FileConfigCollection implements ConfigCollection {
 
 		for (long index = 0; index < reader.count(); index++) {
 			RevLog log = reader.read(index);
-			System.out.println(log);
 
 			if (log.getOperation() == CommitOp.DeleteDoc)
 				m.remove(log.getDocId());
@@ -85,12 +99,6 @@ public class FileConfigCollection implements ConfigCollection {
 		}
 
 		return new ArrayList<RevLog>(m.values());
-	}
-
-	@Override
-	public Config findOne(Predicate pred) {
-
-		return null;
 	}
 
 	@Override
@@ -141,11 +149,12 @@ public class FileConfigCollection implements ConfigCollection {
 	@Override
 	public Config update(Config c, boolean ignoreConflict) {
 		RevLogWriter writer = null;
+		ConfigIterator it = null;
 		try {
 			db.lock();
-			writer = new RevLogWriter(logFile, datFile);
 
-			Iterator<Config> it = getIterator(null);
+			writer = new RevLogWriter(logFile, datFile);
+			it = getIterator(null);
 
 			// find any conflict (if common parent exists)
 			if (!ignoreConflict) {
@@ -167,6 +176,9 @@ public class FileConfigCollection implements ConfigCollection {
 		} finally {
 			if (writer != null)
 				writer.close();
+
+			if (it != null)
+				it.close();
 
 			db.unlock();
 		}

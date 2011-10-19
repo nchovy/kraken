@@ -5,10 +5,12 @@ import java.io.IOException;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicates;
 
 import static org.junit.Assert.*;
 
@@ -56,7 +58,6 @@ public class RevLogTest {
 		assertEquals("hello world", it.next().getDocument());
 		assertEquals("goodbye world", it.next().getDocument());
 		it.close();
-
 	}
 
 	@Test
@@ -70,23 +71,46 @@ public class RevLogTest {
 		assertFalse(it.hasNext());
 		it.close();
 	}
-	
+
 	@Test
 	public void testAddAndUpdate() throws IOException {
 		Config c1 = col.add("hello world");
 		col.add("goodbye world");
-		
+
 		c1.setDocument("hello, world");
 		col.update(c1);
-		
+
 		ConfigIterator it = col.find(null);
 		assertEquals("hello, world", it.next().getDocument());
 		it.close();
 	}
-	
+
 	@Test
 	public void testFindOne() throws IOException {
-		
+		col.add("one");
+		col.add("two");
+		col.add("three");
+		col.add("four");
+		col.add("five");
+
+		Config c = col.findOne(Predicates.eq("two"));
+		assertEquals("two", c.getDocument());
+	}
+
+	@Test
+	public void testFind() throws IOException {
+		col.add("one");
+		col.add("two");
+		col.add("three");
+		col.add("four");
+		col.add("five");
+
+		ConfigIterator it = col.find(Predicates.or(Predicates.eq("two"), Predicates.eq("four")));
+		assertEquals("two", it.next().getDocument());
+		assertEquals("four", it.next().getDocument());
+		assertFalse(it.hasNext());
+
+		it.close();
 	}
 
 	@Test

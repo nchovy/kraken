@@ -167,7 +167,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 			for (int i = 0; i < count; i++) {
 				RevLog revlog = reader.read(i);
 				byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
-				System.out.println(revlog);
 				ChangeLog change = ChangeLog.deserialize(doc);
 				commitLogs.add(change);
 			}
