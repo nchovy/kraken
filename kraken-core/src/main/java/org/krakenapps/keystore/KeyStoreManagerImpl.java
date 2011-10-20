@@ -144,8 +144,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 	@Override
 	public void registerKeyStore(String alias, String type, String path, char[] password) throws KeyStoreException,
 			NoSuchAlgorithmException, CertificateException, IOException {
-		path = Environment.expandSystemProperties(path);
-		File file = new File(path);
+		File file = new File(Environment.expandSystemProperties(path));
 		if (!file.exists())
 			throw new FileNotFoundException();
 
@@ -164,7 +163,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 
 			// add file path property
 			Properties props = keyStoreProps.get(alias);
-			props.put("path", file.getAbsolutePath());
+			props.put("path", path);
 		} finally {
 			if (fs != null) {
 				try {
