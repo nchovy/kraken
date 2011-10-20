@@ -16,6 +16,7 @@ import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.PushCondition;
 import org.krakenapps.msgbus.PushInterceptor;
+import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,36 +55,51 @@ public class PushApiImpl implements PushApi {
 		if (bindings == null)
 			return;
 
-		PushInterceptor interceptor = pushInterceptorsMap.get(callback);
-
 		for (Binding binding : bindings) {
 			if (sessions.contains(binding.sessionId)) {
-				Message msg = new Message();
-				msg.setSession(binding.sessionId);
-				msg.setType(Message.Type.Trap);
-				msg.setMethod(callback);
-				msg.setTarget(Integer.toString(binding.processId));
-
-				Map<String, Object> params = null;
-				if (interceptor != null) {
-					PushCondition.Key key = new PushCondition.Key(orgId, binding.sessionId, binding.processId, callback);
-					PushCondition condition = pushConditions.get(key);
-					params = interceptor.onPush(condition, m);
-				} else {
-					params = m;
-				}
-
-				for (String key : params.keySet()) {
-					msg.getParameters().put(key, params.get(key));
-				}
-
-				if (logger.isTraceEnabled()) {
+				Message msg = createMessage(orgId, binding, callback, m);
+				if (logger.isTraceEnabled())
 					tracePush(orgId, callback, m, binding.sessionId, binding);
-				}
-
 				msgbus.send(msg);
 			}
 		}
+	}
+
+	@Override
+	public void push(Session session, String callback, Map<String, Object> m) {
+		Set<Binding> bindings = pushBindingsMap.get(callback);
+		for (Binding binding : bindings) {
+			if (binding.sessionId == session.getId()) {
+				Message msg = createMessage(session.getOrgId(), binding, callback, m);
+				if (logger.isTraceEnabled())
+					tracePush(session.getOrgId(), callback, m, binding.sessionId, binding);
+				msgbus.send(msg);
+			}
+		}
+	}
+
+	private Message createMessage(int orgId, Binding binding, String callback, Map<String, Object> m) {
+		Message msg = new Message();
+		msg.setSession(binding.sessionId);
+		msg.setType(Message.Type.Trap);
+		msg.setMethod(callback);
+		msg.setTarget(Integer.toString(binding.processId));
+
+		Map<String, Object> params = null;
+		PushInterceptor interceptor = pushInterceptorsMap.get(callback);
+		if (interceptor != null) {
+			PushCondition.Key key = new PushCondition.Key(orgId, binding.sessionId, binding.processId, callback);
+			PushCondition condition = pushConditions.get(key);
+			params = interceptor.onPush(condition, m);
+		} else {
+			params = m;
+		}
+
+		for (String key : params.keySet()) {
+			msg.getParameters().put(key, params.get(key));
+		}
+
+		return msg;
 	}
 
 	private void tracePush(int orgId, String method, Map<String, Object> m, Integer sessionId, Binding binding) {

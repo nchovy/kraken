@@ -18,8 +18,10 @@ package org.krakenapps.dom.api.impl;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
@@ -52,6 +54,7 @@ import org.krakenapps.dom.model.Role;
 import org.krakenapps.jpa.ThreadLocalEntityManagerService;
 import org.krakenapps.jpa.handler.JpaConfig;
 import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Session;
 
 @Component(name = "dom-admin-api")
@@ -63,6 +66,9 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 	@Requires
 	private OrganizationParameterApi orgParamApi;
+
+	@Requires
+	private PushApi pushApi;
 
 	@Requires(optional = true, nullable = false)
 	private OtpApi otpApi;
@@ -126,7 +132,12 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 							while (loggedIn.size() >= maxSessions) {
 								if (loggedIn.peek().level > admin.getRole().getLevel())
 									throw new MaxSessionException();
-								loggedIn.poll().session.close();
+								LoggedInAdmin ban = loggedIn.poll();
+								Map<String, Object> m = new HashMap<String, Object>();
+								m.put("type", "terminate");
+								m.put("kick_by", admin.getUser().getLoginName());
+								pushApi.push(ban.session, "kraken-system-event", m);
+								ban.session.close();
 							}
 						} else if (loggedIn.size() >= maxSessions) {
 							LoggedInAdmin peek = loggedIn.peek();
