@@ -30,10 +30,13 @@ import java.net.SocketException;
 import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 
 import org.krakenapps.ansicode.ClearScreenCode;
@@ -68,19 +71,28 @@ public class CoreScript implements Script {
 		File dir = (File) context.getSession().getProperty("dir");
 		File f = canonicalize(dir, args[0]);
 		if (!f.exists()) {
-			context.println("cat: " + f.getName()
-					+ ": No such file or directory");
+			context.println("cat: " + f.getName() + ": No such file or directory");
 			return;
 		}
 
 		FileInputStream is = new FileInputStream(f);
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		while (true) {
-			String line = br.readLine();
-			if (line == null)
-				break;
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new InputStreamReader(is));
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
 
-			context.println(line);
+				context.println(line);
+			}
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+				}
+			}
 		}
 	}
 
@@ -132,8 +144,7 @@ public class CoreScript implements Script {
 		File to = canonicalize(dir, args[1]);
 
 		if (!from.exists())
-			context.println("cp: cannot stat '" + from.getName()
-					+ "': No such file or directory");
+			context.println("cp: cannot stat '" + from.getName() + "': No such file or directory");
 		else {
 			FileChannel inChannel = new FileInputStream(from).getChannel();
 			FileChannel outChannel = new FileOutputStream(to).getChannel();
@@ -155,8 +166,7 @@ public class CoreScript implements Script {
 		for (String token : args) {
 			File f = canonicalize(dir, token);
 			if (!f.exists())
-				context.println("rm: cannot remove '" + token
-						+ "': No such file or directory");
+				context.println("rm: cannot remove '" + token + "': No such file or directory");
 			else
 				f.delete();
 		}
@@ -169,11 +179,9 @@ public class CoreScript implements Script {
 		File to = canonicalize(dir, args[1]);
 
 		if (from.equals(to))
-			context.println("mv: '" + from.getName() + "' and '" + to.getName()
-					+ "' are the same file");
+			context.println("mv: '" + from.getName() + "' and '" + to.getName() + "' are the same file");
 		else if (!from.exists())
-			context.println("mv: cannot stat '" + from.getName()
-					+ "': No such file or directory");
+			context.println("mv: cannot stat '" + from.getName() + "': No such file or directory");
 		else
 			from.renameTo(to);
 	}
@@ -189,8 +197,7 @@ public class CoreScript implements Script {
 
 		for (File target : targets) {
 			if (!target.exists()) {
-				context.println("ls: cannot access " + target.getName()
-						+ " :No such file or directory");
+				context.println("ls: cannot access " + target.getName() + " :No such file or directory");
 				return;
 			}
 
@@ -232,24 +239,20 @@ public class CoreScript implements Script {
 	}
 
 	public void date(String[] args) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat(
-				"yyyy-MM-dd HH:mm:ssZ");
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		context.println(dateFormat.format(new Date()));
 	}
 
 	public void ipconfig(String[] args) throws SocketException {
-		Enumeration<NetworkInterface> it = NetworkInterface
-				.getNetworkInterfaces();
+		Enumeration<NetworkInterface> it = NetworkInterface.getNetworkInterfaces();
 		while (it.hasMoreElements()) {
 			NetworkInterface nic = it.nextElement();
 			byte[] b = nic.getHardwareAddress();
 			String mac = "";
 			if (b != null && b.length != 0)
-				mac = String.format(" (%02X:%02X:%02X:%02X:%02X:%02X)", b[0],
-						b[1], b[2], b[3], b[4], b[5]);
+				mac = String.format(" (%02X:%02X:%02X:%02X:%02X:%02X)", b[0], b[1], b[2], b[3], b[4], b[5]);
 
-			context.printf("%s%s - %s\n", nic.getName(), mac,
-					nic.getDisplayName());
+			context.printf("%s%s - %s\n", nic.getName(), mac, nic.getDisplayName());
 
 			Enumeration<InetAddress> in = nic.getInetAddresses();
 			while (in.hasMoreElements()) {
@@ -295,17 +298,38 @@ public class CoreScript implements Script {
 		context.print(new ClearScreenCode(Option.EntireScreen));
 	}
 
+	public void set(String[] args) {
+		if (args.length == 0) {
+			Properties props = System.getProperties();
+			List<String> keys = new ArrayList<String>(props.stringPropertyNames());
+			Collections.sort(keys);
+			for (String key : keys) {
+				context.printf("%s=%s\n", key, props.getProperty(key));
+			}
+		} else if (args.length == 1) {
+			if (!args[0].contains("=")) {
+				context.printf("%s=%s\n", args[0], System.getProperty(args[0]));
+			} else {
+				String[] kv = args[0].split("=", 2);
+				System.setProperty(kv[0].trim(), kv[1].trim());
+				context.println("set");
+			}
+		} else {
+			for (String arg : args) {
+				context.printf("%s=%s\n", arg, System.getProperty(arg));
+			}
+		}
+	}
+
 	private String formatFileInfo(File f) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat(
-				"yyyy-MM-dd HH:mm:ss");
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		String lastModified = dateFormat.format(new Date(f.lastModified()));
 		String dir = f.isDirectory() ? "<DIR>" : "";
 		char r = f.canRead() ? 'r' : '-';
 		char w = f.canWrite() ? 'w' : '-';
 		char x = f.canExecute() ? 'x' : '-';
 
-		return String.format("%c%c%c %10d\t%s\t%s\t%s", r, w, x, f.length(),
-				lastModified, dir, f.getName());
+		return String.format("%c%c%c %10d\t%s\t%s\t%s", r, w, x, f.length(), lastModified, dir, f.getName());
 	}
 
 	private void changeColor(String code) {
@@ -320,8 +344,7 @@ public class CoreScript implements Script {
 		byte b = invert(c1);
 		byte f = invert(c2);
 
-		context.print(new SetColorCode(Color.parse(b), Color.parse(f),
-				highIntensity));
+		context.print(new SetColorCode(Color.parse(b), Color.parse(f), highIntensity));
 		context.print(new MoveToCode(1, 1));
 		context.print(new ClearScreenCode(Option.EntireScreen));
 	}
@@ -419,8 +442,7 @@ public class CoreScript implements Script {
 				out.flush();
 
 				// read a content of lfile
-				fos = new FileOutputStream(prefix == null ? lfile : prefix
-						+ file);
+				fos = new FileOutputStream(prefix == null ? lfile : prefix + file);
 				int foo;
 				while (true) {
 					if (buf.length < filesize)
