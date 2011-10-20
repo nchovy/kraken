@@ -20,12 +20,12 @@ public interface KeyStoreManager {
 	 * Return all key store names
 	 */
 	Collection<String> getKeyStoreNames();
-	
+
 	/**
-	 *  Return all properties of the key store.
+	 * Return all properties of the key store.
 	 */
 	Properties getKeyStoreProperties(String alias);
-	
+
 	/**
 	 * Find and return key store.
 	 */
@@ -35,22 +35,27 @@ public interface KeyStoreManager {
 	 * Register file keystore. it is preserved permanently.
 	 * 
 	 * @throws KeyStoreException
-	 * @throws FileNotFoundException
 	 * @throws IOException
 	 * @throws CertificateException
 	 * @throws NoSuchAlgorithmException
 	 */
+	void registerKeyStore(String alias, String type, String path, char[] password) throws KeyStoreException,
+			NoSuchAlgorithmException, CertificateException, IOException;
+
+	@Deprecated
 	void registerKeyStore(String name, String type, File file, char[] password) throws KeyStoreException,
 			FileNotFoundException, NoSuchAlgorithmException, CertificateException, IOException;
 
 	/**
 	 * Register generic keystore. it is not preserved when kraken core reboots.
-	 * @throws IOException 
-	 * @throws CertificateException 
-	 * @throws NoSuchAlgorithmException 
-	 * @throws KeyStoreException 
+	 * 
+	 * @throws IOException
+	 * @throws CertificateException
+	 * @throws NoSuchAlgorithmException
+	 * @throws KeyStoreException
 	 */
-	void registerKeyStore(String name, String type, InputStream is, char[] password) throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException;
+	void registerKeyStore(String name, String type, InputStream is, char[] password) throws KeyStoreException,
+			NoSuchAlgorithmException, CertificateException, IOException;
 
 	/**
 	 * Unregister keystore.
