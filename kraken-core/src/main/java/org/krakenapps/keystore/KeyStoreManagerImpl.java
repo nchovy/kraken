@@ -17,6 +17,7 @@ package org.krakenapps.keystore;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
@@ -32,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.krakenapps.api.Environment;
 import org.krakenapps.api.KeyStoreManager;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
@@ -68,6 +70,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 
 				FileInputStream fs = null;
 				try {
+					path = Environment.expandSystemProperties(path);
 					fs = new FileInputStream(new File(path));
 					registerKeyStore(alias, type, fs, password);
 					Properties props = keyStoreProps.get(alias);
@@ -138,6 +141,55 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 		return null;
 	}
 
+	@Override
+	public void registerKeyStore(String alias, String type, String path, char[] password) throws KeyStoreException,
+			NoSuchAlgorithmException, CertificateException, IOException {
+		path = Environment.expandSystemProperties(path);
+		File file = new File(path);
+		if (!file.exists())
+			throw new FileNotFoundException();
+
+		Preferences prefs = getKeyStorePreferences();
+		try {
+			if (prefs.nodeExists(alias))
+				throw new RuntimeException("duplicated key store alias");
+		} catch (BackingStoreException e1) {
+			throw new RuntimeException("node exists check failed", e1);
+		}
+
+		FileInputStream fs = null;
+		try {
+			fs = new FileInputStream(file);
+			registerKeyStore(alias, type, fs, password);
+
+			// add file path property
+			Properties props = keyStoreProps.get(alias);
+			props.put("path", file.getAbsolutePath());
+		} finally {
+			if (fs != null) {
+				try {
+					fs.close();
+				} catch (IOException e) {
+				}
+			}
+		}
+
+		Preferences p = prefs.node(alias);
+		p.put("alias", alias);
+		p.put("type", type);
+		p.put("path", file.getAbsolutePath());
+		if (password != null)
+			p.put("password", new String(password));
+
+		try {
+			p.flush();
+			p.sync();
+		} catch (BackingStoreException e) {
+			throw new RuntimeException("failed to save keystore preference", e);
+		}
+	}
+
+	@Deprecated
 	@Override
 	public void registerKeyStore(String alias, String type, File file, char[] password) throws KeyStoreException,
 			NoSuchAlgorithmException, CertificateException, IOException {

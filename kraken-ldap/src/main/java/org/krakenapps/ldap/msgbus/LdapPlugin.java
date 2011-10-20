@@ -15,6 +15,8 @@
  */
 package org.krakenapps.ldap.msgbus;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,6 +40,7 @@ import org.osgi.framework.ServiceReference;
 
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPException;
+import com.novell.ldap.util.Base64;
 
 @Component(name = "ldap-plugin")
 @MsgbusPlugin
@@ -49,45 +52,6 @@ public class LdapPlugin {
 
 	public LdapPlugin(BundleContext bc) {
 		this.bc = bc;
-	}
-
-	@MsgbusMethod
-	public void createProfile(Request req, Response resp) {
-		String name = req.getString("profile_name");
-		String dc = req.getString("dc");
-		int port = LdapProfile.DEFAULT_PORT;
-		String account = req.getString("account");
-		String password = req.getString("password");
-		int syncInterval = 10 * 60 * 1000;
-		if (req.has("port"))
-			port = req.getInteger("port");
-
-		if (req.has("sync_interval"))
-			syncInterval = req.getInteger("sync_interval");
-
-		LdapProfile profile = new LdapProfile(name, dc, port, account, password, syncInterval, null);
-		ldap.createProfile(profile);
-	}
-
-	@MsgbusMethod
-	public void setSyncInterval(Request req, Response resp) {
-		String name = req.getString("profile_name");
-		int syncInterval = req.getInteger("sync_interval");
-
-		LdapProfile p = ldap.getProfile(name);
-		if (p == null)
-			throw new MsgbusException("ldap", "profile-not-found");
-
-		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
-				syncInterval, p.getLastSync());
-
-		ldap.updateProfile(newProfile);
-	}
-
-	@MsgbusMethod
-	public void removeProfile(Request req, Response resp) {
-		String name = req.getString("profile_name");
-		ldap.removeProfile(name);
 	}
 
 	@MsgbusMethod
@@ -107,6 +71,45 @@ public class LdapPlugin {
 	}
 
 	@MsgbusMethod
+	public void createProfile(Request req, Response resp) {
+		String name = req.getString("profile_name");
+		String dc = req.getString("dc");
+		int port = LdapProfile.DEFAULT_PORT;
+		String account = req.getString("account");
+		String password = req.getString("password");
+		int syncInterval = 10 * 60 * 1000;
+		if (req.has("port"))
+			port = req.getInteger("port");
+
+		if (req.has("sync_interval"))
+			syncInterval = req.getInteger("sync_interval");
+
+		LdapProfile profile = new LdapProfile(name, dc, port, account, password, null, syncInterval);
+		ldap.createProfile(profile);
+	}
+
+	@MsgbusMethod
+	public void removeProfile(Request req, Response resp) {
+		String name = req.getString("profile_name");
+		ldap.removeProfile(name);
+	}
+
+	@MsgbusMethod
+	public void setSyncInterval(Request req, Response resp) {
+		String name = req.getString("profile_name");
+		int syncInterval = req.getInteger("sync_interval");
+
+		LdapProfile p = ldap.getProfile(name);
+		if (p == null)
+			throw new MsgbusException("ldap", "profile-not-found");
+
+		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
+				p.getKeystore(), syncInterval, p.getLastSync());
+
+		ldap.updateProfile(newProfile);
+	}
+
+	@MsgbusMethod
 	public void getDomainUserAccounts(Request req, Response resp) {
 		List<Object> l = new ArrayList<Object>();
 		String profileName = req.getString("profile_name");
@@ -118,6 +121,29 @@ public class LdapPlugin {
 			l.add(marshal(account));
 
 		resp.put("users", l);
+	}
+
+	@MsgbusMethod
+	public void getCACerts(Request req, Response resp) {
+		resp.put("certs", ldap.getCACerts());
+	}
+
+	@MsgbusMethod
+	public void createCACert(Request req, Response resp) {
+		String alias = req.getString("alias");
+		String base64 = req.getString("keystore");
+		byte[] orig = Base64.decode(base64);
+		try {
+			ldap.importCACert(alias, new ByteArrayInputStream(orig));
+		} catch (IOException e) {
+			throw new MsgbusException("ldap", "import failed");
+		}
+	}
+
+	@MsgbusMethod
+	public void removeCACert(Request req, Response resp) {
+		String alias = req.getString("alias");
+		ldap.removeCACert(alias);
 	}
 
 	@MsgbusMethod

@@ -15,7 +15,6 @@
  */
 package org.krakenapps.keystore;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.KeyStore;
@@ -75,7 +74,8 @@ public class KeyStoreScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "List all aliases in keystore", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the keystore") })
+	@ScriptUsage(description = "List all aliases in keystore", arguments = { @ScriptArgument(name = "alias",
+			type = "string", description = "alias of the keystore") })
 	public void aliases(String[] args) {
 		String name = args[0];
 		KeyStore store = manager.getKeyStore(name);
@@ -83,10 +83,10 @@ public class KeyStoreScript implements Script {
 			context.println("not found");
 			return;
 		}
-		
+
 		context.println("Aliases");
 		context.println("-------------");
-		
+
 		try {
 			Enumeration<String> it = store.aliases();
 			while (it.hasMoreElements()) {
@@ -127,7 +127,7 @@ public class KeyStoreScript implements Script {
 			password = args[3].toCharArray();
 
 		try {
-			manager.registerKeyStore(alias, type, new File(path), password);
+			manager.registerKeyStore(alias, type, path, password);
 			context.printf("[%s] key store registered\n", alias);
 		} catch (KeyStoreException e) {
 			context.printf("key store exception: %s", e.getMessage());
@@ -147,7 +147,8 @@ public class KeyStoreScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "unregister keystore", arguments = { @ScriptArgument(name = "name", description = "alias of the key store") })
+	@ScriptUsage(description = "unregister keystore", arguments = { @ScriptArgument(name = "name",
+			description = "alias of the key store") })
 	public void unregister(String[] args) {
 		String name = args[0];
 		manager.unregisterKeyStore(name);

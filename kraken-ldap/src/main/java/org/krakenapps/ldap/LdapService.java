@@ -15,18 +15,26 @@
  */
 package org.krakenapps.ldap;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 
 public interface LdapService {
+	Collection<LdapProfile> getProfiles();
+
+	LdapProfile getProfile(String name);
+
 	void createProfile(LdapProfile profile);
-	
+
 	void updateProfile(LdapProfile profile);
 
 	void removeProfile(String name);
 
-	Collection<LdapProfile> getProfiles();
+	Collection<String> getCACerts();
 
-	LdapProfile getProfile(String name);
+	void importCACert(String alias, InputStream is) throws IOException;
+
+	void removeCACert(String alias);
 
 	Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile);
 

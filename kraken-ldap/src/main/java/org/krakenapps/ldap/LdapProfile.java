@@ -18,34 +18,55 @@ package org.krakenapps.ldap;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import com.novell.ldap.LDAPConnection;
+
 public class LdapProfile {
-	// default 10min
-	public static final int DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000;
-	public static final int DEFAULT_PORT = 389;
+	public static final int DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000; // 10 minute
+	public static final int DEFAULT_PORT = LDAPConnection.DEFAULT_PORT; // 389
+	public static final int DEFAULT_SSL_PORT = LDAPConnection.DEFAULT_SSL_PORT; // 636
 
 	private String name;
 	private String dc;
 	private int port;
 	private String account;
 	private String password;
+	private String keystore;
 	private int syncInterval = DEFAULT_SYNC_INTERVAL;
 	private Date lastSync = null;
 
 	public LdapProfile(String name, String dc, String account, String password) {
-		this(name, dc, DEFAULT_PORT, account, password, DEFAULT_SYNC_INTERVAL, null);
+		this(name, dc, DEFAULT_PORT, account, password, null, DEFAULT_SYNC_INTERVAL);
+	}
+
+	public LdapProfile(String name, String dc, String account, String password, String keystore) {
+		this(name, dc, DEFAULT_SSL_PORT, account, password, keystore, DEFAULT_SYNC_INTERVAL);
 	}
 
 	public LdapProfile(String name, String dc, int port, String account, String password) {
-		this(name, dc, port, account, password, DEFAULT_SYNC_INTERVAL, null);
+		this(name, dc, port, account, password, null, DEFAULT_SYNC_INTERVAL);
 	}
 
-	public LdapProfile(String name, String dc, int port, String account, String password, int syncInterval,
-			Date lastSync) {
+	public LdapProfile(String name, String dc, int port, String account, String password, String keystore) {
+		this(name, dc, port, account, password, keystore, DEFAULT_SYNC_INTERVAL);
+	}
+
+	public LdapProfile(String name, String dc, int port, String account, String password, int syncInterval) {
+		this(name, dc, port, account, password, null, syncInterval);
+	}
+
+	public LdapProfile(String name, String dc, int port, String account, String password, String keystore,
+			int syncInterval) {
+		this(name, dc, port, account, password, keystore, syncInterval, null);
+	}
+
+	public LdapProfile(String name, String dc, int port, String account, String password, String keystore,
+			int syncInterval, Date lastSync) {
 		this.name = name;
 		this.dc = dc;
 		this.port = port;
 		this.account = account;
 		this.password = password;
+		this.keystore = keystore;
 		this.syncInterval = syncInterval;
 		this.lastSync = lastSync;
 	}
@@ -70,6 +91,10 @@ public class LdapProfile {
 		return password;
 	}
 
+	public String getKeystore() {
+		return keystore;
+	}
+
 	public int getSyncInterval() {
 		return syncInterval;
 	}
@@ -81,7 +106,7 @@ public class LdapProfile {
 	@Override
 	public String toString() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		return String.format("name=%s, dc=%s, port=%d, account=%s, sync interval=%dms, last sync=%s", name, dc, port,
-				account, syncInterval, lastSync == null ? "none" : dateFormat.format(lastSync));
+		return String.format("name=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s", name, dc, port,
+				account, syncInterval, (lastSync == null) ? "none" : dateFormat.format(lastSync));
 	}
 }

@@ -15,6 +15,9 @@
  */
 package org.krakenapps.ldap.impl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Collection;
 
 import org.krakenapps.api.Script;
@@ -55,7 +58,8 @@ public class LdapScript implements Script {
 	@ScriptUsage(description = "create ldap profile", arguments = {
 			@ScriptArgument(name = "name", type = "string", description = "ldap profile name"),
 			@ScriptArgument(name = "dc", type = "string", description = "domain name of domain controller "),
-			@ScriptArgument(name = "account", type = "string", description = "admin account name for simple bind (e.g. OFFICE\\xeraph"),
+			@ScriptArgument(name = "account", type = "string",
+					description = "admin account name for simple bind (e.g. OFFICE\\xeraph"),
 			@ScriptArgument(name = "password", type = "string", description = "admin password") })
 	public void createProfile(String[] args) {
 		String name = args[0];
@@ -68,14 +72,42 @@ public class LdapScript implements Script {
 		context.println("created");
 	}
 
-	@ScriptUsage(description = "remove ldap profile", arguments = { @ScriptArgument(name = "name", type = "string", description = "ldap profile name") })
+	@ScriptUsage(description = "remove ldap profile", arguments = { @ScriptArgument(name = "name", type = "string",
+			description = "ldap profile name") })
 	public void removeProfile(String[] args) {
 		String name = args[0];
 		ldap.removeProfile(name);
 		context.println("removed");
 	}
 
-	@ScriptUsage(description = "print all domain users", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
+	public void cacerts(String[] args) {
+		for (String alias : ldap.getCACerts())
+			context.println(alias);
+	}
+
+	@ScriptUsage(description = "import keystore", arguments = {
+			@ScriptArgument(name = "alias", type = "string", description = "alias"),
+			@ScriptArgument(name = "path", type = "string", description = "keystore path") })
+	public void importca(String[] args) {
+		String alias = args[0];
+		File keystore = new File(args[1]);
+		try {
+			ldap.importCACert(alias, new FileInputStream(keystore));
+			context.println("import success");
+		} catch (IOException e) {
+			context.println("import failed");
+		}
+	}
+
+	@ScriptUsage(description = "remove keystore", arguments = { @ScriptArgument(name = "alias", type = "string",
+			description = "alias") })
+	public void removeca(String[] args) {
+		ldap.removeCACert(args[0]);
+		context.println("removed");
+	}
+
+	@ScriptUsage(description = "print all domain users", arguments = { @ScriptArgument(name = "profile name",
+			type = "string", description = "profile name") })
 	public void domainUsers(String[] args) {
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
@@ -96,7 +128,8 @@ public class LdapScript implements Script {
 			context.println(account.toString());
 	}
 
-	@ScriptUsage(description = "print all organization units", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
+	@ScriptUsage(description = "print all organization units", arguments = { @ScriptArgument(name = "profile name",
+			type = "string", description = "profile name") })
 	public void organizationUnits(String[] args) {
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
@@ -119,7 +152,8 @@ public class LdapScript implements Script {
 
 	@ScriptUsage(description = "print all domain users", arguments = {
 			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
-			@ScriptArgument(name = "account", type = "string", description = "account name without domain prefix (e.g. xeraph)"),
+			@ScriptArgument(name = "account", type = "string",
+					description = "account name without domain prefix (e.g. xeraph)"),
 			@ScriptArgument(name = "password", type = "string", description = "test password") })
 	public void verifyPassword(String[] args) {
 		String profileName = args[0];
@@ -139,7 +173,8 @@ public class LdapScript implements Script {
 			context.println("invalid password");
 	}
 
-	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
+	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(
+			name = "profile name", type = "string", description = "profile name") })
 	public void syncDom(String args[]) {
 		LdapSyncService ldapSync = getSyncService();
 		if (ldapSync == null) {
@@ -157,7 +192,8 @@ public class LdapScript implements Script {
 		context.println(ldapSync.getPeriodicSync() ? "enabled" : "disabled");
 	}
 
-	@ScriptUsage(description = "activate or deactivate periodic sync", arguments = { @ScriptArgument(name = "activate flag", type = "string", description = "true or false") })
+	@ScriptUsage(description = "activate or deactivate periodic sync", arguments = { @ScriptArgument(
+			name = "activate flag", type = "string", description = "true or false") })
 	public void setPeriodicSync(String[] args) {
 		LdapSyncService ldapSync = getSyncService();
 		ldapSync.setPeriodicSync(Boolean.parseBoolean(args[0]));
@@ -176,7 +212,7 @@ public class LdapScript implements Script {
 
 		try {
 			LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
-					p.getPassword(), Integer.valueOf(args[1]), p.getLastSync());
+					p.getPassword(), p.getKeystore(), Integer.valueOf(args[1]), p.getLastSync());
 
 			ldap.updateProfile(newProfile);
 			context.println("set");

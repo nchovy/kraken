@@ -332,17 +332,25 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 			if (!isLocalJar(bundle)) {
 				try {
 					File before = new File(bundle.getLocation().replace("file://", ""));
-					File temp = File.createTempFile(before.getName(), "", before.getParentFile());
-					temp.delete();
-					if (before.renameTo(temp)) {
+					if (before.exists()) {
+						File temp = File.createTempFile(before.getName(), "", before.getParentFile());
+						temp.delete();
+						if (before.renameTo(temp)) {
+							MavenResolver resolver = new MavenResolver(getLocalRepository(),
+									config.getBundleRepositories(), null, getKeyStoreManager());
+							MavenArtifact artifact = getArtifact(bundle);
+							File after = resolver.resolve(artifact);
+							if (after.exists())
+								temp.delete();
+							else
+								temp.renameTo(before);
+						}
+					} else {
+						before.mkdirs();
 						MavenResolver resolver = new MavenResolver(getLocalRepository(),
 								config.getBundleRepositories(), null, getKeyStoreManager());
 						MavenArtifact artifact = getArtifact(bundle);
-						File after = resolver.resolve(artifact);
-						if (after.exists())
-							temp.delete();
-						else
-							temp.renameTo(before);
+						resolver.resolve(artifact);
 					}
 				} catch (MavenResolveException e) {
 					logger.error("kraken core: maven resolve failed.", e);
