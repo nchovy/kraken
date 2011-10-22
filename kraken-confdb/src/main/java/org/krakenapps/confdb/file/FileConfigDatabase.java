@@ -18,7 +18,10 @@ package org.krakenapps.confdb.file;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +63,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private File manifestLogFile;
 	private File manifestDatFile;
 
+	private File lockFile;
+	private FileLock lock;
+
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
 		this(baseDir, name, null);
 	}
@@ -74,20 +80,34 @@ public class FileConfigDatabase implements ConfigDatabase {
 		changeDatFile = new File(dbDir, "changeset.dat");
 		manifestLogFile = new File(dbDir, "manifest.log");
 		manifestDatFile = new File(dbDir, "manifest.dat");
+		lockFile = new File(dbDir, "write.lock");
 	}
 
 	/**
 	 * acquire write lock
 	 */
 	public void lock() {
-
+		try {
+			RandomAccessFile raf = new RandomAccessFile(lockFile, "rw");
+			FileChannel channel = raf.getChannel();
+			lock = channel.tryLock();
+		} catch (IOException e) {
+			throw new IllegalStateException("cannot acquire write lock", e);
+		}
 	}
 
 	/**
 	 * release write lock
 	 */
 	public void unlock() {
-
+		try {
+			if (lock != null) {
+				lock.release();
+				lock.channel().close();
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException("cannot release write lock", e);
+		}
 	}
 
 	@Override
@@ -230,7 +250,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigTransaction beginTransaction(int timeout) {
-		return new FileConfigTransaction(this, timeout);
+		FileConfigTransaction xact = new FileConfigTransaction(this, timeout);
+		xact.begin();
+		return xact;
 	}
 
 	/**
