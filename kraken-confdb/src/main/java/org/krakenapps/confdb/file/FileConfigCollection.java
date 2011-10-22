@@ -22,12 +22,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigListener;
+import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.RollbackException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +114,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 		for (long index = 0; index < reader.count(); index++) {
 			RevLog log = reader.read(index);
-			if (manifest.containsDoc(col.getId(), log))
+			if (manifest.containsDoc(col.getName(), log.getDocId(), log.getRev()))
 				snapshot.add(log);
 		}
 
@@ -124,9 +128,21 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config add(Object doc, String committer, String log) {
+		ConfigTransaction xact = db.beginTransaction();
+		try {
+			Config c = add(xact, doc);
+			xact.commit(committer, log);
+			return c;
+		} catch (Exception e) {
+			xact.rollback();
+			throw new RollbackException(e);
+		}
+	}
+
+	@Override
+	public Config add(ConfigTransaction xact, Object doc) {
 		RevLogWriter writer = null;
 		try {
-			db.lock();
 			writer = new RevLogWriter(logFile, datFile);
 
 			// TODO: check previous revision, is need update?
@@ -138,15 +154,14 @@ public class FileConfigCollection implements ConfigCollection {
 			int docId = writer.write(revlog);
 
 			// write db changelog
-			manifest = db.commit(CommitOp.CreateDoc, col, docId, revlog.getRev(), committer, log);
+			xact.log(CommitOp.CreateDoc, col.getName(), docId, revlog.getRev());
+			manifest = xact.getManifest();
 			return new FileConfig(db, this, docId, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
 		} finally {
 			if (writer != null)
 				writer.close();
-
-			db.unlock();
 		}
 	}
 
@@ -169,11 +184,22 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config update(Config c, boolean ignoreConflict, String committer, String log) {
+		ConfigTransaction xact = db.beginTransaction();
+		try {
+			Config updated = update(xact, c, ignoreConflict);
+			xact.commit(committer, log);
+			return updated;
+		} catch (Exception e) {
+			xact.rollback();
+			throw new RollbackException(e);
+		}
+	}
+
+	@Override
+	public Config update(ConfigTransaction xact, Config c, boolean ignoreConflict) {
 		RevLogWriter writer = null;
 		ConfigIterator it = null;
 		try {
-			db.lock();
-
 			writer = new RevLogWriter(logFile, datFile);
 			it = getIterator(null);
 
@@ -191,7 +217,8 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
-			manifest = db.commit(CommitOp.UpdateDoc, col, id, revlog.getRev(), committer, log);
+			xact.log(CommitOp.UpdateDoc, col.getName(), id, revlog.getRev());
+			manifest = xact.getManifest();
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
@@ -201,8 +228,6 @@ public class FileConfigCollection implements ConfigCollection {
 
 			if (it != null)
 				it.close();
-
-			db.unlock();
 		}
 	}
 
@@ -218,9 +243,22 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config remove(Config c, boolean ignoreConflict, String committer, String log) {
+		ConfigTransaction xact = db.beginTransaction();
+		Config config = c;
+		try {
+			config = remove(xact, c, ignoreConflict);
+			xact.commit(committer, log);
+			return config;
+		} catch (Exception e) {
+			xact.rollback();
+			throw new RollbackException(e);
+		}
+	}
+
+	@Override
+	public Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict) {
 		RevLogWriter writer = null;
 		try {
-			db.lock();
 			writer = new RevLogWriter(logFile, datFile);
 
 			// TODO: check conflict
@@ -228,15 +266,14 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int id = writer.write(revlog);
-			manifest = db.commit(CommitOp.DeleteDoc, col, id, revlog.getRev(), committer, log);
+			xact.log(CommitOp.DeleteDoc, col.getName(), id, revlog.getRev());
+			manifest = xact.getManifest();
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);
 		} finally {
 			if (writer != null)
 				writer.close();
-
-			db.unlock();
 		}
 	}
 

@@ -28,17 +28,23 @@ public interface ConfigCollection {
 
 	Config add(Object doc, String committer, String log);
 
+	Config add(ConfigTransaction xact, Object doc);
+
 	Config update(Config c);
 
 	Config update(Config c, boolean ignoreConflict);
 
 	Config update(Config c, boolean ignoreConflict, String committer, String log);
 
+	Config update(ConfigTransaction xact, Config c, boolean ignoreConflict);
+
 	Config remove(Config c);
 
 	Config remove(Config c, boolean ignoreConflict);
 
 	Config remove(Config c, boolean ignoreConflict, String committer, String log);
+
+	Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict);
 
 	void addHook(CommitOp op, ConfigListener listener);
 

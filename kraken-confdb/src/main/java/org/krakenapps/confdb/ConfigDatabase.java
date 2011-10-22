@@ -19,13 +19,58 @@ import java.util.List;
 import java.util.Set;
 
 public interface ConfigDatabase {
+	/**
+	 * @return the database name
+	 */
 	String getName();
 
+	Manifest getManifest(Integer changeset);
+
+	/**
+	 * @return all collection names
+	 */
 	Set<String> getCollectionNames();
 
+	/**
+	 * return collection. if collection does not exists, it will create
+	 * collection and return it.
+	 * 
+	 * @param name
+	 *            the collection name
+	 * @return the collection
+	 */
 	ConfigCollection ensureCollection(String name);
 
+	/**
+	 * drop collection, but it's just logical deletion (physical data will not
+	 * be removed)
+	 * 
+	 * @param name
+	 *            the collection name
+	 */
 	void dropCollection(String name);
 
+	/**
+	 * List all commit logs (ascending order)
+	 * 
+	 * @return
+	 */
 	List<CommitLog> getCommitLogs();
+
+	/**
+	 * begin config transaction. timeout exception may be thrown when default
+	 * timeout period is over
+	 * 
+	 * @return the transaction object
+	 */
+	ConfigTransaction beginTransaction();
+
+	/**
+	 * begin config transaction
+	 * 
+	 * @param timeout
+	 *            the timeout to wait other transaction complete in milliseconds
+	 * @return the transaction object
+	 */
+	ConfigTransaction beginTransaction(int timeout);
 }

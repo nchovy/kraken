@@ -25,8 +25,11 @@ import java.util.TreeSet;
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.confdb.CollectionEntry;
+import org.krakenapps.confdb.ConfigEntry;
+import org.krakenapps.confdb.Manifest;
 
-class Manifest {
+class FileManifest implements Manifest {
 	private int id;
 
 	@CollectionTypeHint(CollectionEntry.class)
@@ -35,49 +38,51 @@ class Manifest {
 	@CollectionTypeHint(ConfigEntry.class)
 	private List<ConfigEntry> configs = new ArrayList<ConfigEntry>();
 
-	public Manifest() {
+	public FileManifest() {
 	}
 
+	@Override
 	public int getId() {
 		return id;
 	}
 
+	@Override
 	public void setId(int id) {
 		this.id = id;
 	}
 
+	@Override
 	public void add(CollectionEntry e) {
 		cols.remove(e); // remove duplicates
 		cols.add(e);
 	}
 
+	@Override
 	public void remove(CollectionEntry e) {
 		cols.remove(e);
 	}
 
+	@Override
 	public void add(ConfigEntry e) {
 		configs.remove(e); // remove duplicates
 		configs.add(e);
 	}
 
+	@Override
 	public void remove(ConfigEntry e) {
 		configs.remove(e);
 	}
 
-	/**
-	 * generate next collection id (max + 1)
-	 * 
-	 * @return the next collection id
-	 */
-	public int nextCollectionId() {
-		int max = 0;
-		for (CollectionEntry e : cols)
-			if (max < e.getId())
-				max = e.getId();
+	@Override
+	public int getCollectionId(String name) {
+		CollectionEntry e = getCollectionEntry(name);
+		if (e == null)
+			throw new IllegalArgumentException("collection not found:" + name);
 
-		return max + 1;
+		return e.getId();
 	}
 
+	@Override
 	public CollectionEntry getCollectionEntry(String name) {
 		for (CollectionEntry e : cols)
 			if (e.getName().equals(name))
@@ -94,14 +99,18 @@ class Manifest {
 		return null;
 	}
 
-	public boolean containsDoc(int colId, RevLog log) {
+	@Override
+	public boolean containsDoc(String colName, int docId, long rev) {
+		CollectionEntry col = getCollectionEntry(colName);
+
 		for (ConfigEntry e : configs)
-			if (e.getColId() == colId && e.getDocId() == log.getDocId() && e.getRev() == log.getRev())
+			if (e.getColId() == col.getId() && e.getDocId() == docId && e.getRev() == rev)
 				return true;
 
 		return false;
 	}
 
+	@Override
 	public byte[] serialize() {
 		Object o = PrimitiveConverter.serialize(this);
 		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOf(o));
@@ -109,12 +118,13 @@ class Manifest {
 		return bb.array();
 	}
 
-	public static Manifest deserialize(byte[] b) {
+	public static FileManifest deserialize(byte[] b) {
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
-		return PrimitiveConverter.parse(Manifest.class, m);
+		return PrimitiveConverter.parse(FileManifest.class, m);
 	}
 
+	@Override
 	public Set<String> getCollectionNames() {
 		Set<String> names = new TreeSet<String>();
 		for (CollectionEntry e : cols)

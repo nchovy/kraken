@@ -22,15 +22,19 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
-import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.Manifest;
+import org.krakenapps.confdb.RollbackException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +49,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 * changeset revision
 	 */
 	private Integer changeset;
+
+	/**
+	 * default waiting transaction timeout in milliseconds
+	 */
+	private int defaultTimeout = 5000;
 
 	private File changeLogFile;
 	private File changeDatFile;
@@ -86,6 +95,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 		return name;
 	}
 
+	public int nextCollectionId() {
+		// TODO: return max collection id + 1
+		return new Random().nextInt(100);
+	}
+
 	@Override
 	public ConfigCollection ensureCollection(String name) {
 		try {
@@ -104,26 +118,20 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	public Set<String> getCollectionNames() {
-		try {
-			Manifest manifest = getManifest(changeset);
-			return manifest.getCollectionNames();
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
+		Manifest manifest = getManifest(changeset);
+		return manifest.getCollectionNames();
 	}
 
 	private CollectionEntry createCollection(String name) throws IOException {
+		ConfigTransaction xact = beginTransaction();
 		try {
-			lock();
-
-			// reload (manifest can be updated)
-			Manifest manifest = getManifest(changeset);
-			int newColId = manifest.nextCollectionId();
-
-			commit(CommitOp.CreateCol, new CollectionEntry(newColId, name), 0, 0, null, null);
-			return new CollectionEntry(1, name);
-		} finally {
-			unlock();
+			xact.log(CommitOp.CreateCol, name, 0, 0);
+			xact.commit(null, null);
+			int newColId = xact.getManifest().getCollectionId(name);
+			return new CollectionEntry(newColId, name);
+		} catch (Exception e) {
+			xact.rollback();
+			throw new RollbackException(e);
 		}
 	}
 
@@ -140,7 +148,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 		return new File(baseDir, name);
 	}
 
-	private Manifest getManifest(Integer rev) throws IOException {
+	@Override
+	public Manifest getManifest(Integer rev) {
 		// read last changelog and get manifest doc id
 		int manifestId = 0;
 		RevLogReader reader = null;
@@ -160,7 +169,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 			manifestId = change.getManifestId();
 		} catch (FileNotFoundException e) {
 			// changeset can be empty
-			return new Manifest();
+			return new FileManifest();
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
 		} finally {
 			if (reader != null) {
 				reader.close();
@@ -174,71 +185,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 			RevLog revlog = reader.findDoc(manifestId);
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
 			Map<String, Object> m = EncodingRule.decodeMap(ByteBuffer.wrap(doc));
-			return PrimitiveConverter.parse(Manifest.class, m);
+			return PrimitiveConverter.parse(FileManifest.class, m);
 		} catch (FileNotFoundException e) {
-			return new Manifest();
+			return new FileManifest();
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
 		} finally {
 			if (reader != null)
 				reader.close();
-		}
-	}
-
-	public Manifest commit(CommitOp op, CollectionEntry col, int docId, long rev, String committer, String log)
-			throws IOException {
-		Manifest manifest = writeManifestLog(op, col, docId, rev);
-		writeChangeLog(manifest.getId(), op, col, docId, committer, log);
-		return manifest;
-	}
-
-	private Manifest writeManifestLog(CommitOp op, CollectionEntry col, int docId, long rev) throws IOException {
-		Manifest manifest = getManifest(changeset);
-		ConfigEntry entry = new ConfigEntry(col.getId(), docId, rev);
-
-		if (op == CommitOp.CreateDoc || op == CommitOp.UpdateDoc)
-			manifest.add(entry);
-		else if (op == CommitOp.DeleteDoc)
-			manifest.remove(entry);
-		else if (op == CommitOp.CreateCol)
-			manifest.add(col);
-		else if (op == CommitOp.DropCol)
-			manifest.remove(col);
-
-		RevLog log = new RevLog();
-		log.setRev(1);
-		log.setOperation(CommitOp.CreateDoc);
-		log.setDoc(manifest.serialize());
-
-		RevLogWriter writer = null;
-		try {
-			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
-			manifest.setId(writer.write(log));
-			return manifest;
-		} finally {
-			if (writer != null)
-				writer.close();
-		}
-	}
-
-	private void writeChangeLog(int manifestId, CommitOp op, CollectionEntry col, int docId, String committer,
-			String log) throws IOException {
-		ChangeLog change = new ChangeLog();
-		change.setManifestId(manifestId);
-		change.setCommitter(committer);
-		change.setMessage(log);
-		change.getChangeSet().add(new ConfigChange(op, col.getName(), col.getId(), docId));
-
-		RevLog cl = new RevLog();
-		cl.setRev(1);
-		cl.setOperation(CommitOp.CreateDoc);
-		cl.setDoc(change.serialize());
-
-		RevLogWriter writer = null;
-		try {
-			writer = new RevLogWriter(changeLogFile, changeDatFile);
-			writer.write(cl);
-		} finally {
-			if (writer != null)
-				writer.close();
 		}
 	}
 
@@ -267,6 +221,16 @@ public class FileConfigDatabase implements ConfigDatabase {
 			if (reader != null)
 				reader.close();
 		}
+	}
+
+	@Override
+	public ConfigTransaction beginTransaction() {
+		return beginTransaction(defaultTimeout);
+	}
+
+	@Override
+	public ConfigTransaction beginTransaction(int timeout) {
+		return new FileConfigTransaction(this, timeout);
 	}
 
 	/**
