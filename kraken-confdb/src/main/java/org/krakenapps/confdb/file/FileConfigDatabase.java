@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -39,6 +40,7 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.RollbackException;
+import org.krakenapps.confdb.WriteLockTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,13 +90,39 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 * acquire write lock
 	 */
 	public void lock() {
+		lock(defaultTimeout);
+	}
+
+	public void lock(int timeout) {
+		Date begin = new Date();
+		RandomAccessFile raf = null;
+		FileChannel channel = null;
 		try {
 			lockFile.getParentFile().mkdirs();
-			RandomAccessFile raf = new RandomAccessFile(lockFile, "rw");
-			FileChannel channel = raf.getChannel();
-			lock = channel.tryLock();
+			raf = new RandomAccessFile(lockFile, "rw");
+			channel = raf.getChannel();
+
+			while (lock == null) {
+				// check lock timeout
+				Date now = new Date();
+				if (now.getTime() - begin.getTime() > timeout)
+					throw new WriteLockTimeoutException();
+
+				lock = channel.tryLock();
+				Thread.sleep(100);
+			}
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot acquire write lock", e);
+		} catch (InterruptedException e) {
+			throw new IllegalStateException("cannot acquire write lock", e);
+		} finally {
+			// close channel if lock failed
+			if (lock == null && channel != null) {
+				try {
+					channel.close();
+				} catch (IOException e1) {
+				}
+			}
 		}
 	}
 
@@ -106,8 +134,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 			if (lock != null) {
 				lock.release();
 				lock.channel().close();
+				lock = null;
 			}
 		} catch (IOException e) {
+			e.printStackTrace();
 			throw new IllegalStateException("cannot release write lock", e);
 		}
 	}
@@ -256,8 +286,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigTransaction beginTransaction(int timeout) {
-		FileConfigTransaction xact = new FileConfigTransaction(this, timeout);
-		xact.begin();
+		FileConfigTransaction xact = new FileConfigTransaction(this);
+		xact.begin(timeout);
 		return xact;
 	}
 

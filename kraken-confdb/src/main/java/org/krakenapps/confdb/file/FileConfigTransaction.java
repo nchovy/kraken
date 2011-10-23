@@ -31,11 +31,6 @@ public class FileConfigTransaction implements ConfigTransaction {
 
 	private FileConfigDatabase db;
 
-	/**
-	 * wait other transaction timeout in milliseconds
-	 */
-	private int timeout;
-
 	private Manifest manifest;
 
 	private List<ConfigChange> changeSet;
@@ -45,9 +40,8 @@ public class FileConfigTransaction implements ConfigTransaction {
 	private File manifestLogFile;
 	private File manifestDatFile;
 
-	public FileConfigTransaction(FileConfigDatabase db, int timeout) {
+	public FileConfigTransaction(FileConfigDatabase db) {
 		this.db = db;
-		this.timeout = timeout;
 		File dbDir = db.getDbDirectory();
 
 		// TODO: apply changeset rev
@@ -68,6 +62,11 @@ public class FileConfigTransaction implements ConfigTransaction {
 	@Override
 	public void begin() {
 		db.lock();
+	}
+
+	@Override
+	public void begin(int timeout) {
+		db.lock(timeout);
 	}
 
 	/**
@@ -101,12 +100,11 @@ public class FileConfigTransaction implements ConfigTransaction {
 		try {
 			Manifest manifest = writeManifestLog();
 			ChangeSetWriter.log(changeLogFile, changeDatFile, changeSet, manifest.getId(), committer, log);
-
-			db.unlock();
 		} catch (Exception e) {
 			throw new IllegalStateException(e);
+		} finally {
+			db.unlock();
 		}
-
 	}
 
 	@Override

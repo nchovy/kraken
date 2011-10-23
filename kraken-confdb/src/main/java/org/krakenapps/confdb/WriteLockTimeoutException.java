@@ -15,16 +15,6 @@
  */
 package org.krakenapps.confdb;
 
-public interface ConfigTransaction {
-	Manifest getManifest();
-
-	void begin();
-
-	void begin(int timeout);
-
-	void log(CommitOp operation, String colName, int docId, long rev);
-
-	void commit(String committer, String log);
-
-	void rollback();
+public class WriteLockTimeoutException extends RuntimeException {
+	private static final long serialVersionUID = 1L;
 }
