@@ -18,6 +18,8 @@ package org.krakenapps.confdb;
 public interface ConfigCollection {
 	String getName();
 
+	int count();
+
 	ConfigIterator findAll();
 
 	ConfigIterator find(Predicate pred);

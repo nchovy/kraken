@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicates;
 
 import static org.junit.Assert.*;
@@ -30,6 +31,25 @@ public class DatabaseTest {
 	@After
 	public void teardown() throws IOException {
 		db.purge();
+	}
+
+	@Test
+	public void testTransaction() throws IOException {
+		assertEquals(0, col.count());
+
+		ConfigTransaction xact = db.beginTransaction();
+		col.add(xact, "xeraph");
+		col.add(xact, "8con");
+		xact.commit("xeraph", "added members");
+
+		assertEquals(2, col.count());
+
+		assertEquals(2, db.getCommitLogs().size());
+		CommitLog log = db.getCommitLogs().get(1);
+		assertEquals("xeraph", log.getCommitter());
+		assertEquals("added members", log.getMessage());
+		assertEquals(1, log.getChangeSet().get(0).getDocId());
+		assertEquals(2, log.getChangeSet().get(1).getDocId());
 	}
 
 	@Test

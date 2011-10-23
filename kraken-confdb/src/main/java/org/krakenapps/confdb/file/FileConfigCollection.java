@@ -41,9 +41,13 @@ public class FileConfigCollection implements ConfigCollection {
 	private FileConfigDatabase db;
 
 	/**
+	 * head revision if null, otherwise it point to specific revision
+	 */
+	private Integer changeset;
+
+	/**
 	 * TODO: manifest should be updated when you commit
 	 */
-	private Manifest manifest;
 
 	/**
 	 * collection metadata
@@ -54,7 +58,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 	private File datFile;
 
-	public FileConfigCollection(FileConfigDatabase db, Manifest manifest, CollectionEntry col) throws IOException {
+	public FileConfigCollection(FileConfigDatabase db, Integer changeset, CollectionEntry col) throws IOException {
 		File dbDir = db.getDbDirectory();
 		boolean created = dbDir.mkdirs();
 		if (created)
@@ -62,7 +66,7 @@ public class FileConfigCollection implements ConfigCollection {
 
 		this.db = db;
 		this.col = col;
-		this.manifest = manifest;
+		this.changeset = changeset;
 
 		logFile = new File(dbDir, "col" + col.getId() + ".log");
 		datFile = new File(dbDir, "col" + col.getId() + ".dat");
@@ -71,6 +75,12 @@ public class FileConfigCollection implements ConfigCollection {
 	@Override
 	public String getName() {
 		return col.getName();
+	}
+
+	@Override
+	public int count() {
+		Manifest manifest = db.getManifest(changeset);
+		return manifest.getConfigEntries(col.getName()).size();
 	}
 
 	@Override
@@ -110,6 +120,7 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	private List<RevLog> getSnapshot(RevLogReader reader) throws IOException {
+		Manifest manifest = db.getManifest(changeset);
 		List<RevLog> snapshot = new ArrayList<RevLog>();
 
 		for (long index = 0; index < reader.count(); index++) {
@@ -155,7 +166,6 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write db changelog
 			xact.log(CommitOp.CreateDoc, col.getName(), docId, revlog.getRev());
-			manifest = xact.getManifest();
 			return new FileConfig(db, this, docId, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
@@ -218,7 +228,6 @@ public class FileConfigCollection implements ConfigCollection {
 			// write collection log
 			int id = writer.write(revlog);
 			xact.log(CommitOp.UpdateDoc, col.getName(), id, revlog.getRev());
-			manifest = xact.getManifest();
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
@@ -267,7 +276,6 @@ public class FileConfigCollection implements ConfigCollection {
 			// write collection log
 			int id = writer.write(revlog);
 			xact.log(CommitOp.DeleteDoc, col.getName(), id, revlog.getRev());
-			manifest = xact.getManifest();
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);

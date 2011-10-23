@@ -1,5 +1,6 @@
 package org.krakenapps.confdb;
 
+import java.util.List;
 import java.util.Set;
 
 public interface Manifest {
@@ -12,6 +13,8 @@ public interface Manifest {
 	int getCollectionId(String name);
 
 	CollectionEntry getCollectionEntry(String name);
+
+	List<ConfigEntry> getConfigEntries(String colName);
 
 	boolean containsDoc(String colName, int docId, long rev);
 

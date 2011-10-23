@@ -88,6 +88,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 */
 	public void lock() {
 		try {
+			lockFile.getParentFile().mkdirs();
 			RandomAccessFile raf = new RandomAccessFile(lockFile, "rw");
 			FileChannel channel = raf.getChannel();
 			lock = channel.tryLock();
@@ -130,7 +131,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			if (col == null)
 				col = createCollection(name);
 
-			return new FileConfigCollection(this, manifest, col);
+			return new FileConfigCollection(this, changeset, col);
 		} catch (IOException e) {
 			logger.error("kraken confdb: cannot open collection file", e);
 			return null;

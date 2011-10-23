@@ -17,6 +17,7 @@ package org.krakenapps.confdb.file;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +78,7 @@ class FileManifest implements Manifest {
 	public int getCollectionId(String name) {
 		CollectionEntry e = getCollectionEntry(name);
 		if (e == null)
-			throw new IllegalArgumentException("collection not found:" + name);
+			throw new IllegalArgumentException("collection not found: " + name);
 
 		return e.getId();
 	}
@@ -89,6 +90,17 @@ class FileManifest implements Manifest {
 				return e;
 
 		return null;
+	}
+
+	@Override
+	public List<ConfigEntry> getConfigEntries(String colName) {
+		int colId = getCollectionId(colName);
+
+		List<ConfigEntry> entries = new LinkedList<ConfigEntry>();
+		for (ConfigEntry e : configs)
+			if (e.getColId() == colId)
+				entries.add(e);
+		return entries;
 	}
 
 	public String getCollectionName(int id) {
