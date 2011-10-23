@@ -86,4 +86,10 @@ public class ConfigEntry {
 	public void setRev(long rev) {
 		this.rev = rev;
 	}
+
+	@Override
+	public String toString() {
+		return "col=" + colId + ", doc=" + docId + ", rev=" + rev;
+	}
+
 }

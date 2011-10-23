@@ -73,4 +73,14 @@ public interface ConfigDatabase {
 	 * @return the transaction object
 	 */
 	ConfigTransaction beginTransaction(int timeout);
+
+	/**
+	 * Rollback to specified changeset revision
+	 * 
+	 * @param changeset
+	 *            the changeset revision
+	 */
+	void rollback(int changeset);
+
+	void rollback(int changeset, String committer, String log);
 }

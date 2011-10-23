@@ -85,7 +85,7 @@ public class FileConfigTransaction implements ConfigTransaction {
 	public void commit(String committer, String log) {
 		try {
 			Manifest manifest = writeManifestLog();
-			writeChangeLog(manifest.getId(), committer, log);
+			ChangeSetWriter.log(changeLogFile, changeDatFile, changeSet, manifest.getId(), committer, log);
 
 			db.unlock();
 		} catch (Exception e) {
@@ -112,28 +112,6 @@ public class FileConfigTransaction implements ConfigTransaction {
 			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
 			manifest.setId(writer.write(log));
 			return manifest;
-		} finally {
-			if (writer != null)
-				writer.close();
-		}
-	}
-
-	private void writeChangeLog(int manifestId, String committer, String log) throws IOException {
-		ChangeLog change = new ChangeLog();
-		change.setManifestId(manifestId);
-		change.setCommitter(committer);
-		change.setMessage(log);
-		change.setChangeSet(changeSet);
-
-		RevLog cl = new RevLog();
-		cl.setRev(1);
-		cl.setOperation(CommitOp.CreateDoc);
-		cl.setDoc(change.serialize());
-
-		RevLogWriter writer = null;
-		try {
-			writer = new RevLogWriter(changeLogFile, changeDatFile);
-			writer.write(cl);
 		} finally {
 			if (writer != null)
 				writer.close();

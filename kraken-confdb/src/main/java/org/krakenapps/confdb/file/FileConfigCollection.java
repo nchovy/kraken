@@ -84,6 +84,12 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	@Override
+	public int count(ConfigTransaction xact) {
+		Manifest manifest = xact.getManifest();
+		return manifest.getConfigEntries(col.getName()).size();
+	}
+
+	@Override
 	public ConfigIterator findAll() {
 		return find(null);
 	}

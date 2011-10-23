@@ -140,6 +140,6 @@ class ChangeLog implements CommitLog {
 			sb.append(c.toString());
 		}
 
-		return "committer=" + committer + ", msg=" + message + ", changeset=[" + sb.toString() + "]";
+		return "rev=" + rev + ", committer=" + committer + ", msg=" + message + ", changeset=[" + sb.toString() + "]";
 	}
 }

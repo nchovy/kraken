@@ -34,6 +34,35 @@ public class DatabaseTest {
 	}
 
 	@Test
+	public void testDbRollback() throws IOException {
+		assertEquals(0, col.count());
+
+		col.add("xeraph");
+		col.add("8con");
+		assertEquals(2, col.count());
+
+		db.rollback(1, "xeraph", "back to the initial state");
+		assertEquals(0, col.count());
+	}
+
+	@Test
+	public void testTransRollback() throws IOException {
+		assertEquals(0, col.count());
+
+		ConfigTransaction xact = db.beginTransaction();
+		col.add(xact, "xeraph");
+		col.add(xact, "8con");
+		assertEquals(0, col.count());
+		assertEquals(2, col.count(xact));
+
+		xact.rollback();
+		assertEquals(0, col.count());
+
+		col.add("xeraph");
+		assertEquals(1, col.count());
+	}
+
+	@Test
 	public void testTransaction() throws IOException {
 		assertEquals(0, col.count());
 

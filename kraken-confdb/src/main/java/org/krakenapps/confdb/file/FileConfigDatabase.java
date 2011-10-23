@@ -33,6 +33,7 @@ import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
+import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigTransaction;
@@ -206,7 +207,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			RevLog revlog = reader.findDoc(manifestId);
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
 			Map<String, Object> m = EncodingRule.decodeMap(ByteBuffer.wrap(doc));
-			return PrimitiveConverter.parse(FileManifest.class, m);
+
+			// manifest id should be set here (id = revlog id)
+			FileManifest manifest = PrimitiveConverter.parse(FileManifest.class, m);
+			manifest.setId(manifestId);
+			return manifest;
 		} catch (FileNotFoundException e) {
 			return new FileManifest();
 		} catch (IOException e) {
@@ -254,6 +259,26 @@ public class FileConfigDatabase implements ConfigDatabase {
 		FileConfigTransaction xact = new FileConfigTransaction(this, timeout);
 		xact.begin();
 		return xact;
+	}
+
+	@Override
+	public void rollback(int changeset) {
+		rollback(changeset, null, null);
+	}
+
+	@Override
+	public void rollback(int changeset, String committer, String log) {
+		Manifest manifest = getManifest(changeset);
+
+		try {
+			lock();
+			List<ConfigChange> emptyChangeSet = new ArrayList<ConfigChange>();
+			ChangeSetWriter.log(changeLogFile, changeDatFile, emptyChangeSet, manifest.getId(), committer, log);
+		} catch (IOException e) {
+			throw new RollbackException(e);
+		} finally {
+			unlock();
+		}
 	}
 
 	/**

@@ -24,7 +24,7 @@ package org.krakenapps.confdb;
 public class CollectionEntry {
 	private int id;
 	private String name;
-	
+
 	public CollectionEntry() {
 	}
 
@@ -63,4 +63,8 @@ public class CollectionEntry {
 		return name;
 	}
 
+	@Override
+	public String toString() {
+		return "id=" + id + ", name=" + name;
+	}
 }
