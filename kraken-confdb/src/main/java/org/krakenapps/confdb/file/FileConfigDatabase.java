@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
@@ -43,22 +44,26 @@ import org.krakenapps.confdb.WriteLockTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * File config database instance should be only one in a JVM instance since it
+ * uses file lock for exclusive write locking. In multi-threaded environment,
+ * write lock is acquired using reentrant lock. If you create multiple
+ * instances, write lock is not guaranteed.
+ * 
+ * @author xeraph
+ * 
+ */
 public class FileConfigDatabase implements ConfigDatabase {
 	private final Logger logger = LoggerFactory.getLogger(FileConfigDatabase.class.getName());
 
-	private File baseDir;
-	private File dbDir;
-	private String name;
+	private final File baseDir;
+	private final File dbDir;
+	private final String name;
 
 	/**
 	 * base changeset revision
 	 */
-	private Integer changeset;
-
-	/**
-	 * default waiting transaction timeout in milliseconds
-	 */
-	private int defaultTimeout = 5000;
+	private final Integer changeset;
 
 	private final File changeLogFile;
 	private final File changeDatFile;
@@ -67,7 +72,13 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private final File counterFile;
 	private final File lockFile;
 
-	private FileLock lock;
+	private final ReentrantLock threadLock;
+	private FileLock processLock;
+
+	/**
+	 * default waiting transaction timeout in milliseconds
+	 */
+	private int defaultTimeout = 5000;
 
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
 		this(baseDir, name, null);
@@ -78,6 +89,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		this.name = name;
 		this.dbDir = new File(baseDir, name);
 		this.changeset = rev;
+		this.threadLock = new ReentrantLock();
 
 		changeLogFile = new File(dbDir, "changeset.log");
 		changeDatFile = new File(dbDir, "changeset.dat");
@@ -95,6 +107,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	public void lock(int timeout) {
+		// process lock first
 		Date begin = new Date();
 		RandomAccessFile raf = null;
 		FileChannel channel = null;
@@ -103,13 +116,13 @@ public class FileConfigDatabase implements ConfigDatabase {
 			raf = new RandomAccessFile(lockFile, "rw");
 			channel = raf.getChannel();
 
-			while (lock == null) {
+			while (processLock == null) {
 				// check lock timeout
 				Date now = new Date();
 				if (now.getTime() - begin.getTime() > timeout)
 					throw new WriteLockTimeoutException();
 
-				lock = channel.tryLock();
+				processLock = channel.tryLock();
 				Thread.sleep(100);
 			}
 		} catch (IOException e) {
@@ -118,24 +131,31 @@ public class FileConfigDatabase implements ConfigDatabase {
 			throw new IllegalStateException("cannot acquire write lock", e);
 		} finally {
 			// close channel if lock failed
-			if (lock == null && channel != null) {
+			if (processLock == null && channel != null) {
 				try {
 					channel.close();
 				} catch (IOException e1) {
 				}
 			}
 		}
+
+		// thread lock
+		threadLock.lock();
 	}
 
 	/**
 	 * release write lock
 	 */
 	public void unlock() {
+		// release thread lock
+		threadLock.unlock();
+
+		// release process lock
 		try {
-			if (lock != null) {
-				lock.release();
-				lock.channel().close();
-				lock = null;
+			if (processLock != null) {
+				processLock.release();
+				processLock.channel().close();
+				processLock = null;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -193,11 +213,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			// create new collection if not exists
 			if (col == null)
 				col = createCollection(name);
-			
+
 			FileConfigCollection collection = new FileConfigCollection(this, changeset, col);
 			if (changeset != null)
 				return new UnmodifiableConfigCollection(collection);
-			
+
 			return collection;
 		} catch (IOException e) {
 			logger.error("kraken confdb: cannot open collection file", e);

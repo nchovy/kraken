@@ -238,4 +238,9 @@ public class DatabaseTest {
 
 		it.close();
 	}
+
+	@Test
+	public void testThreadLock() {
+		// coming soon
+	}
 }
