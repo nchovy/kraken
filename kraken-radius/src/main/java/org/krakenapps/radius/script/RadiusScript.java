@@ -26,6 +26,7 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.radius.client.RadiusClient;
+import org.krakenapps.radius.client.auth.ChapAuthenticator;
 import org.krakenapps.radius.client.auth.PapAuthenticator;
 import org.krakenapps.radius.protocol.RadiusPacket;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
@@ -79,6 +80,28 @@ public class RadiusScript implements Script {
 		} catch (Exception e) {
 			context.println(e.getMessage());
 			logger.error("kraken radius: pap authentication failed", e);
+		}
+	}
+
+	@ScriptUsage(description = "authenticate using chap method", arguments = {
+			@ScriptArgument(name = "server ip", type = "string", description = "radius server ip address"),
+			@ScriptArgument(name = "shared secret", type = "string", description = "shared secret"),
+			@ScriptArgument(name = "username", type = "string", description = "user name"),
+			@ScriptArgument(name = "password", type = "string", description = "password") })
+	public void chapauth(String[] args) {
+		try {
+			InetAddress addr = InetAddress.getByName(args[0]);
+			String sharedSecret = args[1];
+			String userName = args[2];
+			String password = args[3];
+
+			RadiusClient client = new RadiusClient(addr, sharedSecret);
+			ChapAuthenticator pap = new ChapAuthenticator(client, userName, password);
+			RadiusPacket response = client.authenticate(pap);
+			context.println(response);
+		} catch (Exception e) {
+			context.println(e.getMessage());
+			logger.error("kraken radius: chap authentication failed", e);
 		}
 	}
 

@@ -41,6 +41,14 @@ public class AccessRequest extends RadiusPacket {
 		getAttributes().add(userPassword);
 	}
 
+	public ChapPasswordAttribute getChapPassword() {
+		return (ChapPasswordAttribute) findAttribute(3);
+	}
+
+	public void setChapPassword(ChapPasswordAttribute chapPassword) {
+		getAttributes().add(chapPassword);
+	}
+
 	public NasIpAddressAttribute getNasIpAddress() {
 		return (NasIpAddressAttribute) findAttribute(4);
 	}
