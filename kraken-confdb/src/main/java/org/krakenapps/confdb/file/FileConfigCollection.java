@@ -27,7 +27,6 @@ import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigIterator;
-import org.krakenapps.confdb.ConfigListener;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.Predicate;
@@ -299,13 +298,5 @@ public class FileConfigCollection implements ConfigCollection {
 		log.setOperation(op);
 		log.setDoc(doc);
 		return log;
-	}
-
-	@Override
-	public void addHook(CommitOp op, ConfigListener listener) {
-	}
-
-	@Override
-	public void removeHook(CommitOp op, ConfigListener listener) {
 	}
 }

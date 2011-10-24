@@ -193,8 +193,12 @@ public class FileConfigDatabase implements ConfigDatabase {
 			// create new collection if not exists
 			if (col == null)
 				col = createCollection(name);
-
-			return new FileConfigCollection(this, changeset, col);
+			
+			FileConfigCollection collection = new FileConfigCollection(this, changeset, col);
+			if (changeset != null)
+				return new UnmodifiableConfigCollection(collection);
+			
+			return collection;
 		} catch (IOException e) {
 			logger.error("kraken confdb: cannot open collection file", e);
 			return null;

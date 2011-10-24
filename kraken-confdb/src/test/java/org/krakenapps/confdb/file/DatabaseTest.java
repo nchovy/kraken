@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicates;
@@ -33,14 +34,14 @@ import static org.junit.Assert.*;
 public class DatabaseTest {
 
 	private FileConfigDatabase db;
-	private FileConfigCollection col;
+	private ConfigCollection col;
 
 	@Before
 	public void setup() throws IOException {
 		File workingDir = new File(System.getProperty("user.dir"));
 
 		db = new FileConfigDatabase(workingDir, "testdb2");
-		col = (FileConfigCollection) db.ensureCollection("testcol2");
+		col = db.ensureCollection("testcol2");
 	}
 
 	@After
@@ -110,17 +111,42 @@ public class DatabaseTest {
 		// back to the revision 2
 		File workingDir = new File(System.getProperty("user.dir"));
 		db = new FileConfigDatabase(workingDir, "testdb2", 2);
-		col = (FileConfigCollection) db.ensureCollection("testcol2");
+		col = db.ensureCollection("testcol2");
 
 		assertNotNull(col.findOne(Predicates.eq("hello world")));
 		assertNull(col.findOne(Predicates.eq("goodbye world")));
 
 		// back to the revision 1 (just created)
 		db = new FileConfigDatabase(workingDir, "testdb2", 1);
-		col = (FileConfigCollection) db.ensureCollection("testcol2");
+		col = db.ensureCollection("testcol2");
 
 		assertNull(col.findOne(Predicates.eq("hello world")));
 		assertNull(col.findOne(Predicates.eq("goodbye world")));
+	}
+
+	/**
+	 * you cannot update database in flashback mode
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected = IllegalStateException.class)
+	public void testUpdateBlocking() throws Exception {
+		List<CommitLog> logs = db.getCommitLogs();
+		assertEquals(1, logs.size());
+
+		col.add("hello world", "xeraph", "first commit");
+		col.add("goodbye world", "xeraph", "second commit");
+
+		assertNotNull(col.findOne(Predicates.eq("hello world")));
+		assertNotNull(col.findOne(Predicates.eq("goodbye world")));
+
+		// back to the revision 2
+		File workingDir = new File(System.getProperty("user.dir"));
+		db = new FileConfigDatabase(workingDir, "testdb2", 2);
+		col = db.ensureCollection("testcol2");
+
+		// try to update, but should be blocked
+		col.add("goodbye world", "xeraph", "try commit in flashback");
 	}
 
 	@Test

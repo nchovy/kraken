@@ -49,8 +49,4 @@ public interface ConfigCollection {
 	Config remove(Config c, boolean ignoreConflict, String committer, String log);
 
 	Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict);
-
-	void addHook(CommitOp op, ConfigListener listener);
-
-	void removeHook(CommitOp op, ConfigListener listener);
 }
