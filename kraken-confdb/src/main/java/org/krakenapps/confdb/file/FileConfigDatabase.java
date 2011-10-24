@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 import org.krakenapps.api.PrimitiveConverter;
@@ -52,7 +51,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private String name;
 
 	/**
-	 * changeset revision
+	 * base changeset revision
 	 */
 	private Integer changeset;
 
@@ -61,12 +60,13 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 */
 	private int defaultTimeout = 5000;
 
-	private File changeLogFile;
-	private File changeDatFile;
-	private File manifestLogFile;
-	private File manifestDatFile;
+	private final File changeLogFile;
+	private final File changeDatFile;
+	private final File manifestLogFile;
+	private final File manifestDatFile;
+	private final File counterFile;
+	private final File lockFile;
 
-	private File lockFile;
 	private FileLock lock;
 
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
@@ -84,6 +84,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		manifestLogFile = new File(dbDir, "manifest.log");
 		manifestDatFile = new File(dbDir, "manifest.dat");
 		lockFile = new File(dbDir, "write.lock");
+		counterFile = new File(dbDir, "col.id");
 	}
 
 	/**
@@ -147,9 +148,40 @@ public class FileConfigDatabase implements ConfigDatabase {
 		return name;
 	}
 
+	/**
+	 * should be called in write locked context
+	 * 
+	 * @return the next collection id
+	 */
 	public int nextCollectionId() {
-		// TODO: return max collection id + 1
-		return new Random().nextInt(100);
+		RandomAccessFile raf = null;
+		int next = 0;
+		try {
+			raf = new RandomAccessFile(counterFile, "rw");
+			String line = raf.readLine();
+			if (line != null)
+				next = Integer.valueOf(line);
+
+			next++;
+
+			// cut off
+			raf.setLength(0);
+
+			// update counter
+			raf.write((next + "\n").getBytes());
+
+			logger.debug("kraken confdb: generated next collection id {}", next);
+			return next;
+		} catch (IOException e) {
+			throw new IllegalStateException("cannot generate collection id", e);
+		} finally {
+			if (raf != null) {
+				try {
+					raf.close();
+				} catch (IOException e) {
+				}
+			}
+		}
 	}
 
 	@Override
@@ -335,8 +367,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			manifestLogFile.delete();
 			changeLogFile.delete();
 			changeDatFile.delete();
+			counterFile.delete();
 		} finally {
 			unlock();
 		}
+
+		lockFile.delete();
 	}
 }
