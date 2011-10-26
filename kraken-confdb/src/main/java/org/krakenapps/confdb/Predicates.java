@@ -21,17 +21,17 @@ public class Predicates {
 	public static Predicate eq(Object o) {
 		return new EqObject(o);
 	}
-	
-	public static Predicate key(String key, Object value) {
-		return new KeyMatch(key, value);
+
+	public static Predicate field(String field, Object value) {
+		return new KeyMatch(field, value);
 	}
 
-	public static Predicate and(Predicate lhs, Predicate rhs) {
-		return new Conjunction(lhs, rhs);
+	public static Predicate and(Predicate... pred) {
+		return new Conjunction(pred);
 	}
 
-	public static Predicate or(Predicate lhs, Predicate rhs) {
-		return new Disjunction(lhs, rhs);
+	public static Predicate or(Predicate... pred) {
+		return new Disjunction(pred);
 	}
 
 	private static class EqObject implements Predicate {
@@ -48,10 +48,9 @@ public class Predicates {
 	}
 
 	private static class KeyMatch implements Predicate {
-
 		private String key;
 		private Object value;
-		
+
 		public KeyMatch(String key, Object value) {
 			this.key = key;
 			this.value = value;
@@ -80,32 +79,36 @@ public class Predicates {
 	}
 
 	private static class Conjunction implements Predicate {
-		private Predicate lhs;
-		private Predicate rhs;
+		private Predicate[] pred;
 
-		public Conjunction(Predicate lhs, Predicate rhs) {
-			this.lhs = lhs;
-			this.rhs = rhs;
+		public Conjunction(Predicate... pred) {
+			this.pred = pred;
 		}
 
 		@Override
 		public boolean eval(Config c) {
-			return lhs.eval(c) && rhs.eval(c);
+			for (Predicate p : pred) {
+				if (!p.eval(c))
+					return false;
+			}
+			return true;
 		}
 	}
 
 	private static class Disjunction implements Predicate {
-		private Predicate lhs;
-		private Predicate rhs;
+		private Predicate[] pred;
 
-		public Disjunction(Predicate lhs, Predicate rhs) {
-			this.lhs = lhs;
-			this.rhs = rhs;
+		public Disjunction(Predicate... pred) {
+			this.pred = pred;
 		}
 
 		@Override
 		public boolean eval(Config c) {
-			return lhs.eval(c) || rhs.eval(c);
+			for (Predicate p : pred) {
+				if (p.eval(c))
+					return true;
+			}
+			return false;
 		}
 	}
 

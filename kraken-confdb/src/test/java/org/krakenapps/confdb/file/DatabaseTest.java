@@ -32,7 +32,6 @@ import org.krakenapps.confdb.Predicates;
 import static org.junit.Assert.*;
 
 public class DatabaseTest {
-
 	private FileConfigDatabase db;
 	private ConfigCollection col;
 
