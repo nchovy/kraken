@@ -210,5 +210,14 @@ public class FileMonitorScript implements Script {
 			context.println("[D] " + f.getAbsolutePath());
 		}
 
+		@Override
+		public void onCreated(File f) {
+			context.println("[C] " + f.getAbsolutePath());
+		}
+
+		@Override
+		public void onModified(File f) {
+			context.println("[M] " + f.getAbsolutePath());
+		}
 	}
 }

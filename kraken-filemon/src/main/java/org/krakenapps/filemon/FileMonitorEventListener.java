@@ -21,6 +21,10 @@ import org.krakenapps.filemon.impl.FileChange;
 
 public interface FileMonitorEventListener {
 	void onCheck(File f);
+
+	void onCreated(File f);
+
+	void onModified(File f);
 	
 	void onModified(FileChange change);
 
