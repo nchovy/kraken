@@ -70,7 +70,6 @@
 		<module>kraken-bnf</module>
 		<module>kraken-syslog-parser</module>
 		<module>kraken-stormbringer</module>
-		<module>kraken-sql-engine</module>
 		<module>kraken-webconsole</module>
 		<module>kraken-msgbus</module>
 		<module>kraken-proxy</module>
