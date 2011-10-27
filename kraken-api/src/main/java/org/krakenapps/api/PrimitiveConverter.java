@@ -5,11 +5,17 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PrimitiveConverter {
+	@SuppressWarnings("unchecked")
+	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(Short.class, Integer.class, Long.class, Float.class, Double.class, String.class, Date.class));
+
 	public static Object serialize(Collection<?> c) {
 		List<Object> l = new ArrayList<Object>();
 		for (Object o : c)
@@ -22,25 +28,41 @@ public class PrimitiveConverter {
 		Map<String, Object> m = new HashMap<String, Object>();
 		Class<?> c = o.getClass();
 
+		if (nonSerializeClasses.contains(c))
+			return o;
+
 		for (Field f : c.getDeclaredFields()) {
 			try {
+				FieldOption option = f.getAnnotation(FieldOption.class);
+				if (option != null && option.skip())
+					continue;
+
 				String fieldName = toUnderscoreName(f.getName());
+				if (option != null && !option.name().isEmpty())
+					fieldName = option.name();
+
 				f.setAccessible(true);
 				Object value = f.get(o);
+				if (option != null && !option.nullable() && value == null)
+					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f.getType().getSimpleName(), c.getName(), f.getName()));
 
 				if (value instanceof Enum)
 					m.put(fieldName, value.toString());
-				else if (value instanceof List) {
-					List<?> l = (List<?>) value;
+				else if (value instanceof Collection) {
+					Collection<?> l = (Collection<?>) value;
 					List<Object> l2 = new ArrayList<Object>(l.size());
 					for (Object el : l)
 						l2.add(serialize(el));
 
 					m.put(fieldName, l2);
+				} else if (value instanceof String) {
+					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", c.getName(), f.getName()));
+					m.put(fieldName, value);
 				} else
 					m.put(fieldName, value);
 			} catch (Exception e) {
-				e.printStackTrace();
+				throw new RuntimeException("kraken api: serialize failed", e);
 			}
 		}
 
@@ -64,13 +86,19 @@ public class PrimitiveConverter {
 			T n = (T) c.newInstance();
 
 			for (Field f : clazz.getDeclaredFields()) {
-				CollectionTypeHint hint = f.getAnnotation(CollectionTypeHint.class);
-				Class<?> fieldType = f.getType();
+				FieldOption option = f.getAnnotation(FieldOption.class);
+				if (option != null && option.skip())
+					continue;
+
 				String fieldName = toUnderscoreName(f.getName());
+				if (option != null && !option.name().isEmpty())
+					fieldName = option.name();
 
 				Object value = m.get(fieldName);
 				f.setAccessible(true);
 
+				Class<?> fieldType = f.getType();
+				CollectionTypeHint hint = f.getAnnotation(CollectionTypeHint.class);
 				if (fieldType.isEnum() && value instanceof String) {
 					Object found = null;
 					for (Object o : fieldType.getEnumConstants())
@@ -97,8 +125,7 @@ public class PrimitiveConverter {
 
 			return n;
 		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
+			throw new RuntimeException("kraken api: parse failed", e);
 		}
 	}
 

@@ -22,10 +22,12 @@ public class PrimitiveConverterTest {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("foo", "qoo");
 		m.put("bar", 123);
+		m.put("ignore", "skip");
 
 		Sample s = PrimitiveConverter.parse(Sample.class, m);
 		assertEquals("qoo", s.foo);
 		assertEquals(123, s.bar);
+		assertEquals(null, s.ignore);
 	}
 
 	@Test
@@ -44,11 +46,23 @@ public class PrimitiveConverterTest {
 
 	@SuppressWarnings("unchecked")
 	@Test
+	public void testToList() {
+		Nested s = new Nested();
+		s.name = "nchovy refrigerator";
+		s.vegetableList = Arrays.asList("haruyache", "etulyache", "sahulyache", "nahulyache");
+		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
+		assertEquals("nchovy refrigerator", o.get("name"));
+		assertEquals(Arrays.asList("haruyache", "etulyache", "sahulyache", "nahulyache"), o.get("vegetable_list"));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
 	public void testToPrimitive() {
-		Sample s = new Sample("qoo", 123);
+		Sample s = new Sample("qoo", 123, "ignore field");
 		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
 		assertEquals("qoo", o.get("foo"));
 		assertEquals(123, o.get("bar"));
+		assertEquals(false, o.containsKey("ignore"));
 	}
 
 	@Test
@@ -105,15 +119,18 @@ public class PrimitiveConverterTest {
 	private static class Sample {
 		private String foo;
 		private int bar;
+		@FieldOption(skip = true)
+		private String ignore;
 		private Nested nested;
 
 		@SuppressWarnings("unused")
 		public Sample() {
 		}
 
-		public Sample(String foo, int bar) {
+		public Sample(String foo, int bar, String ignore) {
 			this.foo = foo;
 			this.bar = bar;
+			this.ignore = ignore;
 		}
 
 		@Override
