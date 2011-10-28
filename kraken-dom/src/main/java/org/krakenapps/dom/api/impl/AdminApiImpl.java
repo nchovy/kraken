@@ -155,6 +155,13 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
 
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("type", "login");
+			m.put("login_name", admin.getUser().getLoginName());
+			for (LoggedInAdmin user : loggedIn) {
+				pushApi.push(user.session, "kraken-system-event", m);
+			}
+
 			return admin;
 		} catch (LoginFailedException e) {
 			updateLoginFailures(admin, false);
