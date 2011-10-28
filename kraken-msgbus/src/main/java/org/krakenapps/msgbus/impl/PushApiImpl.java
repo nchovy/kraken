@@ -68,6 +68,8 @@ public class PushApiImpl implements PushApi {
 	@Override
 	public void push(Session session, String callback, Map<String, Object> m) {
 		Set<Binding> bindings = pushBindingsMap.get(callback);
+		if (bindings == null)
+			return;
 		for (Binding binding : bindings) {
 			if (binding.sessionId == session.getId()) {
 				Message msg = createMessage(session.getOrgId(), binding, callback, m);
