@@ -12,6 +12,12 @@ import org.slf4j.LoggerFactory;
 public class LogDbClientRpcService extends SimpleRpcService {
 	private final Logger logger = LoggerFactory.getLogger(LogDbClientRpcService.class.getName());
 
+	private LogDbClientRpcCallback callback;
+
+	public LogDbClientRpcService(LogDbClientRpcCallback callback) {
+		this.callback = callback;
+	}
+
 	@Override
 	public void exceptionCaught(RpcExceptionEvent e) {
 		logger.error("kraken logdb client: rpc error", e);
@@ -33,8 +39,7 @@ public class LogDbClientRpcService extends SimpleRpcService {
 		int offset = (Integer) m.get("offset");
 		int limit = (Integer) m.get("limit");
 
-		logger.info("kraken logdb client: on page loaded, id: {}, offset: {}, limit: {}", new Object[] { id, offset,
-				limit });
+		callback.onPageLoaded(id, offset, limit);
 	}
 
 	@RpcMethod(name = "onEof")
@@ -43,6 +48,6 @@ public class LogDbClientRpcService extends SimpleRpcService {
 		int offset = (Integer) m.get("offset");
 		int limit = (Integer) m.get("limit");
 
-		logger.info("kraken logdb client: on eof id: {}, offset: {}, limit: {}", new Object[] { id, offset, limit });
+		callback.onEof(id, offset, limit);
 	}
 }

@@ -2,11 +2,16 @@ package org.krakenapps.logdb.client;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.krakenapps.rpc.RpcClient;
 import org.krakenapps.rpc.RpcConnection;
@@ -20,43 +25,59 @@ public class LogDbClient {
 	private final Logger logger = LoggerFactory.getLogger(LogDbClient.class.getName());
 
 	private String guid;
-	private InetSocketAddress remote;
 	private RpcClient client;
 	private RpcSession session;
 	private int bufferSize;
 	private LogDbClientRpcService service;
+	private Map<Integer, LogQueryStatus> queries;
 
 	private List<Object> logs = new LinkedList<Object>();
 
 	public static void main(String[] args) throws RpcException, InterruptedException {
-		LogDbClient client = new LogDbClient("test-guid", new InetSocketAddress(7139));
+		final LogDbClient client = new LogDbClient("test-guid");
+
 		try {
-			Log log = new Log("test", "hello world");
-			client.connect();
+			client.connect(new InetSocketAddress(7139), "1234");
 			LogQueryStatus q = client.createQuery("table test");
+			q.addCallback(new LogQueryCallback() {
+
+				@Override
+				public void onPageLoaded(int queryId) {
+				}
+
+				@Override
+				public void onEof(int queryId) {
+					try {
+						LogQueryResult r = client.getResult(queryId, 0, 10);
+						System.out.println("total " + r.getTotalCount());
+						Iterator<Object> it = r.getResult();
+
+						while (it.hasNext()) {
+							@SuppressWarnings("unchecked")
+							Map<String, Object> m = (Map<String, Object>) it.next();
+							System.out.println(m.get("_id") + ", " + m.get("line"));
+						}
+
+						client.removeQuery(queryId);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+
 			System.out.println(q);
 
-			client.startQuery(q, 0, 10, 5);
-			Thread.sleep(2000);
-
-			LogQueryResult r = client.getResult(q, 0, 10);
-			System.out.println("total " + r.getTotalCount());
-			Iterator<Object> it = r.getResult();
-
-			while (it.hasNext()) {
-				Map<String, Object> m = (Map<String, Object>) it.next();
-				System.out.println(m.get("_id") + ", " + m.get("line"));
-			}
-
-			client.removeQuery(q);
+			client.startQuery(q.getId(), 0, 10, 5);
+			client.waitFor(q.getId(), 5000);
 		} finally {
 			client.close();
 		}
 	}
 
-	public LogDbClient(String guid, InetSocketAddress remote) {
+	public LogDbClient(String guid) {
 		this.guid = guid;
-		this.remote = remote;
+		this.service = new LogDbClientRpcService(new RpcEventHandler());
+		this.queries = new ConcurrentHashMap<Integer, LogQueryStatus>();
 	}
 
 	public int getBufferSize() {
@@ -67,9 +88,19 @@ public class LogDbClient {
 		this.bufferSize = bufferSize;
 	}
 
-	public void connect() throws RpcException, InterruptedException {
+	public void connect(InetSocketAddress remote, String password) throws RpcException, InterruptedException {
 		RpcConnectionProperties props = new RpcConnectionProperties(remote);
-		props.setPassword("1234");
+		props.setPassword(password);
+
+		client = new RpcClient(guid);
+		RpcConnection conn = client.connect(props);
+		conn.bind("logdb-client", service);
+		session = conn.createSession("logdb");
+	}
+
+	public void connectSsl(InetSocketAddress remote, KeyManagerFactory kmf, TrustManagerFactory tmf)
+			throws RpcException, InterruptedException {
+		RpcConnectionProperties props = new RpcConnectionProperties(remote, kmf, tmf);
 
 		client = new RpcClient(guid);
 		RpcConnection conn = client.connect(props);
@@ -91,13 +122,14 @@ public class LogDbClient {
 	public LogQueryStatus createQuery(String query) throws RpcException, InterruptedException {
 		int id = (Integer) session.call("createQuery", query);
 		LogQueryStatus q = new LogQueryStatus(id, query, false);
+		queries.put(id, q);
 		return q;
 	}
 
-	public void startQuery(LogQueryStatus query, int offset, int limit, int timelineSize) throws RpcException,
+	public void startQuery(int queryId, int offset, int limit, int timelineSize) throws RpcException,
 			InterruptedException {
 		Map<String, Object> options = new HashMap<String, Object>();
-		options.put("id", query.getId());
+		options.put("id", queryId);
 		options.put("offset", offset);
 		options.put("limit", limit);
 		options.put("timeline_size", timelineSize);
@@ -105,15 +137,31 @@ public class LogDbClient {
 		session.call("startQuery", options);
 	}
 
-	public void removeQuery(LogQueryStatus query) throws RpcException, InterruptedException {
-		session.call("removeQuery", query.getId());
+	public void removeQuery(int queryId) throws RpcException, InterruptedException {
+		session.call("removeQuery", queryId);
+		queries.remove(queryId);
+	}
+
+	public void waitFor(int queryId, int timeout) throws InterruptedException {
+		Date begin = new Date();
+
+		while (true) {
+			LogQueryStatus status = queries.get(queryId);
+			if (status == null || status.isEnded())
+				break;
+
+			Date now = new Date();
+			if (now.getTime() - begin.getTime() > timeout)
+				throw new InterruptedException("timed out");
+
+			Thread.sleep(100);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
-	public LogQueryResult getResult(LogQueryStatus query, int offset, int limit) throws RpcException,
-			InterruptedException {
+	public LogQueryResult getResult(int queryId, int offset, int limit) throws RpcException, InterruptedException {
 
-		Map<String, Object> m = (Map<String, Object>) session.call("getResult", query.getId(), offset, limit);
+		Map<String, Object> m = (Map<String, Object>) session.call("getResult", queryId, offset, limit);
 		int totalCount = (Integer) m.get("count");
 		Object[] result = (Object[]) m.get("result");
 
@@ -150,6 +198,46 @@ public class LogDbClient {
 			flush();
 		} finally {
 			client.close();
+		}
+	}
+
+	private class RpcEventHandler implements LogDbClientRpcCallback {
+
+		@Override
+		public void onPageLoaded(int queryId, int offset, int limit) {
+
+			logger.info("kraken logdb client: on page loaded, id: {}, offset: {}, limit: {}", new Object[] { queryId,
+					offset, limit });
+
+			LogQueryStatus status = queries.get(queryId);
+
+			if (status == null) {
+				logger.warn("kraken logdb client: query [{}] not found", queryId);
+				return;
+			}
+
+			for (LogQueryCallback callback : status.getCallbacks())
+				callback.onPageLoaded(queryId);
+		}
+
+		@Override
+		public void onEof(int queryId, int offset, int limit) {
+
+			logger.info("kraken logdb client: on eof id: {}, offset: {}, limit: {}", new Object[] { queryId, offset,
+					limit });
+
+			LogQueryStatus status = queries.get(queryId);
+
+			if (status == null) {
+				logger.warn("kraken logdb client: query [{}] not found", queryId);
+				return;
+			}
+
+			status.setRunning(false);
+			status.setEnded(true);
+
+			for (LogQueryCallback callback : status.getCallbacks())
+				callback.onEof(queryId);
 		}
 	}
 }

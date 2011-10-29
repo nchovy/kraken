@@ -15,15 +15,22 @@
  */
 package org.krakenapps.logdb.client;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+
 public class LogQueryStatus {
 	private int id;
 	private String query;
 	private boolean isRunning;
+	private boolean ended;
+	private CopyOnWriteArraySet<LogQueryCallback> callbacks;
 
 	public LogQueryStatus(int id, String query, boolean isRunning) {
 		this.id = id;
 		this.query = query;
 		this.isRunning = isRunning;
+		this.callbacks = new CopyOnWriteArraySet<LogQueryCallback>();
 	}
 
 	public int getId() {
@@ -36,6 +43,30 @@ public class LogQueryStatus {
 
 	public boolean isRunning() {
 		return isRunning;
+	}
+
+	public void setRunning(boolean isRunning) {
+		this.isRunning = isRunning;
+	}
+
+	public boolean isEnded() {
+		return ended;
+	}
+
+	public void setEnded(boolean ended) {
+		this.ended = ended;
+	}
+
+	public Set<LogQueryCallback> getCallbacks() {
+		return Collections.unmodifiableSet(callbacks);
+	}
+
+	public void addCallback(LogQueryCallback callback) {
+		callbacks.add(callback);
+	}
+
+	public void removeCallback(LogQueryCallback callback) {
+		callbacks.remove(callback);
 	}
 
 	@Override

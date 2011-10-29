@@ -22,6 +22,10 @@ public class RpcConnectionProperties {
 		this(remote.getAddress().getHostAddress(), remote.getPort(), null, null);
 	}
 
+	public RpcConnectionProperties(InetSocketAddress remote, KeyManagerFactory kmf, TrustManagerFactory tmf) {
+		this(remote.getAddress().getHostAddress(), remote.getPort(), kmf, tmf);
+	}
+
 	public RpcConnectionProperties(String host, int port, KeyManagerFactory kmf, TrustManagerFactory tmf) {
 		this.host = host;
 		this.port = port;
