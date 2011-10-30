@@ -30,6 +30,7 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logdb.LogQueryCommand.Status;
@@ -49,13 +50,15 @@ public class LogQueryImpl implements LogQuery {
 	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
 
-	public LogQueryImpl(LogQueryService service, LogStorage logStorage, LogTableRegistry tableRegistry, String query) {
+	public LogQueryImpl(SyntaxProvider syntaxProvider, LogQueryService service, LogStorage logStorage,
+			LogTableRegistry tableRegistry, String query) {
 		this.queryString = query;
 
 		for (String q : queryString.split("\\|")) {
 			q = q.trim();
 			try {
-				commands.add(LogQueryCommand.createCommand(service, this, logStorage, tableRegistry, q));
+				LogQueryCommand cmd = syntaxProvider.eval(this, q);
+				commands.add(cmd);
 			} catch (ParseException e) {
 				throw new IllegalArgumentException("invalid query command: " + q);
 			}

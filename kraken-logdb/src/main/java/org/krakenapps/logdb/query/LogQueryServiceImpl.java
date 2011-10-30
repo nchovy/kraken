@@ -15,37 +15,87 @@
  */
 package org.krakenapps.logdb.query;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LookupHandler;
+import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.LogQueryImpl;
+import org.krakenapps.logdb.query.parser.DropParser;
+import org.krakenapps.logdb.query.parser.FieldsParser;
+import org.krakenapps.logdb.query.parser.FunctionParser;
+import org.krakenapps.logdb.query.parser.LookupParser;
+import org.krakenapps.logdb.query.parser.OptionParser;
+import org.krakenapps.logdb.query.parser.QueryParser;
+import org.krakenapps.logdb.query.parser.RenameParser;
+import org.krakenapps.logdb.query.parser.SearchParser;
+import org.krakenapps.logdb.query.parser.SortParser;
+import org.krakenapps.logdb.query.parser.StatsParser;
+import org.krakenapps.logdb.query.parser.TableParser;
+import org.krakenapps.logdb.query.parser.TimechartParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "logdb-query")
 @Provides
 public class LogQueryServiceImpl implements LogQueryService {
+	private final Logger logger = LoggerFactory.getLogger(LogQueryServiceImpl.class);
+
 	@Requires
 	private LogStorage logStorage;
 
 	@Requires
 	private LogTableRegistry tableRegistry;
 
+	@Requires
+	private SyntaxProvider syntaxProvider;
+
 	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
 
 	private Map<String, LookupHandler> lookupHandlers = new HashMap<String, LookupHandler>();
 
+	@Validate
+	public void start() {
+		@SuppressWarnings("unchecked")
+		List<Class<? extends QueryParser>> parserClazzes = Arrays.asList(DropParser.class, SearchParser.class,
+				FieldsParser.class, FunctionParser.class, OptionParser.class, RenameParser.class, SortParser.class,
+				StatsParser.class, TimechartParser.class);
+
+		List<QueryParser> parsers = new ArrayList<QueryParser>();
+		for (Class<? extends QueryParser> clazz : parserClazzes) {
+			try {
+				parsers.add(clazz.newInstance());
+			} catch (Exception e) {
+				logger.error("kraken logstorage: failed to add syntax: " + clazz.getSimpleName(), e);
+			}
+		}
+
+		// add table and lookup (need some constructor injection)
+		TableParser tableParser = new TableParser(logStorage, tableRegistry);
+		LookupParser lookupParser = new LookupParser(this);
+
+		parsers.add(tableParser);
+		parsers.add(lookupParser);
+
+		syntaxProvider.addParsers(parsers);
+	}
+
 	@Override
 	public LogQuery createQuery(String query) {
-		LogQuery lq = new LogQueryImpl(this, logStorage, tableRegistry, query);
+		LogQuery lq = new LogQueryImpl(syntaxProvider, this, logStorage, tableRegistry, query);
 		queries.put(lq.getId(), lq);
 		return lq;
 	}

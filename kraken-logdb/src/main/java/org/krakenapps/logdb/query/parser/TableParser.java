@@ -29,11 +29,22 @@ import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Table;
 import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.logdb.query.parser.TableParser;
+import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.TableMetadata;
 
 public class TableParser implements QueryParser {
+	private LogStorage logStorage;
+	private LogTableRegistry tableRegistry;
+
+	public TableParser(LogStorage logStorage, LogTableRegistry tableRegistry) {
+		this.logStorage = logStorage;
+		this.tableRegistry = tableRegistry;
+	}
+
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("table", new TableParser(), k("table"), ref("option"), new StringPlaceholder(), option(uint()));
+		syntax.add("table", this, k("table"), ref("option"), new StringPlaceholder(), option(uint()));
 		syntax.addRoot("table");
 	}
 
@@ -69,7 +80,13 @@ public class TableParser implements QueryParser {
 		if (options.containsKey("limit"))
 			limit = Integer.parseInt(options.get("limit"));
 
-		return new Table(tableName, offset, limit, from, to);
+		Table table = new Table(tableName, offset, limit, from, to);
+		table.setStorage(logStorage);
+		TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(table.getTableName()));
+		if (tm.get("logformat") != null)
+			table.setDataHeaders(tm.get("logformat").split(" "));
+
+		return table;
 	}
 
 	private Date getDuration(int value, String field) {

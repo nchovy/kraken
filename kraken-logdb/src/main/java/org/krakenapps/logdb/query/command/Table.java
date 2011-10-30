@@ -61,6 +61,10 @@ public class Table extends LogQueryCommand {
 		dateColumnName = "_time";
 	}
 
+	public void setDataHeaders(String[] headers) {
+		super.setDataHeader(headers);
+	}
+
 	public String getTableName() {
 		return tableName;
 	}

@@ -20,11 +20,18 @@ import static org.krakenapps.bnf.Syntax.*;
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Lookup;
 import org.krakenapps.logdb.query.parser.QueryParser;
 
 public class LookupParser implements QueryParser {
+	private LogQueryService qs;
+
+	public LookupParser(LogQueryService qs) {
+		this.qs = qs;
+	}
+
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("lookup", this, k("lookup"), ref("option"), new StringPlaceholder(), ref("lookup_field"),
@@ -39,7 +46,9 @@ public class LookupParser implements QueryParser {
 		String handlerName = (String) b.getChildren()[2].getValue();
 		LookupField src = (LookupField) b.getChildren()[3].getValue();
 		LookupField dst = (LookupField) b.getChildren()[5].getValue();
-		return new Lookup(handlerName, src.first, src.second, dst.first, dst.second);
+		Lookup lookup = new Lookup(handlerName, src.first, src.second, dst.first, dst.second);
+		lookup.setLogQueryService(qs);
+		return lookup;
 	}
 
 	private class LookupField {

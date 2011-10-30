@@ -15,43 +15,16 @@
  */
 package org.krakenapps.logdb;
 
-import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
-import org.krakenapps.bnf.Syntax;
-
 import org.krakenapps.logdb.query.FileBufferList;
-import org.krakenapps.logdb.query.command.Lookup;
-import org.krakenapps.logdb.query.command.Table;
-import org.krakenapps.logdb.query.parser.DropParser;
-import org.krakenapps.logdb.query.parser.SearchParser;
-import org.krakenapps.logdb.query.parser.FieldsParser;
-import org.krakenapps.logdb.query.parser.LookupParser;
-import org.krakenapps.logdb.query.parser.OptionParser;
-import org.krakenapps.logdb.query.parser.QueryParser;
-import org.krakenapps.logdb.query.parser.RenameParser;
-import org.krakenapps.logdb.query.parser.SortParser;
-import org.krakenapps.logdb.query.parser.FunctionParser;
-import org.krakenapps.logdb.query.parser.StatsParser;
-import org.krakenapps.logdb.query.parser.TableParser;
-import org.krakenapps.logdb.query.parser.TimechartParser;
-import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.TableMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("unchecked")
 public abstract class LogQueryCommand {
 	public static enum Status {
 		Waiting, Running, End
 	}
 
-	private static Logger logger = LoggerFactory.getLogger(LogQueryCommand.class);
-	private static Syntax syntax = new Syntax();
 	private String queryString;
 	private int pushCount;
 	protected LogQuery logQuery;
@@ -61,40 +34,16 @@ public abstract class LogQueryCommand {
 	private boolean callbackTimeline;
 	protected volatile Status status = Status.Waiting;
 
-	static {
-		List<Class<? extends QueryParser>> parsers = Arrays.asList(DropParser.class, SearchParser.class,
-				FieldsParser.class, FunctionParser.class, LookupParser.class, OptionParser.class, RenameParser.class,
-				SortParser.class, StatsParser.class, TableParser.class, TimechartParser.class);
-
-		for (Class<? extends QueryParser> parser : parsers) {
-			try {
-				parser.newInstance().addSyntax(syntax);
-			} catch (Exception e) {
-				logger.error("kraken logstorage: failed to add syntax: " + parser.getSimpleName(), e);
-			}
-		}
-	}
-
-	public static LogQueryCommand createCommand(LogQueryService service, LogQuery logQuery, LogStorage logStorage,
-			LogTableRegistry tableRegistry, String query) throws ParseException {
-		LogQueryCommand token = (LogQueryCommand) syntax.eval(query);
-		token.queryString = query;
-		token.logQuery = logQuery;
-
-		if (token instanceof Table) {
-			((Table) token).setStorage(logStorage);
-			TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(((Table) token).getTableName()));
-			if (tm.get("logformat") != null)
-				((Table) token).setDataHeader(tm.get("logformat").split(" "));
-		} else if (token instanceof Lookup) {
-			((Lookup) token).setLogQueryService(service);
-		}
-
-		return token;
-	}
-
 	public String getQueryString() {
 		return queryString;
+	}
+
+	public void setQueryString(String queryString) {
+		this.queryString = queryString;
+	}
+
+	public void setLogQuery(LogQuery logQuery) {
+		this.logQuery = logQuery;
 	}
 
 	protected void setDataHeader(String[] header) {
