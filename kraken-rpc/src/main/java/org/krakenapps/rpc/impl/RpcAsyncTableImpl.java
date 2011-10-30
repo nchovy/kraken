@@ -102,6 +102,21 @@ public class RpcAsyncTableImpl implements RpcAsyncTable {
 		}
 
 		@Override
+		public void done(RpcMessage result) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void await(int timeout) throws InterruptedException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public RpcMessage getResult() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public String toString() {
 			return String.format("id=%s, since=%s", id, since.toString());
 		}

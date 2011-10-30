@@ -4,12 +4,14 @@ import java.util.Collection;
 
 public interface RpcBlockingTable {
 	Collection<RpcWaitingCall> getWaitingCalls();
-	
+
 	void cancel(int id);
 
 	void signal(int id, RpcMessage response);
 
-	RpcMessage await(int id) throws InterruptedException;
+	RpcWaitingCall set(int id);
 
-	RpcMessage await(int id, long timeout) throws InterruptedException;
+	RpcMessage await(RpcWaitingCall item) throws InterruptedException;
+
+	RpcMessage await(RpcWaitingCall item, long timeout) throws InterruptedException;
 }

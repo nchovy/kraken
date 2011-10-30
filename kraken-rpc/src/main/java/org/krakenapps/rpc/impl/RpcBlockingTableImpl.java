@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcMessage;
@@ -44,7 +46,7 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 			return;
 
 		synchronized (item) {
-			item.result = interruptSignal;
+			item.done(interruptSignal);
 			item.notifyAll();
 		}
 	}
@@ -68,9 +70,16 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 		}
 
 		synchronized (item) {
-			item.result = response;
+			item.done(response);
 			item.notifyAll();
 		}
+	}
+
+	@Override
+	public RpcWaitingCall set(int id) {
+		RpcWaitingCallImpl item = new RpcWaitingCallImpl(id);
+		lockMap.put(id, item);
+		return item;
 	}
 
 	/**
@@ -83,70 +92,67 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 	 * @return the rpc response of call
 	 * @throws InterruptedException
 	 */
-	public RpcMessage await(int id) throws InterruptedException {
+	public RpcMessage await(RpcWaitingCall item) throws InterruptedException {
 		if (logger.isDebugEnabled())
-			logger.debug("kraken-rpc: waiting call response id {}", id);
-
-		RpcWaitingCallImpl item = new RpcWaitingCallImpl(id);
-		lockMap.put(id, item);
+			logger.debug("kraken-rpc: waiting call response id {}", item.getId());
 
 		try {
 			synchronized (item) {
-				while (item.result == null)
+				while (item.getResult() == null)
 					item.wait();
 			}
 
-			if (item.result == interruptSignal)
+			if (item.getResult() == interruptSignal)
 				throw new InterruptedException("call cancelled");
 
 		} finally {
 			if (logger.isDebugEnabled())
-				logger.debug("kraken-rpc: removing blocking lock id {}", id);
+				logger.debug("kraken-rpc: removing blocking lock id {}", item.getId());
 
-			lockMap.remove(id);
+			lockMap.remove(item.getId());
 		}
 
-		return item.result;
+		return item.getResult();
 	}
 
-	public RpcMessage await(int id, long timeout) throws InterruptedException {
-		RpcWaitingCallImpl item = new RpcWaitingCallImpl(id);
-		lockMap.put(id, item);
+	public RpcMessage await(RpcWaitingCall item, long timeout) throws InterruptedException {
 		long before = new Date().getTime();
 
 		try {
 			synchronized (item) {
-				while (item.result == null) {
+				while (item.getResult() == null) {
 					item.wait(timeout);
 
 					if (new Date().getTime() - before >= timeout) {
 						if (logger.isDebugEnabled())
-							logger.debug("kraken-rpc: blocking timeout of id {}", id);
+							logger.debug("kraken-rpc: blocking timeout of id {}", item.getId());
 						break;
 					}
 				}
 			}
 
-			if (item.result == interruptSignal)
+			if (item.getResult() == interruptSignal)
 				throw new InterruptedException("call cancelled");
 		} finally {
 			if (logger.isDebugEnabled())
-				logger.debug("kraken-rpc: blocking finished for id {}", id);
+				logger.debug("kraken-rpc: blocking finished for id {}", item.getId());
 
-			lockMap.remove(id);
+			lockMap.remove(item.getId());
 		}
 
-		return item.result;
+		return item.getResult();
 	}
 
 	private static class RpcWaitingCallImpl implements RpcWaitingCall {
 		private int id;
 		private Date since;
 		private RpcMessage result = null;
+		private CountDownLatch done;
 
 		public RpcWaitingCallImpl(int id) {
 			this.id = id;
 			this.since = new Date();
+			this.done = new CountDownLatch(1);
 		}
 
 		@Override
@@ -157,6 +163,21 @@ public class RpcBlockingTableImpl implements RpcBlockingTable {
 		@Override
 		public Date getSince() {
 			return since;
+		}
+
+		@Override
+		public void done(RpcMessage result) {
+			this.result = result;
+			done.countDown();
+		}
+
+		public RpcMessage getResult() {
+			return result;
+		}
+
+		@Override
+		public void await(int timeout) throws InterruptedException {
+			done.await(timeout, TimeUnit.MILLISECONDS);
 		}
 
 		@Override

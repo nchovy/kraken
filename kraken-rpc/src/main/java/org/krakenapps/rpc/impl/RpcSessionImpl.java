@@ -14,6 +14,7 @@ import org.krakenapps.rpc.RpcMessage;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.rpc.RpcSessionEventCallback;
 import org.krakenapps.rpc.RpcSessionState;
+import org.krakenapps.rpc.RpcWaitingCall;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,8 +87,7 @@ public class RpcSessionImpl implements RpcSession {
 		int msgId = conn.nextMessageId();
 		RpcMessage msg = RpcMessage.newCall(msgId, getId(), method, params);
 		if (logger.isTraceEnabled())
-			logger.trace("kraken-rpc: async call [id={}, session={}, method={}]",
-					new Object[] { msgId, getId(), method });
+			logger.trace("kraken-rpc: async call [id={}, session={}, method={}]", new Object[] { msgId, getId(), method });
 
 		RpcAsyncResult result = new RpcAsyncResult(callback);
 		table.submit(msgId, result);
@@ -113,14 +113,11 @@ public class RpcSessionImpl implements RpcSession {
 
 		int msgId = conn.nextMessageId();
 		RpcMessage msg = RpcMessage.newCall(msgId, getId(), method, params);
+		RpcWaitingCall call = table.set(msgId);
 		conn.send(msg);
-		
-		if (logger.isTraceEnabled())
-			logger.trace("kraken-rpc: blocking call [id={}, session={}, method={}]",
-					new Object[] { msgId, getId(), method });
 
-		// TODO: response may be received before blocking, then response loss
-		// can be occurred.
+		if (logger.isTraceEnabled())
+			logger.trace("kraken-rpc: blocking call [id={}, session={}, method={}]", new Object[] { msgId, getId(), method });
 
 		// set blocking call
 		blockingCalls.add(msgId);
@@ -128,9 +125,9 @@ public class RpcSessionImpl implements RpcSession {
 		// wait response infinitely
 		RpcMessage message = null;
 		if (timeout == 0)
-			message = table.await(msgId);
+			message = table.await(call);
 		else {
-			message = table.await(msgId, timeout);
+			message = table.await(call, timeout);
 		}
 
 		blockingCalls.remove(msgId);
