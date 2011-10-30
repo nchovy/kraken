@@ -116,7 +116,7 @@ public class PushApiImpl implements PushApi {
 			i++;
 		}
 
-		final String template = "dom push api: dispatching org [{}], session [{}], process [{}], callback [{}], msg [{}]";
+		final String template = "kraken msgbus: push org [{}], session [{}], process [{}], callback [{}], msg [{}]";
 		logger.trace(template, new Object[] { orgId, sessionId, binding.processId, method, sb.toString() });
 	}
 
@@ -146,13 +146,13 @@ public class PushApiImpl implements PushApi {
 		PushCondition condition = new PushCondition(orgId, binding.sessionId, binding.processId, callback, options);
 		pushConditions.put(condition.getKey(), condition);
 
-		logger.trace("dom push api: subscribe, org [{}], session [{}], callback [{}]", new Object[] { orgId, sessionId,
+		logger.trace("kraken msgbus: subscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgId, sessionId,
 				callback });
 	}
 
 	@Override
 	public void unsubscribe(int orgId, int sessionId, int processId, String callback) {
-		logger.trace("dom push api: unsubscribe, org [{}], session [{}], callback [{}]", new Object[] { orgId,
+		logger.trace("kraken msgbus: unsubscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgId,
 				sessionId, callback });
 
 		Set<Binding> bindings = pushBindingsMap.get(callback);
@@ -169,7 +169,7 @@ public class PushApiImpl implements PushApi {
 
 	@Override
 	public void sessionClosed(int orgId, int sessionId) {
-		logger.trace("dom push api: session closed, org [{}], session [{}]", orgId, sessionId);
+		logger.trace("kraken msgbus: push session closed, org [{}], session [{}]", orgId, sessionId);
 		cleanSession(orgId, sessionId);
 	}
 
