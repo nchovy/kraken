@@ -22,6 +22,7 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.arbiter.ArbiterService;
 
 @Component(name = "logdb-script-factory")
 @Provides
@@ -33,9 +34,12 @@ public class LogDBScriptFactory implements ScriptFactory {
 	@Requires
 	private LogQueryService qs;
 
+	@Requires
+	private ArbiterService arbiter;
+
 	@Override
 	public Script createScript() {
-		return new LogDBScript(qs);
+		return new LogDBScript(qs, arbiter);
 	}
 
 }

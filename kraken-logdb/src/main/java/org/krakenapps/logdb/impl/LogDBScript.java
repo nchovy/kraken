@@ -25,18 +25,24 @@ import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.api.Script;
+import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
+import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.arbiter.ArbiterQueryStatus;
+import org.krakenapps.logdb.arbiter.ArbiterService;
 import org.krakenapps.logdb.query.FileBufferList;
 
 public class LogDBScript implements Script {
 	private LogQueryService qs;
+	private ArbiterService arbiter;
 	private ScriptContext context;
 
-	public LogDBScript(LogQueryService qs) {
+	public LogDBScript(LogQueryService qs, ArbiterService arbiter) {
 		this.qs = qs;
+		this.arbiter = arbiter;
 	}
 
 	@Override
@@ -122,4 +128,38 @@ public class LogDBScript implements Script {
 		context.println("removed");
 	}
 
+	/**
+	 * print all connected nodes
+	 */
+	public void nodes(String[] args) {
+		context.println("Log DB Nodes");
+		context.println("--------------");
+
+	}
+
+	@ScriptUsage(description = "connect to arbiter")
+	public void connect(String[] args) {
+		String host = args[0];
+		int port = Integer.valueOf(args[1]);
+	}
+
+	public void disconnect(String[] args) {
+
+	}
+
+	/**
+	 * print all distributed queries
+	 */
+	public void distQueries(String[] args) {
+		context.println("Arbiter Queries");
+		context.println("-----------------");
+
+		for (ArbiterQueryStatus q : arbiter.getQueries())
+			context.println(q);
+	}
+
+	public void distQuery(String[] args) {
+		ArbiterQueryStatus q = arbiter.createQuery(args[0]);
+		context.println(q);
+	}
 }

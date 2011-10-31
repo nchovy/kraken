@@ -1,11 +1,16 @@
-package org.krakenapps.logdb.arbiter.impl;
+package org.krakenapps.logdb.impl;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.ServiceProperty;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.logdb.arbiter.ArbiterService;
 import org.krakenapps.logdb.arbiter.ArbiterQueryStatus;
 import org.krakenapps.rpc.RpcConnection;
@@ -18,6 +23,20 @@ import org.krakenapps.rpc.SimpleRpcService;
 @Component(name = "logdb-arbiter")
 @Provides
 public class ArbiterRpcService extends SimpleRpcService implements ArbiterService {
+
+	private ConcurrentMap<String, ArbiterQueryStatus> queries;
+
+	@SuppressWarnings("unused")
+	@ServiceProperty(name = "rpc.name", value = "logdb-arbiter")
+	private String name;
+
+	public ArbiterRpcService() {
+	}
+
+	@Validate
+	public void start() {
+		queries = new ConcurrentHashMap<String, ArbiterQueryStatus>();
+	}
 
 	public void connect(Map<String, Object> params) {
 		String guid = (String) params.get("guid");
@@ -66,13 +85,11 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 
 	@Override
 	public List<ArbiterQueryStatus> getQueries() {
-		// TODO Auto-generated method stub
-		return null;
+		return new ArrayList<ArbiterQueryStatus>(queries.values());
 	}
 
 	@Override
 	public ArbiterQueryStatus createQuery(String query) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

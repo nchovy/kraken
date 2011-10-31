@@ -5,5 +5,6 @@
 	<instance component="logdb-script-factory" />
 	<instance component="logdb-msgbus" />
 	<instance component="logdb-query" />
+	<instance component="logdb-arbiter" />
 	<instance component="logdb-syntax-provider" />
 </ipojo>
