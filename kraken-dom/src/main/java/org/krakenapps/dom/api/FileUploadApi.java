@@ -121,6 +121,23 @@ public interface FileUploadApi {
 	void writeFile(String token, InputStream is) throws IOException;
 
 	/**
+	 * Write file segment. Partial saving is crucial for heap space management.
+	 * Entire file will be merged if all segments are received.
+	 * 
+	 * @param token
+	 *            the upload token
+	 * @param begin
+	 *            begin byte offset
+	 * @param end
+	 *            end byte offset
+	 * @param is
+	 *            the input stream
+	 * @throws IOException
+	 *             when temp file io or merging io failed
+	 */
+	void writePartialFile(String token, long begin, long end, InputStream is) throws IOException;
+
+	/**
 	 * Get file metadata using download token, space id and resource id.
 	 * 
 	 * @param resourceId

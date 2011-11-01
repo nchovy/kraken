@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 	private final Logger logger = LoggerFactory.getLogger(WebSocketServerHandler.class.getName());
 	private static final String WEBSOCKET_PATH = "/websocket";
+	private static final int MAX_WEBSOCKET_FRAME_SIZE = 8 * 1024 * 1024;
 
 	private MessageBus msgbus;
 	private ServletRegistry servletRegistry;
@@ -129,7 +130,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 			// upgrade the connection and send the handshake response
 			ChannelPipeline p = ctx.getChannel().getPipeline();
 			p.remove("aggregator");
-			p.replace("decoder", "wsdecoder", new WebSocketFrameDecoder());
+			p.replace("decoder", "wsdecoder", new WebSocketFrameDecoder(MAX_WEBSOCKET_FRAME_SIZE));
 
 			ctx.getChannel().write(resp);
 

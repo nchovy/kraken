@@ -16,10 +16,14 @@
 package org.krakenapps.dom.api.impl;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,8 +144,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		// basic check (you should add multicolumn unique index to file space.
-		long count = (Long) em
-				.createQuery("SELECT COUNT(*) FROM FileSpace s WHERE s.organization.id = ? AND s.name = ?")
+		long count = (Long) em.createQuery("SELECT COUNT(*) FROM FileSpace s WHERE s.organization.id = ? AND s.name = ?")
 				.setParameter(1, orgId).setParameter(2, spaceName).getSingleResult();
 
 		if (count > 0)
@@ -213,9 +216,6 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 	@Override
 	public void writeFile(String token, InputStream is) throws IOException {
-		FileOutputStream os = null;
-		long totalReadBytes = 0;
-
 		// remove token from waiting table
 		UploadItem item = items.remove(token);
 		if (item == null)
@@ -225,21 +225,7 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 		try {
 			File temp = File.createTempFile("dom-", null, tempDir);
-			os = new FileOutputStream(temp);
-			byte[] buffer = new byte[8096];
-
-			while (true) {
-				int readBytes = is.read(buffer);
-				if (readBytes <= 0)
-					break;
-
-				totalReadBytes += readBytes;
-				os.write(buffer, 0, readBytes);
-			}
-
-			os.close();
-			os = null;
-
+			long totalReadBytes = writeTempFile(temp, is);
 			// check file size
 			if (totalReadBytes == item.token.getFileSize()) {
 				saveFile(temp, item);
@@ -261,6 +247,87 @@ public class FileUploadApiImpl implements FileUploadApi {
 			}
 		} catch (IOException e) {
 			throw e;
+		}
+	}
+
+	private long writeTempFile(File temp, InputStream is) throws IOException {
+		FileOutputStream os = null;
+		long totalReadBytes = 0;
+
+		try {
+			os = new FileOutputStream(temp);
+			byte[] buffer = new byte[8096];
+
+			while (true) {
+				int readBytes = is.read(buffer);
+				if (readBytes <= 0)
+					break;
+
+				totalReadBytes += readBytes;
+				os.write(buffer, 0, readBytes);
+			}
+
+			return totalReadBytes;
+		} finally {
+			if (os != null)
+				os.close();
+		}
+	}
+
+	@Override
+	public void writePartialFile(String token, long begin, long end, InputStream is) throws IOException {
+		UploadItem item = items.get(token);
+		if (item == null)
+			throw new IOException("upload token not found: " + token);
+
+		File temp = File.createTempFile("dom-", "part", tempDir);
+		writeTempFile(temp, is);
+
+		item.parts.add(new PartialUploadItem(begin, end, temp));
+
+		// check if all segments are received
+		Collections.sort(item.parts);
+
+		long total = 0;
+		long last = 0;
+		for (PartialUploadItem p : item.parts) {
+			total += p.size();
+			last = p.end;
+
+			// check hole
+			if (last != 0 && p.begin - 1 != last)
+				break;
+		}
+
+		if (total == item.token.getFileSize()) {
+			// merge files
+			File merged = File.createTempFile("dom-", null, tempDir);
+			FileChannel out = null;
+			try {
+				out = new FileOutputStream(merged).getChannel();
+
+				for (PartialUploadItem p : item.parts) {
+					FileChannel in = null;
+
+					try {
+						in = new FileInputStream(p.part).getChannel();
+						in.transferTo(0, p.part.length(), out);
+					} finally {
+						if (in != null)
+							in.close();
+					}
+				}
+			} finally {
+				if (out != null)
+					out.close();
+			}
+
+			// delete files
+			for (PartialUploadItem p : item.parts)
+				p.part.delete();
+
+			// write metadata
+			saveFile(merged, item);
 		}
 	}
 
@@ -288,8 +355,8 @@ public class FileUploadApiImpl implements FileUploadApi {
 		if (token.getSpaceId() != null) {
 			space = em.find(FileSpace.class, token.getSpaceId());
 			if (space == null) {
-				String msg = String.format("kraken dom: file space [%d] not found for uploaded file [%s]",
-						token.getSpaceId(), token.getFileName());
+				String msg = String.format("kraken dom: file space [%d] not found for uploaded file [%s]", token.getSpaceId(),
+						token.getFileName());
 				throw new IllegalStateException(msg);
 			}
 		}
@@ -330,8 +397,8 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 		UploadedFile f = getFileMetadata(resourceId);
 		if (f.getOwner().getOrganization().getId() != userId)
-			throw new SecurityException("access denied for token [" + token + "], user [" + userId + "], file ["
-					+ resourceId + "]");
+			throw new SecurityException("access denied for token [" + token + "], user [" + userId + "], file [" + resourceId
+					+ "]");
 
 		return f;
 	}
@@ -367,9 +434,8 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 		File f = new File(spaceDir, Integer.toString(resourceId));
 		if (f.exists() && !f.delete())
-			throw new IllegalStateException(String.format(
-					"failed to delete uploaded file: space %d, resource %d, path %s", spaceId, resourceId,
-					f.getAbsolutePath()));
+			throw new IllegalStateException(String.format("failed to delete uploaded file: space %d, resource %d, path %s",
+					spaceId, resourceId, f.getAbsolutePath()));
 	}
 
 	@Transactional
@@ -389,20 +455,42 @@ public class FileUploadApiImpl implements FileUploadApi {
 
 		File f = new File(spaceDir, Integer.toString(resourceId));
 		if (f.exists() && !f.delete())
-			throw new IllegalStateException(String.format(
-					"failed to delete uploaded file: space %d, resource %d, path %s", spaceId, resourceId,
-					f.getAbsolutePath()));
+			throw new IllegalStateException(String.format("failed to delete uploaded file: space %d, resource %d, path %s",
+					spaceId, resourceId, f.getAbsolutePath()));
 	}
 
 	private static class UploadItem {
 		public UploadToken token;
 		public int resourceId;
 		public UploadCallback callback;
+		public List<PartialUploadItem> parts;
 
 		public UploadItem(UploadToken token, int resourceId, UploadCallback callback) {
 			this.token = token;
 			this.resourceId = resourceId;
 			this.callback = callback;
+			this.parts = new ArrayList<PartialUploadItem>();
+		}
+	}
+
+	private static class PartialUploadItem implements Comparable<PartialUploadItem> {
+		public long begin;
+		public long end;
+		public File part;
+
+		public PartialUploadItem(long begin, long end, File part) {
+			this.begin = begin;
+			this.end = end;
+			this.part = part;
+		}
+
+		@Override
+		public int compareTo(PartialUploadItem o) {
+			return (int) (begin - o.begin);
+		}
+
+		public long size() {
+			return end - begin + 1;
 		}
 	}
 }
