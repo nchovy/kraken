@@ -9,6 +9,7 @@ import org.krakenapps.dom.exception.InvalidPasswordException;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
+import org.krakenapps.msgbus.Session;
 import org.krakenapps.msgbus.handler.AllowGuestAccess;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPermission;
@@ -38,8 +39,9 @@ public class AccountPlugin {
 		logger.trace("kraken webconsole: login attempt user [{}], password [{}]", new Object[] { user, password });
 
 		String hash = adminApi.hash(adminApi.hashPassword(salt, password));
-		String nonce = "";
-		Admin admin = adminApi.login(user, hash, nonce);
+		Session session = req.getSession();
+		session.setProperty("nonce", "");
+		Admin admin = adminApi.login(session, user, hash, true);
 
 		resp.put("result", true);
 		req.getSession().setProperty("org_id", admin.getUser().getOrganization().getId());

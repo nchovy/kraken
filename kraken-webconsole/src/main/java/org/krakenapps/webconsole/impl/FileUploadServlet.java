@@ -45,7 +45,7 @@ public class FileUploadServlet extends HttpServlet {
 
 	@Requires
 	private ServletRegistry servletRegistry;
-	
+
 	@Requires
 	private FileUploadApi upload;
 
@@ -85,7 +85,7 @@ public class FileUploadServlet extends HttpServlet {
 
 			if (token == null)
 				throw new IllegalStateException("download token not found");
-			
+
 			f = upload.getFileMetadata(resourceId, token);
 			is = new FileInputStream(f.getFile());
 			os = resp.getOutputStream();
@@ -135,8 +135,7 @@ public class FileUploadServlet extends HttpServlet {
 		Cookie[] cookies = req.getCookies();
 		if (cookies != null) {
 			for (Cookie cookie : cookies) {
-				logger.trace("kraken webconsole: checking all cookie for download, {} = {}", cookie.getName(),
-						cookie.getValue());
+				logger.trace("kraken webconsole: checking all cookie for download, {} = {}", cookie.getName(), cookie.getValue());
 				if (cookie.getName().equals("kraken_session"))
 					return cookie.getValue();
 			}
@@ -148,20 +147,41 @@ public class FileUploadServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
 		logger.debug("kraken webconsole: received post request from [{}]", req.getRemoteAddr());
-		
+
 		String token = req.getHeader("X-Upload-Token");
 		if (token == null) {
 			logger.warn("kraken webconsole: upload token header not found for [{}] stream", req.getRemoteAddr());
 			return;
 		}
 
+		String range = req.getHeader("X-Upload-Range");
+		String[] ranges = null;
 		InputStream is = null;
 		try {
 			is = req.getInputStream();
-			upload.writeFile(token, is);
+
+			if (range == null) {
+				upload.writeFile(token, is);
+			} else {
+				if (range != null)
+					ranges = range.split(",");
+
+				Long begin = Long.valueOf(ranges[0]);
+				Long end = Long.valueOf(ranges[1]);
+
+				if (begin >= end)
+					throw new IllegalArgumentException("begin should be smaller than end range");
+
+				logger.info("kraken webconsole: partial upload, token [{}], [{}~{}]", new Object[] { token, begin, end });
+				upload.writePartialFile(token, begin, end, is);
+			}
+
 			resp.setStatus(200);
 		} catch (Exception e) {
-			resp.setStatus(500);
+			try {
+				resp.sendError(500, e.toString());
+			} catch (IOException e1) {
+			}
 			logger.warn("kraken webconsole: upload post failed", e);
 		} finally {
 			if (is == null)
