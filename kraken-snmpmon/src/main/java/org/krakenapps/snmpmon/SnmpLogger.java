@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.snmpmon;
 
 import java.io.IOException;
@@ -40,24 +55,24 @@ import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-public class AgentLogger extends AbstractLogger {
+/**
+ * @author stania
+ */
+public class SnmpLogger extends AbstractLogger {
+	private Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
 	private static final int ethernetCsmacd = 6;
-
 	private static final int timeout = 3000;
 
-	private Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
-
 	private long loggerCreated;
-
 	private SnmpAgent target;
 
-	public AgentLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, Properties config) {
+	public SnmpLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, Properties config) {
 		super(hostGuid, name, description, loggerFactory);
 		parseConfig(config);
 		loggerCreated = new Date().getTime();
 	}
 
-	public AgentLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, SnmpAgent agent) {
+	public SnmpLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, SnmpAgent agent) {
 		super(hostGuid, name, description, loggerFactory);
 		target = agent;
 		loggerCreated = new Date().getTime();
@@ -65,35 +80,31 @@ public class AgentLogger extends AbstractLogger {
 
 	private void parseConfig(Properties config) {
 		// parse target addresses
-		String targetAddressesStr = (String) config.get(AgentLoggerFactory.ConfigOption.target.getConfigKey());
+		String targetAddressesStr = (String) config.get(SnmpLoggerFactory.ConfigOption.target.getConfigKey());
 		target = null;
 		if (targetAddressesStr == null)
 			throw new RuntimeException("target address cannot be null.");
 
-		int nextHostId = 2147000000;
-		if (config.containsKey(AgentLoggerFactory.ConfigOption.hostId.getConfigKey())) {
-			nextHostId = (Integer) config.get(AgentLoggerFactory.ConfigOption.hostId.getConfigKey());
-		}
-		SnmpAgent agent = new SnmpAgent(nextHostId);
+		SnmpAgent agent = new SnmpAgent();
 		target = agent;
 		String[] as = targetAddressesStr.split(":");
 		String ip = as[0];
 		int port = 161;
 		if (as.length == 2)
 			port = Integer.parseInt(as[1]);
-		if (config.containsKey(AgentLoggerFactory.ConfigOption.port.getConfigKey()))
-			port = (Integer) config.get(AgentLoggerFactory.ConfigOption.port.getConfigKey());
+		if (config.containsKey(SnmpLoggerFactory.ConfigOption.port.getConfigKey()))
+			port = (Integer) config.get(SnmpLoggerFactory.ConfigOption.port.getConfigKey());
 		agent.setIp(ip);
 		agent.setPort(port);
 
 		// parse community strings
 		{
-			String communityStringStr = (String) config.get(AgentLoggerFactory.ConfigOption.community.getConfigKey());
+			String communityStringStr = (String) config.get(SnmpLoggerFactory.ConfigOption.community.getConfigKey());
 			target.setCommunity(communityStringStr);
 		}
 		{
 			// parse versions
-			Integer version = (Integer) config.get(AgentLoggerFactory.ConfigOption.version.getConfigKey());
+			Integer version = (Integer) config.get(SnmpLoggerFactory.ConfigOption.version.getConfigKey());
 			target.setSnmpVersion(getSnmpVersion(version));
 		}
 	}
@@ -112,15 +123,15 @@ public class AgentLogger extends AbstractLogger {
 			ArrayList<VariableBinding> results = query(target);
 			buildLog(target, results);
 		} catch (Exception e) {
-			String targetStr = String.format("for %s (%d, %d)", target.getIp(), target.getOrganizationId(), target.getHostId());
+			String targetStr = String.format("for %s:%d", target.getIp(), target.getPort());
 			if (e instanceof RuntimeException) {
 				if (e.getCause() != null) {
-					logger.warn("SNMP query failed " + targetStr + ": cause: " + e.getCause().getMessage());
+					logger.warn("SNMP query failed " + targetStr + ", cause: " + e.getCause().getMessage());
 					logger.debug("SNMP query failed exception detail", e);
 				} else {
 					if (!"request timed out".equals(e.getMessage())) {
-						logger.warn("SNMP query failed " + targetStr + ": msg: " + e.getClass().getName() + "(" + e.getMessage()
-								+ ")");
+						logger.warn("SNMP query failed " + targetStr + ", msg: " + e.getClass().getName() + "("
+								+ e.getMessage() + ")");
 						logger.debug("SNMP query failed exception detail", e);
 					}
 				}
@@ -242,6 +253,8 @@ public class AgentLogger extends AbstractLogger {
 	}
 
 	private void buildLog(SnmpAgent target, ArrayList<VariableBinding> results) {
+		Map<String, Object> data = new HashMap<String, Object>();
+
 		VariableBinding vbIfNumber = results.get(0);
 		String oidIfNumber = Interface.oidInterfaces + ".1.0";
 		if (!vbIfNumber.getOid().equals(new OID(oidIfNumber)))
@@ -349,37 +362,42 @@ public class AgentLogger extends AbstractLogger {
 					}
 				}
 
-				Log log = new SimpleLog(now, getFullName(), "device", getMessage(descr, physAddress, rts, tts), params);
-				write(log);
+				params.put("msg", getMessage(descr, physAddress, rts, tts));
+				data.put(descr, params);
 			}
 
 			// max log
 			Map<String, Object> m = new HashMap<String, Object>();
+			String totalMsg = null;
 
 			if (max_ts.utilization < 0) {
-				logger.warn("SnmpMonitor max_ts.utilization < 0 ({}, {}, {})", new Object[] { max_ts.utilization, max_ts.bps,
-						max_descr });
+				logger.warn("SnmpMonitor max_ts.utilization < 0 ({}, {}, {})", new Object[] { max_ts.utilization,
+						max_ts.bps, max_descr });
 				m.put("scope", "total");
 				m.put("max_usage", 0);
 				m.put("description", max_descr);
 				m.put("mac", max_physAddress);
 
-				String msg = String.format("network usage: max network usage [%s (%s) - %d%%]", max_descr, max_physAddress,
-						max_ts.utilization);
-				Log log = new SimpleLog(new Date(), getFullName(), "total", msg, m);
-				write(log);
+				totalMsg = String.format("network usage: max network usage [%s (%s) - %d%%]", max_descr,
+						max_physAddress, max_ts.utilization);
+				m.put("msg", totalMsg);
+
+				data.put("_total", m);
 			} else {
 				m.put("scope", "total");
 				m.put("max_usage", max_ts.utilization);
 				m.put("description", max_descr);
 				m.put("mac", max_physAddress);
 
-				String msg = String.format("network usage: max network usage [%s (%s) - %d%%]", max_descr, max_physAddress,
-						max_ts.utilization);
-				Log log = new SimpleLog(new Date(), getFullName(), "total", msg, m);
+				totalMsg = String.format("network usage: max network usage [%s (%s) - %d%%]", max_descr,
+						max_physAddress, max_ts.utilization);
+				m.put("msg", totalMsg);
 
-				write(log);
+				data.put("_total", m);
 			}
+
+			Log log = new SimpleLog(new Date(), getFullName(), "network-usage", totalMsg, data);
+			write(log);
 
 		} finally {
 			oldValues = newOldValues;
@@ -416,8 +434,10 @@ public class AgentLogger extends AbstractLogger {
 		int fps;
 
 		String octets = type == 'R' ? logParamKeys.get(IfEntry.ifInOctets) : logParamKeys.get(IfEntry.ifOutOctets);
-		String ucastPkts = type == 'R' ? logParamKeys.get(IfEntry.ifInUcastPkts) : logParamKeys.get(IfEntry.ifOutUcastPkts);
-		String nucastPkts = type == 'R' ? logParamKeys.get(IfEntry.ifInNUcastPkts) : logParamKeys.get(IfEntry.ifOutNUcastPkts);
+		String ucastPkts = type == 'R' ? logParamKeys.get(IfEntry.ifInUcastPkts) : logParamKeys
+				.get(IfEntry.ifOutUcastPkts);
+		String nucastPkts = type == 'R' ? logParamKeys.get(IfEntry.ifInNUcastPkts) : logParamKeys
+				.get(IfEntry.ifOutNUcastPkts);
 
 		long octet_delta = ((Number) params.get(octets)).longValue();
 		long pkt_delta = 0;
@@ -444,7 +464,8 @@ public class AgentLogger extends AbstractLogger {
 			logger.warn(String.format(
 					"ifIndex: %d, physAddress: %s, interval: %d, octet_delta: %d, pkt_delta: %d, bandwidth: %d",
 					(Number) params.get(logParamKeys.get(IfEntry.ifIndex)),
-					(String) params.get(logParamKeys.get(IfEntry.ifPhysAddress)), seconds, octet_delta, pkt_delta, bandwidth));
+					(String) params.get(logParamKeys.get(IfEntry.ifPhysAddress)), seconds, octet_delta, pkt_delta,
+					bandwidth));
 		}
 
 		return new TrafficSummary(type, utilization, bps, fps);
@@ -465,7 +486,7 @@ public class AgentLogger extends AbstractLogger {
 		Object convert(Variable value);
 	}
 
-	private static HashMap<Class<?>, VariableConverter<? extends Variable>> converters = new HashMap<Class<?>, AgentLogger.VariableConverter<? extends Variable>>();
+	private static HashMap<Class<?>, VariableConverter<? extends Variable>> converters = new HashMap<Class<?>, SnmpLogger.VariableConverter<? extends Variable>>();
 	static {
 		VariableConverter<?> toStringConverter = new VariableConverter<Variable>() {
 			public Object convert(Variable value) {

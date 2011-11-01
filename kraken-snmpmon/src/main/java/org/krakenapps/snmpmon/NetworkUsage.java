@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.snmpmon;
 
 import java.io.File;
@@ -13,51 +28,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snmp4j.smi.Integer32;
 
+/**
+ * @author stania
+ */
 public class NetworkUsage {
 	public static enum LogEntry {
-		index(Interface.IfEntry.ifIndex),
-		description(Interface.IfEntry.ifDescr),
-		type(Interface.IfEntry.ifType),
-		mtu(Interface.IfEntry.ifMtu),
-		bandwidth(Interface.IfEntry.ifSpeed),
-		mac(Interface.IfEntry.ifPhysAddress),
-		admin_status(Interface.IfEntry.ifAdminStatus),
-		oper_status(Interface.IfEntry.ifOperStatus),
-		last_change(Interface.IfEntry.ifLastChange),
-		rx_bytes_delta(Interface.IfEntry.ifInOctets),
-		rx_ucast_pkts_delta(Interface.IfEntry.ifInUcastPkts),
-		rx_nucast_pkts_delta(Interface.IfEntry.ifInNUcastPkts),
-		rx_discards_delta(Interface.IfEntry.ifInDiscards),
-		rx_errors_delta(Interface.IfEntry.ifInErrors),
-		rx_unknown_protos(Interface.IfEntry.ifInUnknownProtos),
-		tx_bytes_delta(Interface.IfEntry.ifOutOctets),
-		tx_ucast_pkts_delta(Interface.IfEntry.ifOutUcastPkts),
-		tx_nucast_pkts_delta(Interface.IfEntry.ifOutNUcastPkts),
-		tx_discards_delta(Interface.IfEntry.ifOutDiscards),
-		tx_errors_delta(Interface.IfEntry.ifOutErrors),
-		tx_queue_length(Interface.IfEntry.ifOutQLen),
-		specific(Interface.IfEntry.ifSpecific);
+		index(Interface.IfEntry.ifIndex), description(Interface.IfEntry.ifDescr), type(Interface.IfEntry.ifType), mtu(
+				Interface.IfEntry.ifMtu), bandwidth(Interface.IfEntry.ifSpeed), mac(Interface.IfEntry.ifPhysAddress), admin_status(
+				Interface.IfEntry.ifAdminStatus), oper_status(Interface.IfEntry.ifOperStatus), last_change(
+				Interface.IfEntry.ifLastChange), rx_bytes_delta(Interface.IfEntry.ifInOctets), rx_ucast_pkts_delta(
+				Interface.IfEntry.ifInUcastPkts), rx_nucast_pkts_delta(Interface.IfEntry.ifInNUcastPkts), rx_discards_delta(
+				Interface.IfEntry.ifInDiscards), rx_errors_delta(Interface.IfEntry.ifInErrors), rx_unknown_protos(
+				Interface.IfEntry.ifInUnknownProtos), tx_bytes_delta(Interface.IfEntry.ifOutOctets), tx_ucast_pkts_delta(
+				Interface.IfEntry.ifOutUcastPkts), tx_nucast_pkts_delta(Interface.IfEntry.ifOutNUcastPkts), tx_discards_delta(
+				Interface.IfEntry.ifOutDiscards), tx_errors_delta(Interface.IfEntry.ifOutErrors), tx_queue_length(
+				Interface.IfEntry.ifOutQLen), specific(Interface.IfEntry.ifSpecific);
 
 		@SuppressWarnings("unused")
 		private Interface.IfEntry ifEntry;
+
 		private LogEntry(Interface.IfEntry ifEntry) {
 			this.ifEntry = ifEntry;
 		}
 
-		public static EnumSet<LogEntry> counters = EnumSet.of(
-				LogEntry.rx_bytes_delta,
-				LogEntry.rx_ucast_pkts_delta,
-				LogEntry.rx_nucast_pkts_delta,
-				LogEntry.rx_discards_delta,
-				LogEntry.rx_errors_delta,
-				LogEntry.rx_unknown_protos,
-				LogEntry.tx_bytes_delta,
-				LogEntry.tx_ucast_pkts_delta,
-				LogEntry.tx_nucast_pkts_delta,
-				LogEntry.tx_discards_delta,
-				LogEntry.tx_errors_delta,
-				LogEntry.tx_queue_length
-				);
+		public static EnumSet<LogEntry> counters = EnumSet.of(LogEntry.rx_bytes_delta, LogEntry.rx_ucast_pkts_delta,
+				LogEntry.rx_nucast_pkts_delta, LogEntry.rx_discards_delta, LogEntry.rx_errors_delta,
+				LogEntry.rx_unknown_protos, LogEntry.tx_bytes_delta, LogEntry.tx_ucast_pkts_delta,
+				LogEntry.tx_nucast_pkts_delta, LogEntry.tx_discards_delta, LogEntry.tx_errors_delta,
+				LogEntry.tx_queue_length);
 	}
 
 	private Map<LogEntry, Object> properties = new EnumMap<LogEntry, Object>(LogEntry.class);
@@ -125,16 +123,12 @@ public class NetworkUsage {
 		} catch (IOException ioe) {
 			kLogger.warn("IOException while saving");
 		} finally {
-			close(fos);
-		}
-	}
-
-	private void close(FileOutputStream fos) {
-		try {
-			if (fos != null) {
-				fos.close();
+			try {
+				if (fos != null) {
+					fos.close();
+				}
+			} catch (Exception e) {
 			}
-		} catch (Exception e) {
 		}
 	}
 }

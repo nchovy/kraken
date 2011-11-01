@@ -1,56 +1,31 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.snmpmon;
 
+/**
+ * @author stania
+ */
 public class SnmpAgent {
-	private int id;
-	private int organizationId;
-	private int hostId;
-	private transient String hostGuid;
 	private int snmpVersion;
 	private String ip;
 	private int port;
 	private String community;
 	private boolean isEnabled;
 
-	public SnmpAgent(int hostId) {
-		// use only when create mock object;
-		this.organizationId = Integer.MAX_VALUE;
-		this.hostId = hostId;
-		this.id = hostId;
-	}
-
 	public SnmpAgent() {
-	}
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public int getOrganizationId() {
-		return organizationId;
-	}
-
-	public void setOrganizationId(int organizationId) {
-		this.organizationId = organizationId;
-	}
-
-	public int getHostId() {
-		return hostId;
-	}
-
-	public void setHostId(int hostId) {
-		this.hostId = hostId;
-	}
-
-	public String getHostGuid() {
-		return hostGuid;
-	}
-
-	public void setHostGuid(String hostGuid) {
-		this.hostGuid = hostGuid;
 	}
 
 	public int getSnmpVersion() {
@@ -97,8 +72,8 @@ public class SnmpAgent {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((community == null) ? 0 : community.hashCode());
-		result = prime * result + hostId;
+		result = prime * result + ((ip == null) ? 0 : ip.hashCode());
+		result = prime * result + port;
 		return result;
 	}
 
@@ -111,13 +86,14 @@ public class SnmpAgent {
 		if (getClass() != obj.getClass())
 			return false;
 		SnmpAgent other = (SnmpAgent) obj;
-		if (community == null) {
-			if (other.community != null)
+		if (ip == null) {
+			if (other.ip != null)
 				return false;
-		} else if (!community.equals(other.community))
+		} else if (!ip.equals(other.ip))
 			return false;
-		if (hostId != other.hostId)
+		if (port != other.port)
 			return false;
 		return true;
 	}
+
 }

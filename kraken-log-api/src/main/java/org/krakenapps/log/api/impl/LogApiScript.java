@@ -24,10 +24,12 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.log.api.Log;
 import org.krakenapps.log.api.LogNormalizer;
 import org.krakenapps.log.api.LogNormalizerRegistry;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserRegistry;
+import org.krakenapps.log.api.LogPipe;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
 import org.krakenapps.log.api.LoggerFactory;
@@ -138,6 +140,32 @@ public class LogApiScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "trace logger output", arguments = { @ScriptArgument(name = "logger name", type = "string", description = "logger fullname") })
+	public void trace(String[] args) {
+		Logger logger = loggerRegistry.getLogger(args[0]);
+		ConsoleLogPipe p = new ConsoleLogPipe();
+		logger.addLogPipe(p);
+
+		try {
+			context.println("tracing logger: " + logger);
+			while (true) {
+				context.readLine();
+			}
+		} catch (InterruptedException e) {
+			context.println("interrupted");
+		} finally {
+			logger.removeLogPipe(p);
+		}
+	}
+
+	private class ConsoleLogPipe implements LogPipe {
+
+		@Override
+		public void onLog(Logger logger, Log log) {
+			context.println(logger.getFullName() + ": " + log.toString());
+		}
+	}
+
 	@ScriptUsage(description = "start the logger", arguments = {
 			@ScriptArgument(name = "logger fullname", type = "string", description = "the logger fullname to start"),
 			@ScriptArgument(name = "interval", type = "int", description = "thread sleep time in milliseconds") })
@@ -233,7 +261,7 @@ public class LogApiScript implements Script {
 				context.println("logger not found");
 				return;
 			}
-			
+
 			// stop logger
 			logger.stop();
 
