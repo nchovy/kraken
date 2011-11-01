@@ -104,7 +104,7 @@
     <module>kraken-logdb-client</module>
     <module>kraken-logdb</module>
     <module>kraken-confdb</module>
-    <module>kraken-logdb-arbiter</module>
+    <module>kraken-snmpmon</module>
   </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>

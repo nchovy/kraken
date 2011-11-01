@@ -1,0 +1,606 @@
+package org.krakenapps.snmpmon;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.EnumMap;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Vector;
+
+import org.krakenapps.log.api.AbstractLogger;
+import org.krakenapps.log.api.Log;
+import org.krakenapps.log.api.LoggerFactory;
+import org.krakenapps.log.api.SimpleLog;
+import org.krakenapps.snmpmon.Interface.IfEntry;
+import org.slf4j.Logger;
+import org.snmp4j.CommunityTarget;
+import org.snmp4j.PDU;
+import org.snmp4j.Snmp;
+import org.snmp4j.TransportMapping;
+import org.snmp4j.event.ResponseEvent;
+import org.snmp4j.mp.SnmpConstants;
+import org.snmp4j.smi.Counter32;
+import org.snmp4j.smi.Counter64;
+import org.snmp4j.smi.Gauge32;
+import org.snmp4j.smi.Integer32;
+import org.snmp4j.smi.OID;
+import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.TimeTicks;
+import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.UnsignedInteger32;
+import org.snmp4j.smi.Variable;
+import org.snmp4j.smi.VariableBinding;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
+
+public class AgentLogger extends AbstractLogger {
+	private static final int ethernetCsmacd = 6;
+
+	private static final int timeout = 3000;
+
+	private Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
+
+	private long loggerCreated;
+
+	private SnmpAgent target;
+
+	public AgentLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, Properties config) {
+		super(hostGuid, name, description, loggerFactory);
+		parseConfig(config);
+		loggerCreated = new Date().getTime();
+	}
+
+	public AgentLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, SnmpAgent agent) {
+		super(hostGuid, name, description, loggerFactory);
+		target = agent;
+		loggerCreated = new Date().getTime();
+	}
+
+	private void parseConfig(Properties config) {
+		// parse target addresses
+		String targetAddressesStr = (String) config.get(AgentLoggerFactory.ConfigOption.target.getConfigKey());
+		target = null;
+		if (targetAddressesStr == null)
+			throw new RuntimeException("target address cannot be null.");
+
+		int nextHostId = 2147000000;
+		if (config.containsKey(AgentLoggerFactory.ConfigOption.hostId.getConfigKey())) {
+			nextHostId = (Integer) config.get(AgentLoggerFactory.ConfigOption.hostId.getConfigKey());
+		}
+		SnmpAgent agent = new SnmpAgent(nextHostId);
+		target = agent;
+		String[] as = targetAddressesStr.split(":");
+		String ip = as[0];
+		int port = 161;
+		if (as.length == 2)
+			port = Integer.parseInt(as[1]);
+		if (config.containsKey(AgentLoggerFactory.ConfigOption.port.getConfigKey()))
+			port = (Integer) config.get(AgentLoggerFactory.ConfigOption.port.getConfigKey());
+		agent.setIp(ip);
+		agent.setPort(port);
+
+		// parse community strings
+		{
+			String communityStringStr = (String) config.get(AgentLoggerFactory.ConfigOption.community.getConfigKey());
+			target.setCommunity(communityStringStr);
+		}
+		{
+			// parse versions
+			Integer version = (Integer) config.get(AgentLoggerFactory.ConfigOption.version.getConfigKey());
+			target.setSnmpVersion(getSnmpVersion(version));
+		}
+	}
+
+	private int getSnmpVersion(Integer version) {
+		if (version == 1) {
+			return SnmpConstants.version1;
+		} else {
+			return SnmpConstants.version2c;
+		}
+	}
+
+	@Override
+	protected void runOnce() {
+		try {
+			ArrayList<VariableBinding> results = query(target);
+			buildLog(target, results);
+		} catch (Exception e) {
+			String targetStr = String.format("for %s (%d, %d)", target.getIp(), target.getOrganizationId(), target.getHostId());
+			if (e instanceof RuntimeException) {
+				if (e.getCause() != null) {
+					logger.warn("SNMP query failed " + targetStr + ": cause: " + e.getCause().getMessage());
+					logger.debug("SNMP query failed exception detail", e);
+				} else {
+					if (!"request timed out".equals(e.getMessage())) {
+						logger.warn("SNMP query failed " + targetStr + ": msg: " + e.getClass().getName() + "(" + e.getMessage()
+								+ ")");
+						logger.debug("SNMP query failed exception detail", e);
+					}
+				}
+
+				if (e instanceof TimeoutException) {
+					Map<String, Object> m = new HashMap<String, Object>();
+					m.put("source_ip", deviceIp);
+					m.put("target_ip", target.getIp());
+					m.put("proto", "snmp");
+					m.put("port", 161);
+					m.put("timeout", timeout);
+					// Log on error
+					Log log = new SimpleLog(new Date(), getFullName(), "heartbeat", "Heartbeat failed", m);
+					write(log);
+				}
+
+			} else {
+				logger.warn("SNMP query failed " + targetStr + ": " + e.getClass().getName() + ":" + e.getMessage());
+				logger.debug("SNMP query failed exception detail", e);
+			}
+
+		}
+	}
+
+	private static String deviceIp = null;
+	static {
+		try {
+			deviceIp = null;
+			Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+			while (networkInterfaces.hasMoreElements()) {
+				NetworkInterface networkInterface = networkInterfaces.nextElement();
+				if (networkInterface.getHardwareAddress() == null || networkInterface.getHardwareAddress().length != 6)
+					continue;
+				Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+				while (inetAddresses.hasMoreElements()) {
+					InetAddress inetAddress = inetAddresses.nextElement();
+					if (inetAddress.getHostAddress().startsWith("127."))
+						continue;
+					deviceIp = inetAddress.getHostAddress();
+				}
+			}
+			if (deviceIp == null)
+				deviceIp = InetAddress.getLocalHost().getHostAddress();
+		} catch (SocketException e) {
+		} catch (UnknownHostException e) {
+		}
+	}
+
+	private static class OldValueKey {
+		SnmpAgent agent;
+		int ifIndex;
+		IfEntry ifEntry;
+
+		public OldValueKey(SnmpAgent agent, int ifIndex, IfEntry ifEntry) {
+			super();
+			this.agent = agent;
+			this.ifIndex = ifIndex;
+			this.ifEntry = ifEntry;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((agent == null) ? 0 : agent.hashCode());
+			result = prime * result + ((ifEntry == null) ? 0 : ifEntry.hashCode());
+			result = prime * result + ifIndex;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			OldValueKey other = (OldValueKey) obj;
+			if (agent == null) {
+				if (other.agent != null)
+					return false;
+			} else if (!agent.equals(other.agent))
+				return false;
+			if (ifEntry != other.ifEntry)
+				return false;
+			if (ifIndex != other.ifIndex)
+				return false;
+			return true;
+		}
+	}
+
+	private HashMap<OldValueKey, Long> oldValues = new HashMap<OldValueKey, Long>();
+
+	private static EnumMap<IfEntry, String> logParamKeys = new EnumMap<IfEntry, String>(IfEntry.class);
+	static {
+		logParamKeys.put(IfEntry.ifIndex, "index");
+		logParamKeys.put(IfEntry.ifType, "type");
+		logParamKeys.put(IfEntry.ifDescr, "description");
+		logParamKeys.put(IfEntry.ifMtu, "mtu");
+		logParamKeys.put(IfEntry.ifPhysAddress, "mac");
+		logParamKeys.put(IfEntry.ifSpeed, "bandwidth");
+		logParamKeys.put(IfEntry.ifOperStatus, "oper_status");
+		logParamKeys.put(IfEntry.ifAdminStatus, "admin_status");
+		logParamKeys.put(IfEntry.ifSpecific, "specific");
+		logParamKeys.put(IfEntry.ifLastChange, "last_change");
+		logParamKeys.put(IfEntry.ifInOctets, "rx_bytes_delta");
+		logParamKeys.put(IfEntry.ifOutOctets, "tx_bytes_delta");
+		logParamKeys.put(IfEntry.ifInUcastPkts, "rx_ucast_pkts_delta");
+		logParamKeys.put(IfEntry.ifOutUcastPkts, "tx_ucast_pkts_delta");
+		logParamKeys.put(IfEntry.ifInNUcastPkts, "rx_nucast_pkts_delta");
+		logParamKeys.put(IfEntry.ifOutNUcastPkts, "tx_nucast_pkts_delta");
+		logParamKeys.put(IfEntry.ifInErrors, "rx_errors_delta");
+		logParamKeys.put(IfEntry.ifOutErrors, "tx_errors_delta");
+		logParamKeys.put(IfEntry.ifInDiscards, "rx_discards_delta");
+		logParamKeys.put(IfEntry.ifOutDiscards, "tx_discards_delta");
+		logParamKeys.put(IfEntry.ifInUnknownProtos, "rx_unknown_protos");
+		logParamKeys.put(IfEntry.ifOutQLen, "tx_queue_length");
+	}
+
+	private void buildLog(SnmpAgent target, ArrayList<VariableBinding> results) {
+		VariableBinding vbIfNumber = results.get(0);
+		String oidIfNumber = Interface.oidInterfaces + ".1.0";
+		if (!vbIfNumber.getOid().equals(new OID(oidIfNumber)))
+			throw new ParseException("first result doesn't match with " + oidIfNumber + ": " + vbIfNumber.getOid());
+
+		int ifNumber = vbIfNumber.getVariable().toInt();
+
+		HashMap<Integer, Interface> interfaces = new HashMap<Integer, Interface>();
+
+		// building interfaceImpl instances
+		for (int i = 0; i < ifNumber; ++i) {
+			VariableBinding vb = results.get(1 + i);
+			if (!vb.getOid().startsWith(Interface.IfEntry.ifIndex.getOID()))
+				throw new ParseException("invalid parse value while building interfaces: " + vb);
+			int ifIndex = vb.getVariable().toInt();
+			interfaces.put(ifIndex, new Interface(ifIndex));
+		}
+
+		// set properties for interfaces
+		for (VariableBinding vb : results.subList(1 + ifNumber, results.size())) {
+			OID oid = vb.getOid();
+
+			OID parent = (OID) oid.clone();
+			int ifIndex = parent.removeLast();
+			IfEntry ifEntry = IfEntry.valueOf(parent);
+			if (ifEntry == null)
+				continue;
+
+			Variable var = vb.getVariable();
+			Interface iface = interfaces.get(ifIndex);
+			if (iface == null) {
+				continue;
+			} else {
+				// filter non-etherCsmacd
+				iface.setProperty(ifEntry, var);
+				if (ifEntry.equals(IfEntry.ifType)) {
+					if (var.toInt() != ethernetCsmacd) {
+						interfaces.remove(ifIndex);
+					}
+				}
+			}
+		}
+
+		HashMap<OldValueKey, Long> newOldValues = new HashMap<OldValueKey, Long>();
+		try {
+			Date now = new Date();
+
+			// calculate interval
+			OldValueKey intervalKey = new OldValueKey(target, -1, IfEntry.INTERVAL);
+			newOldValues.put(intervalKey, now.getTime());
+			long interval;
+			Long oldInterval = oldValues.get(intervalKey);
+			if (oldInterval == null)
+				interval = delta32(now.getTime(), loggerCreated);
+			else
+				interval = delta32(now.getTime(), oldInterval.longValue());
+
+			TrafficSummary max_ts = new TrafficSummary(' ', -1, -1, -1);
+			String max_descr = null;
+			String max_physAddress = null;
+			// build & write logs for each interfaces
+			for (Entry<Integer, Interface> entry : interfaces.entrySet()) {
+				Interface iface = entry.getValue();
+				HashMap<String, Object> params = new HashMap<String, Object>();
+				params.put("scope", "device");
+				for (Entry<IfEntry, Object> ve : iface.getProperties().entrySet()) {
+					Variable value = (Variable) ve.getValue();
+					if (value instanceof Counter32) {
+						OldValueKey key = new OldValueKey(target, entry.getKey(), ve.getKey());
+						newOldValues.put(key, value.toLong());
+						Long oldValue = oldValues.get(key);
+						if (oldValue == null) {
+							value = new UnsignedInteger32(0);
+						} else {
+							// to calc sanitized delta..
+							long delta = delta32(value.toLong(), oldValue.longValue());
+							value = new UnsignedInteger32(delta);
+						}
+					}
+					String logParamKey = logParamKeys.get(ve.getKey());
+					if (logParamKey == null)
+						logParamKey = ve.getKey().toString();
+					params.put(logParamKey, convertVariableToPrimitive(value));
+				}
+
+				// interval in milliseconds
+				params.put("interval", interval);
+
+				String descr = iface.getProperties().get(IfEntry.ifDescr).toString();
+				String physAddress = iface.getProperties().get(IfEntry.ifPhysAddress).toString();
+
+				TrafficSummary rts = getTrafficSummary('R', params);
+				TrafficSummary tts = getTrafficSummary('T', params);
+
+				if (params.get(logParamKeys.get(IfEntry.ifOperStatus)).toString().equals("1")) {
+					if (max_ts.bps < rts.bps) {
+						max_ts = rts;
+						max_descr = descr;
+						max_physAddress = physAddress;
+					}
+					if (max_ts.bps < tts.bps) {
+						max_ts = tts;
+						max_descr = descr;
+						max_physAddress = physAddress;
+					}
+				}
+
+				Log log = new SimpleLog(now, getFullName(), "device", getMessage(descr, physAddress, rts, tts), params);
+				write(log);
+			}
+
+			// max log
+			Map<String, Object> m = new HashMap<String, Object>();
+
+			if (max_ts.utilization < 0) {
+				logger.warn("SnmpMonitor max_ts.utilization < 0 ({}, {}, {})", new Object[] { max_ts.utilization, max_ts.bps,
+						max_descr });
+				m.put("scope", "total");
+				m.put("max_usage", 0);
+				m.put("description", max_descr);
+				m.put("mac", max_physAddress);
+
+				String msg = String.format("network usage: max network usage [%s (%s) - %d%%]", max_descr, max_physAddress,
+						max_ts.utilization);
+				Log log = new SimpleLog(new Date(), getFullName(), "total", msg, m);
+				write(log);
+			} else {
+				m.put("scope", "total");
+				m.put("max_usage", max_ts.utilization);
+				m.put("description", max_descr);
+				m.put("mac", max_physAddress);
+
+				String msg = String.format("network usage: max network usage [%s (%s) - %d%%]", max_descr, max_physAddress,
+						max_ts.utilization);
+				Log log = new SimpleLog(new Date(), getFullName(), "total", msg, m);
+
+				write(log);
+			}
+
+		} finally {
+			oldValues = newOldValues;
+		}
+	}
+
+	private String getMessage(String descr, String physAddress, TrafficSummary rts, TrafficSummary tts) {
+		return String.format("%s (%s), %s, %s", descr, physAddress, rts.toString(), tts.toString());
+	}
+
+	private static String[] bpsUnits = new String[] { "", "K", "M", "G", "T", "P" };
+
+	private static class TrafficSummary {
+		public char type;
+		public int utilization;
+		public int bps;
+		public int fps;
+
+		public TrafficSummary(char type, int utilization, int bps, int fps) {
+			this.type = type;
+			this.utilization = utilization;
+			this.bps = bps;
+			this.fps = fps;
+		}
+
+		public String toString() {
+			return String.format("%cX[%d%% %s, %dfps]", type, utilization, bpsToString(bps), fps);
+		}
+	}
+
+	private TrafficSummary getTrafficSummary(char type, Map<String, Object> params) {
+		int utilization;
+		int bps;
+		int fps;
+
+		String octets = type == 'R' ? logParamKeys.get(IfEntry.ifInOctets) : logParamKeys.get(IfEntry.ifOutOctets);
+		String ucastPkts = type == 'R' ? logParamKeys.get(IfEntry.ifInUcastPkts) : logParamKeys.get(IfEntry.ifOutUcastPkts);
+		String nucastPkts = type == 'R' ? logParamKeys.get(IfEntry.ifInNUcastPkts) : logParamKeys.get(IfEntry.ifOutNUcastPkts);
+
+		long octet_delta = ((Number) params.get(octets)).longValue();
+		long pkt_delta = 0;
+		if (params.containsKey(ucastPkts)) {
+			pkt_delta += ((Number) params.get(ucastPkts)).longValue();
+		}
+		if (params.containsKey(nucastPkts)) {
+			pkt_delta += ((Number) params.get(nucastPkts)).longValue();
+		}
+		long bandwidth = ((Number) params.get(logParamKeys.get(IfEntry.ifSpeed))).longValue();
+		long seconds = (Long) params.get("interval") / 1000;
+
+		bps = (int) ((double) octet_delta / seconds * 8.0);
+		fps = (int) ((double) pkt_delta / seconds);
+		if (bandwidth == 0)
+			utilization = 0;
+		else
+			utilization = (int) ((long) bps * 100L / bandwidth);
+		if (utilization < 0) {
+			logger.warn("minus utilization: {}, {}, {}, {}", new Object[] { utilization, bps, fps, bandwidth });
+		}
+		if (utilization > 100) {
+			logger.warn("max_ts utilization > 100 !");
+			logger.warn(String.format(
+					"ifIndex: %d, physAddress: %s, interval: %d, octet_delta: %d, pkt_delta: %d, bandwidth: %d",
+					(Number) params.get(logParamKeys.get(IfEntry.ifIndex)),
+					(String) params.get(logParamKeys.get(IfEntry.ifPhysAddress)), seconds, octet_delta, pkt_delta, bandwidth));
+		}
+
+		return new TrafficSummary(type, utilization, bps, fps);
+	}
+
+	private static String bpsToString(int bps) {
+		int mul = 0;
+		while (bps >= 1000) {
+			bps = bps / 1000;
+			mul++;
+		}
+		String bpsUnit = bpsUnits[mul];
+
+		return String.format("%d%sbps", bps, bpsUnit);
+	}
+
+	private interface VariableConverter<T extends Variable> {
+		Object convert(Variable value);
+	}
+
+	private static HashMap<Class<?>, VariableConverter<? extends Variable>> converters = new HashMap<Class<?>, AgentLogger.VariableConverter<? extends Variable>>();
+	static {
+		VariableConverter<?> toStringConverter = new VariableConverter<Variable>() {
+			public Object convert(Variable value) {
+				return value.toString();
+			}
+		};
+		VariableConverter<?> longConverter = new VariableConverter<Variable>() {
+			public Object convert(Variable value) {
+				return value.toLong();
+			}
+		};
+		VariableConverter<?> intConverter = new VariableConverter<Variable>() {
+			public Object convert(Variable value) {
+				return value.toInt();
+			}
+		};
+
+		converters.put(OID.class, toStringConverter);
+
+		converters.put(Counter64.class, longConverter);
+		converters.put(UnsignedInteger32.class, longConverter);
+		converters.put(Counter32.class, longConverter);
+		converters.put(Gauge32.class, longConverter);
+		converters.put(TimeTicks.class, longConverter);
+
+		converters.put(Integer32.class, intConverter);
+	}
+
+	private static <T extends Variable> Object convertVariableToPrimitive(T value) {
+		@SuppressWarnings("unchecked")
+		VariableConverter<T> variableConverter = (VariableConverter<T>) converters.get(value.getClass());
+		if (variableConverter == null)
+			// toString converter
+			return converters.get(OID.class).convert(value);
+		else
+			return variableConverter.convert(value);
+	}
+
+	private long delta32(long nv, long ov) {
+		if (nv < ov) {
+			return nv + 0xFFFFFFFFL - ov;
+		} else {
+			return nv - ov;
+		}
+	}
+
+	private ArrayList<VariableBinding> query(SnmpAgent target) throws Exception {
+		Snmp snmp = null;
+		ArrayList<VariableBinding> results = null;
+		TransportMapping transport = null;
+		try {
+			CommunityTarget commTarget = new CommunityTarget();
+			commTarget.setCommunity(new OctetString(target.getCommunity()));
+			commTarget.setVersion(getSnmpVersionContstant(target.getSnmpVersion()));
+			commTarget.setAddress(new UdpAddress(target.getIp() + "/" + Integer.toString(target.getPort())));
+			commTarget.setRetries(2);
+			commTarget.setTimeout(timeout);
+
+			transport = new DefaultUdpTransportMapping();
+			transport.listen();
+
+			snmp = new Snmp(transport);
+
+			OID ifEntryOid = new OID(Interface.oidInterfaces);
+
+			PDU pdu = new PDU();
+			pdu.add(new VariableBinding(new OID(ifEntryOid)));
+			pdu.setType(PDU.GETBULK);
+			pdu.setMaxRepetitions(10);
+
+			results = new ArrayList<VariableBinding>();
+
+			while (true) {
+				ResponseEvent response = null;
+				response = snmp.getBulk(pdu, commTarget);
+
+				PDU responsePdu = response.getResponse();
+				if (responsePdu == null) {
+					throw new TimeoutException();
+				}
+
+				@SuppressWarnings("unchecked")
+				Vector<VariableBinding> variableBindings = responsePdu.getVariableBindings();
+				VariableBinding lastElement = variableBindings.lastElement();
+				if (lastElement != null && lastElement.getOid().startsWith(ifEntryOid)) {
+					results.addAll(variableBindings);
+					// continue to retrieve next bulk
+					pdu.remove(0);
+					pdu.add(new VariableBinding(lastElement.getOid()));
+					continue;
+				} else {
+					// break loop.
+					// find last element startsWith ifEntryOid
+					for (VariableBinding vb : variableBindings) {
+						if (vb.getOid().startsWith(ifEntryOid))
+							results.add(vb);
+						else {
+							break;
+						}
+					}
+					// break while loop
+					break;
+				}
+			}
+		} catch (Exception e) {
+			throw e;
+		} finally {
+			if (transport != null) {
+				try {
+					transport.close();
+				} catch (IOException e) {
+				}
+			}
+
+			if (snmp != null) {
+				try {
+					snmp.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return results;
+	}
+
+	private int getSnmpVersionContstant(int snmpVersion) {
+		switch (snmpVersion) {
+		case 1:
+			return SnmpConstants.version1;
+		case 2:
+			return SnmpConstants.version2c;
+		case 3:
+			return SnmpConstants.version3;
+		default:
+			return SnmpConstants.version2c;
+		}
+	}
+}
