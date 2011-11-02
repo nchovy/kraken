@@ -15,20 +15,26 @@
  */
 package org.krakenapps.ldap.impl;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -52,6 +58,7 @@ import com.novell.ldap.LDAPJSSESecureSocketFactory;
 import com.novell.ldap.LDAPReferralException;
 import com.novell.ldap.LDAPSearchResults;
 import com.novell.ldap.LDAPSocketFactory;
+import com.novell.ldap.util.Base64;
 
 @Component(name = "ldap-service")
 @Provides
@@ -67,19 +74,9 @@ public class JLdapService implements LdapService {
 		try {
 			Preferences root = prefsvc.getSystemPreferences();
 			for (String name : root.childrenNames()) {
-				Preferences p = root.node(name);
-				String dc = p.get("dc", null);
-				String keystore = p.get("keystore", null);
-				int port = p.getInt("port", (keystore == null) ? LdapProfile.DEFAULT_PORT
-						: LdapProfile.DEFAULT_SSL_PORT);
-				String account = p.get("account", null);
-				String password = p.get("password", null);
-				int syncInterval = p.getInt("sync_interval", 10 * 60 * 1000);
-				Date lastSync = new Date(p.getLong("last_sync", 0));
-
-				LdapProfile profile = new LdapProfile(name, dc, port, account, password, keystore, syncInterval,
-						lastSync);
-				profiles.add(profile);
+				LdapProfile profile = getProfile(root, name);
+				if (profile != null)
+					profiles.add(profile);
 			}
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException("io error", e);
@@ -95,15 +92,24 @@ public class JLdapService implements LdapService {
 			if (!root.nodeExists(name))
 				return null;
 
-			Preferences p = root.node(name);
-			String dc = p.get("dc", null);
-			String account = p.get("account", null);
-			String password = p.get("password", null);
-
-			return new LdapProfile(name, dc, account, password);
+			return getProfile(root, name);
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException("io error", e);
 		}
+	}
+
+	private LdapProfile getProfile(Preferences root, String name) {
+		Preferences p = root.node(name);
+		String dc = p.get("dc", null);
+		String trustStoreType = p.get("truststore_type", null);
+		KeyStore trustStore = getKeyStore(trustStoreType, p.get("truststore", null));
+		int port = p.getInt("port", (trustStore == null) ? LdapProfile.DEFAULT_PORT : LdapProfile.DEFAULT_SSL_PORT);
+		String account = p.get("account", null);
+		String password = p.get("password", null);
+		int syncInterval = p.getInt("sync_interval", 10 * 60 * 1000);
+		Date lastSync = new Date(p.getLong("last_sync", 0));
+
+		return new LdapProfile(name, dc, port, account, password, trustStore, syncInterval, lastSync);
 	}
 
 	@Override
@@ -114,7 +120,6 @@ public class JLdapService implements LdapService {
 				throw new IllegalStateException("duplicated profile name");
 
 			setPreference(profile, root);
-
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException("io error", e);
 		}
@@ -128,7 +133,6 @@ public class JLdapService implements LdapService {
 				throw new IllegalStateException("profile not found");
 
 			setPreference(profile, root);
-
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException("io error", e);
 		}
@@ -137,10 +141,22 @@ public class JLdapService implements LdapService {
 	private void setPreference(LdapProfile profile, Preferences root) throws BackingStoreException {
 		Preferences p = root.node(profile.getName());
 		p.put("dc", profile.getDc());
+		p.putInt("port", profile.getPort());
 		p.put("account", profile.getAccount());
 		p.put("password", profile.getPassword());
 		p.putInt("sync_interval", profile.getSyncInterval());
 		p.putLong("last_sync", profile.getLastSync() == null ? 0 : profile.getLastSync().getTime());
+		if (profile.getTrustStore() != null) {
+			try {
+				p.put("truststore_type", profile.getTrustStore().getType());
+				ByteArrayOutputStream bos = new ByteArrayOutputStream();
+				profile.getTrustStore().store(bos, LdapProfile.DEFAULT_TRUSTSTORE_PASSWORD);
+				p.put("truststore", Base64.encode(bos.toByteArray()));
+			} catch (Exception e) {
+				root.remove(profile.getName());
+				throw new IllegalArgumentException("invalid truststore");
+			}
+		}
 
 		p.flush();
 		p.sync();
@@ -160,58 +176,6 @@ public class JLdapService implements LdapService {
 		} catch (BackingStoreException e) {
 			throw new IllegalStateException("io error", e);
 		}
-	}
-
-	@Override
-	public Collection<String> getCACerts() {
-		File keystoreDir = new File(System.getProperty("kraken.data.dir"), "kraken-ldap");
-		if (!keystoreDir.exists())
-			return new ArrayList<String>();
-
-		List<String> keystores = new ArrayList<String>();
-		for (File keystore : keystoreDir.listFiles()) {
-			if (keystore.isFile() && keystore.getName().endsWith(".crt"))
-				keystores.add(keystore.getName());
-		}
-		return keystores;
-	}
-
-	@Override
-	public void importCACert(String alias, InputStream is) throws IOException {
-		File keystore = new File(System.getProperty("kraken.data.dir"), "kraken-ldap/" + alias + ".crt");
-		if (keystore.exists())
-			throw new IllegalStateException("alias already exist");
-
-		OutputStream os = new FileOutputStream(keystore);
-		try {
-			byte[] b = new byte[4096];
-			while (true) {
-				int len = is.read(b);
-				if (len == -1)
-					break;
-				os.write(b, 0, len);
-			}
-		} finally {
-			if (is != null) {
-				try {
-					is.close();
-				} catch (IOException e) {
-				}
-			}
-			if (os != null) {
-				try {
-					os.close();
-				} catch (IOException e) {
-				}
-			}
-		}
-	}
-
-	@Override
-	public void removeCACert(String alias) {
-		File keystore = new File(System.getProperty("kraken.data.dir"), "kraken-ldap/" + alias + ".crt");
-		if (keystore.exists())
-			keystore.delete();
 	}
 
 	@Override
@@ -241,7 +205,7 @@ public class JLdapService implements LdapService {
 			throw new IllegalStateException(e);
 		} finally {
 			try {
-				if (lc.isConnected())
+				if (lc != null && lc.isConnected())
 					lc.disconnect();
 			} catch (LDAPException e) {
 				logger.error("kraken ldap: disconnect failed", e);
@@ -330,29 +294,83 @@ public class JLdapService implements LdapService {
 		}
 	}
 
+	@Override
+	public KeyStore getKeyStore(String base64Encoded) {
+		return getKeyStore(KeyStore.getDefaultType(), base64Encoded);
+	}
+
+	@Override
+	public KeyStore getKeyStore(String keyStoreType, String base64Encoded) {
+		if (base64Encoded == null || base64Encoded.isEmpty())
+			return null;
+
+		byte[] b = Base64.decode(base64Encoded);
+		return getKeyStore(new ByteArrayInputStream(b));
+	}
+
+	@Override
+	public KeyStore getKeyStore(InputStream is) {
+		return getKeyStore(KeyStore.getDefaultType(), is);
+	}
+
+	@Override
+	public KeyStore getKeyStore(String keyStoreType, InputStream is) {
+		if (is == null)
+			return null;
+
+		try {
+			KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+			keyStore.load(is, LdapProfile.DEFAULT_TRUSTSTORE_PASSWORD);
+			return keyStore;
+		} catch (Exception e) {
+			throw new IllegalArgumentException("invalid keystore");
+		}
+	}
+
+	@Override
+	public KeyStore x509ToJKS(String base64Encoded) {
+		byte[] b = Base64.decode(base64Encoded);
+		return x509ToJKS(new ByteArrayInputStream(b));
+	}
+
+	@Override
+	public KeyStore x509ToJKS(InputStream is) {
+		try {
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			Certificate cert = cf.generateCertificate(is);
+
+			KeyStore jks = KeyStore.getInstance("JKS");
+			jks.load(null, null);
+			jks.setCertificateEntry("mykey", cert);
+
+			return jks;
+		} catch (Exception e) {
+			throw new IllegalArgumentException("invalid x509");
+		}
+	}
+
 	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
 		try {
-			if (profile.getKeystore() != null) {
-				File keystore = new File(System.getProperty("kraken.data.dir"), "kraken-ldap/" + profile.getKeystore()
-						+ ".crt");
-				if (!keystore.exists())
-					throw new IllegalStateException("keystore file not exist");
-				System.setProperty("javax.net.ssl.trustStore", keystore.getAbsolutePath());
-				LDAPConnection.setSocketFactory(new LDAPJSSESecureSocketFactory());
+			if (profile.getTrustStore() != null) {
+				SSLContext ctx = SSLContext.getInstance("SSL");
+				TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+				tmf.init(profile.getTrustStore());
+				ctx.init(null, tmf.getTrustManagers(), new SecureRandom());
+				LDAPConnection.setSocketFactory(new LDAPJSSESecureSocketFactory(ctx.getSocketFactory()));
 			} else
-				LDAPConnection.setSocketFactory(new JLdapSocketFactory(timeout));
+				LDAPConnection.setSocketFactory(new JLDAPSocketFactory(timeout));
 
-			LDAPConnection conn = new LDAPConnection(timeout);
+			LDAPConnection conn = new LDAPConnection();
 			conn.connect(profile.getDc(), profile.getPort());
 			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
 
 			return conn;
 		} catch (UnsupportedEncodingException e) {
 			logger.error("kraken ldap: JVM unsupported utf-8 encoding");
-			return null;
+			throw new IllegalStateException("invalid profile");
 		} catch (Exception e) {
-			logger.error("kraken ldap: ldap profile [{}] connection failed", profile.getName());
-			return null;
+			logger.error("kraken ldap: ldap profile [" + profile.getName() + "] connection failed", e);
+			throw new IllegalStateException("invalid profile");
 		}
 	}
 
@@ -460,10 +478,10 @@ public class JLdapService implements LdapService {
 		return (attr == null) ? null : attr.getStringValue();
 	}
 
-	private static class JLdapSocketFactory implements LDAPSocketFactory {
+	private static class JLDAPSocketFactory implements LDAPSocketFactory {
 		private Integer timeout;
 
-		public JLdapSocketFactory(Integer timeout) {
+		public JLDAPSocketFactory(Integer timeout) {
 			this.timeout = timeout;
 		}
 

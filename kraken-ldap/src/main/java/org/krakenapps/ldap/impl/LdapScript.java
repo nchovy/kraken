@@ -17,7 +17,7 @@ package org.krakenapps.ldap.impl;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
+import java.security.KeyStore;
 import java.util.Collection;
 
 import org.krakenapps.api.Script;
@@ -60,16 +60,32 @@ public class LdapScript implements Script {
 			@ScriptArgument(name = "dc", type = "string", description = "domain name of domain controller "),
 			@ScriptArgument(name = "account", type = "string",
 					description = "admin account name for simple bind (e.g. OFFICE\\xeraph"),
-			@ScriptArgument(name = "password", type = "string", description = "admin password") })
+			@ScriptArgument(name = "password", type = "string", description = "admin password"),
+			@ScriptArgument(name = "truststore path", type = "string", description = "truststore file path",
+					optional = true) })
 	public void createProfile(String[] args) {
 		String name = args[0];
 		String dc = args[1];
 		String account = args[2];
 		String password = args[3];
+		String trustStorePath = (args.length > 4) ? args[4] : null;
 
-		LdapProfile profile = new LdapProfile(name, dc, account, password);
-		ldap.createProfile(profile);
-		context.println("created");
+		try {
+			LdapProfile profile = null;
+			if (trustStorePath != null) {
+				File file = new File(trustStorePath);
+				if (!file.exists())
+					throw new IllegalArgumentException("file not found");
+				KeyStore trustStore = ldap.x509ToJKS(new FileInputStream(file));
+				profile = new LdapProfile(name, dc, account, password, trustStore);
+			} else {
+				profile = new LdapProfile(name, dc, account, password);
+			}
+			ldap.createProfile(profile);
+			context.println("created");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+		}
 	}
 
 	@ScriptUsage(description = "remove ldap profile", arguments = { @ScriptArgument(name = "name", type = "string",
@@ -77,32 +93,6 @@ public class LdapScript implements Script {
 	public void removeProfile(String[] args) {
 		String name = args[0];
 		ldap.removeProfile(name);
-		context.println("removed");
-	}
-
-	public void cacerts(String[] args) {
-		for (String alias : ldap.getCACerts())
-			context.println(alias);
-	}
-
-	@ScriptUsage(description = "import keystore", arguments = {
-			@ScriptArgument(name = "alias", type = "string", description = "alias"),
-			@ScriptArgument(name = "path", type = "string", description = "keystore path") })
-	public void importca(String[] args) {
-		String alias = args[0];
-		File keystore = new File(args[1]);
-		try {
-			ldap.importCACert(alias, new FileInputStream(keystore));
-			context.println("import success");
-		} catch (IOException e) {
-			context.println("import failed");
-		}
-	}
-
-	@ScriptUsage(description = "remove keystore", arguments = { @ScriptArgument(name = "alias", type = "string",
-			description = "alias") })
-	public void removeca(String[] args) {
-		ldap.removeCACert(args[0]);
 		context.println("removed");
 	}
 
@@ -212,7 +202,7 @@ public class LdapScript implements Script {
 
 		try {
 			LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
-					p.getPassword(), p.getKeystore(), Integer.valueOf(args[1]), p.getLastSync());
+					p.getPassword(), p.getTrustStore(), Integer.valueOf(args[1]), p.getLastSync());
 
 			ldap.updateProfile(newProfile);
 			context.println("set");
@@ -228,5 +218,4 @@ public class LdapScript implements Script {
 
 		return (LdapSyncService) bc.getService(ref);
 	}
-
 }

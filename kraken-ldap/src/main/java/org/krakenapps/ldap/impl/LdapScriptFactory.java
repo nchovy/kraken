@@ -27,7 +27,6 @@ import org.osgi.framework.BundleContext;
 @Component(name = "ldap-script-factory")
 @Provides
 public class LdapScriptFactory implements ScriptFactory {
-
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "alias", value = "ldap")
 	private String alias;

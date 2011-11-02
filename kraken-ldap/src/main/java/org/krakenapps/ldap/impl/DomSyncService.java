@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "ldap-sync-service")
 @Provides
-public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit> implements LdapSyncService, Runnable {
+public class DomSyncService implements LdapSyncService, Runnable {
 	private final Logger logger = LoggerFactory.getLogger(DomSyncService.class.getName());
 
 	private BundleContext bc;
@@ -62,13 +62,15 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 	@Requires
 	private PreferencesService prefsvc;
 
+	private OrganizationUnitEntityEventListener orgUnitEntityEventListener = new OrganizationUnitEntityEventListener();
+
 	public DomSyncService(BundleContext bc) {
 		this.bc = bc;
 	}
 
 	@Validate
 	public void start() {
-		orgUnitApi.addEntityEventListener(this);
+		orgUnitApi.addEntityEventListener(orgUnitEntityEventListener);
 
 		// load sync state
 		Preferences p = prefsvc.getSystemPreferences();
@@ -80,7 +82,7 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 	@Invalidate
 	public void stop() {
 		if (orgUnitApi != null)
-			orgUnitApi.removeEntityEventListener(this);
+			orgUnitApi.removeEntityEventListener(orgUnitEntityEventListener);
 	}
 
 	private void startSyncThread() {
@@ -130,7 +132,7 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 					}
 
 					LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
-							p.getPassword(), p.getKeystore(), p.getSyncInterval(), now);
+							p.getPassword(), p.getTrustStore(), p.getSyncInterval(), now);
 					ldap.updateProfile(newProfile);
 				}
 			} catch (Exception e) {
@@ -159,11 +161,6 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 		} catch (BackingStoreException e) {
 			throw new RuntimeException("cannot change sync state", e);
 		}
-	}
-
-	@Override
-	public void entityRemoved(OrganizationUnit orgUnit) {
-		ldapOrgUnitApi.removeLdapOrganizationalUnit(orgUnit);
 	}
 
 	@Override
@@ -301,4 +298,10 @@ public class DomSyncService extends DefaultEntityEventListener<OrganizationUnit>
 		return profile;
 	}
 
+	private class OrganizationUnitEntityEventListener extends DefaultEntityEventListener<OrganizationUnit> {
+		@Override
+		public void entityRemoved(OrganizationUnit orgUnit) {
+			ldapOrgUnitApi.removeLdapOrganizationalUnit(orgUnit);
+		}
+	}
 }

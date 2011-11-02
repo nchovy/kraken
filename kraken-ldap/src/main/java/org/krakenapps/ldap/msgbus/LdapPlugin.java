@@ -15,9 +15,8 @@
  */
 package org.krakenapps.ldap.msgbus;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.security.KeyStore;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,7 +39,6 @@ import org.osgi.framework.ServiceReference;
 
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPException;
-import com.novell.ldap.util.Base64;
 
 @Component(name = "ldap-plugin")
 @MsgbusPlugin
@@ -77,14 +75,23 @@ public class LdapPlugin {
 		int port = LdapProfile.DEFAULT_PORT;
 		String account = req.getString("account");
 		String password = req.getString("password");
+		String encoded = null;
 		int syncInterval = 10 * 60 * 1000;
 		if (req.has("port"))
 			port = req.getInteger("port");
-
 		if (req.has("sync_interval"))
 			syncInterval = req.getInteger("sync_interval");
+		if (req.has("trust_store"))
+			encoded = req.getString("trust_store");
 
-		LdapProfile profile = new LdapProfile(name, dc, port, account, password, null, syncInterval);
+		KeyStore trustStore = null;
+		try {
+			trustStore = ldap.x509ToJKS(encoded);
+		} catch (IllegalArgumentException e) {
+			throw new MsgbusException("ldap", e.getMessage());
+		}
+
+		LdapProfile profile = new LdapProfile(name, dc, port, account, password, trustStore, syncInterval);
 		ldap.createProfile(profile);
 	}
 
@@ -104,7 +111,7 @@ public class LdapPlugin {
 			throw new MsgbusException("ldap", "profile-not-found");
 
 		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
-				p.getKeystore(), syncInterval, p.getLastSync());
+				p.getTrustStore(), syncInterval, p.getLastSync());
 
 		ldap.updateProfile(newProfile);
 	}
@@ -121,29 +128,6 @@ public class LdapPlugin {
 			l.add(marshal(account));
 
 		resp.put("users", l);
-	}
-
-	@MsgbusMethod
-	public void getCACerts(Request req, Response resp) {
-		resp.put("certs", ldap.getCACerts());
-	}
-
-	@MsgbusMethod
-	public void createCACert(Request req, Response resp) {
-		String alias = req.getString("alias");
-		String base64 = req.getString("keystore");
-		byte[] orig = Base64.decode(base64);
-		try {
-			ldap.importCACert(alias, new ByteArrayInputStream(orig));
-		} catch (IOException e) {
-			throw new MsgbusException("ldap", "import failed");
-		}
-	}
-
-	@MsgbusMethod
-	public void removeCACert(Request req, Response resp) {
-		String alias = req.getString("alias");
-		ldap.removeCACert(alias);
 	}
 
 	@MsgbusMethod

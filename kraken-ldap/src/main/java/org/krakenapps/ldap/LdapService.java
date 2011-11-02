@@ -15,8 +15,8 @@
  */
 package org.krakenapps.ldap;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.security.KeyStore;
 import java.util.Collection;
 
 public interface LdapService {
@@ -30,12 +30,6 @@ public interface LdapService {
 
 	void removeProfile(String name);
 
-	Collection<String> getCACerts();
-
-	void importCACert(String alias, InputStream is) throws IOException;
-
-	void removeCACert(String alias);
-
 	Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile);
 
 	Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile);
@@ -43,4 +37,16 @@ public interface LdapService {
 	boolean verifyPassword(LdapProfile profile, String account, String password);
 
 	boolean verifyPassword(LdapProfile profile, String account, String password, int timeout);
+
+	KeyStore getKeyStore(String base64Encoded);
+
+	KeyStore getKeyStore(String keyStoreType, String base64Encoded);
+
+	KeyStore getKeyStore(InputStream is);
+
+	KeyStore getKeyStore(String keyStoreType, InputStream is);
+
+	KeyStore x509ToJKS(String base64Encoded);
+
+	KeyStore x509ToJKS(InputStream is);
 }
