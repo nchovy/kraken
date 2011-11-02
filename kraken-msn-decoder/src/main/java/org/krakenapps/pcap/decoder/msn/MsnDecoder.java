@@ -121,7 +121,7 @@ public class MsnDecoder implements TcpProcessor {
 		while (!isFindCommand && tokenIndex < token.length) {
 			if (token[tokenIndex].matches("^USR.+")) {
 				// USR: normal case. ANS: called by opponent.
-				String[] usrCommand = token[0].split(";");
+				String[] usrCommand = token[tokenIndex].split(";");
 				String[] userAddress = usrCommand[0].split(" ");
 				session.setMsnUserAddress(userAddress[userAddress.length - 1]);
 				isFindCommand = true;
