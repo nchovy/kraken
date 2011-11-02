@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-pcap</artifactId>
-	<version>1.5.0</version>
+	<version>1.6.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken PCAP</name>
 	<build>
@@ -24,9 +24,11 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap</Bundle-SymbolicName>
 						<Bundle-NativeCode>
-							lib/win32_x86/kpcap.dll; osname=win32; osname=windows server 2008;
+							lib/win32_x86/kpcap.dll; osname=win32;
+							osname=windows server 2008;
 							processor=x86,
-							lib/win32_x86_64/kpcap.dll; osname=win32; osname=windows server 2008;
+							lib/win32_x86_64/kpcap.dll; osname=win32; osname=windows server
+							2008;
 							processor=x86_64,
 							lib/linux_x86/libkpcap.so; osname=linux;
 							processor=x86,

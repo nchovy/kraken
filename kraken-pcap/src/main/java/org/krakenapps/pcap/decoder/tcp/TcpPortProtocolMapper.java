@@ -68,25 +68,27 @@ public class TcpPortProtocolMapper implements TcpProtocolMapper {
 	}
 
 	@Override
-	public void registerTemporaryMapping(InetSocketAddress sockAddr, Protocol protocol) {
+	public void register(InetSocketAddress sockAddr, Protocol protocol) {
 		temporaryTcpMap.put(sockAddr, protocol);
 	}
 
 	@Override
-	public void unregisterTemporaryMapping(InetSocketAddress sockAddr) {
+	public void unregister(InetSocketAddress sockAddr) {
 		if (temporaryTcpMap.containsKey(sockAddr))
 			temporaryTcpMap.remove(sockAddr);
 	}
 
 	@Override
 	public void register(Protocol protocol, TcpProcessor processor) {
-		tcpProcessorMap.putIfAbsent(protocol, Collections.newSetFromMap(new ConcurrentHashMap<TcpProcessor, Boolean>()));
+		tcpProcessorMap
+				.putIfAbsent(protocol, Collections.newSetFromMap(new ConcurrentHashMap<TcpProcessor, Boolean>()));
 		tcpProcessorMap.get(protocol).add(processor);
 	}
 
 	@Override
 	public void unregister(Protocol protocol, TcpProcessor processor) {
-		tcpProcessorMap.putIfAbsent(protocol, Collections.newSetFromMap(new ConcurrentHashMap<TcpProcessor, Boolean>()));
+		tcpProcessorMap
+				.putIfAbsent(protocol, Collections.newSetFromMap(new ConcurrentHashMap<TcpProcessor, Boolean>()));
 		tcpProcessorMap.get(protocol).remove(processor);
 	}
 
@@ -99,20 +101,12 @@ public class TcpPortProtocolMapper implements TcpProtocolMapper {
 
 	@Override
 	public Protocol map(TcpSegment segment) {
-		int port;
-
-		if (segment.getDirection() == TcpDirection.ToServer)
-			port = segment.getDestinationPort();
-		else
-			port = segment.getSourcePort();
-
-		/* FTP passive: use Socket Address of Destination, FTP active: use Socket Address of Source */
-		if (temporaryTcpMap.containsKey(segment.getDestination()))
-			return temporaryTcpMap.get(segment.getDestination());
-		else if (temporaryTcpMap.containsKey(segment.getSource()))
-			return temporaryTcpMap.get(segment.getSource());
-		else if (tcpMap.containsKey(port))
-			return tcpMap.get(port);
+		TcpSessionKey key = segment.getSessionKey();
+		InetSocketAddress server = new InetSocketAddress(key.getServerIp(), key.getServerPort());
+		if (temporaryTcpMap.containsKey(server))
+			return temporaryTcpMap.get(server);
+		else if (tcpMap.containsKey(key.getServerPort()))
+			return tcpMap.get(key.getServerPort());
 
 		return null;
 	}

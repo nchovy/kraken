@@ -29,13 +29,14 @@ public interface TcpProtocolMapper {
 
 	void unregister(Protocol protocol, TcpProcessor processor);
 
-	void registerTemporaryMapping(InetSocketAddress sockAddr, Protocol protocol);
-	
-	void unregisterTemporaryMapping(InetSocketAddress sockAddr);
+	void register(InetSocketAddress server, Protocol protocol);
+
+	void unregister(InetSocketAddress server);
 
 	@Deprecated
 	TcpProcessor getTcpProcessor(Protocol protocol);
 
 	@Deprecated
 	void unregister(Protocol protocol);
+
 }

@@ -51,7 +51,7 @@ public class FtpDecoder implements TcpProcessor {
 	/* list variables */
 	private boolean isViewList = false;
 	private Buffer list;
-	
+
 	public FtpDecoder(TcpProtocolMapper mapper) {
 		callbacks = new HashSet<FtpProcessor>();
 		sessionMap = new HashMap<TcpSessionKey, FtpSession>();
@@ -78,7 +78,7 @@ public class FtpDecoder implements TcpProcessor {
 	@Override
 	public void handleRx(TcpSessionKey sessionKey, Buffer data) {
 		FtpSession session = sessionMap.get(sessionKey);
-		if (isDownload && !(sessionKey.equals(key))) 
+		if (isDownload && !(sessionKey.equals(key)))
 			dataSession.putData(data);
 		else
 			handleRxBuffer(sessionKey, session, data);
@@ -95,9 +95,8 @@ public class FtpDecoder implements TcpProcessor {
 	@Override
 	public void onFinish(TcpSessionKey session) {
 		if (logger.isDebugEnabled())
-			logger.debug("-> ftp Session Closed: \n" + "Client Port: "
-					+ (int) session.getClientPort() + "\nServer Port: "
-					+ (int) session.getServerPort());
+			logger.debug("-> ftp Session Closed: \n" + "Client Port: " + (int) session.getClientPort()
+					+ "\nServer Port: " + (int) session.getServerPort());
 		sessionMap.remove(session);
 	}
 
@@ -125,15 +124,15 @@ public class FtpDecoder implements TcpProcessor {
 	}
 
 	private void handleCommandSession(TcpSessionKey key, FtpSession session, Buffer buffer) {
-		while(true) { 
-			if(buffer.isEOB()) {
+		while (true) {
+			if (buffer.isEOB()) {
 				break;
 			}
-			
+
 			int length = buffer.bytesBefore(new byte[] { 0x0d, 0x0a });
 			if (length == 0)
 				return;
-			
+
 			byte[] codes = new byte[4];
 			buffer.mark();
 			buffer.gets(codes, 0, 4);
@@ -152,11 +151,11 @@ public class FtpDecoder implements TcpProcessor {
 					/* passive mode */
 					String replyStr = new String(reply);
 					String[] token = replyStr.split(" ");
-					
+
 					InetSocketAddress sockAddr = new InetSocketAddress(key.getServerIp(), getPort(token));
-					mapper.registerTemporaryMapping(sockAddr, Protocol.FTP);
-				} 
-				
+					mapper.register(sockAddr, Protocol.FTP);
+				}
+
 				else if (code.equals("226 ") || code.equals("250 ")) {
 					/* get attached file */
 					if (fileName != "") {
@@ -166,24 +165,23 @@ public class FtpDecoder implements TcpProcessor {
 						initMultiSession();
 					}
 					/* view directory list */
-					else if(isViewList) { 
+					else if (isViewList) {
 						int remain = list.readableBytes();
-						
-						if(remain <= 0) {
+
+						if (remain <= 0) {
 							/* get directory list. But, list is empty. */
 							list = null;
 							isViewList = false;
-						}
-						else {
+						} else {
 							byte[] b = new byte[remain];
 							list.gets(b, 0, remain);
 							dispatchList(b);
-							
+
 							list = null;
 							isViewList = false;
 						}
 					}
-				} 
+				}
 			}
 
 			else {
@@ -198,33 +196,32 @@ public class FtpDecoder implements TcpProcessor {
 					list.addLast(command);
 					list.addLast(new byte[] { 0x0d, 0x0a });
 				}
-				
+
 				else if (code.equalsIgnoreCase("LIST") || code.equalsIgnoreCase("NLST")) {
 					fileName = "";
 					list = new ChainBuffer();
 					isViewList = true;
 					dispatchCommand(commandStr);
 				}
-				
+
 				else if (code.equalsIgnoreCase("STOR") || code.equalsIgnoreCase("RETR")) {
 					dataSession = new FtpDataSession();
-					
+
 					fileName = commandStr.split(" ")[1].replaceAll("\r\n", "");
 					isDownload = true;
 					this.key = key;
 					dispatchCommand(commandStr);
-				} 
-				
+				}
+
 				else if (code.equalsIgnoreCase("PORT")) {
 					/* active mode - REGISTER PORT */
 					String[] token = commandStr.split(" ");
 
 					InetSocketAddress sockAddr = new InetSocketAddress(key.getClientIp(), getPort(token));
-					mapper.registerTemporaryMapping(sockAddr, Protocol.FTP);
-					
+					mapper.register(sockAddr, Protocol.FTP);
+
 					dispatchCommand(commandStr);
-				}
-				else {
+				} else {
 					dispatchCommand(commandStr);
 				}
 			}
@@ -233,9 +230,8 @@ public class FtpDecoder implements TcpProcessor {
 	}
 
 	private int getPort(String[] token) {
-		String[] portCommand = token[token.length - 1].replaceAll("[()]", "").split(",");
-		int port = (Integer.parseInt(portCommand[4]) * 256)
-				+ Integer.parseInt(portCommand[5].replaceAll("\r\n", ""));
+		String[] portCommand = token[token.length - 1].replaceAll("[()]\\.", "").split(",");
+		int port = (Integer.parseInt(portCommand[4]) * 256) + Integer.parseInt(portCommand[5].replaceAll("\r\n", ""));
 		return port;
 	}
 
@@ -263,7 +259,7 @@ public class FtpDecoder implements TcpProcessor {
 			processor.viewList(list);
 		}
 	}
-	
+
 	private void dispatchFile(InputStream is, String fileName) {
 		for (FtpProcessor processor : callbacks) {
 			processor.onExtractFile(is, fileName);
