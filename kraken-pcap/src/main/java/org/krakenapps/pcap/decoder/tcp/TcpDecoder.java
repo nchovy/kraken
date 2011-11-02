@@ -87,7 +87,8 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 		dispatchNewTcpSegment(session, newTcp);
 
 		if (newTcp.isGarbage() || session == null) {
-			System.out.println("{NULL Session}");
+			if (logger.isDebugEnabled())
+				logger.debug("kraken pcap: null session for tcp [{}]", newTcp);
 			return;
 		}
 
