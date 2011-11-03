@@ -91,22 +91,6 @@ public class LoggerPlugin {
 		logServer.removeManagedLogger(logger.getId());
 	}
 
-	@MsgbusMethod
-	public void traverse(Request req, Response resp) throws Exception {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		String loggerName = req.getString("logger");
-		Date from = dateFormat.parse(req.getString("from"));
-		Date to = dateFormat.parse(req.getString("to"));
-		int offset = req.getInteger("offset");
-		int limit = req.getInteger("limit");
-
-		List<Map<String, Object>> logs = new ArrayList<Map<String, Object>>();
-		LogAdder adder = new LogAdder(logs);
-		logServer.search(loggerName, from, to, offset, limit, null, adder);
-
-		resp.put("logs", logs);
-	}
-
 	private class LogAdder implements LogSearchCallback {
 		private List<Map<String, Object>> logs;
 

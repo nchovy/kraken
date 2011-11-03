@@ -3,6 +3,7 @@ package org.krakenapps.msgbus;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 
 public class Request {
 	private Session session;
@@ -37,6 +38,10 @@ public class Request {
 		return msg.getParameters().containsKey(key);
 	}
 
+	public Map<String, Object> getParams() {
+		return msg.getParameters();
+	}
+
 	public Object get(String key) {
 		return msg.getParameters().get(key);
 	}
@@ -68,7 +73,7 @@ public class Request {
 				}
 			}
 		}
-		
+
 		return null;
 	}
 }

@@ -16,27 +16,12 @@
 package org.krakenapps.siem;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.Properties;
 
 import org.krakenapps.logstorage.Log;
-import org.krakenapps.logstorage.LogSearchCallback;
-import org.krakenapps.logstorage.criterion.Criterion;
 import org.krakenapps.siem.model.ManagedLogger;
 
 public interface LogServer {
-	int search(Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
-
-	int search(Date from, Date to, int offset, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
-
-	int search(String fullName, Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
-
-	int search(String fullName, Date from, Date to, int offset, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException;
-
 	void write(Log log);
 
 	Collection<ManagedLogger> getManagedLoggers();

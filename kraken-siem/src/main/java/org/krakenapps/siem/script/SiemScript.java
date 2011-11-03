@@ -92,8 +92,8 @@ public class SiemScript implements Script {
 			root.flush();
 			root.sync();
 
-			String connectionString = String.format("jdbc:mysql://%s/%s??useUnicode=true&amp;characterEncoding=utf8",
-					host, databaseName);
+			String connectionString = String.format("jdbc:mysql://%s/%s??useUnicode=true&amp;characterEncoding=utf8", host,
+					databaseName);
 
 			if (jpa.getEntityManagerFactory(JPA_FACTORY_NAME) == null) {
 				try {
@@ -144,8 +144,7 @@ public class SiemScript implements Script {
 		return getInput(key, label, defaultValue, false);
 	}
 
-	private String getInput(String key, String label, String defaultValue, boolean isPassword)
-			throws InterruptedException {
+	private String getInput(String key, String label, String defaultValue, boolean isPassword) throws InterruptedException {
 		Preferences p = getConfigRoot();
 		String oldConfig = p.get(key, null);
 		if (oldConfig != null)
@@ -192,8 +191,7 @@ public class SiemScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "", arguments = {
-			@ScriptArgument(name = "offset", type = "int", description = "offset"),
+	@ScriptUsage(description = "", arguments = { @ScriptArgument(name = "offset", type = "int", description = "offset"),
 			@ScriptArgument(name = "limit", type = "int", description = "limit") })
 	public void events(String[] args) {
 		EventServer evtServer = getEventServer();
@@ -217,35 +215,6 @@ public class SiemScript implements Script {
 		} catch (Exception e) {
 			context.println("failed: " + e);
 			slog.error("kraken siem: cannot update rules", e);
-		}
-	}
-
-	@ScriptUsage(description = "traverse logs", arguments = {
-			@ScriptArgument(name = "full name", type = "string", description = "logger full name"),
-			@ScriptArgument(name = "day", type = "string", description = "day, yyyyMMdd"),
-			@ScriptArgument(name = "offset", type = "int", description = "offset"),
-			@ScriptArgument(name = "limit", type = "int", description = "limit") })
-	public void traverse(String[] args) {
-		try {
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-
-			String fullName = args[0];
-			Date from = dateFormat.parse(args[1]);
-			int offset = Integer.valueOf(args[2]);
-			int limit = Integer.valueOf(args[3]);
-
-			Calendar cal = Calendar.getInstance();
-			cal.setTime(from);
-			cal.add(Calendar.DAY_OF_MONTH, 1);
-			Date to = cal.getTime();
-
-			LogServer logServer = getLogServer();
-			LogPrinter printer = new LogPrinter();
-			logServer.search(fullName, from, to, offset, limit, null, printer);
-
-		} catch (Exception e) {
-			context.println("cannot parse date");
-			slog.error("kraken siem: cannot parse date", e);
 		}
 	}
 
@@ -636,8 +605,8 @@ public class SiemScript implements Script {
 
 					if (logServer.getManagedLogger(logger.getFullName()) == null) {
 						for (Organization org : orgApi.getOrganizations()) {
-							logServer.createManagedLogger(org.getId(), logger.getFullName(),
-									candidate.getParserFactoryName(), candidate.getParserOptions());
+							logServer.createManagedLogger(org.getId(), logger.getFullName(), candidate.getParserFactoryName(),
+									candidate.getParserOptions());
 							context.println("  managed logger [org=" + org.getId() + ", " + logger.getFullName()
 									+ "] created, parser [" + candidate.getParserFactoryName() + "] mapped");
 						}

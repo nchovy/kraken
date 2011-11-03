@@ -11,7 +11,7 @@
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-confdb</artifactId>
 	<version>0.1.0</version>
-	<packaging>jar</packaging>
+	<packaging>bundle</packaging>
 	<name>Kraken Config Database</name>
 
 	<build>
@@ -24,7 +24,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.confdb</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.confdb</Export-Package>
+						<Export-Package>org.krakenapps.confdb, org.krakenapps.confdb.file</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

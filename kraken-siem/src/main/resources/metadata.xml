@@ -21,4 +21,5 @@
 	<instance component="siem-redhat-logfile-scanner" />
 	<instance component="siem-isc-rule-storage" />
 
+	<instance component="siem-config-manager" />
 </ipojo>

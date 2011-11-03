@@ -47,7 +47,6 @@ import org.krakenapps.log.api.LoggerRegistry;
 import org.krakenapps.log.api.LoggerRegistryEventListener;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.logstorage.criterion.Criterion;
 import org.krakenapps.siem.LogServer;
 import org.krakenapps.siem.NormalizedLog;
 import org.krakenapps.siem.NormalizedLogListener;
@@ -100,30 +99,6 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 	}
 
 	@Override
-	public int search(Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException {
-		return logStorage.search(from, to, limit, pred, callback);
-	}
-
-	@Override
-	public int search(Date from, Date to, int offset, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException {
-		return logStorage.search(from, to, offset, limit, pred, callback);
-	}
-
-	@Override
-	public int search(String fullName, Date from, Date to, int limit, Criterion pred, LogSearchCallback callback)
-			throws InterruptedException {
-		return logStorage.search(fullName, from, to, limit, pred, callback);
-	}
-
-	@Override
-	public int search(String fullName, Date from, Date to, int offset, int limit, Criterion pred,
-			LogSearchCallback callback) throws InterruptedException {
-		return logStorage.search(fullName, from, to, offset, limit, pred, callback);
-	}
-
-	@Override
 	public void write(org.krakenapps.logstorage.Log log) {
 		logStorage.write(log);
 	}
@@ -140,8 +115,8 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 	public ManagedLogger getManagedLogger(String fullName) {
 		try {
 			EntityManager em = entityManagerService.getEntityManager();
-			return (ManagedLogger) em.createQuery("FROM ManagedLogger m WHERE m.fullName = ?")
-					.setParameter(1, fullName).getSingleResult();
+			return (ManagedLogger) em.createQuery("FROM ManagedLogger m WHERE m.fullName = ?").setParameter(1, fullName)
+					.getSingleResult();
 		} catch (NoResultException e) {
 			return null;
 		}
@@ -187,7 +162,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 
 			em.persist(option);
 		}
-		
+
 		em.merge(m);
 
 		// create log table

@@ -17,7 +17,7 @@ public class MsgbusPackageHandler extends PrimitiveHandler implements PackageMet
 	private String packageKey;
 	private ConcurrentMap<String, String> nameLocalizations;
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	@Override
 	public void configure(Element metadata, Dictionary configuration) throws ConfigurationException {
 		Object o = getInstanceManager().getPojoObject();

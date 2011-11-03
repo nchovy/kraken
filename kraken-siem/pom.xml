@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-siem</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken SIEM</name>
 	<build>
@@ -62,7 +62,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.7.0</version>
+			<version>1.8.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -102,12 +102,12 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-msgbus</artifactId>
-			<version>1.1.4</version>
+			<version>1.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-logstorage</artifactId>
-			<version>1.0.0</version>
+			<version>1.5.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
@@ -133,6 +133,11 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-dom</artifactId>
 			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-confdb</artifactId>
+			<version>0.1.0</version>
 		</dependency>
 	</dependencies>
 </project>
