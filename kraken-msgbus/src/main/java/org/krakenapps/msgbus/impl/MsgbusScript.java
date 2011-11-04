@@ -133,7 +133,11 @@ public class MsgbusScript implements Script {
 
 		@Override
 		public void send(Message msg) {
-			context.println(Primitive.stringify(msg.getParameters()));
+			if (msg.getErrorCode() != null)
+				context.println(msg.getErrorCode() + ": " + msg.getErrorMessage());
+			else
+				context.println(Primitive.stringify(msg.getParameters()));
+			
 			completed = true;
 		}
 	}
