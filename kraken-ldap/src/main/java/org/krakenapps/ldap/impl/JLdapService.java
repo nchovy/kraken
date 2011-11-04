@@ -63,7 +63,8 @@ import com.novell.ldap.util.Base64;
 @Component(name = "ldap-service")
 @Provides
 public class JLdapService implements LdapService {
-	private final Logger logger = LoggerFactory.getLogger(JLdapService.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(JLdapService.class
+			.getName());
 
 	@Requires
 	private PreferencesService prefsvc;
@@ -102,14 +103,18 @@ public class JLdapService implements LdapService {
 		Preferences p = root.node(name);
 		String dc = p.get("dc", null);
 		String trustStoreType = p.get("truststore_type", null);
-		KeyStore trustStore = getKeyStore(trustStoreType, p.get("truststore", null));
-		int port = p.getInt("port", (trustStore == null) ? LdapProfile.DEFAULT_PORT : LdapProfile.DEFAULT_SSL_PORT);
+		KeyStore trustStore = getKeyStore(trustStoreType,
+				p.get("truststore", null));
+		int port = p.getInt("port",
+				(trustStore == null) ? LdapProfile.DEFAULT_PORT
+						: LdapProfile.DEFAULT_SSL_PORT);
 		String account = p.get("account", null);
 		String password = p.get("password", null);
 		int syncInterval = p.getInt("sync_interval", 10 * 60 * 1000);
 		Date lastSync = new Date(p.getLong("last_sync", 0));
 
-		return new LdapProfile(name, dc, port, account, password, trustStore, syncInterval, lastSync);
+		return new LdapProfile(name, dc, port, account, password, trustStore,
+				syncInterval, lastSync);
 	}
 
 	@Override
@@ -138,19 +143,22 @@ public class JLdapService implements LdapService {
 		}
 	}
 
-	private void setPreference(LdapProfile profile, Preferences root) throws BackingStoreException {
+	private void setPreference(LdapProfile profile, Preferences root)
+			throws BackingStoreException {
 		Preferences p = root.node(profile.getName());
 		p.put("dc", profile.getDc());
 		p.putInt("port", profile.getPort());
 		p.put("account", profile.getAccount());
 		p.put("password", profile.getPassword());
 		p.putInt("sync_interval", profile.getSyncInterval());
-		p.putLong("last_sync", profile.getLastSync() == null ? 0 : profile.getLastSync().getTime());
+		p.putLong("last_sync", profile.getLastSync() == null ? 0 : profile
+				.getLastSync().getTime());
 		if (profile.getTrustStore() != null) {
 			try {
 				p.put("truststore_type", profile.getTrustStore().getType());
 				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				profile.getTrustStore().store(bos, LdapProfile.DEFAULT_TRUSTSTORE_PASSWORD);
+				profile.getTrustStore().store(bos,
+						LdapProfile.DEFAULT_TRUSTSTORE_PASSWORD);
 				p.put("truststore", Base64.encode(bos.toByteArray()));
 			} catch (Exception e) {
 				root.remove(profile.getName());
@@ -179,13 +187,15 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile) {
+	public Collection<DomainUserAccount> getDomainUserAccounts(
+			LdapProfile profile) {
 		List<DomainUserAccount> accounts = new ArrayList<DomainUserAccount>();
 
 		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
-					"(&(userPrincipalName=*))", null, false);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()),
+					LDAPConnection.SCOPE_SUB, "(&(userPrincipalName=*))", null,
+					false);
 
 			while (r.hasMore()) {
 				try {
@@ -216,18 +226,23 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile) {
+	public Collection<DomainOrganizationalUnit> getOrganizationUnits(
+			LdapProfile profile) {
 		List<DomainOrganizationalUnit> ous = new ArrayList<DomainOrganizationalUnit>();
 
 		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB,
-					"(&(objectClass=organizationalUnit)(!(isCriticalSystemObject=*)))", null, false);
+			LDAPSearchResults r = lc
+					.search(buildBaseDN(profile.getDc()),
+							LDAPConnection.SCOPE_SUB,
+							"(&(objectClass=organizationalUnit)(!(isCriticalSystemObject=*)))",
+							null, false);
 
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
-					logger.debug("kraken-ldap: fetch org unit entry [{}]", entry);
+					logger.debug("kraken-ldap: fetch org unit entry [{}]",
+							entry);
 
 					DomainOrganizationalUnit ou = parseOrganizationUnit(entry);
 					if (ou != null)
@@ -252,12 +267,14 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public boolean verifyPassword(LdapProfile profile, String account, String password) {
+	public boolean verifyPassword(LdapProfile profile, String account,
+			String password) {
 		return verifyPassword(profile, account, password, 0);
 	}
 
 	@Override
-	public boolean verifyPassword(LdapProfile profile, String account, String password, int timeout) {
+	public boolean verifyPassword(LdapProfile profile, String account,
+			String password, int timeout) {
 		boolean bindStatus = false;
 		if (password == null || password.isEmpty())
 			return false;
@@ -265,8 +282,9 @@ public class JLdapService implements LdapService {
 		LDAPConnection lc = openLdapConnection(profile, timeout);
 
 		try {
-			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()), LDAPConnection.SCOPE_SUB, "(sAMAccountName="
-					+ account + ")", null, false);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile.getDc()),
+					LDAPConnection.SCOPE_SUB, "(sAMAccountName=" + account
+							+ ")", null, false);
 
 			bindStatus = true;
 
@@ -275,12 +293,14 @@ public class JLdapService implements LdapService {
 			logger.trace("kraken ldap: verify password for {}", entry);
 
 			// try bind
-			String dn = entry.getAttribute("distinguishedName").getStringValue();
+			String dn = entry.getAttribute("distinguishedName")
+					.getStringValue();
 			lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
 			return true;
 		} catch (Exception e) {
 			if (!bindStatus)
-				throw new IllegalArgumentException("check ldap profile: " + profile.getName(), e);
+				throw new IllegalArgumentException("check ldap profile: "
+						+ profile.getName(), e);
 
 			return false;
 		} finally {
@@ -329,6 +349,8 @@ public class JLdapService implements LdapService {
 
 	@Override
 	public KeyStore x509ToJKS(String base64Encoded) {
+		if (base64Encoded == null)
+			return null;
 		byte[] b = Base64.decode(base64Encoded);
 		return x509ToJKS(new ByteArrayInputStream(b));
 	}
@@ -349,27 +371,34 @@ public class JLdapService implements LdapService {
 		}
 	}
 
-	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
+	private LDAPConnection openLdapConnection(LdapProfile profile,
+			Integer timeout) {
 		try {
 			if (profile.getTrustStore() != null) {
 				SSLContext ctx = SSLContext.getInstance("SSL");
-				TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+				TrustManagerFactory tmf = TrustManagerFactory
+						.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 				tmf.init(profile.getTrustStore());
 				ctx.init(null, tmf.getTrustManagers(), new SecureRandom());
-				LDAPConnection.setSocketFactory(new LDAPJSSESecureSocketFactory(ctx.getSocketFactory()));
+				LDAPConnection
+						.setSocketFactory(new LDAPJSSESecureSocketFactory(ctx
+								.getSocketFactory()));
 			} else
-				LDAPConnection.setSocketFactory(new JLDAPSocketFactory(timeout));
+				LDAPConnection
+						.setSocketFactory(new JLDAPSocketFactory(timeout));
 
 			LDAPConnection conn = new LDAPConnection();
 			conn.connect(profile.getDc(), profile.getPort());
-			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
+			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile
+					.getPassword().getBytes("utf-8"));
 
 			return conn;
 		} catch (UnsupportedEncodingException e) {
 			logger.error("kraken ldap: JVM unsupported utf-8 encoding");
 			throw new IllegalStateException("invalid profile");
 		} catch (Exception e) {
-			logger.error("kraken ldap: ldap profile [" + profile.getName() + "] connection failed", e);
+			logger.error("kraken ldap: ldap profile [" + profile.getName()
+					+ "] connection failed", e);
 			throw new IllegalStateException("invalid profile");
 		}
 	}
@@ -410,7 +439,8 @@ public class JLdapService implements LdapService {
 			d.setDepartment(getString(attrs, "department"));
 			d.setMail(getString(attrs, "mail"));
 			d.setMobile(getString(attrs, "mobile"));
-			d.setLastLogon(new Date(getLong(attrs, "lastLogon") / 10000L - 11644473600000L));
+			d.setLastLogon(new Date(
+					getLong(attrs, "lastLogon") / 10000L - 11644473600000L));
 			d.setWhenCreated(getDate(attrs, "whenCreated"));
 			d.setLastPasswordChange(getTimestamp(attrs, "pwdLastSet"));
 			d.setAccountExpires(getTimestamp(attrs, "accountExpires"));
@@ -462,7 +492,8 @@ public class JLdapService implements LdapService {
 		try {
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
 			LDAPAttribute attr = attrs.getAttribute(attrName);
-			return (attr == null) ? null : dateFormat.parse(attr.getStringValue());
+			return (attr == null) ? null : dateFormat.parse(attr
+					.getStringValue());
 		} catch (Exception e) {
 			return null;
 		}
@@ -470,7 +501,8 @@ public class JLdapService implements LdapService {
 
 	private Date getTimestamp(LDAPAttributeSet attrs, String attrName) {
 		LDAPAttribute attr = attrs.getAttribute(attrName);
-		return (attr == null) ? null : new Date(Long.parseLong(attr.getStringValue()));
+		return (attr == null) ? null : new Date(Long.parseLong(attr
+				.getStringValue()));
 	}
 
 	private String getString(LDAPAttributeSet attrs, String attrName) {
@@ -486,7 +518,8 @@ public class JLdapService implements LdapService {
 		}
 
 		@Override
-		public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
+		public Socket createSocket(String host, int port) throws IOException,
+				UnknownHostException {
 			Socket socket = new Socket(host, port);
 			if (timeout != null)
 				socket.setSoTimeout(timeout);
