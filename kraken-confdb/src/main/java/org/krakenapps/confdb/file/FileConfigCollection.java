@@ -16,6 +16,7 @@
 package org.krakenapps.confdb.file;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -105,7 +106,8 @@ public class FileConfigCollection implements ConfigCollection {
 
 			return c;
 		} finally {
-			it.close();
+			if (it != null)
+				it.close();
 		}
 	}
 
@@ -113,6 +115,9 @@ public class FileConfigCollection implements ConfigCollection {
 	public ConfigIterator find(Predicate pred) {
 		try {
 			return getIterator(pred);
+		} catch (FileNotFoundException e) {
+			// collection has no data
+			return new EmptyIterator();
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot open collection file", e);
 		}
@@ -298,5 +303,25 @@ public class FileConfigCollection implements ConfigCollection {
 		log.setOperation(op);
 		log.setDoc(doc);
 		return log;
+	}
+
+	private static class EmptyIterator implements ConfigIterator {
+		@Override
+		public boolean hasNext() {
+			return false;
+		}
+
+		@Override
+		public Config next() {
+			return null;
+		}
+
+		@Override
+		public void remove() {
+		}
+
+		@Override
+		public void close() {
+		}
 	}
 }
