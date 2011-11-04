@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.file.FileConfigDatabase;
 import org.krakenapps.msgbus.Session;
@@ -16,6 +17,7 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	private ConfigDatabase db;
 
+	@Validate
 	public void start() throws IOException {
 		File dataDir = new File(System.getProperty("kraken.data.dir"));
 		File baseDir = new File(dataDir, "kraken-siem");

@@ -22,4 +22,5 @@
 	<instance component="siem-isc-rule-storage" />
 
 	<instance component="siem-config-manager" />
+	<instance component="siem-wall-plugin" />
 </ipojo>
