@@ -16,13 +16,21 @@ public class Primitive {
 	private static void stringify(StringBuilder sb, Object o) {
 		if (o instanceof Collection<?>) {
 			sb.append("[");
-			for (Object child : (Collection<?>) o)
+			int i = 0;
+			for (Object child : (Collection<?>) o) {
+				if (i++ != 0)
+					sb.append(", ");
 				stringify(sb, child);
+			}
 			sb.append("]");
 		} else if (o instanceof Map<?, ?>) {
 			Map<?, ?> m = (Map<?, ?>) o;
 			sb.append("{");
+			int i = 0;
 			for (Object k : m.keySet()) {
+				if (i++ != 0)
+					sb.append(", ");
+
 				sb.append("\"");
 				sb.append(k.toString());
 				sb.append("\": ");
