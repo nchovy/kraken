@@ -26,6 +26,7 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.exception.DuplicateLoginNameException;
 import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.User;
@@ -67,7 +68,8 @@ public class UserPlugin {
 		Collection<User> users = null;
 		if (req.has("ou_id")) {
 			int orgUnitId = req.getInteger("ou_id");
-			boolean incChildren = req.has("inc_children") ? req.getBoolean("inc_children") : false;
+			boolean incChildren = req.has("inc_children") ? req
+					.getBoolean("inc_children") : false;
 			users = userApi.getUsers(req.getOrgId(), orgUnitId, incChildren);
 		} else
 			users = userApi.getUsers(req.getOrgId());
@@ -88,14 +90,22 @@ public class UserPlugin {
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
 		User user = toUser(req);
-		userApi.createUser(user);
+		try {
+			userApi.createUser(user);
+		} catch (IllegalStateException e) {
+			throw new DuplicateLoginNameException();
+		}
 		resp.put("id", user.getId());
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateUser(Request req, Response resp) {
-		userApi.updateUser(toUser(req));
+		try {
+			userApi.updateUser(toUser(req));
+		} catch (IllegalStateException e) {
+			throw new DuplicateLoginNameException();
+		}
 	}
 
 	private User toUser(Request req) {
@@ -105,7 +115,8 @@ public class UserPlugin {
 
 		user.setOrganization(orgApi.getOrganization(req.getOrgId()));
 		if (req.get("org_unit_id") != null)
-			user.setOrganizationUnit(orgUnitApi.getOrganizationUnit(req.getInteger("org_unit_id")));
+			user.setOrganizationUnit(orgUnitApi.getOrganizationUnit(req
+					.getInteger("org_unit_id")));
 
 		user.setName(req.getString("name"));
 		user.setSalt(createSalt(userApi.getSaltLength()));
