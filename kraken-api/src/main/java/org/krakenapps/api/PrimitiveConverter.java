@@ -76,7 +76,7 @@ public class PrimitiveConverter {
 	public static <T> List<T> parse(Class<T> clazz, List<?> c) {
 		List<T> l = new ArrayList<T>();
 		for (Object o : c)
-			l.add(parse(clazz, (Map<String, Object>) o));
+			l.add(parseObject(clazz, (Map<String, Object>) o));
 
 		return l;
 	}
@@ -84,12 +84,12 @@ public class PrimitiveConverter {
 	@SuppressWarnings("unchecked")
 	public static <T> T parse(Class<T> clazz, Object c) {
 		if (c instanceof Map<?, ?>)
-			return parse(clazz, (Map<String, Object>) c);
+			return parseObject(clazz, (Map<String, Object>) c);
 		return null;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static <T> T parse(Class<T> clazz, Map<String, Object> m) {
+	public static <T> T parseObject(Class<T> clazz, Map<String, Object> m) {
 		try {
 			Constructor c = clazz.getConstructor();
 			c.setAccessible(true);
@@ -126,8 +126,8 @@ public class PrimitiveConverter {
 						else
 							f.set(n, value);
 					}
-				} else if (!fieldType.isInstance(Map.class) && value instanceof Map) {
-					f.set(n, parse(fieldType, (Map) value));
+				} else if (!contains(fieldType, Map.class) && value instanceof Map) {
+					f.set(n, parseObject(fieldType, (Map) value));
 				} else {
 					f.set(n, value);
 				}
@@ -155,7 +155,7 @@ public class PrimitiveConverter {
 		List<T> list = new ArrayList<T>();
 		for (Object o : l) {
 			if (o instanceof Map) {
-				T v = parse(clazz, (Map<String, Object>) o);
+				T v = parseObject(clazz, (Map<String, Object>) o);
 				list.add(v);
 			} else
 				list.add((T) o);
