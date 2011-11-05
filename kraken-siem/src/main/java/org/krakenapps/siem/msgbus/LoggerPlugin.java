@@ -15,20 +15,14 @@
  */
 package org.krakenapps.siem.msgbus;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerRegistry;
-import org.krakenapps.logstorage.Log;
-import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
