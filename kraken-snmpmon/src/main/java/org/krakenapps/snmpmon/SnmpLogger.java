@@ -129,7 +129,7 @@ public class SnmpLogger extends AbstractLogger {
 					logger.warn("SNMP query failed " + targetStr + ", cause: " + e.getCause().getMessage());
 					logger.debug("SNMP query failed exception detail", e);
 				} else {
-					if (!"request timed out".equals(e.getMessage())) {
+					if (!(e instanceof TimeoutException)) {
 						logger.warn("SNMP query failed " + targetStr + ", msg: " + e.getClass().getName() + "("
 								+ e.getMessage() + ")");
 						logger.debug("SNMP query failed exception detail", e);
