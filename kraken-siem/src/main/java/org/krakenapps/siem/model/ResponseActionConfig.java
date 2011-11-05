@@ -15,45 +15,17 @@
  */
 package org.krakenapps.siem.model;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-
-@Entity
-@Table(name = "siem_response_action_configs")
 public class ResponseActionConfig {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "instance_id", nullable = false)
-	private ResponseActionInstance instance;
-
-	@Column(nullable = false)
 	private String name;
 
 	private String value;
 
-	public int getId() {
-		return id;
+	public ResponseActionConfig() {
 	}
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public ResponseActionInstance getInstance() {
-		return instance;
-	}
-
-	public void setInstance(ResponseActionInstance instance) {
-		this.instance = instance;
+	public ResponseActionConfig(String name, String value) {
+		this.name = name;
+		this.value = value;
 	}
 
 	public String getName() {

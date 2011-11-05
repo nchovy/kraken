@@ -15,41 +15,16 @@
  */
 package org.krakenapps.siem.model;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.ManyToMany;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-
-@Entity
-@Table(name = "siem_event_response_mappings", uniqueConstraints = { @UniqueConstraint(columnNames = { "category",
-		"event_source" }) })
 public class EventResponseMapping {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@Column(nullable = false)
 	private String category;
-
-	@Column(name = "event_source", nullable = false)
 	private int eventSource;
 
-	@ManyToMany(mappedBy = "eventMappings")
-	private Set<ResponseActionInstance> response = new HashSet<ResponseActionInstance>();
-
-	public int getId() {
-		return id;
+	public EventResponseMapping() {
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public EventResponseMapping(String category, int eventSource) {
+		this.category = category;
+		this.eventSource = eventSource;
 	}
 
 	public String getCategory() {
@@ -68,12 +43,32 @@ public class EventResponseMapping {
 		this.eventSource = eventSource;
 	}
 
-	public Set<ResponseActionInstance> getResponses() {
-		return response;
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((category == null) ? 0 : category.hashCode());
+		result = prime * result + eventSource;
+		return result;
 	}
 
-	public void setResponse(Set<ResponseActionInstance> response) {
-		this.response = response;
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		EventResponseMapping other = (EventResponseMapping) obj;
+		if (category == null) {
+			if (other.category != null)
+				return false;
+		} else if (!category.equals(other.category))
+			return false;
+		if (eventSource != other.eventSource)
+			return false;
+		return true;
 	}
 
 }

@@ -15,8 +15,8 @@
  */
 package org.krakenapps.siem.engine;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -24,17 +24,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.log.api.Log;
 import org.krakenapps.log.api.LogNormalizer;
 import org.krakenapps.log.api.LogNormalizerRegistry;
@@ -45,22 +45,20 @@ import org.krakenapps.log.api.LogPipe;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerRegistry;
 import org.krakenapps.log.api.LoggerRegistryEventListener;
-import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.siem.ConfigManager;
 import org.krakenapps.siem.LogServer;
 import org.krakenapps.siem.NormalizedLog;
 import org.krakenapps.siem.NormalizedLogListener;
-import org.krakenapps.siem.model.LogParserOption;
 import org.krakenapps.siem.model.ManagedLogger;
 
 @Component(name = "siem-log-server")
-@JpaConfig(factory = "siem")
 @Provides
 public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventListener {
 	private final org.slf4j.Logger slog = org.slf4j.LoggerFactory.getLogger(LogServerEngine.class.getName());
 
 	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+	private ConfigManager configManager;
 
 	@Requires
 	private LoggerRegistry loggerRegistry;
@@ -103,95 +101,64 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		logStorage.write(log);
 	}
 
-	@Transactional
-	@Override
-	public ManagedLogger getManagedLogger(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.find(ManagedLogger.class, id);
-	}
-
-	@Transactional
 	@Override
 	public ManagedLogger getManagedLogger(String fullName) {
-		try {
-			EntityManager em = entityManagerService.getEntityManager();
-			return (ManagedLogger) em.createQuery("FROM ManagedLogger m WHERE m.fullName = ?").setParameter(1, fullName)
-					.getSingleResult();
-		} catch (NoResultException e) {
-			return null;
-		}
+		ConfigCollection col = getCol();
+		Config c = col.findOne(Predicates.field("full_name", fullName));
+		return PrimitiveConverter.parse(ManagedLogger.class, c.getDocument());
 	}
 
-	@SuppressWarnings("unchecked")
-	@Transactional
 	@Override
 	public Collection<ManagedLogger> getManagedLoggers() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM ManagedLogger").getResultList();
+		ConfigCollection col = getCol();
+		ConfigIterator it = col.findAll();
+
+		List<ManagedLogger> loggers = new ArrayList<ManagedLogger>();
+		while (it.hasNext())
+			loggers.add(PrimitiveConverter.parse(ManagedLogger.class, it.next().getDocument()));
+
+		return loggers;
 	}
 
-	@Transactional
 	@Override
-	public int createManagedLogger(int organizationId, String fullName, String parserName, Properties parserOptions) {
-		Logger logger = loggerRegistry.getLogger(fullName);
+	public void createManagedLogger(ManagedLogger ml) {
+		Logger logger = loggerRegistry.getLogger(ml.getFullName());
 		if (logger == null)
-			throw new IllegalStateException("logger not found: " + fullName);
-
-		EntityManager em = entityManagerService.getEntityManager();
+			throw new IllegalStateException("logger not found: " + ml.getFullName());
 
 		// check if duplicated managed logger exists
-		int size = em.createQuery("FROM ManagedLogger l WHERE l.organizationId = ? AND l.fullName = ?")
-				.setParameter(1, organizationId).setParameter(2, fullName).getResultList().size();
-		if (size > 0)
-			throw new IllegalStateException("duplicated managed logger exists: " + fullName);
+		ConfigCollection col = getCol();
+		Config c = col.findOne(Predicates.field("full_name", ml.getFullName()));
+		if (c != null)
+			throw new IllegalStateException("duplicated managed logger exists: " + ml.getFullName());
 
-		ManagedLogger m = new ManagedLogger();
-		m.setOrganizationId(organizationId);
-		m.setFullName(fullName);
-		m.setParserFactoryName(parserName);
-		m.setEnabled(true);
-		em.persist(m);
-
-		for (Object k : parserOptions.keySet()) {
-			LogParserOption option = new LogParserOption();
-			option.setName((String) k);
-			option.setValue(parserOptions.getProperty((String) k));
-
-			option.setManagedLogger(m);
-			m.getLogParserOptions().add(option);
-
-			em.persist(option);
-		}
-
-		em.merge(m);
+		col.add(PrimitiveConverter.serialize(ml));
 
 		// create log table
-		logStorage.createTable(m.getFullName());
+		logStorage.createTable(ml.getFullName());
 
 		// connect pipe
 		logger.addLogPipe(this);
-
-		return m.getId();
 	}
 
-	@Transactional
 	@Override
-	public void removeManagedLogger(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		ManagedLogger m = em.find(ManagedLogger.class, id);
-		if (m == null)
+	public void removeManagedLogger(ManagedLogger ml) {
+		ConfigCollection col = getCol();
+		Config c = col.findOne(Predicates.field("full_name", ml.getFullName()));
+
+		if (c == null)
 			return;
 
 		// disconnect pipe
-		Logger logger = loggerRegistry.getLogger(m.getFullName());
+		Logger logger = loggerRegistry.getLogger(ml.getFullName());
 		if (logger != null)
 			logger.removeLogPipe(this);
 
 		// remove configuration
-		em.remove(m);
+		col.remove(c);
 
 		// drop log table
-		logStorage.dropTable(m.getFullName());
+		logStorage.dropTable(ml.getFullName());
 	}
 
 	@Override
@@ -270,7 +237,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 			return;
 		}
 
-		NormalizedLog normalizedLog = new NormalizedLog(ml.getOrganizationId(), normalized);
+		NormalizedLog normalizedLog = new NormalizedLog(ml.getOrgId(), normalized);
 		String category = (String) normalizedLog.get("category");
 		if (category == null) {
 			slog.debug("kraken siem: normalization category not found");
@@ -290,10 +257,10 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		}
 	}
 
-	private Properties convert(List<LogParserOption> options) {
+	private Properties convert(Map<String, Object> options) {
 		Properties p = new Properties();
-		for (LogParserOption o : options)
-			p.put(o.getName(), o.getValue());
+		for (String key : options.keySet())
+			p.put(key, options.get(key));
 
 		return p;
 	}
@@ -319,4 +286,11 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 	public void loggerRemoved(Logger logger) {
 		logger.removeLogPipe(this);
 	}
+
+	private ConfigCollection getCol() {
+		ConfigDatabase db = configManager.getDatabase();
+		ConfigCollection col = db.ensureCollection("managed_logger");
+		return col;
+	}
+
 }

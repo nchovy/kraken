@@ -17,23 +17,24 @@ package org.krakenapps.siem.engine;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.event.api.Event;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.siem.ConfigManager;
 import org.krakenapps.siem.model.EventResponseMapping;
 import org.krakenapps.siem.model.ResponseActionInstance;
 import org.krakenapps.siem.response.ResponseAction;
@@ -45,7 +46,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "siem-response-mapper")
-@JpaConfig(factory = "siem")
 @Provides
 public class EventResponseMapperImpl implements EventResponseMapper, ResponseServerEventListener,
 		ResponseActionManagerEventListener {
@@ -53,10 +53,10 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 	private ConcurrentMap<ResponseKey, CopyOnWriteArraySet<ResponseAction>> actionMap;
 
 	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+	private ResponseServer responseServer;
 
 	@Requires
-	private ResponseServer responseServer;
+	private ConfigManager configManager;
 
 	@Validate
 	public void start() {
@@ -79,13 +79,15 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	@Transactional
 	private void loadActions() {
-		EntityManager em = entityManagerService.getEntityManager();
-		List<EventResponseMapping> mappings = em.createQuery("FROM EventResponseMapping m").getResultList();
-		for (EventResponseMapping mapping : mappings) {
-			for (ResponseActionInstance instance : mapping.getResponses()) {
+		ConfigCollection col = getCol();
+
+		ConfigIterator it = col.findAll();
+		while (it.hasNext()) {
+			Config c = it.next();
+			ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
+
+			for (EventResponseMapping mapping : instance.getEventMappings()) {
 				ResponseActionManager manager = responseServer.getResponseActionManager(instance.getManager());
 				if (manager == null) {
 					logger.trace("kraken siem: manager [{}] not found, preloading deferred", instance.getManager());
@@ -99,10 +101,10 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 					continue;
 				}
 
-				addResponseTemp(new ResponseKey(mapping.getCategory(), mapping.getEventSource()), action);
+				loadResponse(new ResponseKey(mapping.getCategory(), mapping.getEventSource()), action);
 				logger.trace("kraken siem: event [category={}, source={}] to response [{}] mapping loaded",
-						new Object[] { mapping.getCategory(), mapping.getEventSource(), action.getNamespace() + "\\"
-						+ action.getName() });
+						new Object[] { mapping.getCategory(), mapping.getEventSource(),
+								action.getNamespace() + "\\" + action.getName() });
 			}
 		}
 	}
@@ -128,20 +130,20 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 
 	@Override
 	public void addResponse(ResponseKey key, ResponseAction action) {
-		addResponseTemp(key, action);
+		loadResponse(key, action);
 		addResponseConfig(key, action);
 		logger.trace("kraken siem: added response mapping, key [{}], action [{}]", key, action.toString());
 	}
 
 	@Override
 	public void removeResponse(ResponseKey key, ResponseAction action) {
-		removeResponseTemp(key, action);
+		unloadResponse(key, action);
 		removeResponseConfig(key, action);
 
 		logger.trace("kraken siem: removed response mapping, key [{}], action [{}]", key, action.toString());
 	}
 
-	private void addResponseTemp(ResponseKey key, ResponseAction action) {
+	private void loadResponse(ResponseKey key, ResponseAction action) {
 		CopyOnWriteArraySet<ResponseAction> actions = new CopyOnWriteArraySet<ResponseAction>();
 		CopyOnWriteArraySet<ResponseAction> old = actionMap.putIfAbsent(key, actions);
 		if (old != null)
@@ -150,28 +152,29 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 		actions.add(action);
 	}
 
-	@Transactional
+	/**
+	 * add response mapping to specific event type
+	 * 
+	 * @param key
+	 *            the event type
+	 * @param action
+	 *            the response action
+	 */
 	private void addResponseConfig(ResponseKey key, ResponseAction action) {
-		EntityManager em = entityManagerService.getEntityManager();
+		ConfigCollection col = getCol();
+		Config c = getResponseActionInstance(action);
+		ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
+		EventResponseMapping mapping = new EventResponseMapping(key.getCategory(), key.getEventSource());
 
-		ResponseActionInstance instance = getResponseActionInstance(action, em);
-		EventResponseMapping mapping = getEventResponseMapping(key, em);
+		Set<EventResponseMapping> mappings = instance.getEventMappings();
+		if (!mappings.contains(mapping))
+			mappings.add(mapping);
 
-		if (mapping == null) {
-			mapping = new EventResponseMapping();
-			mapping.setCategory(key.getCategory());
-			mapping.setEventSource(key.getEventSource());
-
-			em.persist(mapping);
-		}
-
-		instance.getEventMappings().add(mapping);
-		mapping.getResponses().add(instance);
-
-		em.merge(instance);
+		c.setDocument(PrimitiveConverter.serialize(instance));
+		col.update(c);
 	}
 
-	private void removeResponseTemp(ResponseKey key, ResponseAction action) {
+	private void unloadResponse(ResponseKey key, ResponseAction action) {
 		CopyOnWriteArraySet<ResponseAction> actions = actionMap.get(key);
 		if (actions == null)
 			return;
@@ -179,46 +182,33 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 		actions.remove(action);
 	}
 
-	@Transactional
 	private void removeResponseConfig(ResponseKey key, ResponseAction action) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		ResponseActionInstance instance = getResponseActionInstance(action, em);
-		EventResponseMapping mapping = getEventResponseMapping(key, em);
+		ConfigCollection col = getCol();
+		Config c = getResponseActionInstance(action);
+		ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c);
+		EventResponseMapping mapping = new EventResponseMapping(key.getCategory(), key.getEventSource());
 
 		instance.getEventMappings().remove(mapping);
-		mapping.getResponses().remove(instance);
-
-		em.merge(instance);
-		em.merge(mapping);
-
-		if (mapping.getResponses().size() == 0)
-			em.remove(mapping);
+		if (instance.getEventMappings().size() == 0)
+			col.remove(c);
+		else {
+			c.setDocument(PrimitiveConverter.serialize(instance));
+			col.update(c);
+		}
 	}
 
-	private ResponseActionInstance getResponseActionInstance(ResponseAction action, EntityManager em) {
-		ResponseActionInstance instance = null;
-		try {
-			instance = (ResponseActionInstance) em.createQuery(
-					"FROM ResponseActionInstance r WHERE r.manager = ? AND r.namespace = ? AND r.name = ?").setParameter(
-					1, action.getManager().getName()).setParameter(2, action.getNamespace()).setParameter(3,
-					action.getName()).getSingleResult();
-		} catch (NoResultException e) {
+	private Config getResponseActionInstance(ResponseAction action) {
+		ConfigCollection col = getCol();
+		Config c = col.findOne(Predicates.and( //
+				Predicates.field("manager", action.getManager().getName()), //
+				Predicates.field("namespace", action.getNamespace()), //
+				Predicates.field("name", action.getName()))); //
+
+		if (c == null)
 			throw new IllegalStateException("response instance configuration not found: " + action.getNamespace()
 					+ "\\" + action.getName());
-		}
-		return instance;
-	}
 
-	private EventResponseMapping getEventResponseMapping(ResponseKey key, EntityManager em) {
-		EventResponseMapping mapping = null;
-		try {
-			mapping = (EventResponseMapping) em.createQuery(
-					"FROM EventResponseMapping m WHERE m.category = ? AND m.eventSource = ?").setParameter(
-					1, key.getCategory()).setParameter(2, key.getEventSource()).getSingleResult();
-		} catch (NoResultException e) {
-		}
-		return mapping;
+		return c;
 	}
 
 	@Override
@@ -240,15 +230,14 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 		manager.removeEventListener(this);
 	}
 
-	@Transactional
 	@Override
 	public void actionCreated(ResponseActionManager manager, ResponseAction action) {
 		try {
-			EntityManager em = entityManagerService.getEntityManager();
-			ResponseActionInstance instance = getResponseActionInstance(action, em);
+			Config c = getResponseActionInstance(action);
+			ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
 
 			for (EventResponseMapping mapping : instance.getEventMappings()) {
-				addResponseTemp(new ResponseKey(mapping.getCategory(), mapping.getEventSource()), action);
+				loadResponse(new ResponseKey(mapping.getCategory(), mapping.getEventSource()), action);
 			}
 		} catch (Exception e) {
 			// ignore if not exists
@@ -258,14 +247,19 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 	@Override
 	public void actionRemoved(ResponseActionManager manager, ResponseAction action) {
 		try {
-			EntityManager em = entityManagerService.getEntityManager();
-			ResponseActionInstance instance = getResponseActionInstance(action, em);
+			Config c = getResponseActionInstance(action);
+			ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
 
 			for (EventResponseMapping mapping : instance.getEventMappings()) {
-				removeResponseTemp(new ResponseKey(mapping.getCategory(), mapping.getEventSource()), action);
+				unloadResponse(new ResponseKey(mapping.getCategory(), mapping.getEventSource()), action);
 			}
 		} catch (Exception e) {
 			// ignore if not exists
 		}
+	}
+
+	private ConfigCollection getCol() {
+		ConfigDatabase db = configManager.getDatabase();
+		return db.ensureCollection("response_action_instance");
 	}
 }

@@ -31,4 +31,9 @@ public class ConfigManagerImpl implements ConfigManager {
 		return db;
 	}
 
+	@Override
+	public ConfigDatabase getDatabase() {
+		return db;
+	}
+
 }

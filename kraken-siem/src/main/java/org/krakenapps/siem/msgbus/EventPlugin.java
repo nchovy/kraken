@@ -16,9 +16,7 @@
 package org.krakenapps.siem.msgbus;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -29,11 +27,7 @@ import org.krakenapps.event.api.Event;
 import org.krakenapps.event.api.EventDispatcher;
 import org.krakenapps.event.api.EventPipe;
 import org.krakenapps.msgbus.PushApi;
-import org.krakenapps.msgbus.Request;
-import org.krakenapps.msgbus.Response;
-import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
-import org.krakenapps.siem.EventServer;
 
 @Component(name = "siem-event-plugin")
 @MsgbusPlugin
@@ -44,9 +38,6 @@ public class EventPlugin implements EventPipe {
 	@Requires
 	private EventDispatcher dispatcher;
 
-	@Requires
-	private EventServer evtServer;
-
 	@Validate
 	public void start() {
 		dispatcher.addEventPipe(this);
@@ -56,21 +47,6 @@ public class EventPlugin implements EventPipe {
 	public void stop() {
 		if (dispatcher != null)
 			dispatcher.removeEventPipe(this);
-	}
-
-	@MsgbusMethod
-	public void getEvents(Request req, Response resp) {
-		int offset = req.getInteger("offset");
-		int limit = req.getInteger("limit");
-
-		List<Event> events = evtServer.getEvents(offset, limit);
-		List<Map<String, Object>> marshaledEvents = new ArrayList<Map<String, Object>>();
-
-		for (Event event : events)
-			marshaledEvents.add(marshalEvent(event));
-
-		resp.put("events", marshaledEvents);
-		resp.put("counts", evtServer.getEventsCount());
 	}
 
 	private Map<String, Object> marshalEvent(Event event) {

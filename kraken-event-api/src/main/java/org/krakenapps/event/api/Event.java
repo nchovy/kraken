@@ -20,72 +20,45 @@ import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-
-@Entity
-@Table(name = "siem_events")
 public class Event {
-	@EmbeddedId
 	private EventKey key;
 
-	@Column(name = "org_id")
 	private int organizationId;
 
-	@Column(name = "first_seen", nullable = false)
 	private Date firstSeen;
 
-	@Column(name = "last_seen", nullable = false)
 	private Date lastSeen;
 
-	@Column(name = "category", nullable = false, length = 20)
 	private String category;
 
-	@Column(name = "severity", nullable = false)
 	private int severity;
 
-	@Column(name = "host")
 	private Integer hostId;
 
-	@Column(name = "src_ip", length = 20)
 	private String sourceIp; // IPv4
 
-	@Column(name = "dst_ip", length = 20)
 	private String destinationIp; // IPv4
 
-	@Column(name = "src_ip_raw")
 	private Long sourceIpRaw;
 
-	@Column(name = "dst_ip_raw")
 	private Long destinationIpRaw;
 
-	@Column(name = "src_port")
 	private Integer sourcePort;
 
-	@Column(name = "dst_port")
 	private Integer destinationPort;
 
-	@Column(name = "msg_key", length = 60)
 	private String messageKey;
 
-	@Column(name = "msg", length = 250)
 	private String messageValues;
 
-	@Column(name = "rule", length = 20)
 	private String rule;
 
-	@Column(name = "cve", length = 20)
 	private String cve;
 
-	@Column(name = "detail", length = 250)
 	private String detail;
 
-	@Column(name = "count", nullable = false)
 	private int count;
 
-	@Column(name = "is_acked")
 	private boolean isAcked;
 
 	public EventKey getKey() {

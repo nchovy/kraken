@@ -15,12 +15,5 @@
  */
 package org.krakenapps.siem;
 
-import java.util.List;
-
-import org.krakenapps.event.api.Event;
-
 public interface EventServer {
-	List<Event> getEvents(int offset, int limit);
-
-	Long getEventsCount();
 }

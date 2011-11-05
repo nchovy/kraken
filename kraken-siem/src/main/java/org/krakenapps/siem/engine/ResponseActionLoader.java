@@ -18,15 +18,17 @@ package org.krakenapps.siem.engine;
 import java.util.List;
 import java.util.Properties;
 
-import javax.persistence.EntityManager;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.siem.ConfigManager;
 import org.krakenapps.siem.model.ResponseActionConfig;
 import org.krakenapps.siem.model.ResponseActionInstance;
 import org.krakenapps.siem.response.ResponseAction;
@@ -39,12 +41,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "siem-response-action-loader")
-@JpaConfig(factory = "siem")
 public class ResponseActionLoader extends ServiceTracker implements ResponseActionManagerEventListener {
 	private final Logger logger = LoggerFactory.getLogger(ResponseActionLoader.class.getName());
 
 	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+	private ConfigManager configManager;
 
 	public ResponseActionLoader(BundleContext bc) {
 		super(bc, ResponseActionManager.class.getName(), null);
@@ -60,14 +61,13 @@ public class ResponseActionLoader extends ServiceTracker implements ResponseActi
 		super.close();
 	}
 
-	@SuppressWarnings("unchecked")
-	@Transactional
 	private void loadActions(ResponseActionManager manager) {
-		EntityManager em = entityManagerService.getEntityManager();
-		List<ResponseActionInstance> instances = em.createQuery("FROM ResponseActionInstance r WHERE r.manager = ?").setParameter(
-				1, manager.getName()).getResultList();
+		ConfigCollection col = getCol();
+		ConfigIterator it = col.find(Predicates.field("manager", manager.getName()));
 
-		for (ResponseActionInstance instance : instances) {
+		while (it.hasNext()) {
+			Config c = it.next();
+			ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
 			manager.newAction(instance.getNamespace(), instance.getName(), instance.getDescription(),
 					toProperties(instance.getConfigs()));
 		}
@@ -86,7 +86,7 @@ public class ResponseActionLoader extends ServiceTracker implements ResponseActi
 		ResponseActionManager manager = (ResponseActionManager) super.addingService(reference);
 		loadActions(manager);
 		manager.addEventListener(this);
-		
+
 		return manager;
 	}
 
@@ -97,18 +97,19 @@ public class ResponseActionLoader extends ServiceTracker implements ResponseActi
 		super.removedService(reference, service);
 	}
 
-	@Transactional
 	@Override
 	public void actionCreated(ResponseActionManager manager, ResponseAction action) {
 		logger.info("kraken siem: insert new action to database [{}]", action);
-		EntityManager em = entityManagerService.getEntityManager();
+		ConfigCollection col = getCol();
+		Config c = findAction(col, manager, action);
+		if (c != null)
+			return;
 
 		ResponseActionInstance instance = new ResponseActionInstance();
 		instance.setManager(manager.getName());
 		instance.setNamespace(action.getNamespace());
 		instance.setName(action.getName());
 		instance.setDescription(action.getDescription());
-		em.persist(instance);
 
 		Properties config = action.getConfig();
 
@@ -117,26 +118,32 @@ public class ResponseActionLoader extends ServiceTracker implements ResponseActi
 			if (value == null)
 				continue;
 
-			ResponseActionConfig c = new ResponseActionConfig();
-			c.setInstance(instance);
-			c.setName(key.toString());
-			c.setValue(value.toString());
-
-			instance.getConfigs().add(c);
-			em.persist(c);
+			instance.getConfigs().add(new ResponseActionConfig(key.toString(), value.toString()));
 		}
+
+		col.add(PrimitiveConverter.serialize(instance));
 	}
 
-	@Transactional
 	@Override
 	public void actionRemoved(ResponseActionManager manager, ResponseAction action) {
 		logger.info("kraken siem: delete action from database [{}]", action);
+		ConfigCollection col = getCol();
+		Config c = findAction(col, manager, action);
 
-		EntityManager em = entityManagerService.getEntityManager();
-		ResponseActionInstance instance = (ResponseActionInstance) em.createQuery(
-				"FROM ResponseActionInstance r WHERE r.namespace = ? AND r.name = ?").setParameter(1,
-				action.getNamespace()).setParameter(2, action.getName()).getSingleResult();
+		if (c != null)
+			col.remove(c);
+	}
 
-		em.remove(instance);
+	private Config findAction(ConfigCollection col, ResponseActionManager manager, ResponseAction action) {
+		Config c = col.findOne(Predicates.and( //
+				Predicates.field("manager", manager.getName()),//
+				Predicates.field("namespace", action.getNamespace()),//
+				Predicates.field("name", action.getName())));
+		return c;
+	}
+
+	private ConfigCollection getCol() {
+		ConfigDatabase db = configManager.getDatabase();
+		return db.ensureCollection("response_action_instance");
 	}
 }

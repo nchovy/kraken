@@ -17,22 +17,16 @@ package org.krakenapps.event.api;
 
 import java.io.Serializable;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-
-@Embeddable
 public class EventKey implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	@Column(nullable = false)
 	private int source;
 
-	@Column(nullable = false)
 	private int id;
 
 	public EventKey() {
 	}
-	
+
 	public EventKey(int id) {
 		this(0, id);
 	}

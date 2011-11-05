@@ -11,39 +11,17 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
 import org.krakenapps.msgbus.Marshalable;
 import org.krakenapps.rule.Rule;
 
-@Entity
-@Table(name = "siem_http_rules")
 public class HttpRule implements Rule, Marshalable {
-	@Id
-	private int sid;
-
-	@Column(nullable = false, length = 20)
 	private String name; // e.g. NCHOVY-2011-0001 format
 
-	@Column(nullable = false, length = 500)
 	private String rule;
 
-	@Column(name = "created_at", nullable = false)
 	private Date createDateTime;
 
-	@Column(name = "updated_at", nullable = false)
 	private Date updateDateTime;
-
-	public int getSid() {
-		return sid;
-	}
-
-	public void setSid(int sid) {
-		this.sid = sid;
-	}
 
 	public String getName() {
 		return name;
@@ -130,7 +108,6 @@ public class HttpRule implements Rule, Marshalable {
 	public Map<String, Object> marshal() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("sid", sid);
 		m.put("name", name);
 		m.put("rule", rule);
 		m.put("created_at", dateFormat.format(createDateTime));

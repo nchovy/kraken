@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-event-api</artifactId>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Event API</name>
 	<build>
@@ -68,17 +68,6 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 			<version>1.5.6</version>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-jpa</artifactId>
-			<version>1.5.0</version>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-dom</artifactId>
-			<version>1.0.0</version>
 		</dependency>
 	</dependencies>
 </project>

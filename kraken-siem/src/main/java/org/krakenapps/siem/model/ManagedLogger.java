@@ -15,58 +15,28 @@
  */
 package org.krakenapps.siem.model;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
 
 import org.krakenapps.msgbus.Marshalable;
 
-@Entity
-@Table(name = "siem_managed_loggers")
 public class ManagedLogger implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@Column(name = "org_id", nullable = false)
-	private int organizationId;
-
-	@Column(name = "fullname")
+	private int orgId;
 	private String fullName;
-
-	@Column(name = "parser")
 	private String parserFactoryName;
-
-	@Column(name = "is_enabled")
 	private boolean isEnabled;
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "managedLogger")
-	private List<LogParserOption> logParserOptions = new ArrayList<LogParserOption>();
+	/**
+	 * string to string map
+	 */
+	private Map<String, Object> logParserOptions = new HashMap<String, Object>();
 
-	public int getId() {
-		return id;
+	public int getOrgId() {
+		return orgId;
 	}
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public int getOrganizationId() {
-		return organizationId;
-	}
-
-	public void setOrganizationId(int organizationId) {
-		this.organizationId = organizationId;
+	public void setOrgId(int orgId) {
+		this.orgId = orgId;
 	}
 
 	public String getFullName() {
@@ -93,18 +63,17 @@ public class ManagedLogger implements Marshalable {
 		this.isEnabled = isEnabled;
 	}
 
-	public List<LogParserOption> getLogParserOptions() {
+	public Map<String, Object> getLogParserOptions() {
 		return logParserOptions;
 	}
 
-	public void setLogParserOptions(List<LogParserOption> logParserOptions) {
+	public void setLogParserOptions(Map<String, Object> logParserOptions) {
 		this.logParserOptions = logParserOptions;
 	}
 
 	@Override
 	public Map<String, Object> marshal() {
 		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
 		m.put("fullname", fullName);
 		m.put("parser_factory_name", parserFactoryName);
 		m.put("is_enabled", isEnabled);
@@ -113,6 +82,6 @@ public class ManagedLogger implements Marshalable {
 
 	@Override
 	public String toString() {
-		return "id=" + id + ", fullname=" + fullName + ", parsername=" + parserFactoryName + ", enabled=" + isEnabled;
+		return "fullname=" + fullName + ", parsername=" + parserFactoryName + ", enabled=" + isEnabled;
 	}
 }

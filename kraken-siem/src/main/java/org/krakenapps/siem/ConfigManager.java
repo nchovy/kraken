@@ -10,4 +10,10 @@ public interface ConfigManager {
 	 * @return the config database instance
 	 */
 	ConfigDatabase getDatabase(Session session);
+
+	/**
+	 * will be removed after multi-tenancy support
+	 */
+	@Deprecated
+	ConfigDatabase getDatabase();
 }

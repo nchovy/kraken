@@ -17,12 +17,9 @@ package org.krakenapps.siem.script;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -31,18 +28,13 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.dom.api.OrganizationApi;
-import org.krakenapps.dom.model.Organization;
 import org.krakenapps.event.api.Event;
 import org.krakenapps.event.api.EventDispatcher;
 import org.krakenapps.event.api.EventSeverity;
-import org.krakenapps.jpa.JpaService;
 import org.krakenapps.log.api.LoggerFactoryRegistry;
 import org.krakenapps.log.api.LoggerRegistry;
 import org.krakenapps.logstorage.Log;
-import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.siem.CandidateTextFileLogger;
-import org.krakenapps.siem.EventServer;
 import org.krakenapps.siem.LogFileScanner;
 import org.krakenapps.siem.LogFileScannerRegistry;
 import org.krakenapps.siem.LogServer;
@@ -56,16 +48,11 @@ import org.krakenapps.siem.response.ResponseConfigOption;
 import org.krakenapps.siem.response.ResponseServer;
 import org.krakenapps.xmlrpc.XmlRpcFaultException;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleException;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SiemScript implements Script {
-	private static final String JPA_FACTORY_NAME = "siem";
 	private final Logger slog = LoggerFactory.getLogger(SiemScript.class.getName());
 	private BundleContext bc;
 	private ScriptContext context;
@@ -79,105 +66,6 @@ public class SiemScript implements Script {
 		this.context = context;
 	}
 
-	public void load(String[] args) {
-		try {
-			JpaService jpa = getJpaService();
-			Preferences root = getConfigRoot();
-
-			String host = getInput("jpa.siem.host", "Database Host", "localhost");
-			String databaseName = getInput("jpa.siem.db", "Database Name", "kraken");
-			String username = getInput("jpa.siem.user", "Database User", "root");
-			String password = getInput("jpa.siem.password", "Database Password", null, true);
-
-			root.flush();
-			root.sync();
-
-			String connectionString = String.format("jdbc:mysql://%s/%s??useUnicode=true&amp;characterEncoding=utf8", host,
-					databaseName);
-
-			if (jpa.getEntityManagerFactory(JPA_FACTORY_NAME) == null) {
-				try {
-					Properties props = new Properties();
-					props.put("hibernate.connection.url", connectionString);
-					props.put("hibernate.connection.username", username);
-					props.put("hibernate.connection.password", password);
-
-					jpa.registerEntityManagerFactory(JPA_FACTORY_NAME, props, bc.getBundle().getBundleId());
-				} catch (BundleException e) {
-					context.println("cannot find model bundle");
-					slog.error("kraken siem: cannot find model bundle", e);
-				}
-			} else {
-				context.println("kraken siem database loaded");
-			}
-
-			context.println("siem loaded");
-		} catch (InterruptedException e) {
-			context.println("");
-			context.println("interrupted");
-		} catch (BackingStoreException e) {
-			context.println("cannot save database configuration");
-			slog.error("kraken siem: cannot save database configuration", e);
-		}
-	}
-
-	public void reset(String args[]) {
-		try {
-			Preferences pref = getConfigRoot();
-
-			pref.remove("jpa.siem.host");
-			pref.remove("jpa.siem.db");
-			pref.remove("jpa.siem.user");
-			pref.remove("jpa.siem.password");
-
-			pref.flush();
-			pref.sync();
-
-			context.println("database configuration reset success");
-		} catch (BackingStoreException e) {
-			context.println("cannot remove database configuration");
-			slog.error("kraken siem: cannot remove database configuration", e);
-		}
-	}
-
-	private String getInput(String key, String label, String defaultValue) throws InterruptedException {
-		return getInput(key, label, defaultValue, false);
-	}
-
-	private String getInput(String key, String label, String defaultValue, boolean isPassword) throws InterruptedException {
-		Preferences p = getConfigRoot();
-		String oldConfig = p.get(key, null);
-		if (oldConfig != null)
-			return oldConfig;
-
-		String def = ": ";
-		if (defaultValue != null)
-			def = " (default '" + defaultValue + "'): ";
-
-		context.print(label + def);
-
-		String value = null;
-		if (isPassword)
-			value = context.readPassword();
-		else
-			value = context.readLine();
-
-		if (value.isEmpty() && defaultValue != null)
-			value = defaultValue;
-
-		p.put(key, value);
-
-		return value;
-	}
-
-	public void unload(String[] args) {
-		JpaService jpa = getJpaService();
-		if (jpa.getEntityManagerFactory(JPA_FACTORY_NAME) != null) {
-			jpa.unregisterEntityManagerFactory(JPA_FACTORY_NAME);
-			context.println("jpa unloaded");
-		}
-	}
-
 	public void loggers(String[] args) {
 		try {
 			LogServer logServer = getLogServer();
@@ -188,19 +76,6 @@ public class SiemScript implements Script {
 			}
 		} catch (Exception e) {
 			context.println(e.getMessage());
-		}
-	}
-
-	@ScriptUsage(description = "", arguments = { @ScriptArgument(name = "offset", type = "int", description = "offset"),
-			@ScriptArgument(name = "limit", type = "int", description = "limit") })
-	public void events(String[] args) {
-		EventServer evtServer = getEventServer();
-		int offset = Integer.valueOf(args[0]);
-		int limit = Integer.valueOf(args[1]);
-
-		List<Event> events = evtServer.getEvents(offset, limit);
-		for (Event event : events) {
-			context.println(event.toString());
 		}
 	}
 
@@ -252,35 +127,6 @@ public class SiemScript implements Script {
 		d.dispatch(e);
 	}
 
-	private class LogPrinter implements LogSearchCallback {
-		private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-		@Override
-		public void interrupt() {
-		}
-
-		@Override
-		public boolean isInterrupted() {
-			return false;
-		}
-
-		@Override
-		public void onLog(Log log) {
-			String date = dateFormat.format(log.getDate());
-			String line = String.format("day=%s, id=%d", date, log.getId());
-			StringBuilder sb = new StringBuilder(line);
-
-			for (String key : log.getData().keySet()) {
-				sb.append(", ");
-				sb.append(key);
-				sb.append("=");
-				sb.append(log.getData().get(key));
-			}
-
-			context.println(sb.toString());
-		}
-	}
-
 	@ScriptUsage(description = "create managed logger", arguments = {
 			@ScriptArgument(name = "org id", type = "int", description = "organization id"),
 			@ScriptArgument(name = "logger fullname", type = "string", description = "logger fullname"),
@@ -288,7 +134,12 @@ public class SiemScript implements Script {
 	public void createLogger(String[] args) {
 		try {
 			LogServer logServer = getLogServer();
-			logServer.createManagedLogger(Integer.valueOf(args[0]), args[1], args[2], new Properties());
+			ManagedLogger ml = new ManagedLogger();
+			ml.setOrgId(Integer.valueOf(args[0]));
+			ml.setFullName(args[1]);
+			ml.setParserFactoryName(args[2]);
+
+			logServer.createManagedLogger(ml);
 			context.println("created");
 		} catch (Exception e) {
 			context.println(e.getMessage());
@@ -306,7 +157,7 @@ public class SiemScript implements Script {
 				return;
 			}
 
-			logServer.removeManagedLogger(m.getId());
+			logServer.removeManagedLogger(m);
 			context.println("removed");
 		} catch (Exception e) {
 			context.println(e.getMessage());
@@ -520,6 +371,8 @@ public class SiemScript implements Script {
 	}
 
 	public void configure(String[] args) {
+		final int orgId = 1;
+
 		LogFileScannerRegistry registry = getLogFileScannerRegistry();
 		if (registry == null) {
 			context.println("log file scanner registry not ready");
@@ -579,9 +432,6 @@ public class SiemScript implements Script {
 			context.println("firewall will block source ip which are detected as attack event");
 		}
 
-		ServiceReference ref = bc.getServiceReference(OrganizationApi.class.getName());
-		OrganizationApi orgApi = (OrganizationApi) bc.getService(ref);
-
 		// find and add loggers
 		for (LogFileScanner scanner : registry.getScanners()) {
 			context.println("running " + scanner.getName() + " scanner");
@@ -604,12 +454,14 @@ public class SiemScript implements Script {
 					}
 
 					if (logServer.getManagedLogger(logger.getFullName()) == null) {
-						for (Organization org : orgApi.getOrganizations()) {
-							logServer.createManagedLogger(org.getId(), logger.getFullName(), candidate.getParserFactoryName(),
-									candidate.getParserOptions());
-							context.println("  managed logger [org=" + org.getId() + ", " + logger.getFullName()
-									+ "] created, parser [" + candidate.getParserFactoryName() + "] mapped");
-						}
+						ManagedLogger ml = new ManagedLogger();
+						ml.setOrgId(orgId);
+						ml.setFullName(logger.getFullName());
+						ml.setParserFactoryName(candidate.getParserFactoryName());
+						ml.setLogParserOptions(toMap(candidate.getParserOptions()));
+
+						context.println("  managed logger [org=" + orgId + ", " + logger.getFullName()
+								+ "] created, parser [" + candidate.getParserFactoryName() + "] mapped");
 					}
 
 					if (!logger.isRunning()) {
@@ -621,6 +473,13 @@ public class SiemScript implements Script {
 				}
 			}
 		}
+	}
+
+	private Map<String, Object> toMap(Properties p) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		for (Object key : p.keySet())
+			m.put(key.toString(), p.getProperty(key.toString()));
+		return m;
 	}
 
 	public void logFileScanners(String[] args) {
@@ -653,10 +512,6 @@ public class SiemScript implements Script {
 		return getService(EventResponseMapper.class, "event-response mapper");
 	}
 
-	private JpaService getJpaService() {
-		return getService(JpaService.class, "jpa service");
-	}
-
 	private LogServer getLogServer() {
 		return getService(LogServer.class, "log server");
 	}
@@ -669,17 +524,8 @@ public class SiemScript implements Script {
 		return getService(EventDispatcher.class, "event dispatcher");
 	}
 
-	private EventServer getEventServer() {
-		return getService(EventServer.class, "event server");
-	}
-
 	private IscHttpRuleManager getIscHttpRuleManager() {
 		return getService(IscHttpRuleManager.class, "isc http-rule manager");
-	}
-
-	private Preferences getConfigRoot() {
-		PreferencesService prefsvc = getService(PreferencesService.class, "preferences service");
-		return prefsvc.getSystemPreferences();
 	}
 
 	@SuppressWarnings("unchecked")

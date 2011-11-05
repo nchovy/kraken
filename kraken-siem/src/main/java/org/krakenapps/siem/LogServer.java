@@ -16,8 +16,6 @@
 package org.krakenapps.siem;
 
 import java.util.Collection;
-import java.util.Properties;
-
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.siem.model.ManagedLogger;
 
@@ -26,13 +24,11 @@ public interface LogServer {
 
 	Collection<ManagedLogger> getManagedLoggers();
 
-	ManagedLogger getManagedLogger(int id);
-
 	ManagedLogger getManagedLogger(String fullName);
 
-	int createManagedLogger(int organizationId, String fullName, String parserName, Properties config);
+	void createManagedLogger(ManagedLogger logger);
 
-	void removeManagedLogger(int id);
+	void removeManagedLogger(ManagedLogger logger);
 
 	void addNormalizedLogListener(String category, NormalizedLogListener callback);
 

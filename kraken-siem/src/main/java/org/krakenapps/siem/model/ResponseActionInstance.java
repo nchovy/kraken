@@ -20,35 +20,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-
-@Entity
-@Table(name = "siem_response_actions", uniqueConstraints = { @UniqueConstraint(columnNames = { "manager", "namespace",
-		"name" }) })
 public class ResponseActionInstance {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
 	private int id;
 	private String manager;
 	private String namespace;
 	private String name;
 	private String description;
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "instance")
 	private List<ResponseActionConfig> configs = new ArrayList<ResponseActionConfig>();
 
-	@ManyToMany
-	@JoinTable(name = "siem_events_to_responses", joinColumns = @JoinColumn(name = "mapping_id"), inverseJoinColumns = @JoinColumn(name = "response_id"))
 	private Set<EventResponseMapping> eventMappings = new HashSet<EventResponseMapping>();
 
 	public int getId() {
