@@ -58,7 +58,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	private final File baseDir;
 	private final File dbDir;
-	private final String name;
+	private final String dbName;
 
 	/**
 	 * base changeset revision
@@ -86,7 +86,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	public FileConfigDatabase(File baseDir, String name, Integer rev) throws IOException {
 		this.baseDir = baseDir;
-		this.name = name;
+		this.dbName = name;
 		this.dbDir = new File(baseDir, name);
 		this.changeset = rev;
 		this.threadLock = new ReentrantLock();
@@ -165,7 +165,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public String getName() {
-		return name;
+		return dbName;
 	}
 
 	/**
@@ -201,6 +201,25 @@ public class FileConfigDatabase implements ConfigDatabase {
 				} catch (IOException e) {
 				}
 			}
+		}
+	}
+
+	@Override
+	public ConfigCollection getCollection(String name) {
+		try {
+			Manifest manifest = getManifest(changeset);
+			CollectionEntry col = manifest.getCollectionEntry(name);
+			if (col == null)
+				return null;
+
+			FileConfigCollection collection = new FileConfigCollection(this, changeset, col);
+			if (changeset != null)
+				return new UnmodifiableConfigCollection(collection);
+
+			return collection;
+		} catch (IOException e) {
+			logger.error("kraken confdb: cannot open collection file", e);
+			return null;
 		}
 	}
 
@@ -253,7 +272,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	public File getDbDirectory() {
-		return new File(baseDir, name);
+		return new File(baseDir, dbName);
 	}
 
 	@Override

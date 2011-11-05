@@ -63,6 +63,7 @@ import org.krakenapps.logger.KrakenLogService;
 import org.krakenapps.logger.LogCleaner;
 import org.krakenapps.logger.LoggerScriptFactory;
 import org.krakenapps.pkg.PackageScriptFactory;
+import org.krakenapps.script.ConfScriptFactory;
 import org.krakenapps.script.CoreScriptFactory;
 import org.krakenapps.script.HistoryScriptFactory;
 import org.krakenapps.script.OsgiScriptFactory;
@@ -371,6 +372,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(context, KeyStoreScriptFactory.class, "keystore");
 		registerScriptFactory(context, AccountScriptFactory.class, "account");
 		registerScriptFactory(context, SunPerfScriptFactory.class, "sunperf");
+		registerScriptFactory(context, ConfScriptFactory.class, "conf");
 	}
 
 	/**

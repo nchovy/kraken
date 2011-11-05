@@ -1,5 +1,6 @@
 package org.krakenapps.api;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
@@ -14,7 +15,17 @@ public class Primitive {
 	}
 
 	private static void stringify(StringBuilder sb, Object o) {
-		if (o instanceof Collection<?>) {
+		if (o instanceof Object[]) {
+			Object[] arr = (Object[]) o;
+			sb.append("[");
+			int i = 0;
+			for (Object child : arr) {
+				if (i++ != 0)
+					sb.append(", ");
+				stringify(sb, child);
+			}
+			sb.append("]");
+		} else if (o instanceof Collection<?>) {
 			sb.append("[");
 			int i = 0;
 			for (Object child : (Collection<?>) o) {

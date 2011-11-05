@@ -32,6 +32,11 @@ public interface ConfigDatabase {
 	Set<String> getCollectionNames();
 
 	/**
+	 * return collection. return null if collection does not exists
+	 */
+	ConfigCollection getCollection(String string);
+
+	/**
 	 * return collection. if collection does not exists, it will create
 	 * collection and return it.
 	 * 
