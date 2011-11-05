@@ -37,8 +37,7 @@ public class ShellSession {
 		sc.getOutputStream().println(Kraken.BANNER);
 	}
 
-	public void handleMessage(Object message) throws InterruptedException,
-			IOException {
+	public void handleMessage(Object message) throws InterruptedException, IOException {
 		if (ignoreLF(message))
 			return;
 
@@ -75,15 +74,13 @@ public class ShellSession {
 		}
 	}
 
-	private void processShell(Object message) throws InterruptedException,
-			IOException {
+	private void processShell(Object message) throws InterruptedException, IOException {
 		ConsoleController controller = sc.getController();
 		if (message instanceof FunctionKeyEvent) {
 			FunctionKeyEvent ev = (FunctionKeyEvent) message;
 
 			// suppress function key while logon
-			if (attributes.get("principal") == null
-					&& !ev.isPressed(KeyCode.BACKSPACE))
+			if (attributes.get("principal") == null && !ev.isPressed(KeyCode.BACKSPACE))
 				return;
 
 			controller.onFunctionKeyPressed(ev);
@@ -159,8 +156,7 @@ public class ShellSession {
 		attributes.put("principal", name);
 	}
 
-	private boolean handleEmbeddedCommands(ScriptOutputStream out, String line)
-			throws IOException {
+	private boolean handleEmbeddedCommands(ScriptOutputStream out, String line) throws IOException {
 		line = line.trim();
 
 		if ((line.equals("quit") || line.equals("exit")))
@@ -175,10 +171,8 @@ public class ShellSession {
 		return false;
 	}
 
-	private void runScript(String line) throws InstantiationException,
-			IllegalAccessException {
-		Thread t = new Thread(new ScriptRunner(sc, line),
-				"Kraken Script Runner");
+	private void runScript(String line) throws InstantiationException, IllegalAccessException {
+		Thread t = new Thread(new ScriptRunner(sc, line), "Kraken Script Runner [" + line + "]");
 		t.start();
 	}
 }
