@@ -14,7 +14,8 @@ import java.util.Set;
 
 public class PrimitiveConverter {
 	@SuppressWarnings("unchecked")
-	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(Short.class, Integer.class, Long.class, Float.class, Double.class, String.class, Date.class));
+	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(Short.class, Integer.class,
+			Long.class, Float.class, Double.class, String.class, Date.class));
 
 	public static Object serialize(Collection<?> c) {
 		List<Object> l = new ArrayList<Object>();
@@ -44,7 +45,8 @@ public class PrimitiveConverter {
 				f.setAccessible(true);
 				Object value = f.get(o);
 				if (option != null && !option.nullable() && value == null)
-					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f.getType().getSimpleName(), c.getName(), f.getName()));
+					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f
+							.getType().getSimpleName(), c.getName(), f.getName()));
 
 				if (value instanceof Enum)
 					m.put(fieldName, value.toString());
@@ -57,7 +59,8 @@ public class PrimitiveConverter {
 					m.put(fieldName, l2);
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", c.getName(), f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", c.getName(),
+								f.getName()));
 					m.put(fieldName, value);
 				} else
 					m.put(fieldName, value);
@@ -76,6 +79,13 @@ public class PrimitiveConverter {
 			l.add(parse(clazz, (Map<String, Object>) o));
 
 		return l;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T parse(Class<T> clazz, Object c) {
+		if (c instanceof Map<?, ?>)
+			return parse(clazz, (Map<String, Object>) c);
+		return null;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
