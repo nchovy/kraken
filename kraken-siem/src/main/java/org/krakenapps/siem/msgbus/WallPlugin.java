@@ -33,7 +33,7 @@ public class WallPlugin {
 
 		List<Object> presets = new ArrayList<Object>();
 		while (it.hasNext()) {
-			WallPreset preset = PrimitiveConverter.parse(WallPreset.class, (Map<String, Object>) it.next()
+			WallPreset preset = PrimitiveConverter.parseObject(WallPreset.class, (Map<String, Object>) it.next()
 					.getDocument());
 
 			Map<String, Object> m = new HashMap<String, Object>();
@@ -57,7 +57,7 @@ public class WallPlugin {
 	@MsgbusMethod
 	public void setPreset(Request req, Response resp) {
 		ConfigCollection col = getCol(req);
-		WallPreset p = PrimitiveConverter.parse(WallPreset.class, req.getParams());
+		WallPreset p = PrimitiveConverter.parseObject(WallPreset.class, req.getParams());
 
 		Config c = col.findOne(Predicates.field("guid", p.getGuid()));
 		if (c == null) {

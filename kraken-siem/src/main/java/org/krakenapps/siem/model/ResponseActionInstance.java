@@ -16,9 +16,9 @@
 package org.krakenapps.siem.model;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+
+import org.krakenapps.api.CollectionTypeHint;
 
 public class ResponseActionInstance {
 	private int id;
@@ -27,9 +27,11 @@ public class ResponseActionInstance {
 	private String name;
 	private String description;
 
+	@CollectionTypeHint(ResponseActionConfig.class)
 	private List<ResponseActionConfig> configs = new ArrayList<ResponseActionConfig>();
 
-	private Set<EventResponseMapping> eventMappings = new HashSet<EventResponseMapping>();
+	@CollectionTypeHint(EventResponseMapping.class)
+	private List<EventResponseMapping> eventMappings = new ArrayList<EventResponseMapping>();
 
 	public int getId() {
 		return id;
@@ -79,11 +81,11 @@ public class ResponseActionInstance {
 		this.configs = configs;
 	}
 
-	public Set<EventResponseMapping> getEventMappings() {
+	public List<EventResponseMapping> getEventMappings() {
 		return eventMappings;
 	}
 
-	public void setEventMappings(Set<EventResponseMapping> eventMappings) {
+	public void setEventMappings(List<EventResponseMapping> eventMappings) {
 		this.eventMappings = eventMappings;
 	}
 

@@ -22,14 +22,17 @@ import org.krakenapps.msgbus.Marshalable;
 
 public class ManagedLogger implements Marshalable {
 	private int orgId;
+
 	private String fullName;
+
 	private String parserFactoryName;
-	private boolean isEnabled;
 
 	/**
 	 * string to string map
 	 */
 	private Map<String, Object> logParserOptions = new HashMap<String, Object>();
+
+	private boolean isEnabled = true;
 
 	public int getOrgId() {
 		return orgId;
@@ -55,20 +58,20 @@ public class ManagedLogger implements Marshalable {
 		this.parserFactoryName = parserFactoryName;
 	}
 
-	public boolean isEnabled() {
-		return isEnabled;
-	}
-
-	public void setEnabled(boolean isEnabled) {
-		this.isEnabled = isEnabled;
-	}
-
 	public Map<String, Object> getLogParserOptions() {
 		return logParserOptions;
 	}
 
 	public void setLogParserOptions(Map<String, Object> logParserOptions) {
 		this.logParserOptions = logParserOptions;
+	}
+
+	public boolean isEnabled() {
+		return isEnabled;
+	}
+
+	public void setEnabled(boolean isEnabled) {
+		this.isEnabled = isEnabled;
 	}
 
 	@Override

@@ -17,7 +17,7 @@ package org.krakenapps.siem.engine;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -166,7 +166,7 @@ public class EventResponseMapperImpl implements EventResponseMapper, ResponseSer
 		ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
 		EventResponseMapping mapping = new EventResponseMapping(key.getCategory(), key.getEventSource());
 
-		Set<EventResponseMapping> mappings = instance.getEventMappings();
+		List<EventResponseMapping> mappings = instance.getEventMappings();
 		if (!mappings.contains(mapping))
 			mappings.add(mapping);
 
