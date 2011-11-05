@@ -281,7 +281,7 @@ public abstract class AbstractLogger implements Logger, Runnable {
 			try {
 				pipe.onLog(this, log);
 			} catch (Exception e) {
-				if (e.getMessage().startsWith("invalid time"))
+				if (e.getMessage() != null && e.getMessage().startsWith("invalid time"))
 					this.log.warn("kraken-log-api: log pipe should not throw exception" + e.getMessage());
 				else
 					this.log.warn("kraken-log-api: log pipe should not throw exception", e);
