@@ -43,8 +43,7 @@ import org.krakenapps.jpa.handler.Transactional;
 @Component(name = "dom-ldap-org-unit-api")
 @Provides
 @JpaConfig(factory = "dom")
-public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationalUnit> implements
-		LdapOrganizationalUnitApi {
+public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationalUnit> implements LdapOrganizationalUnitApi {
 	@Requires
 	private ThreadLocalEntityManagerService entityManagerService;
 
@@ -120,6 +119,9 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 	@Override
 	public LdapOrganizationalUnit removeLdapOrganizationalUnit(OrganizationUnit orgUnit) {
 		LdapOrganizationalUnit unit = removeLdapOrganizationalUnitInternal(orgUnit);
+		if (unit == null)
+			return null;
+
 		fireEntityRemoved(unit);
 		return unit;
 	}
@@ -127,12 +129,16 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 	@Transactional
 	private LdapOrganizationalUnit removeLdapOrganizationalUnitInternal(OrganizationUnit orgUnit) {
 		EntityManager em = entityManagerService.getEntityManager();
-		LdapOrganizationalUnit ldapUnit = (LdapOrganizationalUnit) em
-				.createQuery("FROM LdapOrganizationalUnit l WHERE l.organizationUnit.id = ?")
-				.setParameter(1, orgUnit.getId()).getSingleResult();
+		try {
+			LdapOrganizationalUnit ldapUnit = (LdapOrganizationalUnit) em
+					.createQuery("FROM LdapOrganizationalUnit l WHERE l.organizationUnit.id = ?")
+					.setParameter(1, orgUnit.getId()).getSingleResult();
+			em.remove(ldapUnit);
+			return ldapUnit;
+		} catch (NoResultException e) {
+		}
 
-		em.remove(ldapUnit);
-		return ldapUnit;
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -239,8 +245,8 @@ public class LdapOrganizationalUnitApiImpl extends AbstractApi<LdapOrganizationa
 		} catch (NonUniqueResultException e) {
 			if (dc != null) {
 				try {
-					o = (Organization) em.createQuery("FROM Organization o WHERE o.domainController = ?")
-							.setParameter(1, dc).getSingleResult();
+					o = (Organization) em.createQuery("FROM Organization o WHERE o.domainController = ?").setParameter(1, dc)
+							.getSingleResult();
 				} catch (NoResultException ex) {
 					try {
 						o = (Organization) em.createQuery("FROM Organization o WHERE o.backupDomainController = ?")
