@@ -173,7 +173,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 				if (end < 0)
 					end = cookie.length();
 
-				sessionKey = cookie.substring(begin, end);
+				sessionKey = cookie.substring(begin + "kraken-session=".length(), end);
 			}
 		}
 
