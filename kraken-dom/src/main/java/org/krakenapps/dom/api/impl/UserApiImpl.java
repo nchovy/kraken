@@ -75,8 +75,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 
 	@Override
 	public Collection<UserExtensionProvider> getExtensionProviders() {
-		return new ArrayList<UserExtensionProvider>(
-				userExtensionProviders.values());
+		return new ArrayList<UserExtensionProvider>(userExtensionProviders.values());
 	}
 
 	@Override
@@ -100,11 +99,8 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 			return new ArrayList<User>();
 
 		EntityManager em = entityManagerService.getEntityManager();
-		return em
-				.createQuery(
-						"FROM User u WHERE u.organization.id = :org AND u.id IN (:users)")
-				.setParameter("org", orgId).setParameter("users", idList)
-				.getResultList();
+		return em.createQuery("FROM User u WHERE u.organization.id = :org AND u.id IN (:users)").setParameter("org", orgId)
+				.setParameter("users", idList).getResultList();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -112,49 +108,34 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Override
 	public Collection<User> getUsers(int orgId) {
 		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM User u WHERE u.organization.id = ?")
-				.setParameter(1, orgId).getResultList();
+		return em.createQuery("FROM User u WHERE u.organization.id = ?").setParameter(1, orgId).getResultList();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Transactional
 	@Override
-	public Collection<User> getUsers(int orgId, Integer orgUnitId,
-			boolean includeChildren) {
+	public Collection<User> getUsers(int orgId, Integer orgUnitId, boolean includeChildren) {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (!includeChildren)
-			return em
-					.createQuery("FROM User u WHERE u.organizationUnit.id = ?")
-					.setParameter(1, orgUnitId).getResultList();
+			return em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId).getResultList();
 		else
 			return getChildren(em, orgId, orgUnitId);
 	}
 
 	@SuppressWarnings("unchecked")
-	private Collection<User> getChildren(EntityManager em, int orgId,
-			Integer orgUnitId) {
+	private Collection<User> getChildren(EntityManager em, int orgId, Integer orgUnitId) {
 		Collection<User> users = new ArrayList<User>();
 		Collection<OrganizationUnit> children = null;
 		if (orgUnitId != null) {
-			children = em
-					.createQuery(
-							"FROM OrganizationUnit o WHERE o.parent.id = ?")
-					.setParameter(1, orgUnitId).getResultList();
-			users.addAll(em
-					.createQuery("FROM User u WHERE u.organizationUnit.id = ?")
-					.setParameter(1, orgUnitId).getResultList());
+			children = em.createQuery("FROM OrganizationUnit o WHERE o.parent.id = ?").setParameter(1, orgUnitId).getResultList();
+			users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId).getResultList());
 		} else {
-			children = em.createQuery(
-					"FROM OrganizationUnit o WHERE o.parent IS NULL")
-					.getResultList();
-			users.addAll(em.createQuery(
-					"FROM User u WHERE u.organizationUnit.id IS NULL")
-					.getResultList());
+			children = em.createQuery("FROM OrganizationUnit o WHERE o.parent IS NULL").getResultList();
+			users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id IS NULL").getResultList());
 		}
 
 		for (OrganizationUnit child : children)
-			users.addAll(getChildren(em, child.getOrganization().getId(),
-					child.getId()));
+			users.addAll(getChildren(em, child.getOrganization().getId(), child.getId()));
 
 		return users;
 	}
@@ -164,9 +145,8 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Override
 	public Collection<User> getUsers(String domainController) {
 		EntityManager em = entityManagerService.getEntityManager();
-		List<User> users = em
-				.createQuery("FROM User u WHERE u.domainController = ?")
-				.setParameter(1, domainController).getResultList();
+		List<User> users = em.createQuery("FROM User u WHERE u.domainController = ?").setParameter(1, domainController)
+				.getResultList();
 		for (User user : users) {
 			if (user.getAdmin() != null)
 				user.getAdmin().getTrustHosts().size();
@@ -186,8 +166,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	public User getUserByLoginName(String loginName) {
 		try {
 			EntityManager em = entityManagerService.getEntityManager();
-			return (User) em.createQuery("FROM User u WHERE u.loginName = ?")
-					.setParameter(1, loginName).getSingleResult();
+			return (User) em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, loginName).getSingleResult();
 		} catch (NoResultException e) {
 			return null;
 		}
@@ -203,9 +182,11 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Transactional
 	private User createUserInternal(User user) {
 		EntityManager em = entityManagerService.getEntityManager();
-		if (em.createQuery("FROM User u WHERE u.loginName = ?")
-				.setParameter(1, user.getLoginName()).getSingleResult() != null)
+		try {
+			em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, user.getLoginName()).getSingleResult();
 			throw new IllegalStateException("duplicate login name");
+		} catch (NoResultException e) {
+		}
 
 		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		user.setCreateDateTime(new Date());
@@ -226,8 +207,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (user.getId() == 0)
 			throw new IllegalArgumentException("check user id");
-		if (em.createQuery("FROM User u WHERE u.loginName = ?")
-				.setParameter(1, user.getLoginName()).getSingleResult() != null)
+		if (em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, user.getLoginName()).getSingleResult() != null)
 			throw new IllegalStateException("duplicate login name");
 
 		User u = em.find(User.class, user.getId());
@@ -285,8 +265,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Override
 	public void setSaltLength(int length) {
 		if (length < 0 || length > 20)
-			throw new IllegalArgumentException(
-					"invalid salt length. (valid: 0~20)");
+			throw new IllegalArgumentException("invalid salt length. (valid: 0~20)");
 
 		try {
 			prefsvc.getSystemPreferences().putInt("salt_length", length);
@@ -309,8 +288,7 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 
 		@Override
 		public Object addingService(ServiceReference reference) {
-			UserExtensionProvider p = (UserExtensionProvider) super
-					.addingService(reference);
+			UserExtensionProvider p = (UserExtensionProvider) super.addingService(reference);
 			userExtensionProviders.put(p.getName(), p);
 			return p;
 		}
