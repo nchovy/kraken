@@ -3,7 +3,6 @@ package org.krakenapps.msgbus.impl;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.krakenapps.api.Primitive;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -111,6 +110,29 @@ public class MsgbusScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "send", arguments = {
+			@ScriptArgument(name = "session id", type = "int", description = "session id"),
+			@ScriptArgument(name = "callback name", type = "string", description = "callback name"),
+			@ScriptArgument(name = "data string", type = "string", description = "data string") })
+	public void send(String[] args) {
+		Session session = msgbus.getSession(Integer.valueOf(args[0]));
+		if (session == null) {
+			context.println("session not found");
+			return;
+		}
+
+		// trap without push api (test without push subscription)
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("data", args[2]);
+
+		Message msg = new Message();
+		msg.setType(Type.Trap);
+		msg.setMethod(args[1]);
+		msg.setParameters(params);
+		session.send(msg);
+		context.println("sent trap message");
+	}
+
 	private class ScriptSession extends AbstractSession {
 		private boolean completed;
 		private int orgId;
@@ -137,7 +159,7 @@ public class MsgbusScript implements Script {
 				context.println(msg.getErrorCode() + ": " + msg.getErrorMessage());
 			else
 				context.println(Primitive.stringify(msg.getParameters()));
-			
+
 			completed = true;
 		}
 	}
