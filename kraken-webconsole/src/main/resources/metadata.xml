@@ -18,4 +18,5 @@
 	<instance component="webconsole-keydist-servlet" />
 	<instance component="slpolicy-server" />
 	<instance component="slpolicy-script-factory" />
+	<instance component="comet-session-store" />
 </ipojo>

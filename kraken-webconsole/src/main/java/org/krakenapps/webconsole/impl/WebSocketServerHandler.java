@@ -17,9 +17,12 @@ package org.krakenapps.webconsole.impl;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -44,6 +47,7 @@ import org.jboss.netty.util.CharsetUtil;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.Session;
+import org.krakenapps.webconsole.CometSessionStore;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,10 +59,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
 	private MessageBus msgbus;
 	private ServletRegistry servletRegistry;
+	private CometSessionStore comet;
 
-	public WebSocketServerHandler(MessageBus msgbus, ServletRegistry servletRegistry) {
+	public WebSocketServerHandler(MessageBus msgbus, ServletRegistry servletRegistry, CometSessionStore comet) {
 		this.msgbus = msgbus;
 		this.servletRegistry = servletRegistry;
+		this.comet = comet;
 	}
 
 	@Override
@@ -143,12 +149,76 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 			return;
 		}
 
+		// comet session check
+		if (req.getUri().startsWith("/kraken-comet")) {
+			handleComet(ctx, req);
+			return;
+		}
+
 		try {
 			servletRegistry.service(ctx, req);
 		} catch (IllegalArgumentException e) {
 			// send an error page otherwise
 			sendHttpResponse(ctx, req, new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
 		}
+	}
+
+	private void handleComet(ChannelHandlerContext ctx, HttpRequest req) {
+		String cookie = req.getHeader(HttpHeaders.Names.COOKIE);
+		String sessionKey = null;
+		if (cookie != null) {
+			int begin = cookie.indexOf("kraken-session=");
+			if (begin > 0) {
+				int end = cookie.indexOf(";", begin);
+				if (end < 0)
+					end = cookie.length();
+
+				sessionKey = cookie.substring(begin, end);
+			}
+		}
+
+		if (req.getUri().equals("/kraken-comet/trap"))
+			handleCometTrap(ctx, sessionKey);
+		else if (req.getUri().equals("/kraken-comet/request"))
+			handleCometRequest(ctx, sessionKey, req);
+	}
+
+	private void handleCometTrap(ChannelHandlerContext ctx, String sessionKey) {
+		if (sessionKey == null) {
+			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+			resp.setHeader(HttpHeaders.Names.SET_COOKIE, "kraken-session=" + UUID.randomUUID().toString());
+			resp.setHeader(HttpHeaders.Names.CONTENT_LENGTH, "0");
+			ChannelFuture future = ctx.getChannel().write(resp);
+			future.addListener(ChannelFutureListener.CLOSE);
+			logger.info("kraken webconsole: set cookie and close [{}]", ctx.getChannel().getRemoteAddress());
+			return;
+		}
+
+		logger.info("kraken webconsole: new comet session [{}]", sessionKey);
+
+		Session session = comet.find(sessionKey);
+		if (session != null) {
+			// session closed callback will trigger msgbus.closeSession()
+			session.close();
+
+			logger.info("kraken webconsole: closed old comet session [{}]", sessionKey);
+		}
+
+		session = new CometSession(comet, sessionKey, ctx.getChannel());
+		comet.register(sessionKey, session);
+		msgbus.openSession(session);
+
+		logger.info("kraken webconsole: comet session [{}] opened", ctx.getChannel().getRemoteAddress());
+	}
+
+	private void handleCometRequest(ChannelHandlerContext ctx, String sessionKey, HttpRequest req) {
+		ChannelBuffer buf = req.getContent();
+		String text = new String(buf.array(), buf.readerIndex(), buf.readableBytes(), Charset.forName("utf-8"));
+
+		CometSession session = new CometSession(comet, sessionKey, ctx.getChannel());
+		Message msg = KrakenMessageDecoder.decode(session, text);
+
+		msgbus.dispatch(session, msg);
 	}
 
 	private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {

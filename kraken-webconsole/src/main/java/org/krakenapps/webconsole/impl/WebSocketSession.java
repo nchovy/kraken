@@ -17,47 +17,24 @@ package org.krakenapps.webconsole.impl;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.http.websocket.DefaultWebSocketFrame;
+import org.krakenapps.msgbus.AbstractSession;
 import org.krakenapps.msgbus.Message;
-import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class WebSocketSession implements Session {
+public class WebSocketSession extends AbstractSession {
 	private final Logger logger = LoggerFactory.getLogger(WebSocketSession.class.getName());
 	private Channel channel;
-	private Map<String, Object> params;
 
 	public WebSocketSession(Channel channel) {
 		this.channel = channel;
-		this.params = new ConcurrentHashMap<String, Object>();
-	}
-
-	@Override
-	public Locale getLocale() {
-		if (!params.containsKey("locale"))
-			return new Locale("en");
-
-		return new Locale((String) params.get("locale"));
 	}
 
 	public int getId() {
 		return channel.getId();
-	}
-
-	@Override
-	public Integer getOrgId() {
-		return getInt("org_id");
-	}
-
-	@Override
-	public Integer getAdminId() {
-		return getInt("admin_id");
 	}
 
 	@Override
@@ -68,31 +45,6 @@ public class WebSocketSession implements Session {
 	@Override
 	public InetAddress getRemoteAddress() {
 		return ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
-	}
-
-	@Override
-	public boolean has(String key) {
-		return params.containsKey(key);
-	}
-
-	public Object get(String key) {
-		return params.get(key);
-	}
-
-	public String getString(String key) {
-		return (String) params.get(key);
-	}
-
-	public Integer getInt(String key) {
-		return (Integer) params.get(key);
-	}
-
-	public void setProperty(String key, Object value) {
-		params.put(key, value);
-	}
-
-	public void unsetProperty(String key) {
-		params.remove(key);
 	}
 
 	public void send(Message msg) {

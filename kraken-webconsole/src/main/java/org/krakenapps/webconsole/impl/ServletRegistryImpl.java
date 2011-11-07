@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 
@@ -101,8 +100,7 @@ public class ServletRegistryImpl implements ServletRegistry {
 		}
 	}
 
-	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req) throws ServletException,
-			IOException {
+	private boolean serviceInternal(ChannelHandlerContext ctx, HttpRequest req) throws ServletException, IOException {
 		Response response = null;
 
 		try {

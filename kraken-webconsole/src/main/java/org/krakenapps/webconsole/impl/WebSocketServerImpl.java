@@ -37,6 +37,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.webconsole.BundleResourceServlet;
+import org.krakenapps.webconsole.CometSessionStore;
 import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.krakenapps.webconsole.WebSocketServerParams;
@@ -66,6 +67,9 @@ public class WebSocketServerImpl implements WebSocketServer {
 	@Requires
 	private KeyStoreManager keyStoreManager;
 
+	@Requires
+	private CometSessionStore comet;
+
 	private Map<InetSocketAddress, Channel> listeners;
 	private BundleContext bc;
 
@@ -86,7 +90,7 @@ public class WebSocketServerImpl implements WebSocketServer {
 				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
 		// Set up the event pipeline factory.
-		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(msgbus, staticResourceApi, params));
+		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(msgbus, staticResourceApi, comet, params));
 
 		// Bind and start to accept incoming connections.
 		InetSocketAddress addr = params.getListenAddress();
