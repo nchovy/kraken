@@ -15,24 +15,27 @@
  */
 package org.krakenapps.ca.msgbus;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.cert.CertificateException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.bouncycastle.util.encoders.Base64;
+import org.krakenapps.api.Primitive;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ca.CertificateAuthority;
+import org.krakenapps.ca.CertificateAuthorityService;
+import org.krakenapps.ca.CertificateMetadata;
+import org.krakenapps.ca.CertificateRequest;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -47,12 +50,13 @@ public class CaPlugin {
 	private final Logger logger = LoggerFactory.getLogger(CaPlugin.class.getName());
 
 	@Requires
-	private CertificateAuthority ca;
+	private CertificateAuthorityService ca;
 
 	@MsgbusMethod
 	public void issueRootCertificate(Request req, Response resp) {
 		try {
 			// parameters
+			String authorityName = req.getString("authority");
 			int days = req.getInteger("days");
 			String cn = req.getString("common_name");
 			String ou = req.getString("org_unit");
@@ -65,7 +69,22 @@ public class CaPlugin {
 
 			String dn = String.format("CN=%s, OU=%s, O=%s, L=%s, ST=%s, C=%s", cn, ou, o, l, st, c);
 
-			X509Certificate cert = ca.issueSelfSignedCertificate(dn, signatureAlgorithm, days, password);
+			Date notBefore = new Date();
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(notBefore);
+			cal.add(Calendar.DAY_OF_YEAR, days);
+			Date notAfter = cal.getTime();
+
+			// key pair generation
+			KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
+			KeyPair keyPair = keyPairGen.generateKeyPair();
+
+			CertificateRequest certReq = CertificateRequest.createSelfSignedCertRequest(keyPair, password, dn, notBefore,
+					notAfter, signatureAlgorithm);
+			ca.createAuthority(authorityName, certReq);
+
+			CertificateAuthority authority = ca.createAuthority(authorityName, certReq);
+			X509Certificate cert = authority.getRootCertificate().getCertificate(password);
 			resp.put("cert", marshal(cert));
 
 		} catch (Exception e) {
@@ -77,24 +96,44 @@ public class CaPlugin {
 	@MsgbusMethod
 	public void issueCertificate(Request req, Response resp) {
 		try {
-			String caCN = req.getString("ca_common_name");
+			String authorityName = req.getString("authority");
 			String caPassword = req.getString("ca_password");
 
-			String keyAlias = req.getString("key_alias");
+			// check authority
+			CertificateAuthority authority = ca.getAuthority(authorityName);
+			if (authority == null)
+				throw new MsgbusException("kraken-ca", "authority-not-found");
+
+			// generate public/private key pair
+			KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
+			CertificateRequest certReq = new CertificateRequest();
+
+			// calculate valid period
+			int days = req.getInteger("days");
+			Date notBefore = new Date();
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(notBefore);
+			cal.add(Calendar.DAY_OF_YEAR, days);
+			Date notAfter = cal.getTime();
+
+			// build dn
 			String cn = req.getString("common_name");
 			String ou = req.getString("org_unit");
 			String o = req.getString("org");
 			String l = req.getString("city");
 			String st = req.getString("state");
 			String c = req.getString("country");
-			String signatureAlgorithm = req.getString("signature_algorithm");
-			String keyPassword = req.getString("password");
 
-			int days = req.getInteger("days");
+			// set
+			certReq.setSubjectDn(String.format("CN=%s, OU=%s, O=%s, L=%s, ST=%s, C=%s", cn, ou, o, l, st, c));
+			certReq.setKeyPair(keyPairGen.generateKeyPair());
+			certReq.setSignatureAlgorithm(req.getString("signature_algorithm"));
+			certReq.setKeyPassword(req.getString("password"));
+			certReq.setNotBefore(notBefore);
+			certReq.setNotAfter(notAfter);
 
-			String dn = String.format("CN=%s, OU=%s, O=%s, L=%s, ST=%s, C=%s", cn, ou, o, l, st, c);
+			authority.issueCertificate(caPassword, certReq);
 
-			ca.issueCertificate(caCN, caPassword, keyAlias, keyPassword, dn, signatureAlgorithm, days);
 		} catch (MsgbusException e) {
 			throw e;
 		} catch (Exception e) {
@@ -105,49 +144,46 @@ public class CaPlugin {
 
 	@MsgbusMethod
 	public void getRootCertificates(Request req, Response resp) {
-		Collection<X509Certificate> rootCerts = ca.getRootCertificates();
-
 		List<Object> l = new ArrayList<Object>();
-		for (X509Certificate rootCert : rootCerts)
-			l.add(marshal(rootCert));
+
+		for (CertificateAuthority authority : ca.getAuthorities()) {
+			CertificateMetadata cm = authority.getRootCertificate();
+			l.add(PrimitiveConverter.serialize(cm));
+		}
 
 		resp.put("root_certs", l);
 	}
 
 	@MsgbusMethod
 	public void getCertificates(Request req, Response resp) {
-		String caCN = req.getString("ca_common_name");
-		resp.put("certs", ca.getCertificates(caCN));
+		String authorityName = req.getString("authority");
+
+		// check authority
+		CertificateAuthority authority = ca.getAuthority(authorityName);
+		if (authority == null)
+			throw new MsgbusException("kraken-ca", "authority-not-found");
+
+		List<Object> l = new LinkedList<Object>();
+		for (CertificateMetadata cm : authority.getCertificates()) {
+			l.add(PrimitiveConverter.serialize(cm));
+		}
+
+		resp.put("certs", l);
 	}
 
 	@MsgbusMethod
 	public void getCertificate(Request req, Response resp) {
 		try {
-			String caCN = req.getString("ca_common_name");
-			String keyAlias = req.getString("key_alias");
-			String keyPassword = req.getString("key_password");
+			String authorityName = req.getString("authority");
+			String serial = req.getString("serial");
 
-			X509Certificate cert = ca.getCertificate(caCN, keyAlias, keyPassword);
-			resp.put("cert", marshal(cert));
+			// check authority
+			CertificateAuthority authority = ca.getAuthority(authorityName);
+			if (authority == null)
+				throw new MsgbusException("kraken-ca", "authority-not-found");
 
-		} catch (FileNotFoundException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "cert-not-found");
-		} catch (KeyStoreException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "keystore-not-found");
-		} catch (NoSuchProviderException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "provider-not-found");
-		} catch (NoSuchAlgorithmException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "algorithm-not-found");
-		} catch (CertificateException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "cert-error");
-		} catch (IOException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "io-error");
+			CertificateMetadata cm = authority.findCertificate("serial", serial);
+			resp.put("cert", cm == null ? null : PrimitiveConverter.serialize(cm));
 		} catch (Exception e) {
 			logger.error("kraken ca: cannot get certificate", e);
 			throw new MsgbusException("ca", "general-error");
@@ -156,23 +192,22 @@ public class CaPlugin {
 
 	@MsgbusMethod
 	public void getPfxFile(Request req, Response resp) {
-		try {
-			String caCN = req.getString("ca_common_name");
-			String keyAlias = req.getString("key_alias");
-			String keyPassword = req.getString("key_password");
+		String authorityName = req.getString("authority");
+		String serial = req.getString("serial");
+		String keyPassword = req.getString("key_password");
 
-			byte[] b = ca.getPfxFile(caCN, keyAlias, keyPassword);
-			byte[] encoded = Base64.encode(b);
-			
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < encoded.length; i++)
-				sb.append((char) encoded[i]);
-			
-			resp.put("pfx", sb.toString());
-		} catch (IOException e) {
-			logger.error("kraken ca: cannot get certificate", e);
-			throw new MsgbusException("ca", "io-error");
-		}
+		// check authority
+		CertificateAuthority authority = ca.getAuthority(authorityName);
+		if (authority == null)
+			throw new MsgbusException("kraken-ca", "authority-not-found");
+
+		CertificateMetadata cm = authority.findCertificate("serial", serial);
+		if (cm == null)
+			throw new MsgbusException("kraken-ca", "certificate-not-found");
+
+		byte[] b = authority.getPfxBinary(cm.getSubjectDn(), keyPassword);
+		String encoded = Base64.encodeBase64String(b);
+		resp.put("pfx", encoded);
 	}
 
 	private Map<String, Object> marshal(X509Certificate cert) {

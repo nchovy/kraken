@@ -17,30 +17,25 @@ package org.krakenapps.ca.impl;
 
 import java.io.File;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.KeyStore;
-import java.security.PrivateKey;
 import java.security.Security;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.bouncycastle.asn1.x509.X509Name;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.krakenapps.api.Script;
+import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
+import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.ca.CertificateAuthority;
-import org.krakenapps.ca.crl.RevokedCertificatesManager;
-import org.krakenapps.ca.util.CertExporter;
-import org.krakenapps.ca.util.CertImporter;
+import org.krakenapps.ca.CertificateAuthorityService;
+import org.krakenapps.ca.CertificateMetadata;
+import org.krakenapps.ca.CertificateRequest;
+import org.krakenapps.ca.RevocationReason;
+import org.krakenapps.ca.util.CertificateExporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,16 +47,14 @@ public class CertificateAuthorityScript implements Script {
 
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityScript.class.getName());
 
-	private CertificateAuthority x509cert;
+	private CertificateAuthorityService ca;
 	private ScriptContext context;
-	private File home;
 
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
-	private static final String[] reasonCode = new String[] { "unspecified", "keyCompromise", "caCompromise", "AffiliationChanged", "superseded", "cessationOfOperation", "certificateHold", "removeFromCRL" };
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
+			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
-	public CertificateAuthorityScript(CertificateAuthority ca) {
-		this.x509cert = ca;
-		this.home = ca.getCARootDir();
+	public CertificateAuthorityScript(CertificateAuthorityService ca) {
+		this.ca = ca;
 	}
 
 	@Override
@@ -69,7 +62,7 @@ public class CertificateAuthorityScript implements Script {
 		this.context = context;
 	}
 
-	public void exportCaCrt(String[] args) {
+	public void exportRootCert(String[] args) {
 		boolean usePem = false;
 		boolean exportKey = false;
 		if (args.length >= 1) {
@@ -81,289 +74,52 @@ public class CertificateAuthorityScript implements Script {
 			}
 		}
 		try {
-			context.print("CA Common Name? ");
-			String caCN = context.readLine();
+			context.print("Authority Name? ");
+			String authorityName = context.readLine();
 
-			context.print("CA keystore password? ");
+			context.print("CA Private Key Password? ");
 			String password = context.readPassword();
 
-			File jks = new File(home, caCN + "/CA.jks");
-			KeyStore store = CertImporter.loadJks(jks, password);
+			CertificateAuthority authority = ca.getAuthority(authorityName);
+			CertificateMetadata cm = authority.getRootCertificate();
+			X509Certificate crt = cm.getCertificate(password);
+			RSAPrivateKey key = cm.getPrivateKey(password);
 
 			String extension = usePem ? ".pem" : ".crt";
-			File caDir = new File(home, caCN);
-			File f = new File(caDir, caCN + extension);
+			File dir = (File) context.getSession().getProperty("dir");
+			File f = new File(dir, authorityName + extension);
 
 			if (usePem)
-				CertExporter.writePemFile(store, password, f, exportKey);
+				CertificateExporter.writePemFile(crt, key, f, exportKey);
 			else
-				CertExporter.writeCrtFile(store, f);
+				CertificateExporter.writeCrtFile(crt, f);
 
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
-			logger.warn("kraken x509: export ca cert failed", e);
+			logger.warn("kraken ca: export ca cert failed", e);
 		}
 	}
 
 	public void createCert(String[] args) {
 		try {
-			context.print("CA Common Name? ");
-			String caCN = context.readLine();
-
-			File caFile = new File(home, caCN + "/CA.jks");
-			if (!caFile.exists()) {
-				context.println("CA keystore not found");
+			// find authority
+			context.print("Authority Name? ");
+			String authorityName = context.readLine();
+			CertificateAuthority authority = ca.getAuthority(authorityName);
+			if (authority == null) {
+				context.println("authority not found");
 				return;
 			}
 
-			Certificate caCert = null;
-			RSAPrivateKey caKey = null;
-			FileInputStream fs = new FileInputStream(caFile);
-			KeyStore store = KeyStore.getInstance("JKS");
+			// ca private key password for signing
+			context.print("CA Private Key Password? ");
+			String password = context.readPassword();
 
-			try {
-				context.print("CA keystore password? ");
-				String password = context.readPassword();
-				store.load(fs, password.toCharArray());
-
-				context.print("CA private-key password? ");
-				String keyPassword = context.readPassword();
-
-				caCert = store.getCertificate("ca");
-				caKey = (RSAPrivateKey) store.getKey("ca-key", keyPassword.toCharArray());
-			} catch (InterruptedException e) {
-				throw e;
-			} catch (Exception e) {
-				context.println("CA keystore open failed: " + e.getMessage());
-				logger.warn("kraken x509: ca keystore open failed", e);
-				return;
-			} finally {
-				fs.close();
-			}
-
-			context.print("Common Name (CN)? ");
-			String cn = context.readLine();
-
-			context.print("Organization Unit (OU)? ");
-			String ou = context.readLine();
-
-			context.print("Organization (O)? ");
-			String o = context.readLine();
-
-			context.print("City (L)? ");
-			String l = context.readLine();
-
-			context.print("State (ST)? ");
-			String st = context.readLine();
-
-			context.print("Country Code (C)? ");
-			String c = context.readLine();
-
-			// select signature algorithm
-			context.println("Select Signature Algorithm:");
-			int i = 1;
-			for (String sig : sigAlgorithms) {
-				context.printf("[%d] %s\n", i, sig);
-				i++;
-			}
-
-			context.printf("Select [1~%d] (default %d)? ", sigAlgorithms.length, sigAlgorithms.length);
-			String sigSelect = context.readLine();
-
-			int select;
-			if (sigSelect.isEmpty())
-				select = sigAlgorithms.length - 1;
-			else
-				select = Integer.parseInt(sigSelect) - 1;
-
-			String signatureAlgorithm = sigAlgorithms[select];
-
-			String dn = String.format("CN=%s, OU=%s, O=%s, L=%s, ST=%s, C=%s", cn, ou, o, l, st, c);
-
-			// valid duration
-			context.print("Days (default 365)?");
-			String daysLine = context.readLine();
-			int days = 0;
-			if (daysLine.isEmpty())
-				days = 365;
-			else
-				days = Integer.parseInt(daysLine);
-
-			context.print("CRL Distribution Point (http)?");
-			String dp = context.readLine();
-
-			// attributes
-			Map<String, String> attrs = new HashMap<String, String>();
-			while (true) {
-				context.print("Attribute Name (press enter to skip)? ");
-				String name = context.readLine();
-				if (name.isEmpty())
-					break;
-
-				context.print("Attribute Value? ");
-				String value = context.readLine();
-
-				DERObjectIdentifier oid = (DERObjectIdentifier) X509Name.DefaultLookUp.get(name);
-				if (oid == null) {
-					try {
-						oid = new DERObjectIdentifier(name);
-					} catch (Exception e) {
-						context.println("Error: invalid oid will be ignored.");
-					}
-				}
-
-				if (oid != null)
-					attrs.put(name, value);
-			}
-
-			// key pair generation
-			context.println("Generating key pairs...");
-			KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
-			KeyPair keyPair = keyPairGen.generateKeyPair();
-
-			Date notBefore = new Date();
-			Calendar cal = Calendar.getInstance();
-			cal.setTime(notBefore);
-			cal.add(Calendar.DAY_OF_YEAR, days);
-			Date notAfter = cal.getTime();
-
-			// generate cert
-			X509Certificate cert = x509cert.createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, attrs, notBefore, notAfter, signatureAlgorithm, dp);
+			CertificateRequest req = inputRequest();
+			CertificateMetadata cm = authority.issueCertificate(password, req);
+			X509Certificate cert = cm.getCertificate(req.getKeyPassword());
 
 			context.println(cert.toString());
-
-			// save pfx or p12 file
-			File pfxBase = new File(home, caCN);
-			pfxBase.mkdirs();
-			File f = new File(pfxBase, cn + ".pfx");
-
-			context.print("Key Alias? ");
-			String alias = context.readLine();
-			context.print("Key password? ");
-			context.turnEchoOff();
-			try {
-				String password = context.readLine();
-				context.println("");
-				context.println("Writing pfx file to " + f.getAbsolutePath());
-				x509cert.exportPkcs12(alias, f, keyPair, password, cert, caCert);
-			} finally {
-				context.turnEchoOn();
-			}
-
-			context.println("Completed");
-		} catch (InterruptedException e) {
-			context.println("");
-			context.println("Interrupted");
-		} catch (Exception e) {
-			context.println("Error: " + e.getMessage());
-			logger.warn("kraken x509: create cert failed", e);
-		}
-	}
-
-	public void createRootCa(String[] args) {
-		try {
-			context.print("Common Name (CN)? ");
-			String cn = context.readLine();
-
-			context.print("Organization Unit (OU)? ");
-			String ou = context.readLine();
-
-			context.print("Organization (O)? ");
-			String o = context.readLine();
-
-			context.print("City (L)? ");
-			String l = context.readLine();
-
-			context.print("State (ST)? ");
-			String st = context.readLine();
-
-			context.print("Country Code (C)? ");
-			String c = context.readLine();
-
-			context.println("Select Signature Algorithm:");
-			int i = 1;
-			for (String sig : sigAlgorithms) {
-				context.printf("[%d] %s\n", i, sig);
-				i++;
-			}
-
-			context.printf("Select [1~%d] (default %d)? ", sigAlgorithms.length, sigAlgorithms.length);
-			String sigSelect = context.readLine();
-
-			int select;
-			if (sigSelect.isEmpty())
-				select = sigAlgorithms.length - 1;
-			else
-				select = Integer.parseInt(sigSelect) - 1;
-
-			String signatureAlgorithm = sigAlgorithms[select];
-
-			String dn = String.format("CN=%s, OU=%s, O=%s, L=%s, ST=%s, C=%s", cn, ou, o, l, st, c);
-
-			context.print("Days (default 3650)? ");
-			String daysLine = context.readLine();
-			int days = 0;
-			if (daysLine.isEmpty())
-				days = 3650; // 10 year
-			else
-				days = Integer.parseInt(daysLine);
-
-			context.println("Generating key pairs...");
-			KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
-			KeyPair keyPair = keyPairGen.generateKeyPair();
-
-			Date notBefore = new Date();
-			Calendar cal = Calendar.getInstance();
-			cal.setTime(notBefore);
-			cal.add(Calendar.DAY_OF_YEAR, days);
-			Date notAfter = cal.getTime();
-
-			// generate
-			X509Certificate cert = x509cert.createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
-			context.println(cert.toString());
-
-			// save
-			String keyPassword = null;
-			String storePassword = null;
-
-			try {
-				context.turnEchoOff();
-				context.print("KeyStore Password? ");
-				storePassword = context.readLine();
-				if (storePassword.isEmpty())
-					storePassword = null;
-
-				context.println("");
-				context.print("PrivateKey Password? ");
-				keyPassword = context.readLine();
-				if (keyPassword.isEmpty())
-					keyPassword = null;
-			} finally {
-				context.turnEchoOn();
-			}
-
-			home.mkdirs();
-
-			KeyStore store = KeyStore.getInstance("JKS");
-			store.load(null, null);
-			store.setCertificateEntry("ca", cert);
-			store.setKeyEntry("ca-key", keyPair.getPrivate(), keyPassword.toCharArray(), new Certificate[] { cert });
-
-			FileOutputStream os = null;
-			String filename = "CA.jks";
-			File caRoot = new File(home, cn);
-			caRoot.mkdirs();
-			try {
-				File file = new File(caRoot, filename);
-				os = new FileOutputStream(file);
-				store.store(os, storePassword.toCharArray());
-			} catch (Exception e) {
-				context.printf("Failed to save %s, Error: %s\n", filename, e.getMessage());
-				logger.warn("kraken x509: failed to save CA cert", e);
-			} finally {
-				os.close();
-			}
-
 			context.println("");
 			context.println("Complete!");
 		} catch (InterruptedException e) {
@@ -373,42 +129,132 @@ public class CertificateAuthorityScript implements Script {
 			context.println("invalid number format");
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
-			logger.warn("kraken x509: failed to create CA root", e);
+			logger.warn("kraken ca: failed to create certificate", e);
 		}
 	}
 
-	public void revoke(String[] args) {
+	public void createAuthority(String[] args) {
 		try {
-			context.print("Serial Number (Hex String)?");
-			String serial = context.readLine();
+			context.print("Authority Name? ");
+			String name = context.readLine();
 
-			context.println("Select Reason Code:");
-			int i = 0;
-			for (String sig : reasonCode) {
-				context.printf("[%d] %s\n", i, sig);
-				if (i == 6)
-					i = i + 2; // reason code increase 6 -> 8
-				else
-					i++;
-			}
+			CertificateRequest req = inputRequest();
 
-			context.printf("Select [0, 1, 2, 3, 4, 5, 6, 8] (default 0)? ");
-			String reasonSelect = context.readLine();
+			// for self signing
+			req.setIssuerKey(req.getKeyPair().getPrivate());
 
-			int select;
-			if (reasonSelect.isEmpty())
-				select = 0;
-			else
-				select = Integer.parseInt(reasonSelect);
-			
-			RevokedCertificatesManager manager = new RevokedCertificatesManager();
-			manager.revoke(serial, select);
+			ca.createAuthority(name, req);
+			context.println("Completed");
 		} catch (InterruptedException e) {
 			context.println("");
-			context.println("interrupted");
+			context.println("Interrupted");
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
-			logger.warn("kraken x509: failed to revoke certificate", e);
+			logger.warn("kraken ca: create cert failed", e);
+		}
+	}
+
+	private CertificateRequest inputRequest() throws Exception {
+		context.print("Common Name (CN)? ");
+		String cn = context.readLine();
+
+		context.print("Organization Unit (OU)? ");
+		String ou = context.readLine();
+
+		context.print("Organization (O)? ");
+		String o = context.readLine();
+
+		context.print("City (L)? ");
+		String l = context.readLine();
+
+		context.print("State (ST)? ");
+		String st = context.readLine();
+
+		context.print("Country Code (C)? ");
+		String c = context.readLine();
+
+		context.println("Select Signature Algorithm:");
+		int i = 1;
+		for (String sig : sigAlgorithms) {
+			context.printf("[%d] %s\n", i, sig);
+			i++;
+		}
+
+		context.printf("Select [1~%d] (default %d)? ", sigAlgorithms.length, sigAlgorithms.length);
+		String sigSelect = context.readLine();
+
+		int select;
+		if (sigSelect.isEmpty())
+			select = sigAlgorithms.length - 1;
+		else
+			select = Integer.parseInt(sigSelect) - 1;
+
+		String signatureAlgorithm = sigAlgorithms[select];
+
+		String dn = String.format("CN=%s,OU=%s,O=%s,L=%s,ST=%s,C=%s", cn, ou, o, l, st, c);
+
+		context.print("Days (default 365)? ");
+		String daysLine = context.readLine();
+		int days = 0;
+		if (daysLine.isEmpty())
+			days = 365; // 1 year
+		else
+			days = Integer.parseInt(daysLine);
+
+		context.println("Generating key pairs...");
+		KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
+		KeyPair keyPair = keyPairGen.generateKeyPair();
+
+		context.print("Key Password? ");
+		String keyPassword = context.readPassword();
+
+		Date notBefore = new Date();
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(notBefore);
+		cal.add(Calendar.DAY_OF_YEAR, days);
+		Date notAfter = cal.getTime();
+
+		// generate
+		return CertificateRequest.createSelfSignedCertRequest(keyPair, keyPassword, dn, notBefore, notAfter, signatureAlgorithm);
+	}
+
+	public void authorities(String[] args) {
+		context.println("Certificate Authorities");
+		context.println("-------------------------");
+
+		for (CertificateAuthority authority : ca.getAuthorities())
+			context.println(authority);
+	}
+
+	@ScriptUsage(description = "revoke a certificate", arguments = {
+			@ScriptArgument(name = "authority name", type = "string", description = "authority name"),
+			@ScriptArgument(name = "serial", type = "string", description = "cert serial (big integer range)"),
+			@ScriptArgument(name = "reason", type = "string", description = "cert revocation reason (select enum constant)", optional = true) })
+	public void revoke(String[] args) {
+		String authorityName = args[0];
+		String serial = args[1];
+		RevocationReason reason = RevocationReason.Unspecified;
+		if (args.length > 2)
+			reason = RevocationReason.valueOf(args[2]);
+
+		try {
+			CertificateAuthority authority = ca.getAuthority(authorityName);
+			if (authority == null) {
+				context.println("authority not found");
+				return;
+			}
+
+			CertificateMetadata cm = authority.findCertificate("serial", serial);
+			if (cm == null) {
+				context.println("certificate not found");
+				return;
+			}
+
+			authority.revoke(cm, reason);
+			context.println("revoked");
+		} catch (Exception e) {
+			context.println("Error: " + e.getMessage());
+			logger.warn("kraken ca: failed to revoke certificate", e);
 		}
 	}
 }

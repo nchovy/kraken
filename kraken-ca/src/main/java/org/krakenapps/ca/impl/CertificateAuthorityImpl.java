@@ -15,53 +15,30 @@
  */
 package org.krakenapps.ca.impl;
 
-import java.io.BufferedReader;
-
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.Security;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPrivateKey;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
-import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.DERBMPString;
-import org.bouncycastle.asn1.DERIA5String;
-import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.x509.CRLDistPoint;
-import org.bouncycastle.asn1.x509.DistributionPoint;
-import org.bouncycastle.asn1.x509.DistributionPointName;
-import org.bouncycastle.asn1.x509.GeneralName;
-import org.bouncycastle.asn1.x509.GeneralNames;
-import org.bouncycastle.asn1.x509.X509Extensions;
-import org.bouncycastle.asn1.x509.X509Name;
-import org.bouncycastle.jce.X509Principal;
-import org.bouncycastle.jce.interfaces.PKCS12BagAttributeCarrier;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.x509.X509V1CertificateGenerator;
-import org.bouncycastle.x509.X509V3CertificateGenerator;
-import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
+import org.apache.commons.codec.binary.Base64;
+import org.krakenapps.api.Primitive;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ca.CertificateAuthority;
+import org.krakenapps.ca.CertificateMetadata;
+import org.krakenapps.ca.CertificateRequest;
+import org.krakenapps.ca.RevocationReason;
+import org.krakenapps.ca.RevokedCertificate;
+import org.krakenapps.ca.util.CertificateBuilder;
+import org.krakenapps.ca.util.CertificateExporter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.confdb.file.FileConfigDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,375 +48,174 @@ import org.slf4j.LoggerFactory;
  * @author xeraph
  * 
  */
-@Component(name = "certificate-authority")
-@Provides
 public class CertificateAuthorityImpl implements CertificateAuthority {
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityImpl.class.getName());
-	private final File home = getCARootDir();
-	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
+			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
-	public File getCARootDir() {
-		return new File(System.getProperty("kraken.data.dir"), "kraken-ca/CA/");
-	}
+	private ConfigDatabase db;
+	private String name;
 
-	// install JCE provider
-	static {
-		if (Security.getProvider("BC") == null)
-			Security.addProvider(new BouncyCastleProvider());
-	}
-
-	@Override
-	public X509Certificate createSelfSignedCertificate(KeyPair keyPair, String dn, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception {
-		X509V1CertificateGenerator certGen = new X509V1CertificateGenerator();
-
-		certGen.setSerialNumber(new BigInteger("1"));
-		certGen.setIssuerDN(new X509Name(dn));
-		certGen.setNotBefore(notBefore);
-		certGen.setNotAfter(notAfter);
-		certGen.setSubjectDN(new X509Name(dn));
-		certGen.setPublicKey(keyPair.getPublic());
-		certGen.setSignatureAlgorithm(signatureAlgorithm);
-
-		return certGen.generate(keyPair.getPrivate());
+	public CertificateAuthorityImpl(ConfigDatabase db, String name) {
+		this.db = db;
+		this.name = name;
 	}
 
 	@Override
-	public X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception {
-		return createCertificate(caCert, caKey, keyPair, dn, attrs, notBefore, notAfter, signatureAlgorithm, null);
+	public String getName() {
+		return name;
 	}
 
-	// added by mindori
 	@Override
-	public X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm, String crlDpUrl) throws Exception {
-		X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
-		Vector<Object> oids = new Vector<Object>();
-		Vector<Object> values = new Vector<Object>();
-		parseDn(dn, oids, values);
+	public CertificateMetadata getRootCertificate() {
+		ConfigCollection metadata = db.ensureCollection("metadata");
+		Config jks = metadata.findOne(Predicates.field("type", "jks"));
+		if (jks == null)
+			throw new IllegalStateException("jks not found for " + name);
 
-		if (attrs != null) {
-			for (String key : attrs.keySet()) {
-				DERObjectIdentifier oid = (DERObjectIdentifier) X509Name.DefaultLookUp.get(key.toLowerCase());
-				if (oid != null) {
-					oids.add(oid);
-					values.add(attrs.get(key));
-				}
-			}
-		}
-
-		BigInteger serial = getSerial(caCert);
-
-		certGen.setSerialNumber(serial.add(new BigInteger("1")));
-		certGen.setIssuerDN(caCert.getSubjectX500Principal());
-		certGen.setNotBefore(notBefore);
-		certGen.setNotAfter(notAfter);
-		certGen.setSubjectDN(new X509Principal(oids, values));
-		certGen.setPublicKey(keyPair.getPublic());
-		certGen.setSignatureAlgorithm(signatureAlgorithm);
-
-		if (crlDpUrl != null) {
-			GeneralName gn = new GeneralName(6, new DERIA5String(crlDpUrl));
-
-			ASN1EncodableVector vec = new ASN1EncodableVector();
-			vec.add(gn);
-
-			GeneralNames gns = new GeneralNames(new DERSequence(vec));
-			DistributionPointName dpn = new DistributionPointName(0, gns);
-
-			List<DistributionPoint> l = new ArrayList<DistributionPoint>();
-			l.add(new DistributionPoint(dpn, null, null));
-
-			CRLDistPoint crlDp = new CRLDistPoint(l.toArray(new DistributionPoint[0]));
-			certGen.addExtension(X509Extensions.CRLDistributionPoints.getId(), false, crlDp);
-		}
-
-		return certGen.generate(caKey, "BC");
+		return PrimitiveConverter.parse(CertificateMetadata.class, jks.getDocument());
 	}
 
-	private void parseDn(String dn, Vector<Object> oids, Vector<Object> values) {
-		String[] tokens = dn.split(",");
-		for (String token : tokens) {
-			int p = token.indexOf('=');
-			String key = token.substring(0, p).trim().toLowerCase();
-			String value = token.substring(p + 1).trim();
+	@Override
+	public List<CertificateMetadata> getCertificates() {
+		ConfigCollection certs = db.ensureCollection("certs");
 
-			DERObjectIdentifier oid = (DERObjectIdentifier) X509Name.DefaultLookUp.get(key);
-			if (oid != null) {
-				oids.add(oid);
-				values.add(value);
-			}
-		}
-	}
-
-	public void exportPkcs12(String alias, File f, KeyPair keyPair, String keyPassword, Certificate cert, Certificate caCert) throws Exception {
-		PKCS12BagAttributeCarrier bagAttr = (PKCS12BagAttributeCarrier) keyPair.getPrivate();
-		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.20"), new DERBMPString(alias));
-		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.21"), new SubjectKeyIdentifierStructure(keyPair.getPublic()));
-
-		KeyStore pfx = KeyStore.getInstance("PKCS12", "BC");
-		pfx.load(null, null);
-		pfx.setKeyEntry(alias, keyPair.getPrivate(), null, new Certificate[] { cert, caCert });
-
-		setSerial((X509Certificate) caCert, ((X509Certificate) cert).getSerialNumber());
-
-		FileOutputStream out = null;
+		List<CertificateMetadata> l = new LinkedList<CertificateMetadata>();
+		ConfigIterator it = certs.findAll();
 		try {
-			out = new FileOutputStream(f);
-			pfx.store(out, keyPassword.toCharArray());
+			while (it.hasNext()) {
+				Config c = it.next();
+				CertificateMetadata cm = PrimitiveConverter.parse(CertificateMetadata.class, c.getDocument());
+				l.add(cm);
+			}
 		} finally {
-			out.close();
+			it.close();
 		}
-
-	}
-
-	private BigInteger getSerial(X509Certificate cert) {
-		String caCN = cert.getSubjectX500Principal().getName();
-		caCN = caCN.substring(caCN.indexOf("CN=") + 3);
-		File srl = new File(new File(home, caCN), caCN + ".srl");
-
-		if (srl.exists()) {
-			BigInteger serial = null;
-			BufferedReader reader = null;
-			try {
-				reader = new BufferedReader(new InputStreamReader(new FileInputStream(srl)));
-				serial = new BigInteger(reader.readLine());
-			} catch (Exception e) {
-				return new BigInteger("1");
-			} finally {
-				try {
-					if (reader != null)
-						reader.close();
-				} catch (IOException e) {
-				}
-
-			}
-
-			return serial;
-		}
-
-		return new BigInteger("1");
-	}
-
-	private void setSerial(X509Certificate cert, BigInteger serial) {
-		String caCN = cert.getSubjectX500Principal().getName();
-		caCN = caCN.substring(caCN.indexOf("CN=") + 3);
-		File srl = new File(new File(home, caCN), caCN + ".srl");
-
-		PrintWriter writer = null;
-		try {
-			writer = new PrintWriter(srl);
-			writer.write(serial.toString());
-		} catch (Exception e) {
-		} finally {
-			if (writer != null)
-				writer.close();
-		}
+		return l;
 	}
 
 	@Override
-	public Collection<String> getCertificates(String caCommonName) {
-		File pfxBase = new File(home, caCommonName);
-		File[] files = pfxBase.listFiles(new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String name) {
-				return name.endsWith(".pfx");
-			}
-		});
+	public BigInteger getLastSerial() {
+		ConfigCollection col = db.ensureCollection("metadata");
+		Config c = col.findOne(Predicates.field("type", "serial"));
+		if (c == null)
+			return new BigInteger("1");
 
-		List<String> certFileNames = new ArrayList<String>();
-		for (File file : files)
-			certFileNames.add(file.getName());
-
-		return certFileNames;
+		return new BigInteger((String) c.getDocument());
 	}
 
 	@Override
-	public Collection<X509Certificate> getRootCertificates() {
-		List<X509Certificate> certs = new ArrayList<X509Certificate>();
-
-		for (File f : home.listFiles()) {
-			if (f.isDirectory()) {
-				X509Certificate cert = loadRootCert(f);
-				if (cert != null)
-					certs.add(cert);
-			}
+	public BigInteger getNextSerial() {
+		ConfigCollection col = db.ensureCollection("metadata");
+		Config c = col.findOne(Predicates.field("type", "serial"));
+		if (c == null) {
+			col.add("1", "kraken-ca", "init serial");
+			return new BigInteger("1");
 		}
 
-		return certs;
+		BigInteger current = new BigInteger((String) c.getDocument());
+		c.setDocument(current.add(new BigInteger("1")));
+		col.update(c, false, "kraken-ca", "set next serial");
+		return current;
 	}
 
 	@Override
-	public X509Certificate getRootCertificate(String caCommonName) {
-		File caDir = new File(home, caCommonName);
-		if (!caDir.exists() || !caDir.isDirectory())
+	public CertificateMetadata findCertificate(String field, String value) {
+		ConfigCollection certs = db.ensureCollection("certs");
+		Config c = certs.findOne(Predicates.field(field, value));
+		return PrimitiveConverter.parse(CertificateMetadata.class, c);
+
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public byte[] getPfxBinary(String subjectDn, String keyPassword) {
+		ConfigCollection col = db.ensureCollection("certs");
+		Config c = col.findOne(Predicates.field("subject_dn", subjectDn));
+		if (c == null)
 			return null;
 
-		return loadRootCert(caDir);
-	}
-
-	private X509Certificate loadRootCert(File caDir) {
-		File caFile = new File(caDir, "CA.jks");
-		FileInputStream fs = null;
-		try {
-			fs = new FileInputStream(caFile);
-			KeyStore store = KeyStore.getInstance("JKS");
-			store.load(fs, null);
-			return (X509Certificate) store.getCertificate("ca");
-		} catch (Exception e) {
-			logger.error("kraken ca: keystore error", e);
-		} finally {
-			if (fs != null)
-				try {
-					fs.close();
-				} catch (IOException e) {
-				}
-		}
-
-		return null;
+		Map<String, Object> doc = (Map<String, Object>) c.getDocument();
+		return Base64.decodeBase64((String) doc.get("binary"));
 	}
 
 	@Override
-	public X509Certificate getCertificate(String caCommonName, String keyAlias, String keyPassword) throws Exception {
-		File pfxBase = new File(home, caCommonName);
-		File certFile = new File(pfxBase, keyAlias + ".pfx");
+	public CertificateMetadata issueCertificate(String caPassword, CertificateRequest req) throws Exception {
+		ConfigCollection metadata = db.ensureCollection("metadata");
+		Config caPkcs12 = metadata.findOne(Predicates.field("type", "pkcs12"));
+		if (caPkcs12 == null)
+			throw new IllegalStateException("ca not found for " + name);
 
-		FileInputStream fs = new FileInputStream(certFile);
-
-		KeyStore pfx = KeyStore.getInstance("PKCS12", "BC");
-		pfx.load(fs, keyPassword.toCharArray());
-		return (X509Certificate) pfx.getCertificate(keyAlias);
-	}
-
-	@Override
-	public byte[] getPfxFile(String caCommonName, String keyAlias, String keyPassword) throws IOException {
-		File pfxBase = new File(home, caCommonName);
-		File certFile = new File(pfxBase, keyAlias + ".pfx");
-
-		byte[] b = new byte[(int) certFile.length()];
-		FileInputStream fs = new FileInputStream(certFile);
-		try {
-			fs.read(b);
-			return b;
-		} finally {
-			if (fs != null)
-				fs.close();
-		}
-	}
-
-	@Override
-	public X509Certificate issueSelfSignedCertificate(String dn, String signatureAlgorithm, int days, String password) throws Exception {
-		String cn = parseCN(dn);
+		CertificateMetadata cm = PrimitiveConverter.parse(CertificateMetadata.class, caPkcs12.getDocument());
+		req.setIssuerDn(cm.getSubjectDn());
+		req.setIssuerKey(cm.getPrivateKey(caPassword));
 
 		// check availability of signature algorithm
-		validateSignatureAlgorithm(signatureAlgorithm);
-
-		// generate key pair
-		KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
-		KeyPair keyPair = keyPairGen.generateKeyPair();
-
-		// calculate date range
-		Date notBefore = new Date();
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(notBefore);
-		cal.add(Calendar.DAY_OF_YEAR, days);
-		Date notAfter = cal.getTime();
-
-		// generate ca cert
-		X509Certificate cert = createSelfSignedCertificate(keyPair, dn, notBefore, notAfter, signatureAlgorithm);
-
-		home.mkdirs();
-
-		KeyStore store = KeyStore.getInstance("JKS");
-		store.load(null, null);
-		store.setCertificateEntry("ca", cert);
-		store.setKeyEntry("ca-key", keyPair.getPrivate(), password.toCharArray(), new Certificate[] { cert });
-
-		FileOutputStream os = null;
-		String filename = "CA.jks";
-		File caRoot = new File(home, cn);
-		caRoot.mkdirs();
-
-		try {
-			File file = new File(caRoot, filename);
-			os = new FileOutputStream(file);
-			store.store(os, password.toCharArray());
-		} finally {
-			os.close();
-		}
-
-		return cert;
-	}
-
-	@Override
-	public X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days) throws Exception {
-		return issueCertificate(caCommonName, caPassword, keyAlias, keyPassword, dn, signatureAlgorithm, days, null);
-	}
-
-	// added by mindori
-	@Override
-	public X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days, String crlDpUrl) throws Exception {
-		File caFile = new File(home, caCommonName + "/CA.jks");
-		if (!caFile.exists())
-			throw new IOException(caFile.getAbsolutePath() + " not found");
-
-		Certificate caCert = null;
-		RSAPrivateKey caKey = null;
-		FileInputStream fs = new FileInputStream(caFile);
-		KeyStore store = KeyStore.getInstance("JKS");
-
-		try {
-			store.load(fs, caPassword.toCharArray());
-			caCert = store.getCertificate("ca");
-			caKey = (RSAPrivateKey) store.getKey("ca-key", caPassword.toCharArray());
-		} finally {
-			fs.close();
-		}
-
-		// check availability of signature algorithm
-		validateSignatureAlgorithm(signatureAlgorithm);
-
-		// key pair generation
-		KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA", "BC");
-		KeyPair keyPair = keyPairGen.generateKeyPair();
-
-		Date notBefore = new Date();
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(notBefore);
-		cal.add(Calendar.DAY_OF_YEAR, days);
-		Date notAfter = cal.getTime();
+		validateSignatureAlgorithm(req.getSignatureAlgorithm());
 
 		// generate cert
-		X509Certificate cert = createCertificate((X509Certificate) caCert, (PrivateKey) caKey, keyPair, dn, null, notBefore, notAfter, signatureAlgorithm, crlDpUrl);
+		X509Certificate caCert = cm.getCertificate(caPassword);
+		X509Certificate cert = CertificateBuilder.createCertificate(req);
+		byte[] pkcs12 = CertificateExporter.exportPkcs12(cert, req.getKeyPair(), req.getKeyPassword(), caCert);
+
+		cm = new CertificateMetadata();
+		cm.setType("pkcs12");
+		cm.setSerial(req.getSerial().toString());
+		cm.setSubjectDn(req.getSubjectDn());
+		cm.setNotBefore(req.getNotBefore());
+		cm.setNotAfter(req.getNotAfter());
+		cm.setBinary(Base64.encodeBase64String(pkcs12));
+
+		ConfigCollection certs = db.ensureCollection("certs");
+		Object c = PrimitiveConverter.serialize(cm);
+		certs.add(c, "kraken-ca", "issued certificate for " + req.getSubjectDn());
 
 		logger.info("kraken ca: generated new certificate [{}]", cert.getSubjectX500Principal().getName());
-
-		// save pfx or p12 file
-		String cn = parseCN(dn);
-		File pfxBase = new File(home, caCommonName);
-		pfxBase.mkdirs();
-		File f = new File(pfxBase, cn + ".pfx");
-
-		logger.info("kraken ca: writing pfx file to " + f.getAbsolutePath());
-		exportPkcs12(keyAlias, f, keyPair, keyPassword, cert, caCert);
-		return cert;
+		return cm;
 	}
 
-	private String parseCN(String dn) {
-		int begin = dn.indexOf("CN=");
-		if (begin < 0)
-			throw new IllegalArgumentException("CN not found");
-
-		int end = dn.indexOf(",", begin);
-		if (end < 0)
-			throw new IllegalArgumentException("CN not found");
-
-		return dn.substring(begin + 3, end).trim();
-	}
-
-	private void validateSignatureAlgorithm(String algorithm) {
+	public static void validateSignatureAlgorithm(String algorithm) {
 		for (int i = 0; i < sigAlgorithms.length; i++)
 			if (sigAlgorithms[i].equals(algorithm))
 				return;
 
 		throw new IllegalArgumentException("invalid signature algorithm: " + algorithm);
+	}
+
+	@Override
+	public void revoke(CertificateMetadata cm) {
+		revoke(cm, RevocationReason.Unspecified);
+	}
+
+	public void revoke(CertificateMetadata cm, RevocationReason reason) {
+		ConfigCollection revoked = db.ensureCollection("revoked");
+		Config c = revoked.findOne(Predicates.field("serial", cm.getSerial()));
+		if (c != null)
+			throw new IllegalStateException("already revoked: serial " + cm.getSerial());
+
+	}
+
+	@Override
+	public List<RevokedCertificate> getRevokedCertifcates() {
+		ConfigCollection revoked = db.ensureCollection("revoked");
+		ConfigIterator it = revoked.findAll();
+		List<RevokedCertificate> l = new LinkedList<RevokedCertificate>();
+
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				RevokedCertificate rc = PrimitiveConverter.parse(RevokedCertificate.class, c.getDocument());
+				l.add(rc);
+			}
+		} finally {
+			it.close();
+		}
+
+		return l;
+	}
+
+	@Override
+	public String toString() {
+		return name + ": " + getRootCertificate().getSubjectDn();
 	}
 }

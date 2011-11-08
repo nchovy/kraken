@@ -23,8 +23,8 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
-public class CertImporter {
-	private CertImporter() {
+public class CertificateImporter {
+	private CertificateImporter() {
 	}
 
 	public static KeyStore loadJks(File jks, String password) throws NoSuchAlgorithmException, CertificateException, IOException,

@@ -21,7 +21,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.ca.CertificateAuthority;
+import org.krakenapps.ca.CertificateAuthorityService;
 
 @Component(name = "ca-script-factory")
 @Provides
@@ -31,7 +31,7 @@ public class CertificateAuthorityScriptFactory implements ScriptFactory {
 	private String alias;
 
 	@Requires
-	private CertificateAuthority ca;
+	private CertificateAuthorityService ca;
 
 	@Override
 	public Script createScript() {

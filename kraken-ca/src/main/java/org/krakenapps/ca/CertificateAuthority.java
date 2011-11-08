@@ -15,42 +15,39 @@
  */
 package org.krakenapps.ca;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
+import java.math.BigInteger;
 import java.util.Collection;
-import java.util.Date;
-import java.util.Map;
+import java.util.List;
 
 public interface CertificateAuthority {
-	X509Certificate createSelfSignedCertificate(KeyPair keyPair, String dn, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception;
+	String getName();
 
-	X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm) throws Exception;
+	BigInteger getLastSerial();
 
-	// added by mindori
-	X509Certificate createCertificate(X509Certificate caCert, PrivateKey caKey, KeyPair keyPair, String dn, Map<String, String> attrs, Date notBefore, Date notAfter, String signatureAlgorithm, String crlDpUrl) throws Exception;
+	BigInteger getNextSerial();
 
-	void exportPkcs12(String alias, File f, KeyPair keyPair, String keyPassword, Certificate cert, Certificate caCert) throws Exception;
+	CertificateMetadata getRootCertificate();
 
-	Collection<X509Certificate> getRootCertificates();
+	Collection<CertificateMetadata> getCertificates();
 
-	X509Certificate getRootCertificate(String caCommonName);
+	/**
+	 * Find a certificate by given search condition
+	 * 
+	 * @param field
+	 *            the search field name. "subject_dn" or "serial"
+	 * @param value
+	 *            the search value
+	 * @return the certificate
+	 */
+	CertificateMetadata findCertificate(String field, String value);
 
-	Collection<String> getCertificates(String caCommonName);
+	CertificateMetadata issueCertificate(String caPassword, CertificateRequest req) throws Exception;
 
-	X509Certificate getCertificate(String caCommonName, String keyAlias, String keyPassword) throws Exception;
+	byte[] getPfxBinary(String subjectDn, String keyPassword);
 
-	byte[] getPfxFile(String caCommonName, String keyAlias, String keyPassword) throws IOException;
+	List<RevokedCertificate> getRevokedCertifcates();
 
-	X509Certificate issueSelfSignedCertificate(String dn, String signatureAlgorithm, int days, String password) throws Exception;
+	void revoke(CertificateMetadata cm);
 
-	X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days) throws Exception;
-
-	// added by mindori
-	X509Certificate issueCertificate(String caCommonName, String caPassword, String keyAlias, String keyPassword, String dn, String signatureAlgorithm, int days, String crlDpUrl) throws Exception;
-
-	File getCARootDir();
+	void revoke(CertificateMetadata cm, RevocationReason reason);
 }
