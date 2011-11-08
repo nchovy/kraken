@@ -70,8 +70,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 
 				FileInputStream fs = null;
 				try {
-					path = Environment.expandSystemProperties(path);
-					fs = new FileInputStream(new File(path));
+					fs = new FileInputStream(new File(Environment.expandSystemProperties(path)));
 					registerKeyStore(alias, type, fs, password);
 					Properties props = keyStoreProps.get(alias);
 					props.put("path", path);
@@ -176,7 +175,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 		Preferences p = prefs.node(alias);
 		p.put("alias", alias);
 		p.put("type", type);
-		p.put("path", file.getAbsolutePath());
+		p.put("path", path);
 		if (password != null)
 			p.put("password", new String(password));
 
@@ -190,8 +189,8 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 
 	@Deprecated
 	@Override
-	public void registerKeyStore(String alias, String type, File file, char[] password) throws KeyStoreException,
-			NoSuchAlgorithmException, CertificateException, IOException {
+	public void registerKeyStore(String alias, String type, File file, char[] password) throws KeyStoreException, NoSuchAlgorithmException,
+			CertificateException, IOException {
 		Preferences prefs = getKeyStorePreferences();
 		try {
 			if (prefs.nodeExists(alias))
@@ -288,8 +287,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 	}
 
 	@Override
-	public TrustManagerFactory getTrustManagerFactory(String alias, String algorithm) throws KeyStoreException,
-			NoSuchAlgorithmException {
+	public TrustManagerFactory getTrustManagerFactory(String alias, String algorithm) throws KeyStoreException, NoSuchAlgorithmException {
 		KeyStore keystore = getKeyStore(alias);
 		if (keystore == null)
 			return null;
