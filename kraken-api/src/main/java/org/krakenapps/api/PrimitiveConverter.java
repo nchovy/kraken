@@ -14,28 +14,57 @@ import java.util.Set;
 
 public class PrimitiveConverter {
 	@SuppressWarnings("unchecked")
-	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(Short.class, Integer.class,
-			Long.class, Float.class, Double.class, String.class, Date.class));
+	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(byte.class, Byte.class, short.class,
+			Short.class, int.class, Integer.class, long.class, Long.class, float.class, Float.class, double.class, Double.class,
+			boolean.class, Boolean.class, char.class, Character.class, String.class, Date.class));
 
-	public static Object serialize(Collection<?> c) {
-		List<Object> l = new ArrayList<Object>();
-		for (Object o : c)
-			l.add(serialize(o));
-
-		return l;
+	public static Object serialize(Object obj) {
+		return serialize(obj, obj, null, null);
 	}
 
-	public static Object serialize(Object o) {
+	public static Object serialize(Object obj, PrimitiveSerializeCallback callback) {
+		return serialize(obj, obj, callback, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Object serialize(Object root, Object obj, PrimitiveSerializeCallback callback, List<String> refkey) {
+		Class<?> cls = obj.getClass();
+
+		// Primitive Object
+		if (nonSerializeClasses.contains(cls))
+			return obj;
+
+		// Collection
+		if (Collection.class.isAssignableFrom(cls)) {
+			Collection<Object> col = new ArrayList<Object>();
+			for (Object o : (Collection<Object>) obj)
+				col.add(serialize(root, o, callback, refkey));
+			return col;
+		}
+
+		// Map
+		if (Map.class.isAssignableFrom(cls)) {
+			Map<Object, Object> m = new HashMap<Object, Object>();
+			Map<Object, Object> o = (Map<Object, Object>) obj;
+			for (Object key : o.keySet()) {
+				Object k = serialize(root, key, callback, refkey);
+				Object value = o.get(key);
+				Object v = serialize(root, value, callback, refkey);
+				m.put(k, v);
+			}
+			return m;
+		}
+
+		// Others
 		Map<String, Object> m = new HashMap<String, Object>();
-		Class<?> c = o.getClass();
-
-		if (nonSerializeClasses.contains(c))
-			return o;
-
-		for (Field f : c.getDeclaredFields()) {
+		for (Field f : cls.getDeclaredFields()) {
 			try {
 				FieldOption option = f.getAnnotation(FieldOption.class);
+
 				if (option != null && option.skip())
+					continue;
+
+				if (refkey != null && !refkey.contains(f.getName()))
 					continue;
 
 				String fieldName = toUnderscoreName(f.getName());
@@ -43,27 +72,30 @@ public class PrimitiveConverter {
 					fieldName = option.name();
 
 				f.setAccessible(true);
-				Object value = f.get(o);
+				Object value = f.get(obj);
+
 				if (option != null && !option.nullable() && value == null)
-					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f
-							.getType().getSimpleName(), c.getName(), f.getName()));
+					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f.getType()
+							.getSimpleName(), cls.getName(), f.getName()));
 
-				if (value instanceof Enum)
+				if (value instanceof Enum) {
 					m.put(fieldName, value.toString());
-				else if (value instanceof Collection) {
-					Collection<?> l = (Collection<?>) value;
-					List<Object> l2 = new ArrayList<Object>(l.size());
-					for (Object el : l)
-						l2.add(serialize(el));
-
-					m.put(fieldName, l2);
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", c.getName(),
-								f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
 					m.put(fieldName, value);
-				} else
-					m.put(fieldName, value);
+				} else {
+					if (value == null)
+						m.put(fieldName, null);
+					else {
+						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f.getAnnotation(
+								ReferenceKey.class).value()) : null;
+						Object serialized = serialize(root, value, callback, referenceKey);
+						m.put(fieldName, serialized);
+						if (callback != null)
+							callback.onSerialize(root, obj, serialized);
+					}
+				}
 			} catch (Exception e) {
 				throw new RuntimeException("kraken api: serialize failed", e);
 			}
@@ -72,31 +104,22 @@ public class PrimitiveConverter {
 		return m;
 	}
 
-	@SuppressWarnings("unchecked")
-	public static <T> List<T> parse(Class<T> clazz, List<?> c) {
-		List<T> l = new ArrayList<T>();
-		for (Object o : c)
-			l.add(parseObject(clazz, (Map<String, Object>) o));
-
-		return l;
-	}
-
-	@SuppressWarnings("unchecked")
-	public static <T> T parse(Class<T> clazz, Object c) {
-		if (c instanceof Map<?, ?>)
-			return parseObject(clazz, (Map<String, Object>) c);
-		return null;
+	public static <T> T parse(Class<T> cls, Object obj) {
+		return parse(cls, obj, null);
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static <T> T parseObject(Class<T> clazz, Map<String, Object> m) {
+	public static <T> T parse(Class<T> cls, Object obj, PrimitiveParseCallback callback) {
 		try {
-			Constructor c = clazz.getConstructor();
+			Map<String, Object> m = (Map<String, Object>) obj;
+
+			Constructor c = cls.getConstructor();
 			c.setAccessible(true);
 			T n = (T) c.newInstance();
 
-			for (Field f : clazz.getDeclaredFields()) {
+			for (Field f : cls.getDeclaredFields()) {
 				FieldOption option = f.getAnnotation(FieldOption.class);
+
 				if (option != null && option.skip())
 					continue;
 
@@ -104,30 +127,45 @@ public class PrimitiveConverter {
 				if (option != null && !option.name().isEmpty())
 					fieldName = option.name();
 
+				if (option != null && !option.nullable()) {
+					if (!m.containsKey(fieldName) || m.get(fieldName) == null)
+						throw new IllegalArgumentException(fieldName + " cannot be null.");
+					continue;
+				}
+
 				Object value = m.get(fieldName);
 				f.setAccessible(true);
 
 				Class<?> fieldType = f.getType();
-				CollectionTypeHint hint = f.getAnnotation(CollectionTypeHint.class);
-				if (fieldType.isEnum() && value instanceof String) {
+				ReferenceKey refkey = f.getAnnotation(ReferenceKey.class);
+				if (refkey != null) {
+					Map<String, Object> keys = (Map<String, Object>) value;
+					if (callback != null)
+						f.set(n, callback.onParse(fieldType, keys));
+					else if (option != null && !option.nullable())
+						throw new IllegalArgumentException(fieldName + " requires parse callback");
+					continue;
+				}
+
+				if (fieldType.isEnum()) {
 					Object found = null;
 					for (Object o : fieldType.getEnumConstants())
 						if (o.toString().equals(value))
 							found = o;
-
 					f.set(n, found);
-				} else if (contains(fieldType, List.class)) {
+				} else if (Collection.class.isAssignableFrom(fieldType)) {
 					if (value instanceof Object[])
 						value = Arrays.asList((Object[]) value);
 
+					CollectionTypeHint hint = f.getAnnotation(CollectionTypeHint.class);
 					if (value instanceof List) {
 						if (hint != null)
-							f.set(n, parseList(hint.value(), (List) value));
+							f.set(n, parseCollection(hint.value(), (List) value));
 						else
 							f.set(n, value);
 					}
-				} else if (!contains(fieldType, Map.class) && value instanceof Map) {
-					f.set(n, parseObject(fieldType, (Map) value));
+				} else if (!Map.class.isAssignableFrom(fieldType) && value instanceof Map) {
+					f.set(n, parse(fieldType, (Map) value));
 				} else {
 					f.set(n, value);
 				}
@@ -139,29 +177,20 @@ public class PrimitiveConverter {
 		}
 	}
 
-	private static boolean contains(Class<?> clazz, Class<?> iface) {
-		if (clazz.equals(iface))
-			return true;
-
-		Class<?>[] clazzes = clazz.getInterfaces();
-		for (int i = 0; i < clazzes.length; i++)
-			if (clazzes[i].equals(iface))
-				return true;
-		return false;
+	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll) {
+		return parseCollection(cls, coll, null);
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T> List<T> parseList(Class<T> clazz, List<Object> l) {
-		List<T> list = new ArrayList<T>();
-		for (Object o : l) {
-			if (o instanceof Map) {
-				T v = parseObject(clazz, (Map<String, Object>) o);
-				list.add(v);
-			} else
-				list.add((T) o);
+	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll, PrimitiveParseCallback callback) {
+		Collection<T> result = new ArrayList<T>();
+		for (Object obj : coll) {
+			if (Map.class.isAssignableFrom(obj.getClass()))
+				result.add(parse(cls, obj, callback));
+			else
+				result.add((T) obj);
 		}
-
-		return list;
+		return result;
 	}
 
 	public static String toUnderscoreName(String s) {
