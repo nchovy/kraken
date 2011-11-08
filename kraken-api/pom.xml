@@ -9,6 +9,6 @@
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-api</artifactId>
 	<name>Kraken API</name>
-	<version>1.8.5</version>
+	<version>1.8.6</version>
 	<url>http://maven.apache.org</url>
 </project>

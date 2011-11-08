@@ -23,11 +23,34 @@ public class PrimitiveConverterTest {
 		m.put("foo", "qoo");
 		m.put("bar", 123);
 		m.put("ignore", "skip");
+		Map<String, Object> m2 = new HashMap<String, Object>();
+		m2.put("name", "xeraph");
+		m2.put("vegetable_list", Arrays.asList("cucumber", "pumpkin"));
+		m.put("nested", m2);
 
 		Sample s = PrimitiveConverter.parse(Sample.class, m);
 		assertEquals("qoo", s.foo);
 		assertEquals(123, s.bar);
 		assertEquals(null, s.ignore);
+		assertEquals("xeraph", s.nested.name);
+		assertEquals(Arrays.asList("cucumber", "pumpkin"), s.nested.vegetableList);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testToPrimitive() {
+		Sample s = new Sample("qoo", 123, "ignore field", new Nested("xeraph", "cucumber", "pumpkin"), new Nested("delmitz"));
+		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
+		System.out.println(o);
+		assertEquals("qoo", o.get("foo"));
+		assertEquals(123, o.get("bar"));
+		assertEquals(false, o.containsKey("ignore"));
+		Map<String, Object> m = (Map<String, Object>) o.get("nested");
+		assertEquals("xeraph", m.get("name"));
+		assertEquals(Arrays.asList("cucumber", "pumpkin"), m.get("vegetable_list"));
+		Map<String, Object> m2 = (Map<String, Object>) o.get("ref");
+		assertEquals("delmitz", m2.get("name"));
+		assertEquals(false, m2.containsKey("vegetable_list"));
 	}
 
 	@Test
@@ -50,19 +73,10 @@ public class PrimitiveConverterTest {
 		Nested s = new Nested();
 		s.name = "nchovy refrigerator";
 		s.vegetableList = Arrays.asList("haruyache", "etulyache", "sahulyache", "nahulyache");
+
 		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
 		assertEquals("nchovy refrigerator", o.get("name"));
 		assertEquals(Arrays.asList("haruyache", "etulyache", "sahulyache", "nahulyache"), o.get("vegetable_list"));
-	}
-
-	@SuppressWarnings("unchecked")
-	@Test
-	public void testToPrimitive() {
-		Sample s = new Sample("qoo", 123, "ignore field");
-		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
-		assertEquals("qoo", o.get("foo"));
-		assertEquals(123, o.get("bar"));
-		assertEquals(false, o.containsKey("ignore"));
 	}
 
 	@Test
@@ -122,35 +136,43 @@ public class PrimitiveConverterTest {
 		@FieldOption(skip = true)
 		private String ignore;
 		private Nested nested;
+		@ReferenceKey("name")
+		private Nested ref;
 
-		@SuppressWarnings("unused")
 		public Sample() {
 		}
 
-		public Sample(String foo, int bar, String ignore) {
+		public Sample(String foo, int bar, String ignore, Nested nested, Nested ref) {
 			this.foo = foo;
 			this.bar = bar;
 			this.ignore = ignore;
-		}
-
-		@Override
-		public String toString() {
-			return "foo=" + foo + ", bar=" + bar;
+			this.nested = nested;
+			this.ref = ref;
 		}
 	}
 
 	public static class NestedList {
 		@CollectionTypeHint(Nested.class)
 		private List<Nested> list;
+
+		public NestedList() {
+		}
+
+		public NestedList(List<Nested> list) {
+			this.list = list;
+		}
 	}
 
 	public static class Nested {
 		private String name;
 		private List<String> vegetableList = new ArrayList<String>();
 
-		@Override
-		public String toString() {
-			return "name=" + name + ", vegetables=" + vegetableList.size();
+		public Nested() {
+		}
+
+		public Nested(String name, String... vegetableList) {
+			this.name = name;
+			this.vegetableList = Arrays.asList(vegetableList);
 		}
 	}
 }
