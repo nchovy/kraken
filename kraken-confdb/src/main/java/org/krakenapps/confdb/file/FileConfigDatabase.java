@@ -417,4 +417,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 		lockFile.delete();
 	}
+
+	@Override
+	public String toString() {
+		return dbName + ", changeset=" + (changeset == null ? "tip" : changeset);
+	}
 }

@@ -104,11 +104,15 @@ public class ConfScript implements Script {
 		context.println("Documents");
 		context.println("-----------");
 		ConfigIterator it = col.findAll();
-
-		while (it.hasNext()) {
-			Config c = it.next();
-			String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc=" + Primitive.stringify(c.getDocument());
-			context.println(s);
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc="
+						+ Primitive.stringify(c.getDocument());
+				context.println(s);
+			}
+		} finally {
+			it.close();
 		}
 	}
 }

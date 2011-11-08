@@ -324,4 +324,9 @@ public class FileConfigCollection implements ConfigCollection {
 		public void close() {
 		}
 	}
+
+	@Override
+	public String toString() {
+		return "config collection: " + col.toString();
+	}
 }
