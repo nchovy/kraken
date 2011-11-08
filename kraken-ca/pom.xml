@@ -25,15 +25,12 @@
 						<Bundle-SymbolicName>org.krakenapps.ca</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.ca,
-							org.krakenapps.ca.crl,
 							org.krakenapps.ca.util,
 							org.krakenapps.ca.msgbus
 						</Export-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
-							!org.junit,
-							!org.krakenapps.main,
 							*
 						</Import-Package>
 						<Private-Package>org.krakenapps.ca.impl</Private-Package>

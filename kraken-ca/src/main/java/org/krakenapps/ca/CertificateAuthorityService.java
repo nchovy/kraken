@@ -8,4 +8,6 @@ public interface CertificateAuthorityService {
 	CertificateAuthority getAuthority(String name);
 
 	CertificateAuthority createAuthority(String name, CertificateRequest req) throws Exception;
+
+	void removeAuthority(String name);
 }

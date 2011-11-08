@@ -16,6 +16,8 @@
 package org.krakenapps.ca.impl;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -50,8 +52,8 @@ public class CertificateAuthorityScript implements Script {
 	private CertificateAuthorityService ca;
 	private ScriptContext context;
 
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
-			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
+			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	public CertificateAuthorityScript(CertificateAuthorityService ca) {
 		this.ca = ca;
@@ -60,6 +62,59 @@ public class CertificateAuthorityScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	@ScriptUsage(description = "export pfx file", arguments = {
+			@ScriptArgument(name = "authority", type = "string", description = "authority name"),
+			@ScriptArgument(name = "serial", type = "string", description = "serial number") })
+	public void exportPfx(String[] args) throws InterruptedException {
+		String authorityName = args[0];
+		CertificateAuthority authority = ca.getAuthority(authorityName);
+		if (authority == null) {
+			context.println("authority not found");
+			return;
+		}
+
+		String serial = args[1];
+		CertificateMetadata cm = authority.findCertificate("serial", serial);
+		if (cm == null) {
+			context.println("certificate not found");
+			return;
+		}
+
+		context.print("Private Key Password? ");
+		String keyPassword = context.readPassword();
+		byte[] b = authority.getPfxBinary(cm.getSubjectDn(), keyPassword);
+
+		File dir = (File) context.getSession().getProperty("dir");
+		File pfx = new File(dir, parseCN(cm.getSubjectDn()) + ".pfx");
+		RandomAccessFile f = null;
+		try {
+			f = new RandomAccessFile(pfx, "rw");
+			f.write(b);
+		} catch (Exception e) {
+			context.println("io failed: " + e.getMessage());
+			logger.error("kraken ca: export failed", e);
+		} finally {
+			if (f != null) {
+				try {
+					f.close();
+				} catch (IOException e) {
+				}
+			}
+		}
+	}
+
+	private String parseCN(String dn) {
+		int begin = dn.indexOf("CN=");
+		if (begin < 0)
+			throw new IllegalArgumentException("CN not found");
+
+		int end = dn.indexOf(",", begin);
+		if (end < 0)
+			throw new IllegalArgumentException("CN not found");
+
+		return dn.substring(begin + 3, end).trim();
 	}
 
 	public void exportRootCert(String[] args) {
@@ -100,7 +155,22 @@ public class CertificateAuthorityScript implements Script {
 		}
 	}
 
-	public void createCert(String[] args) {
+	@ScriptUsage(description = "print all issued certs", arguments = { @ScriptArgument(name = "authority name", type = "string", description = "authority name") })
+	public void certs(String[] args) throws InterruptedException {
+		CertificateAuthority authority = ca.getAuthority(args[0]);
+		if (authority == null) {
+			context.println("authority not found");
+			return;
+		}
+
+		context.println("Certificates");
+		context.println("--------------");
+		for (CertificateMetadata cm : authority.getCertificates()) {
+			context.println(cm);
+		}
+	}
+
+	public void issue(String[] args) {
 		try {
 			// find authority
 			context.print("Authority Name? ");
@@ -152,6 +222,17 @@ public class CertificateAuthorityScript implements Script {
 			context.println("Error: " + e.getMessage());
 			logger.warn("kraken ca: create cert failed", e);
 		}
+	}
+
+	@ScriptUsage(description = "remove authority and purge all certificates", arguments = { @ScriptArgument(name = "authority name", type = "string", description = "authority name") })
+	public void removeAuthority(String[] args) {
+		CertificateAuthority authority = ca.getAuthority(args[0]);
+		if (authority == null) {
+			context.println("authority not found");
+			return;
+		}
+
+		ca.removeAuthority(args[0]);
 	}
 
 	private CertificateRequest inputRequest() throws Exception {
@@ -215,7 +296,8 @@ public class CertificateAuthorityScript implements Script {
 		Date notAfter = cal.getTime();
 
 		// generate
-		return CertificateRequest.createSelfSignedCertRequest(keyPair, keyPassword, dn, notBefore, notAfter, signatureAlgorithm);
+		return CertificateRequest.createSelfSignedCertRequest(keyPair, keyPassword, dn, notBefore, notAfter,
+				signatureAlgorithm);
 	}
 
 	public void authorities(String[] args) {

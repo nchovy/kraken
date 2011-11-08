@@ -97,24 +97,33 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 
 		// save pfx
 		X509Certificate root = CertificateBuilder.createCertificate(req);
-		byte[] pkcs12 = CertificateExporter.exportPkcs12(root, req.getKeyPair(), req.getKeyPassword(), root);
+		byte[] jks = CertificateExporter.exportJks(root, req.getKeyPair(), req.getKeyPassword(), root);
 		CertificateMetadata cm = new CertificateMetadata();
-		cm.setType("pkcs12");
+		cm.setType("jks");
 		cm.setSerial(req.getSerial().toString());
 		cm.setSubjectDn(req.getSubjectDn());
 		cm.setNotBefore(req.getNotBefore());
 		cm.setNotAfter(req.getNotAfter());
-		cm.setBinary(Base64.encodeBase64String(pkcs12));
+		cm.setBinary(Base64.encodeBase64String(jks));
 
 		// set authority metadata
 		ConfigCollection metadata = db.ensureCollection("metadata");
 		Object cert = PrimitiveConverter.serialize(cm);
-		metadata.add(cert, "kraken-ca", "added root pkcs12 certificate");
+		metadata.add(cert, "kraken-ca", "added root jks certificate");
 
 		// set master metadata
 		metadata = ca.ensureCollection("metadata");
 		metadata.add(doc, "kraken-ca", "added " + name + " authority");
 
 		return authority;
+	}
+
+	@Override
+	public void removeAuthority(String name) {
+		CertificateAuthority authority = authorities.remove(name);
+		if (authority == null)
+			return;
+
+		conf.dropDatabase("kraken-ca-" + authority.getName());
 	}
 }

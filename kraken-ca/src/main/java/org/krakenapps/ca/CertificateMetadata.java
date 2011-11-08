@@ -64,11 +64,21 @@ public class CertificateMetadata {
 		this.binary = binary;
 	}
 
+	public X509Certificate getCertificate() {
+		// jks don't need password, but pkcs12 need password to decrypt file
+		return getCertificate(null);
+	}
+
 	public X509Certificate getCertificate(String password) {
 		try {
 			ByteArrayInputStream is = new ByteArrayInputStream(Base64.decodeBase64(binary));
-			KeyStore store = KeyStore.getInstance(type.toUpperCase(), "BC");
-			store.load(is, password.toCharArray());
+			KeyStore store = null;
+			if (type.equals("pkcs12"))
+				store = KeyStore.getInstance(type.toUpperCase(), "BC");
+			else
+				store = KeyStore.getInstance(type.toUpperCase());
+
+			store.load(is, password == null ? null : password.toCharArray());
 			return (X509Certificate) store.getCertificate("public");
 
 		} catch (Exception e) {
@@ -79,11 +89,17 @@ public class CertificateMetadata {
 	public RSAPrivateKey getPrivateKey(String password) {
 		try {
 			ByteArrayInputStream is = new ByteArrayInputStream(Base64.decodeBase64(binary));
-			KeyStore store = KeyStore.getInstance(type.toUpperCase(), "BC");
+			KeyStore store = KeyStore.getInstance(type.toUpperCase());
 			store.load(is, password.toCharArray());
 			return (RSAPrivateKey) store.getKey("private", password.toCharArray());
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	public String toString() {
+		return "type=" + type + ", serial=" + serial + ", subject=" + subjectDn + ", not_before=" + notBefore
+				+ ", not_after=" + notAfter;
 	}
 }

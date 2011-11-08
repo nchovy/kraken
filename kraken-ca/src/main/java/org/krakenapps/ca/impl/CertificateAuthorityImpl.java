@@ -50,8 +50,8 @@ import org.slf4j.LoggerFactory;
  */
 public class CertificateAuthorityImpl implements CertificateAuthority {
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityImpl.class.getName());
-	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
-			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
+			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	private ConfigDatabase db;
 	private String name;
@@ -109,21 +109,23 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		ConfigCollection col = db.ensureCollection("metadata");
 		Config c = col.findOne(Predicates.field("type", "serial"));
 		if (c == null) {
-			col.add("1", "kraken-ca", "init serial");
-			return new BigInteger("1");
+			Object doc = PrimitiveConverter.serialize(new CertSerial());
+			col.add(doc, "kraken-ca", "init serial");
+			return new BigInteger("2");
 		}
 
-		BigInteger current = new BigInteger((String) c.getDocument());
-		c.setDocument(current.add(new BigInteger("1")));
+		CertSerial s = PrimitiveConverter.parse(CertSerial.class, c.getDocument());
+		s.serial = new BigInteger(s.serial).add(new BigInteger("1")).toString();
+		c.setDocument(PrimitiveConverter.serialize(s));
 		col.update(c, false, "kraken-ca", "set next serial");
-		return current;
+		return new BigInteger(s.serial);
 	}
 
 	@Override
 	public CertificateMetadata findCertificate(String field, String value) {
 		ConfigCollection certs = db.ensureCollection("certs");
 		Config c = certs.findOne(Predicates.field(field, value));
-		return PrimitiveConverter.parse(CertificateMetadata.class, c);
+		return PrimitiveConverter.parse(CertificateMetadata.class, c.getDocument());
 
 	}
 
@@ -142,11 +144,12 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	@Override
 	public CertificateMetadata issueCertificate(String caPassword, CertificateRequest req) throws Exception {
 		ConfigCollection metadata = db.ensureCollection("metadata");
-		Config caPkcs12 = metadata.findOne(Predicates.field("type", "pkcs12"));
-		if (caPkcs12 == null)
+		Config jks = metadata.findOne(Predicates.field("type", "jks"));
+		if (jks == null)
 			throw new IllegalStateException("ca not found for " + name);
 
-		CertificateMetadata cm = PrimitiveConverter.parse(CertificateMetadata.class, caPkcs12.getDocument());
+		CertificateMetadata cm = PrimitiveConverter.parse(CertificateMetadata.class, jks.getDocument());
+		req.setSerial(getNextSerial());
 		req.setIssuerDn(cm.getSubjectDn());
 		req.setIssuerKey(cm.getPrivateKey(caPassword));
 
@@ -217,5 +220,13 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	@Override
 	public String toString() {
 		return name + ": " + getRootCertificate().getSubjectDn();
+	}
+
+	private static class CertSerial {
+		private String type = "serial";
+		private String serial = "2";
+
+		public CertSerial() {
+		}
 	}
 }

@@ -41,14 +41,24 @@ public class CertificateExporter {
 	private CertificateExporter() {
 	}
 
+	public static byte[] exportJks(X509Certificate cert, KeyPair keyPair, String keyPassword, X509Certificate caCert)
+			throws Exception {
+		KeyStore store = KeyStore.getInstance("JKS");
+		store.load(null, null);
+		store.setCertificateEntry("public", cert);
+		store.setKeyEntry("private", keyPair.getPrivate(), keyPassword.toCharArray(), new Certificate[] { cert, caCert });
+
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		store.store(out, keyPassword.toCharArray());
+		return out.toByteArray();
+	}
+
 	public static byte[] exportPkcs12(X509Certificate cert, KeyPair keyPair, String keyPassword, X509Certificate caCert)
 			throws Exception {
-		String friendlyName = cert.getSubjectDN().getName();
-		
 		PKCS12BagAttributeCarrier bagAttr = (PKCS12BagAttributeCarrier) keyPair.getPrivate();
-		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.20"), new DERBMPString(friendlyName));
-		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.21"),
-				new SubjectKeyIdentifierStructure(keyPair.getPublic()));
+		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.20"), new DERBMPString("public"));
+		bagAttr.setBagAttribute(new DERObjectIdentifier("1.2.840.113549.1.9.21"), new SubjectKeyIdentifierStructure(
+				keyPair.getPublic()));
 
 		KeyStore pfx = KeyStore.getInstance("PKCS12", "BC");
 		pfx.load(null, null);
@@ -77,8 +87,8 @@ public class CertificateExporter {
 		}
 	}
 
-	public static void writeCrtFile(Certificate crt, File output) throws KeyStoreException, CertificateEncodingException,
-			IOException {
+	public static void writeCrtFile(Certificate crt, File output) throws KeyStoreException,
+			CertificateEncodingException, IOException {
 		OutputStream os = null;
 		try {
 			os = new FileOutputStream(output);
