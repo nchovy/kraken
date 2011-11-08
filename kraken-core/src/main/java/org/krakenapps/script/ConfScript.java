@@ -85,7 +85,9 @@ public class ConfScript implements Script {
 			context.println(name);
 	}
 
-	@ScriptUsage(description = "print collection names", arguments = { @ScriptArgument(name = "name", type = "string", description = "database name") })
+	@ScriptUsage(description = "print documents", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name") })
 	public void docs(String[] args) {
 		ConfigDatabase db = conf.getDatabase(args[0]);
 		if (db == null) {
