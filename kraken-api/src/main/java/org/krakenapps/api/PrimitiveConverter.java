@@ -92,14 +92,14 @@ public class PrimitiveConverter {
 								ReferenceKey.class).value()) : null;
 						Object serialized = serialize(root, value, callback, referenceKey);
 						m.put(fieldName, serialized);
-						if (callback != null)
-							callback.onSerialize(root, obj, value.getClass(), serialized);
 					}
 				}
 			} catch (Exception e) {
 				throw new RuntimeException("kraken api: serialize failed", e);
 			}
 		}
+		if(callback != null && refkey != null)
+			callback.onSerialize(root, cls, obj, m);
 
 		return m;
 	}
