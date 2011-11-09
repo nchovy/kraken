@@ -6,15 +6,13 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Date;
 
-import org.apache.commons.codec.binary.Base64;
-
 public class CertificateMetadata {
 	private String type;
 	private String serial;
 	private String subjectDn;
 	private Date notBefore;
 	private Date notAfter;
-	private String binary;
+	private byte[] binary;
 
 	public String getType() {
 		return type;
@@ -56,11 +54,11 @@ public class CertificateMetadata {
 		this.notAfter = notAfter;
 	}
 
-	public String getBinary() {
+	public byte[] getBinary() {
 		return binary;
 	}
 
-	public void setBinary(String binary) {
+	public void setBinary(byte[] binary) {
 		this.binary = binary;
 	}
 
@@ -71,7 +69,7 @@ public class CertificateMetadata {
 
 	public X509Certificate getCertificate(String password) {
 		try {
-			ByteArrayInputStream is = new ByteArrayInputStream(Base64.decodeBase64(binary));
+			ByteArrayInputStream is = new ByteArrayInputStream(binary);
 			KeyStore store = null;
 			if (type.equals("pkcs12"))
 				store = KeyStore.getInstance(type.toUpperCase(), "BC");
@@ -88,7 +86,7 @@ public class CertificateMetadata {
 
 	public RSAPrivateKey getPrivateKey(String password) {
 		try {
-			ByteArrayInputStream is = new ByteArrayInputStream(Base64.decodeBase64(binary));
+			ByteArrayInputStream is = new ByteArrayInputStream(binary);
 			KeyStore store = KeyStore.getInstance(type.toUpperCase());
 			store.load(is, password.toCharArray());
 			return (RSAPrivateKey) store.getKey("private", password.toCharArray());
@@ -99,7 +97,7 @@ public class CertificateMetadata {
 
 	@Override
 	public String toString() {
-		return "type=" + type + ", serial=" + serial + ", subject=" + subjectDn + ", not_before=" + notBefore
-				+ ", not_after=" + notAfter;
+		return "type=" + type + ", serial=" + serial + ", subject=" + subjectDn + ", not_before=" + notBefore + ", not_after="
+				+ notAfter;
 	}
 }

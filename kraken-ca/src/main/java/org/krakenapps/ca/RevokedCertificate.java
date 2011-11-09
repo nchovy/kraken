@@ -7,6 +7,9 @@ public class RevokedCertificate {
 	private String serial;
 	private Date date;
 	private RevocationReason reason;
+	
+	public RevokedCertificate() {
+	}
 
 	public RevokedCertificate(String serial, Date date, RevocationReason reason) {
 		this.date = date;
@@ -25,4 +28,10 @@ public class RevokedCertificate {
 	public RevocationReason getReason() {
 		return reason;
 	}
+
+	@Override
+	public String toString() {
+		return "serial=" + serial + ", date=" + date + ", reason=" + reason;
+	}
+
 }

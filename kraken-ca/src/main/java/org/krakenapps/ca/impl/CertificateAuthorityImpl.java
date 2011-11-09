@@ -15,16 +15,12 @@
  */
 package org.krakenapps.ca.impl;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
-import org.krakenapps.api.Primitive;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ca.CertificateAuthority;
 import org.krakenapps.ca.CertificateMetadata;
@@ -38,7 +34,6 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.confdb.file.FileConfigDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +45,8 @@ import org.slf4j.LoggerFactory;
  */
 public class CertificateAuthorityImpl implements CertificateAuthority {
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityImpl.class.getName());
-	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA",
-			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
+			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	private ConfigDatabase db;
 	private String name;
@@ -125,20 +120,10 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	public CertificateMetadata findCertificate(String field, String value) {
 		ConfigCollection certs = db.ensureCollection("certs");
 		Config c = certs.findOne(Predicates.field(field, value));
-		return PrimitiveConverter.parse(CertificateMetadata.class, c.getDocument());
-
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public byte[] getPfxBinary(String subjectDn, String keyPassword) {
-		ConfigCollection col = db.ensureCollection("certs");
-		Config c = col.findOne(Predicates.field("subject_dn", subjectDn));
 		if (c == null)
 			return null;
 
-		Map<String, Object> doc = (Map<String, Object>) c.getDocument();
-		return Base64.decodeBase64((String) doc.get("binary"));
+		return PrimitiveConverter.parse(CertificateMetadata.class, c.getDocument());
 	}
 
 	@Override
@@ -167,7 +152,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		cm.setSubjectDn(req.getSubjectDn());
 		cm.setNotBefore(req.getNotBefore());
 		cm.setNotAfter(req.getNotAfter());
-		cm.setBinary(Base64.encodeBase64String(pkcs12));
+		cm.setBinary(pkcs12);
 
 		ConfigCollection certs = db.ensureCollection("certs");
 		Object c = PrimitiveConverter.serialize(cm);
@@ -190,12 +175,16 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		revoke(cm, RevocationReason.Unspecified);
 	}
 
+	@Override
 	public void revoke(CertificateMetadata cm, RevocationReason reason) {
 		ConfigCollection revoked = db.ensureCollection("revoked");
+
 		Config c = revoked.findOne(Predicates.field("serial", cm.getSerial()));
 		if (c != null)
 			throw new IllegalStateException("already revoked: serial " + cm.getSerial());
 
+		RevokedCertificate r = new RevokedCertificate(cm.getSerial(), new Date(), reason);
+		revoked.add(PrimitiveConverter.serialize(r), "kraken-ca", "revoked " + cm);
 	}
 
 	@Override
@@ -223,7 +212,8 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	private static class CertSerial {
-		private String type = "serial";
+		@SuppressWarnings("unused")
+		private final String type = "serial";
 		private String serial = "2";
 
 		public CertSerial() {

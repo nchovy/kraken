@@ -43,8 +43,6 @@ public interface CertificateAuthority {
 
 	CertificateMetadata issueCertificate(String caPassword, CertificateRequest req) throws Exception;
 
-	byte[] getPfxBinary(String subjectDn, String keyPassword);
-
 	List<RevokedCertificate> getRevokedCertifcates();
 
 	void revoke(CertificateMetadata cm);

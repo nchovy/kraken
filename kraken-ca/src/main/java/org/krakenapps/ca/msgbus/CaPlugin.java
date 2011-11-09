@@ -27,10 +27,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.api.Primitive;
+import org.bouncycastle.util.encoders.Base64;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ca.CertificateAuthority;
 import org.krakenapps.ca.CertificateAuthorityService;
@@ -194,7 +193,6 @@ public class CaPlugin {
 	public void getPfxFile(Request req, Response resp) {
 		String authorityName = req.getString("authority");
 		String serial = req.getString("serial");
-		String keyPassword = req.getString("key_password");
 
 		// check authority
 		CertificateAuthority authority = ca.getAuthority(authorityName);
@@ -205,9 +203,13 @@ public class CaPlugin {
 		if (cm == null)
 			throw new MsgbusException("kraken-ca", "certificate-not-found");
 
-		byte[] b = authority.getPfxBinary(cm.getSubjectDn(), keyPassword);
-		String encoded = Base64.encodeBase64String(b);
-		resp.put("pfx", encoded);
+		byte[] encoded = Base64.encode(cm.getBinary());
+
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < encoded.length; i++)
+			sb.append((char) encoded[i]);
+
+		resp.put("pfx", sb.toString());
 	}
 
 	private Map<String, Object> marshal(X509Certificate cert) {

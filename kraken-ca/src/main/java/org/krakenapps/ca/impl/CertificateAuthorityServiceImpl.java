@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -104,7 +103,7 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		cm.setSubjectDn(req.getSubjectDn());
 		cm.setNotBefore(req.getNotBefore());
 		cm.setNotAfter(req.getNotAfter());
-		cm.setBinary(Base64.encodeBase64String(jks));
+		cm.setBinary(jks);
 
 		// set authority metadata
 		ConfigCollection metadata = db.ensureCollection("metadata");

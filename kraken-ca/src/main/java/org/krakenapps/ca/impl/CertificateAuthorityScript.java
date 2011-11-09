@@ -37,6 +37,7 @@ import org.krakenapps.ca.CertificateAuthorityService;
 import org.krakenapps.ca.CertificateMetadata;
 import org.krakenapps.ca.CertificateRequest;
 import org.krakenapps.ca.RevocationReason;
+import org.krakenapps.ca.RevokedCertificate;
 import org.krakenapps.ca.util.CertificateExporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +53,8 @@ public class CertificateAuthorityScript implements Script {
 	private CertificateAuthorityService ca;
 	private ScriptContext context;
 
-	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA",
-			"SHA224withRSA", "SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
+	private static final String[] sigAlgorithms = new String[] { "MD2withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
+			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
 	public CertificateAuthorityScript(CertificateAuthorityService ca) {
 		this.ca = ca;
@@ -64,10 +65,10 @@ public class CertificateAuthorityScript implements Script {
 		this.context = context;
 	}
 
-	@ScriptUsage(description = "export pfx file", arguments = {
+	@ScriptUsage(description = "export certificate", arguments = {
 			@ScriptArgument(name = "authority", type = "string", description = "authority name"),
 			@ScriptArgument(name = "serial", type = "string", description = "serial number") })
-	public void exportPfx(String[] args) throws InterruptedException {
+	public void export(String[] args) throws InterruptedException {
 		String authorityName = args[0];
 		CertificateAuthority authority = ca.getAuthority(authorityName);
 		if (authority == null) {
@@ -82,16 +83,13 @@ public class CertificateAuthorityScript implements Script {
 			return;
 		}
 
-		context.print("Private Key Password? ");
-		String keyPassword = context.readPassword();
-		byte[] b = authority.getPfxBinary(cm.getSubjectDn(), keyPassword);
-
 		File dir = (File) context.getSession().getProperty("dir");
-		File pfx = new File(dir, parseCN(cm.getSubjectDn()) + ".pfx");
+		File pfx = new File(dir, parseCN(cm.getSubjectDn()) + "." + cm.getType());
 		RandomAccessFile f = null;
 		try {
 			f = new RandomAccessFile(pfx, "rw");
-			f.write(b);
+			f.write(cm.getBinary());
+			context.println("exported pfx file to " + pfx.getAbsolutePath());
 		} catch (Exception e) {
 			context.println("io failed: " + e.getMessage());
 			logger.error("kraken ca: export failed", e);
@@ -296,8 +294,7 @@ public class CertificateAuthorityScript implements Script {
 		Date notAfter = cal.getTime();
 
 		// generate
-		return CertificateRequest.createSelfSignedCertRequest(keyPair, keyPassword, dn, notBefore, notAfter,
-				signatureAlgorithm);
+		return CertificateRequest.createSelfSignedCertRequest(keyPair, keyPassword, dn, notBefore, notAfter, signatureAlgorithm);
 	}
 
 	public void authorities(String[] args) {
@@ -337,6 +334,19 @@ public class CertificateAuthorityScript implements Script {
 		} catch (Exception e) {
 			context.println("Error: " + e.getMessage());
 			logger.warn("kraken ca: failed to revoke certificate", e);
+		}
+	}
+
+	@ScriptUsage(description = "print cert revocation list", arguments = { @ScriptArgument(name = "authority name", type = "string", description = "authority name") })
+	public void crl(String[] args) {
+		CertificateAuthority authority = ca.getAuthority(args[0]);
+		if (authority == null) {
+			context.println("authority not found");
+			return;
+		}
+
+		for (RevokedCertificate c : authority.getRevokedCertifcates()) {
+			context.println(c);
 		}
 	}
 }
