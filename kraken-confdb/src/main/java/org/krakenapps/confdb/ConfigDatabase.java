@@ -34,7 +34,9 @@ public interface ConfigDatabase {
 	/**
 	 * return collection. return null if collection does not exists
 	 */
-	ConfigCollection getCollection(String string);
+	ConfigCollection getCollection(Class<?> cls);
+
+	ConfigCollection getCollection(String name);
 
 	/**
 	 * return collection. if collection does not exists, it will create
@@ -44,6 +46,8 @@ public interface ConfigDatabase {
 	 *            the collection name
 	 * @return the collection
 	 */
+	ConfigCollection ensureCollection(Class<?> cls);
+
 	ConfigCollection ensureCollection(String name);
 
 	/**
@@ -53,6 +57,8 @@ public interface ConfigDatabase {
 	 * @param name
 	 *            the collection name
 	 */
+	void dropCollection(Class<?> cls);
+
 	void dropCollection(String name);
 
 	/**
@@ -88,4 +94,36 @@ public interface ConfigDatabase {
 	void rollback(int changeset);
 
 	void rollback(int changeset, String committer, String log);
+
+	int count(Class<?> cls);
+
+	int count(Class<?> cls, ConfigTransaction xact);
+
+	ConfigIterator findAll(Class<?> cls);
+
+	ConfigIterator find(Class<?> cls, Predicate pred);
+
+	Config findOne(Class<?> cls, Predicate pred);
+
+	Config add(Object doc);
+
+	Config add(Object doc, String committer, String log);
+
+	Config add(ConfigTransaction xact, Object doc);
+
+	Config update(Config c, Object doc);
+
+	Config update(Config c, Object doc, boolean ignoreConflict);
+
+	Config update(Config c, Object doc, boolean ignoreConflict, String committer, String log);
+
+	Config update(ConfigTransaction xact, Config c, Object doc, boolean ignoreConflict);
+
+	Config remove(Config c);
+
+	Config remove(Config c, boolean ignoreConflict);
+
+	Config remove(Config c, boolean ignoreConflict, String committer, String log);
+
+	Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict);
 }

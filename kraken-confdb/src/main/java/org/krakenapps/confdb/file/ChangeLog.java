@@ -126,7 +126,7 @@ class ChangeLog implements CommitLog {
 		c.setMessage((String) m.get("msg"));
 		c.setManifestId((Integer) m.get("manifest_id"));
 		List<Object> list = Arrays.asList((Object[]) m.get("changeset"));
-		c.setChangeSet(PrimitiveConverter.parse(ConfigChange.class, list));
+		c.setChangeSet(new ArrayList<ConfigChange>(PrimitiveConverter.parseCollection(ConfigChange.class, list)));
 		return c;
 	}
 

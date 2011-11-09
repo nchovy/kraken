@@ -17,6 +17,8 @@ package org.krakenapps.confdb.file;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -44,8 +46,7 @@ class FileConfigIterator implements ConfigIterator {
 	private Config prefetch;
 	private boolean loaded;
 
-	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot,
-			Predicate pred) {
+	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot, Predicate pred) {
 		this.db = db;
 		this.col = col;
 		this.reader = reader;
@@ -112,6 +113,24 @@ class FileConfigIterator implements ConfigIterator {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Collection<Object> getDocuments() {
+		Collection<Object> docs = new ArrayList<Object>();
+		ConfigIterator it = this;
+		while (it.hasNext())
+			docs.add(it.next().getDocument());
+		return docs;
+	}
+
+	@Override
+	public <T> Collection<T> getDocuments(Class<T> clazz) {
+		Collection<T> docs = new ArrayList<T>();
+		ConfigIterator it = this;
+		while (it.hasNext())
+			docs.add(it.next().getDocument(clazz));
+		return docs;
 	}
 
 	@Override

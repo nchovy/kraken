@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.krakenapps.codec.EncodingRule;
@@ -318,6 +319,16 @@ public class FileConfigCollection implements ConfigCollection {
 
 		@Override
 		public void remove() {
+		}
+
+		@Override
+		public Collection<Object> getDocuments() {
+			return new ArrayList<Object>();
+		}
+
+		@Override
+		public <T> Collection<T> getDocuments(Class<T> clazz) {
+			return new ArrayList<T>();
 		}
 
 		@Override

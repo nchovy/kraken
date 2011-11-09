@@ -23,10 +23,12 @@ public interface Config {
 	int getId();
 
 	long getRevision();
-	
+
 	long getPrevRevision();
-	
+
 	Object getDocument();
-	
+
+	<T> T getDocument(Class<T> clazz);
+
 	void setDocument(Object doc);
 }
