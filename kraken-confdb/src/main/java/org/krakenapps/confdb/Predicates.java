@@ -15,7 +15,10 @@
  */
 package org.krakenapps.confdb;
 
+import java.util.HashMap;
 import java.util.Map;
+
+import org.krakenapps.api.PrimitiveConverter;
 
 public class Predicates {
 	public static Predicate eq(Object o) {
@@ -24,6 +27,10 @@ public class Predicates {
 
 	public static Predicate field(String field, Object value) {
 		return new KeyMatch(field, value);
+	}
+
+	public static Predicate field(Map<String, Object> terms) {
+		return new KeyMatch(terms);
 	}
 
 	public static Predicate and(Predicate... pred) {
@@ -48,12 +55,15 @@ public class Predicates {
 	}
 
 	private static class KeyMatch implements Predicate {
-		private String key;
-		private Object value;
+		private Map<String, Object> terms;
 
 		public KeyMatch(String key, Object value) {
-			this.key = key;
-			this.value = value;
+			this.terms = new HashMap<String, Object>();
+			this.terms.put(key, value);
+		}
+
+		public KeyMatch(Map<String, Object> terms) {
+			this.terms = terms;
 		}
 
 		@SuppressWarnings("unchecked")
@@ -64,17 +74,25 @@ public class Predicates {
 				return false;
 
 			Map<String, Object> m = (Map<String, Object>) doc;
-			if (!m.containsKey(key))
-				return false;
+			for (String k : terms.keySet()) {
+				String key = PrimitiveConverter.toUnderscoreName(k);
+				Object value = terms.get(k);
 
-			Object v = m.get(key);
-			if (v == null && value != null)
-				return false;
+				if (!m.containsKey(key))
+					return false;
 
-			if (v == null && value == null)
-				return true;
+				Object v = m.get(key);
+				if (v == null && value != null)
+					return false;
 
-			return v.equals(value);
+				if (v == null && value == null)
+					continue;
+
+				if (!v.equals(value))
+					return false;
+			}
+
+			return true;
 		}
 	}
 

@@ -15,12 +15,12 @@
  */
 package org.krakenapps.confdb.file;
 
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 
 class FileConfig implements Config {
-
 	private ConfigDatabase db;
 	private ConfigCollection col;
 	private int id;
@@ -65,6 +65,11 @@ class FileConfig implements Config {
 	@Override
 	public Object getDocument() {
 		return doc;
+	}
+
+	@Override
+	public <T> T getDocument(Class<T> clazz) {
+		return PrimitiveConverter.parse(clazz, doc);
 	}
 
 	@Override

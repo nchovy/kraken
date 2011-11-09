@@ -30,15 +30,20 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.api.PrimitiveSerializeCallback;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
+import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.confdb.RollbackException;
 import org.krakenapps.confdb.WriteLockTimeoutException;
 import org.slf4j.Logger;
@@ -205,6 +210,17 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	@Override
+	public Set<String> getCollectionNames() {
+		Manifest manifest = getManifest(changeset);
+		return manifest.getCollectionNames();
+	}
+
+	@Override
+	public ConfigCollection getCollection(Class<?> cls) {
+		return getCollection(cls.getName());
+	}
+
+	@Override
 	public ConfigCollection getCollection(String name) {
 		try {
 			Manifest manifest = getManifest(changeset);
@@ -221,6 +237,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			logger.error("kraken confdb: cannot open collection file", e);
 			return null;
 		}
+	}
+
+	@Override
+	public ConfigCollection ensureCollection(Class<?> cls) {
+		return ensureCollection(cls.getName());
 	}
 
 	@Override
@@ -244,11 +265,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	public Set<String> getCollectionNames() {
-		Manifest manifest = getManifest(changeset);
-		return manifest.getCollectionNames();
-	}
-
 	private CollectionEntry createCollection(String name) throws IOException {
 		ConfigTransaction xact = beginTransaction();
 		try {
@@ -260,6 +276,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			xact.rollback();
 			throw new RollbackException(e);
 		}
+	}
+
+	@Override
+	public void dropCollection(Class<?> cls) {
+		dropCollection(cls.getName());
 	}
 
 	@Override
@@ -416,6 +437,122 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 
 		lockFile.delete();
+		if (dbDir.listFiles().length == 0)
+			dbDir.delete();
+	}
+
+	@Override
+	public int count(Class<?> cls) {
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			return 0;
+		return collection.count();
+	}
+
+	@Override
+	public int count(Class<?> cls, ConfigTransaction xact) {
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			return 0;
+		return collection.count(xact);
+	}
+
+	@Override
+	public ConfigIterator findAll(Class<?> cls) {
+		ConfigCollection collection = getCollection(cls);
+		if (collection != null)
+			return collection.findAll();
+		return null;
+	}
+
+	@Override
+	public ConfigIterator find(Class<?> cls, Predicate pred) {
+		ConfigCollection collection = getCollection(cls);
+		if (collection != null)
+			return collection.find(pred);
+		return null;
+	}
+
+	@Override
+	public Config findOne(Class<?> cls, Predicate pred) {
+		ConfigCollection collection = getCollection(cls);
+		if (collection != null)
+			return collection.findOne(pred);
+		return null;
+	}
+
+	@Override
+	public Config add(Object doc) {
+		ConfigCollection collection = ensureCollection(doc.getClass());
+		return collection.add(PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+	}
+
+	@Override
+	public Config add(Object doc, String committer, String log) {
+		ConfigCollection collection = ensureCollection(doc.getClass());
+		return collection.add(PrimitiveConverter.serialize(doc, new CascadeUpdate()), committer, log);
+	}
+
+	@Override
+	public Config add(ConfigTransaction xact, Object doc) {
+		ConfigCollection collection = ensureCollection(doc.getClass());
+		return collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+	}
+
+	@Override
+	public Config update(Config c, Object doc) {
+		c.setDocument(PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+		return c.getCollection().update(c);
+	}
+
+	@Override
+	public Config update(Config c, Object doc, boolean ignoreConflict) {
+		c.setDocument(PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+		return c.getCollection().update(c, ignoreConflict);
+	}
+
+	@Override
+	public Config update(Config c, Object doc, boolean ignoreConflict, String committer, String log) {
+		c.setDocument(PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+		return c.getCollection().update(c, ignoreConflict, committer, log);
+	}
+
+	@Override
+	public Config update(ConfigTransaction xact, Config c, Object doc, boolean ignoreConflict) {
+		c.setDocument(PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+		return c.getCollection().update(xact, c, ignoreConflict);
+	}
+
+	private class CascadeUpdate implements PrimitiveSerializeCallback {
+		@Override
+		public void onSerialize(Object root, Class<?> cls, Object obj, Map<String, Object> referenceKeys) {
+			ConfigCollection coll = getCollection(cls);
+			Config c = coll.findOne(Predicates.field(referenceKeys));
+			if (c == null)
+				add(obj);
+			else
+				update(c, obj);
+		}
+	}
+
+	@Override
+	public Config remove(Config c) {
+		return c.getCollection().remove(c);
+	}
+
+	@Override
+	public Config remove(Config c, boolean ignoreConflict) {
+		return c.getCollection().remove(c, ignoreConflict);
+	}
+
+	@Override
+	public Config remove(Config c, boolean ignoreConflict, String committer, String log) {
+		return c.getCollection().remove(c, ignoreConflict, committer, log);
+	}
+
+	@Override
+	public Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict) {
+		return c.getCollection().remove(xact, c, ignoreConflict);
 	}
 
 	@Override

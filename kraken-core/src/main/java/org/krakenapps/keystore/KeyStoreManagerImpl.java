@@ -124,7 +124,7 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 			if (ks == null)
 				return null;
 
-			is = new FileInputStream(new File(path));
+			is = new FileInputStream(new File(Environment.expandSystemProperties(path)));
 			ks.load(is, password);
 			return ks;
 		} catch (Exception e) {
