@@ -1,9 +1,11 @@
 package org.krakenapps.siem.model;
 
+import java.util.Map;
+
 public class WallPreset {
 	private String guid;
 	private String name;
-	private Object state;
+	private Map<String, Object> state;
 
 	public String getGuid() {
 		return guid;
@@ -21,11 +23,11 @@ public class WallPreset {
 		this.name = name;
 	}
 
-	public Object getState() {
+	public Map<String, Object> getState() {
 		return state;
 	}
 
-	public void setState(Object state) {
+	public void setState(Map<String, Object> state) {
 		this.state = state;
 	}
 
