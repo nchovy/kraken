@@ -93,7 +93,7 @@ public class PrimitiveConverter {
 						Object serialized = serialize(root, value, callback, referenceKey);
 						m.put(fieldName, serialized);
 						if (callback != null)
-							callback.onSerialize(root, obj, serialized);
+							callback.onSerialize(root, obj, value.getClass(), serialized);
 					}
 				}
 			} catch (Exception e) {
