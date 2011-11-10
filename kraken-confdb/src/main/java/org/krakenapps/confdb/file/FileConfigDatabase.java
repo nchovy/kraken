@@ -443,42 +443,32 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public int count(Class<?> cls) {
-		ConfigCollection collection = getCollection(cls);
-		if (collection == null)
-			return 0;
+		ConfigCollection collection = ensureCollection(cls);
 		return collection.count();
 	}
 
 	@Override
 	public int count(Class<?> cls, ConfigTransaction xact) {
-		ConfigCollection collection = getCollection(cls);
-		if (collection == null)
-			return 0;
+		ConfigCollection collection = ensureCollection(cls);
 		return collection.count(xact);
 	}
 
 	@Override
 	public ConfigIterator findAll(Class<?> cls) {
-		ConfigCollection collection = getCollection(cls);
-		if (collection != null)
-			return collection.findAll();
-		return null;
+		ConfigCollection collection = ensureCollection(cls);
+		return collection.findAll();
 	}
 
 	@Override
 	public ConfigIterator find(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = getCollection(cls);
-		if (collection != null)
-			return collection.find(pred);
-		return null;
+		ConfigCollection collection = ensureCollection(cls);
+		return collection.find(pred);
 	}
 
 	@Override
 	public Config findOne(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = getCollection(cls);
-		if (collection != null)
-			return collection.findOne(pred);
-		return null;
+		ConfigCollection collection = ensureCollection(cls);
+		return collection.findOne(pred);
 	}
 
 	@Override
@@ -526,7 +516,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private class CascadeUpdate implements PrimitiveSerializeCallback {
 		@Override
 		public void onSerialize(Object root, Class<?> cls, Object obj, Map<String, Object> referenceKeys) {
-			ConfigCollection coll = getCollection(cls);
+			ConfigCollection coll = ensureCollection(cls);
 			Config c = coll.findOne(Predicates.field(referenceKeys));
 			if (c == null)
 				add(obj);
