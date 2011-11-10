@@ -83,7 +83,7 @@ public class FileConfigService implements ConfigService {
 	}
 
 	@Override
-	public void createDatabase(String name) {
+	public ConfigDatabase createDatabase(String name) {
 		try {
 			ConfigCollection col = metadb.ensureCollection("database");
 			Config c = col.findOne(Predicates.field("name", name));
@@ -95,6 +95,7 @@ public class FileConfigService implements ConfigService {
 
 			ConfigDatabase db = new FileConfigDatabase(baseDir, name);
 			instances.putIfAbsent(name, db);
+			return db;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

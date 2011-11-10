@@ -22,7 +22,7 @@ public interface ConfigService {
 
 	ConfigDatabase ensureDatabase(String name);
 
-	void createDatabase(String name);
+	ConfigDatabase createDatabase(String name);
 
 	void dropDatabase(String name);
 
