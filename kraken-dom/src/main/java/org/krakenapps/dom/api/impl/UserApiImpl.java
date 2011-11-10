@@ -207,8 +207,13 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 		EntityManager em = entityManagerService.getEntityManager();
 		if (user.getId() == 0)
 			throw new IllegalArgumentException("check user id");
-		if (em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, user.getLoginName()).getSingleResult() != null)
-			throw new IllegalStateException("duplicate login name");
+
+		try {
+			if (em.createQuery("FROM User u WHERE u.id <> ? AND u.loginName = ?").setParameter(1, user.getId())
+					.setParameter(2, user.getLoginName()).getSingleResult() != null)
+				throw new IllegalStateException("duplicate login name");
+		} catch (NoResultException e) {
+		}
 
 		User u = em.find(User.class, user.getId());
 		u.setOrganizationUnit(user.getOrganizationUnit());
