@@ -22,6 +22,11 @@ import java.security.PrivateKey;
 import java.util.Date;
 import java.util.Map;
 
+/**
+ * Certificate Sign Request
+ * 
+ * @author xeraph
+ */
 public class CertificateRequest {
 	/**
 	 * cert serial
@@ -75,7 +80,9 @@ public class CertificateRequest {
 	private String signatureAlgorithm;
 
 	/**
-	 * CRL distribution point URL
+	 * CRL distribution point URL will be set at
+	 * CertificateAuthority.issueCertificate(). You cannot set this parameter
+	 * directly.
 	 */
 	private URL crlUrl;
 

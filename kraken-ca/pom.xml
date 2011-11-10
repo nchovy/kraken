@@ -24,9 +24,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ca</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.ca,
-							org.krakenapps.ca.util,
-							org.krakenapps.ca.msgbus
+							org.krakenapps.ca;version=2.0.0,
+							org.krakenapps.ca.util;version=2.0.0,
+							org.krakenapps.ca.msgbus;version=2.0.0
 						</Export-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,
@@ -87,7 +87,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-webconsole</artifactId>
-			<version>1.3.0</version>
+			<version>1.3.1</version>
 		</dependency>
 	</dependencies>
 </project>

@@ -6,12 +6,40 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Date;
 
+/**
+ * Certificate metadata that contains certificate binary
+ * 
+ * @author xeraph
+ */
 public class CertificateMetadata {
+	/**
+	 * "jks" or "pkcs12" string
+	 */
 	private String type;
+
+	/**
+	 * big integer serial is represented as string
+	 */
 	private String serial;
+
+	/**
+	 * subject distinguished name
+	 */
 	private String subjectDn;
+
+	/**
+	 * valid period start from
+	 */
 	private Date notBefore;
+
+	/**
+	 * valid period expiry date
+	 */
 	private Date notAfter;
+
+	/**
+	 * jks or pkcs12 (.pfx) binary (related to type)
+	 */
 	private byte[] binary;
 
 	public String getType() {

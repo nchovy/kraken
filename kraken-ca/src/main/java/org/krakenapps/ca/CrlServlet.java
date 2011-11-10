@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.ca.util.CrlBuilder;
@@ -18,6 +19,11 @@ import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Servlet for CRL distribution
+ * 
+ * @author xeraph
+ */
 @Component(name = "ca-crl-servlet")
 public class CrlServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
@@ -32,6 +38,11 @@ public class CrlServlet extends HttpServlet {
 	@Validate
 	public void start() {
 		servletRegistry.register("/ca/crl", this);
+	}
+
+	@Invalidate
+	public void stop() {
+		servletRegistry.unregister("/ca/crl");
 	}
 
 	@Override

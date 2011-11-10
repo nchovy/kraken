@@ -16,8 +16,11 @@
 package org.krakenapps.ca.impl;
 
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +52,15 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	private static final String[] sigAlgorithms = new String[] { "MD5withRSA", "MD5withRSA", "SHA1withRSA", "SHA224withRSA",
 			"SHA256withRSA", "SHA384withRSA", "SHA512withRSA" };
 
+	/**
+	 * config database which contains "metadata", "certs", and "revoked" config
+	 * collections.
+	 */
 	private ConfigDatabase db;
+
+	/**
+	 * authority name
+	 */
 	private String name;
 
 	public CertificateAuthorityImpl(ConfigDatabase db, String name) {
@@ -82,6 +93,45 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 		Map<String, Object> m = (Map<String, Object>) c.getDocument();
 		return (String) m.get("password");
+	}
+
+	@Override
+	public URL getCrlDistPoint() {
+		ConfigCollection metadata = db.ensureCollection("metadata");
+		Config c = metadata.findOne(Predicates.field("type", "crl"));
+		if (c == null)
+			return null;
+
+		try {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> m = (Map<String, Object>) c.getDocument();
+			return new URL((String) m.get("base_url"));
+		} catch (MalformedURLException e) {
+			// unreachable
+			throw new IllegalStateException(e);
+		}
+	}
+
+	@Override
+	public void setCrlDistPoint(URL url) {
+		String baseUrl = url.toString();
+		if (baseUrl.endsWith("/"))
+			baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+
+		ConfigCollection metadata = db.ensureCollection("metadata");
+		Config c = metadata.findOne(Predicates.field("type", "crl"));
+
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("type", "crl");
+
+		m.put("base_url", baseUrl);
+
+		if (c == null) {
+			metadata.add(m, "kraken-ca", "set CRL distribution point");
+		} else {
+			c.setDocument(m);
+			metadata.update(c, false, "kraken-ca", "updated CRL distribution point");
+		}
 	}
 
 	@Override
@@ -150,6 +200,12 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		req.setSerial(getNextSerial());
 		req.setIssuerDn(cm.getSubjectDn());
 		req.setIssuerKey(cm.getPrivateKey(getRootKeyPassword()));
+
+		URL dist = getCrlDistPoint();
+		if (dist != null) {
+			dist = new URL(dist + "/ca/crl/" + name + "?serial=" + req.getSerial().toString());
+			req.setCrlUrl(dist);
+		}
 
 		// check availability of signature algorithm
 		validateSignatureAlgorithm(req.getSignatureAlgorithm());

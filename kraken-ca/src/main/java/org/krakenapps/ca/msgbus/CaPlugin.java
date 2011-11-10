@@ -96,7 +96,6 @@ public class CaPlugin {
 	public void issueCertificate(Request req, Response resp) {
 		try {
 			String authorityName = req.getString("authority");
-			String caPassword = req.getString("ca_password");
 
 			// check authority
 			CertificateAuthority authority = ca.getAuthority(authorityName);
@@ -131,7 +130,7 @@ public class CaPlugin {
 			certReq.setNotBefore(notBefore);
 			certReq.setNotAfter(notAfter);
 
-			authority.issueCertificate(caPassword, certReq);
+			authority.issueCertificate(certReq);
 
 		} catch (MsgbusException e) {
 			throw e;

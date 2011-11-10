@@ -16,6 +16,7 @@
 package org.krakenapps.ca;
 
 import java.math.BigInteger;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 
@@ -51,6 +52,22 @@ public interface CertificateAuthority {
 	 * @return the root key password
 	 */
 	String getRootKeyPassword();
+
+	/**
+	 * Certificate's CRL Distribution URL will be CrlDistPoint followed by
+	 * /ca/crl/[authority]?serial=[serial]. For example,
+	 * http://localhost/ca/crl/test?serial=2
+	 * 
+	 * @return the CRL distribution base URL
+	 */
+	URL getCrlDistPoint();
+
+	/**
+	 * Set CRL distribution base URL. Certificate's CRL Distribution URL will be
+	 * CrlDistPoint followed by /ca/crl/[authority]?serial=[serial]. For
+	 * example, http://localhost/ca/crl/test?serial=2
+	 */
+	void setCrlDistPoint(URL url);
 
 	/**
 	 * Return all issued certificates including revoked ones

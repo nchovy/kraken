@@ -18,6 +18,8 @@ package org.krakenapps.ca.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -67,6 +69,35 @@ public class CertificateAuthorityScript implements Script {
 
 	@ScriptUsage(description = "export certificate", arguments = {
 			@ScriptArgument(name = "authority", type = "string", description = "authority name"),
+			@ScriptArgument(name = "crl base url", type = "string", description = "new crl distribution point base url", optional = true) })
+	public void crlDistPoint(String[] args) {
+		String authorityName = args[0];
+		CertificateAuthority authority = ca.getAuthority(authorityName);
+		if (authority == null) {
+			context.println("authority not found");
+			return;
+		}
+
+		try {
+			if (args.length > 1) {
+				authority.setCrlDistPoint(new URL(args[1]));
+				context.print("set ");
+			}
+		} catch (MalformedURLException e) {
+			context.println("invalid CRL base URL: " + args[1]);
+			return;
+		}
+
+		if (authority.getCrlDistPoint() == null) {
+			context.println("not set");
+			return;
+		}
+
+		context.println(authority.getCrlDistPoint());
+	}
+
+	@ScriptUsage(description = "export certificate", arguments = {
+			@ScriptArgument(name = "authority", type = "string", description = "authority name"),
 			@ScriptArgument(name = "serial", type = "string", description = "serial number") })
 	public void export(String[] args) throws InterruptedException {
 		String authorityName = args[0];
@@ -84,7 +115,11 @@ public class CertificateAuthorityScript implements Script {
 		}
 
 		File dir = (File) context.getSession().getProperty("dir");
-		File pfx = new File(dir, parseCN(cm.getSubjectDn()) + "." + cm.getType());
+		String ext = cm.getType();
+		if (ext.equals("pkcs12"))
+			ext = "pfx";
+		
+		File pfx = new File(dir, parseCN(cm.getSubjectDn()) + "." + ext);
 		RandomAccessFile f = null;
 		try {
 			f = new RandomAccessFile(pfx, "rw");

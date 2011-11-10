@@ -4,10 +4,21 @@ import java.text.ParseException;
 import java.util.Date;
 
 public class RevokedCertificate {
+	/**
+	 * certificate serial (big integer as string)
+	 */
 	private String serial;
+
+	/**
+	 * revocation date
+	 */
 	private Date date;
+
+	/**
+	 * revocation reason
+	 */
 	private RevocationReason reason;
-	
+
 	public RevokedCertificate() {
 	}
 
