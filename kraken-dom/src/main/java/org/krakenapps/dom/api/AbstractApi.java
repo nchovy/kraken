@@ -53,13 +53,10 @@ public class AbstractApi<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityRemoving(T t) {
+		// do NOT add try-catch. it's intentional exception throwing
 		for (EntityEventListener<T> listener : listeners.keySet()) {
 			if (listener != null) {
-				try {
-					listener.entityRemoving(t);
-				} catch (Exception e) {
-					logger.warn("abstract entity api: entity event callback should not throw any exception", e);
-				}
+				listener.entityRemoving(t);
 			}
 		}
 	}
