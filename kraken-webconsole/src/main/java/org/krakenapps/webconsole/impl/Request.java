@@ -67,8 +67,8 @@ public class Request implements HttpServletRequest {
 
 		if (req.getMethod().equals(HttpMethod.POST)) {
 			if (!(contentType != null && contentType.equals("application/octet-stream"))) {
-				String body = new String(
-						content.array(), content.readerIndex(), content.readableBytes(), Charset.forName("utf-8"));
+				String body = new String(content.array(), content.readerIndex(), content.readableBytes(),
+						Charset.forName("utf-8"));
 				setParams(body);
 			}
 		}
@@ -104,10 +104,19 @@ public class Request implements HttpServletRequest {
 
 		for (String param : params.split("&")) {
 			logger.trace("param: {}", param);
-			String name = param.substring(0, param.indexOf("="));
-			String value = param.substring(param.indexOf("=") + 1);
-			logger.trace("name: {}, value: {}");
-			parameters.put(name, value);
+			int pos = param.indexOf("=");
+			if (pos > 0) {
+				String name = param.substring(0, pos);
+				String value = param.substring(pos + 1);
+				if (value.isEmpty())
+					value = null;
+
+				parameters.put(name, value);
+				logger.trace("kraken webconsole: param name [{}], value [{}]", name, value);
+			} else {
+				parameters.put(param, null);
+				logger.trace("kraken webconsole: param name: {}", param);
+			}
 		}
 	}
 
@@ -297,7 +306,6 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getRemoteUser() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
