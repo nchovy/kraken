@@ -183,8 +183,7 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 	}
 
 	@Transactional
-	private Application createApplicationInternal(String vendorGuid, String name, String platform,
-			Map<String, String> props) {
+	private Application createApplicationInternal(String vendorGuid, String name, String platform, Map<String, String> props) {
 		EntityManager em = entityManagerService.getEntityManager();
 
 		Vendor vendor = null;
@@ -264,6 +263,7 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
+		fireEntityRemoving(app);
 		em.remove(app);
 
 		return app;
@@ -278,8 +278,8 @@ public class ApplicationApiImpl extends AbstractApi<Application> implements Appl
 		if (app == null)
 			throw new ApplicationNotFoundException();
 
-		return (Collection<ApplicationVersion>) em
-				.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?").setParameter(1, app.getGuid());
+		return (Collection<ApplicationVersion>) em.createQuery("FROM ApplicationVersion v WHERE v.application.guid = ?")
+				.setParameter(1, app.getGuid());
 	}
 
 	@Override
