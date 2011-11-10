@@ -20,14 +20,43 @@ import java.util.Collection;
 import java.util.List;
 
 public interface CertificateAuthority {
+	/**
+	 * @return the authority name
+	 */
 	String getName();
 
+	/**
+	 * @return the last serial.
+	 */
 	BigInteger getLastSerial();
 
+	/**
+	 * Increase internal serial counter and return new one
+	 * 
+	 * @return the next serial for issuing new certificate
+	 */
 	BigInteger getNextSerial();
 
+	/**
+	 * Get root X.509 certificate and metadata
+	 * 
+	 * @return the certificate metadata
+	 */
 	CertificateMetadata getRootCertificate();
 
+	/**
+	 * Get key password for private key of root certificate. Key password is
+	 * required for CA signing (e.g. CRL sign)
+	 * 
+	 * @return the root key password
+	 */
+	String getRootKeyPassword();
+
+	/**
+	 * Return all issued certificates including revoked ones
+	 * 
+	 * @return the all issued certificates
+	 */
 	Collection<CertificateMetadata> getCertificates();
 
 	/**
@@ -41,11 +70,39 @@ public interface CertificateAuthority {
 	 */
 	CertificateMetadata findCertificate(String field, String value);
 
-	CertificateMetadata issueCertificate(String caPassword, CertificateRequest req) throws Exception;
+	/**
+	 * Issue a new certificate
+	 * 
+	 * @param req
+	 *            the certificate sign request
+	 * @return the issued certificate, private key and metadata
+	 * @throws Exception
+	 *             when any cryptographic error is raised
+	 */
+	CertificateMetadata issueCertificate(CertificateRequest req) throws Exception;
 
+	/**
+	 * @return all revoked certificate list
+	 */
 	List<RevokedCertificate> getRevokedCertifcates();
 
+	/**
+	 * Revoke a certificate
+	 * 
+	 * @param cm
+	 *            the certificate metadata. use findCertificate() to get
+	 *            certificate metadata.
+	 */
 	void revoke(CertificateMetadata cm);
 
+	/**
+	 * Revoke a certificate with reason
+	 * 
+	 * @param cm
+	 *            the certificate metadata. use findCertificate() to get
+	 *            certificate metadata.
+	 * @param reason
+	 *            the revocation reason
+	 */
 	void revoke(CertificateMetadata cm, RevocationReason reason);
 }

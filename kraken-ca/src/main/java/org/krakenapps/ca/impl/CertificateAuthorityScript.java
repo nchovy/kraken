@@ -130,13 +130,10 @@ public class CertificateAuthorityScript implements Script {
 			context.print("Authority Name? ");
 			String authorityName = context.readLine();
 
-			context.print("CA Private Key Password? ");
-			String password = context.readPassword();
-
 			CertificateAuthority authority = ca.getAuthority(authorityName);
 			CertificateMetadata cm = authority.getRootCertificate();
-			X509Certificate crt = cm.getCertificate(password);
-			RSAPrivateKey key = cm.getPrivateKey(password);
+			X509Certificate crt = cm.getCertificate();
+			RSAPrivateKey key = cm.getPrivateKey(authority.getRootKeyPassword());
 
 			String extension = usePem ? ".pem" : ".crt";
 			File dir = (File) context.getSession().getProperty("dir");
@@ -179,12 +176,8 @@ public class CertificateAuthorityScript implements Script {
 				return;
 			}
 
-			// ca private key password for signing
-			context.print("CA Private Key Password? ");
-			String password = context.readPassword();
-
 			CertificateRequest req = inputRequest();
-			CertificateMetadata cm = authority.issueCertificate(password, req);
+			CertificateMetadata cm = authority.issueCertificate(req);
 			X509Certificate cert = cm.getCertificate(req.getKeyPassword());
 
 			context.println(cert.toString());

@@ -84,5 +84,10 @@
 			<artifactId>kraken-confdb</artifactId>
 			<version>0.2.0</version>
 		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-webconsole</artifactId>
+			<version>1.3.0</version>
+		</dependency>
 	</dependencies>
 </project>

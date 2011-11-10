@@ -20,6 +20,7 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ca.CertificateAuthority;
@@ -69,6 +70,18 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 			throw new IllegalStateException("jks not found for " + name);
 
 		return PrimitiveConverter.parse(CertificateMetadata.class, jks.getDocument());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public String getRootKeyPassword() {
+		ConfigCollection metadata = db.ensureCollection("metadata");
+		Config c = metadata.findOne(Predicates.field("type", "rootpw"));
+		if (c == null)
+			throw new IllegalStateException("root key password not found");
+
+		Map<String, Object> m = (Map<String, Object>) c.getDocument();
+		return (String) m.get("password");
 	}
 
 	@Override
@@ -127,7 +140,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public CertificateMetadata issueCertificate(String caPassword, CertificateRequest req) throws Exception {
+	public CertificateMetadata issueCertificate(CertificateRequest req) throws Exception {
 		ConfigCollection metadata = db.ensureCollection("metadata");
 		Config jks = metadata.findOne(Predicates.field("type", "jks"));
 		if (jks == null)
@@ -136,13 +149,13 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		CertificateMetadata cm = PrimitiveConverter.parse(CertificateMetadata.class, jks.getDocument());
 		req.setSerial(getNextSerial());
 		req.setIssuerDn(cm.getSubjectDn());
-		req.setIssuerKey(cm.getPrivateKey(caPassword));
+		req.setIssuerKey(cm.getPrivateKey(getRootKeyPassword()));
 
 		// check availability of signature algorithm
 		validateSignatureAlgorithm(req.getSignatureAlgorithm());
 
 		// generate cert
-		X509Certificate caCert = cm.getCertificate(caPassword);
+		X509Certificate caCert = cm.getCertificate();
 		X509Certificate cert = CertificateBuilder.createCertificate(req);
 		byte[] pkcs12 = CertificateExporter.exportPkcs12(cert, req.getKeyPair(), req.getKeyPassword(), caCert);
 

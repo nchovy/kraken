@@ -12,22 +12,17 @@ import org.krakenapps.ca.RevokedCertificate;
 
 @SuppressWarnings("deprecation")
 public class CrlBuilder {
-	private PrivateKey caPrivateKey;
-	private X509Certificate caCert;
-
-	public CrlBuilder(PrivateKey caPrivateKey, X509Certificate caCert) {
-		this.caPrivateKey = caPrivateKey;
-		this.caCert = caCert;
+	private CrlBuilder() {
 	}
 
-	public byte[] getCrl(List<RevokedCertificate> certs) throws Exception {
+	public static byte[] getCrl(X509Certificate caCert, PrivateKey caPrivateKey, List<RevokedCertificate> revokes) throws Exception {
 		X509V2CRLGenerator generator = new X509V2CRLGenerator();
 		generator.setIssuerDN(caCert.getIssuerX500Principal());
 
 		generator.setThisUpdate(new Date());
 		generator.setSignatureAlgorithm(caCert.getSigAlgName());
 
-		for (RevokedCertificate r : certs) {
+		for (RevokedCertificate r : revokes) {
 			BigInteger serial = new BigInteger(r.getSerial());
 			generator.addCRLEntry(serial, r.getRevocationDate(), r.getReason().ordinal());
 		}

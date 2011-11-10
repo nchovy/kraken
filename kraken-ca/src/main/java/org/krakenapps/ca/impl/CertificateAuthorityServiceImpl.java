@@ -27,6 +27,7 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.ConfigTransaction;
 
 @Component(name = "certificate-authority")
 @Provides
@@ -78,8 +79,7 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 
 	@Override
 	public CertificateAuthority createAuthority(String name, CertificateRequest req) throws Exception {
-		// check availability of signature algorithm
-		CertificateAuthorityImpl.validateSignatureAlgorithm(req.getSignatureAlgorithm());
+		validate(req);
 
 		// generate ca cert
 		Map<String, Object> doc = new HashMap<String, Object>();
@@ -108,13 +108,38 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		// set authority metadata
 		ConfigCollection metadata = db.ensureCollection("metadata");
 		Object cert = PrimitiveConverter.serialize(cm);
-		metadata.add(cert, "kraken-ca", "added root jks certificate");
+		Map<String, Object> pw = newRootKeyPassword(req);
+
+		// commit metadata transaction
+		ConfigTransaction xact = db.beginTransaction(5000);
+		try {
+			metadata.add(xact, cert);
+			metadata.add(xact, pw);
+			xact.commit("kraken-ca", "added root certificate and password");
+		} catch (Exception e) {
+			xact.rollback();
+		}
 
 		// set master metadata
 		metadata = ca.ensureCollection("metadata");
 		metadata.add(doc, "kraken-ca", "added " + name + " authority");
 
 		return authority;
+	}
+
+	private Map<String, Object> newRootKeyPassword(CertificateRequest req) {
+		Map<String, Object> pw = new HashMap<String, Object>();
+		pw.put("type", "rootpw");
+		pw.put("password", req.getKeyPassword());
+		return pw;
+	}
+
+	private void validate(CertificateRequest req) {
+		// check availability of signature algorithm
+		CertificateAuthorityImpl.validateSignatureAlgorithm(req.getSignatureAlgorithm());
+
+		if (req.getKeyPassword() == null)
+			throw new IllegalArgumentException("ca key password should be not null");
 	}
 
 	@Override
