@@ -15,6 +15,8 @@
  */
 package org.krakenapps.confdb;
 
+import org.krakenapps.api.PrimitiveParseCallback;
+
 public interface Config {
 	ConfigDatabase getDatabase();
 
@@ -28,7 +30,9 @@ public interface Config {
 
 	Object getDocument();
 
-	<T> T getDocument(Class<T> clazz);
+	<T> T getDocument(Class<T> cls);
+
+	<T> T getDocument(Class<T> cls, PrimitiveParseCallback callback);
 
 	void setDocument(Object doc);
 }

@@ -16,6 +16,7 @@
 package org.krakenapps.confdb.file;
 
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
@@ -68,8 +69,13 @@ class FileConfig implements Config {
 	}
 
 	@Override
-	public <T> T getDocument(Class<T> clazz) {
-		return PrimitiveConverter.parse(clazz, doc);
+	public <T> T getDocument(Class<T> cls) {
+		return PrimitiveConverter.parse(cls, doc);
+	}
+
+	@Override
+	public <T> T getDocument(Class<T> cls, PrimitiveParseCallback callback) {
+		return PrimitiveConverter.parse(cls, doc, callback);
 	}
 
 	@Override
