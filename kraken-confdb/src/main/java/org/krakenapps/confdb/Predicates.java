@@ -15,6 +15,7 @@
  */
 package org.krakenapps.confdb;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +32,10 @@ public class Predicates {
 
 	public static Predicate field(Map<String, Object> terms) {
 		return new KeyMatch(terms);
+	}
+
+	public static Predicate in(String field, Collection<? extends Object> values) {
+		return new KeyContains(field, values);
 	}
 
 	public static Predicate and(Predicate... pred) {
@@ -78,10 +83,21 @@ public class Predicates {
 				String key = PrimitiveConverter.toUnderscoreName(k);
 				Object value = terms.get(k);
 
-				if (!m.containsKey(key))
+				Map<String, Object> m2 = m;
+				String[] splittedKey = key.split("/");
+				for (int i = 0; i < splittedKey.length - 1; i++) {
+					if (!m2.containsKey(splittedKey[i]))
+						return false;
+					if (!(m2.get(splittedKey[i]) instanceof Map))
+						return false;
+					m2 = (Map<String, Object>) m2.get(splittedKey[i]);
+				}
+				key = splittedKey[splittedKey.length - 1];
+
+				if (!m2.containsKey(key))
 					return false;
 
-				Object v = m.get(key);
+				Object v = m2.get(key);
 				if (v == null && value != null)
 					return false;
 
@@ -93,6 +109,32 @@ public class Predicates {
 			}
 
 			return true;
+		}
+	}
+
+	private static class KeyContains implements Predicate {
+		private String key;
+		private Collection<? extends Object> values;
+
+		public KeyContains(String key, Collection<? extends Object> values) {
+			this.key = key;
+			this.values = values;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public boolean eval(Config c) {
+			Object doc = c.getDocument();
+			if (!(doc instanceof Map))
+				return false;
+
+			Map<String, Object> m = (Map<String, Object>) doc;
+
+			if (!m.containsKey(key))
+				return false;
+
+			Object v = m.get(key);
+			return values.contains(v);
 		}
 	}
 
