@@ -157,7 +157,7 @@ public class RpcSessionImpl implements RpcSession {
 	}
 
 	@Override
-	public void post(String method, Object[] params) {
+	public void post(String method, Object... params) {
 		verify();
 
 		// send rpc call message

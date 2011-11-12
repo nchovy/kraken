@@ -22,7 +22,7 @@ public interface RpcSession {
 
 	Object call(String method, Object[] params, long timeout) throws RpcException, InterruptedException;
 
-	void post(String method, Object[] params);
+	void post(String method, Object... params);
 
 	void close();
 
