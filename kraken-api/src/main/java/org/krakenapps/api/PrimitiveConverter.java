@@ -14,9 +14,10 @@ import java.util.Set;
 
 public class PrimitiveConverter {
 	@SuppressWarnings("unchecked")
-	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(byte.class, Byte.class, short.class,
-			Short.class, int.class, Integer.class, long.class, Long.class, float.class, Float.class, double.class, Double.class,
-			boolean.class, Boolean.class, char.class, Character.class, String.class, Date.class));
+	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(byte.class, Byte.class,
+			short.class, Short.class, int.class, Integer.class, long.class, Long.class, float.class, Float.class,
+			double.class, Double.class, boolean.class, Boolean.class, char.class, Character.class, String.class,
+			Date.class));
 
 	public static Object serialize(Object obj) {
 		return serialize(obj, obj, null, null);
@@ -75,21 +76,22 @@ public class PrimitiveConverter {
 				Object value = f.get(obj);
 
 				if (option != null && !option.nullable() && value == null)
-					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f.getType()
-							.getSimpleName(), cls.getName(), f.getName()));
+					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f
+							.getType().getSimpleName(), cls.getName(), f.getName()));
 
 				if (value instanceof Enum) {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
+								f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
 						m.put(fieldName, null);
 					else {
-						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f.getAnnotation(
-								ReferenceKey.class).value()) : null;
+						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f
+								.getAnnotation(ReferenceKey.class).value()) : null;
 						Object serialized = serialize(root, value, callback, referenceKey);
 						m.put(fieldName, serialized);
 					}
@@ -98,7 +100,7 @@ public class PrimitiveConverter {
 				throw new RuntimeException("kraken api: serialize failed", e);
 			}
 		}
-		if(callback != null && refkey != null)
+		if (callback != null && refkey != null)
 			callback.onSerialize(root, cls, obj, m);
 
 		return m;
@@ -113,9 +115,14 @@ public class PrimitiveConverter {
 		try {
 			Map<String, Object> m = (Map<String, Object>) obj;
 
-			Constructor c = cls.getConstructor();
-			c.setAccessible(true);
-			T n = (T) c.newInstance();
+			T n = null;
+			try {
+				n = cls.newInstance();
+			} catch (IllegalAccessException e) {
+				Constructor c = cls.getConstructor();
+				c.setAccessible(true);
+				n = (T) c.newInstance();
+			}
 
 			for (Field f : cls.getDeclaredFields()) {
 				FieldOption option = f.getAnnotation(FieldOption.class);
@@ -172,8 +179,10 @@ public class PrimitiveConverter {
 			}
 
 			return n;
+		} catch (InstantiationException e) {
+			throw new RuntimeException("Primitive parse failed. Please check if nullary constructor is accessible", e);
 		} catch (Exception e) {
-			throw new RuntimeException("kraken api: parse failed", e);
+			throw new RuntimeException("Primitive parse failed", e);
 		}
 	}
 
@@ -182,7 +191,8 @@ public class PrimitiveConverter {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll, PrimitiveParseCallback callback) {
+	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll,
+			PrimitiveParseCallback callback) {
 		Collection<T> result = new ArrayList<T>();
 		for (Object obj : coll) {
 			if (Map.class.isAssignableFrom(obj.getClass()))
