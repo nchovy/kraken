@@ -79,8 +79,10 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 	}
 
 	public void stop() {
-		executor.shutdown();
-		executor = null;
+		if (executor != null) {
+			executor.shutdown();
+			executor = null;
+		}
 
 		for (RpcConnection conn : connMap.values())
 			conn.close();
@@ -115,12 +117,12 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 
 		// register handler to connection
 		newConnection.addListener(this);
-		
+
 		// add to connection
 		connMap.put(channel.getId(), newConnection);
 
-		logger.info("kraken-rpc: [{}] {} connected, remote={}", new Object[] { newConnection.getId(),
-				newConnection.isClient() ? "client" : "server", addr });
+		logger.info("kraken-rpc: [{}] {} connected, remote={}",
+				new Object[] { newConnection.getId(), newConnection.isClient() ? "client" : "server", addr });
 
 		// ssl handshake
 		SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
@@ -152,7 +154,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			props.setPeerCert(peerCert);
 
 			String peerCommonName = peerCert.getSubjectDN().getName();
-			logger.info("kraken-rpc: new peer certificate subject={}, remote={}", peerCommonName, channel.getRemoteAddress());
+			logger.info("kraken-rpc: new peer certificate subject={}, remote={}", peerCommonName,
+					channel.getRemoteAddress());
 
 			if (executor != null)
 				executor.submit(this);
@@ -189,7 +192,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		connection.close();
 	}
 
-	private RpcConnection initializeConnection(Channel channel, RpcConnectionProperties props) throws InterruptedException {
+	private RpcConnection initializeConnection(Channel channel, RpcConnectionProperties props)
+			throws InterruptedException {
 		RpcConnectionImpl newConnection = null;
 
 		// wait connect callback thread ends
@@ -294,13 +298,14 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			String methodName = msg.getString("method");
 
 			if (logger.isTraceEnabled())
-				logger.trace("kraken-rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
+				logger.trace(
+						"kraken-rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
 						new Object[] { conn.getId(), sessionId, id, type, methodName });
 
 			RpcSession session = conn.findSession(sessionId);
 			if (session == null) {
-				logger.warn("kraken-rpc: session {} not found, connection={}, peer={}", new Object[] { sessionId, conn.getId(),
-						conn.getRemoteAddress() });
+				logger.warn("kraken-rpc: session {} not found, connection={}, peer={}",
+						new Object[] { sessionId, conn.getId(), conn.getRemoteAddress() });
 				return;
 			}
 
@@ -322,8 +327,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 					RpcMessage resp = RpcMessage.newResponse(newId, session.getId(), id, methodName, ret);
 					channel.write(resp);
 
-					logger.trace("kraken-rpc: return for [id={}, ret={}, session={}, method={}]", new Object[] { newId, id,
-							session.getId(), methodName });
+					logger.trace("kraken-rpc: return for [id={}, ret={}, session={}, method={}]", new Object[] { newId,
+							id, session.getId(), methodName });
 				} catch (Throwable t) {
 					if (t.getCause() != null)
 						t = t.getCause();
@@ -413,8 +418,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		Integer sessionId = (Integer) msg.getHeader("session");
 		String methodName = msg.getString("method");
 
-		logger.trace("kraken-rpc: received rpc-call, connection={}, session={}, method={}", new Object[] { connectionId,
-				sessionId, methodName });
+		logger.trace("kraken-rpc: received rpc-call, connection={}, session={}, method={}", new Object[] {
+				connectionId, sessionId, methodName });
 
 		Method method = binding.getMethod(methodName);
 		if (method == null)
@@ -431,7 +436,7 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 				Object[] args = (Object[]) msg.get("params");
 				if (logger.isTraceEnabled())
 					traceMethodCall(connectionId, sessionId, methodName, args);
-				
+
 				return method.invoke(binding.getService(), args);
 			}
 		} finally {
@@ -448,8 +453,8 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			sb.append(args[i]);
 		}
 
-		logger.trace("kraken rpc: method call, conn [{}], session [{}], method [{}], params [{}]", new Object[] { conn, session,
-				method, sb.toString() });
+		logger.trace("kraken rpc: method call, conn [{}], session [{}], method [{}], params [{}]", new Object[] { conn,
+				session, method, sb.toString() });
 	}
 
 	/*

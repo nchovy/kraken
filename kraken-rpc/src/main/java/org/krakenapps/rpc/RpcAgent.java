@@ -5,6 +5,12 @@ import java.util.Collection;
 public interface RpcAgent {
 	String getGuid();
 
+	Collection<RpcBindingProperties> getBindings();
+
+	void open(RpcBindingProperties props);
+
+	void close(RpcBindingProperties props);
+
 	RpcConnection connect(RpcConnectionProperties props);
 
 	RpcConnection connectSsl(RpcConnectionProperties props);

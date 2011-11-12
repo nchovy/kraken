@@ -15,6 +15,7 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.rpc.RpcBindingProperties;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcAgent;
@@ -42,6 +43,93 @@ public class RpcScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void bindings(String[] args) {
+		context.println("Port Bindings");
+		context.println("---------------");
+		for (RpcBindingProperties props : agent.getBindings())
+			context.println(props);
+	}
+
+	@ScriptUsage(description = "open rpc port", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "port"),
+			@ScriptArgument(name = "ip", type = "string", description = "bind address", optional = true) })
+	public void open(String[] args) {
+		RpcBindingProperties props = null;
+		try {
+			props = inputBindingProps(args);
+			agent.open(props);
+			context.println("opened ");
+		} catch (NumberFormatException e) {
+			context.println("invalid port number format");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+			logger.error("kraken rpc: cannot bind " + props, e);
+		}
+	}
+
+	@ScriptUsage(description = "open rpc port", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "port"),
+			@ScriptArgument(name = "key alias", type = "string", description = "key alias"),
+			@ScriptArgument(name = "trust alias", type = "string", description = "trust alias"),
+			@ScriptArgument(name = "ip", type = "string", description = "bind address", optional = true) })
+	public void openSsl(String[] args) {
+		RpcBindingProperties props = null;
+		try {
+			String keyAlias = args[1];
+			String trustAlias = args[2];
+			String ip = args[3];
+
+			args[1] = ip;
+			args[2] = keyAlias;
+			args[3] = trustAlias;
+			props = inputBindingProps(args);
+
+			agent.open(props);
+			context.println("opened ");
+		} catch (NumberFormatException e) {
+			context.println("invalid port number format");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+			logger.error("kraken rpc: cannot bind " + props, e);
+		}
+	}
+
+	public void close(String[] args) {
+		try {
+			RpcBindingProperties props = inputBindingProps(args);
+			if (!agent.getBindings().contains(props)) {
+				context.println("not opened");
+				return;
+			}
+
+			agent.close(props);
+		} catch (NumberFormatException e) {
+			context.println("invalid port number format");
+		} catch (Exception e) {
+			context.println(e.getMessage());
+		}
+	}
+
+	private RpcBindingProperties inputBindingProps(String[] args) {
+		int port = Integer.valueOf(args[0]);
+		if (port < 1 || port > 65535)
+			throw new IllegalArgumentException("port number should be 1~65535");
+
+		String addr = "0.0.0.0";
+		if (args.length > 1)
+			addr = args[1];
+
+		String keyAlias = null;
+		String trustAlias = null;
+
+		if (args.length >= 4) {
+			keyAlias = args[2];
+			trustAlias = args[3];
+		}
+		
+		return new RpcBindingProperties(addr, port, keyAlias, trustAlias);
 	}
 
 	@ScriptUsage(description = "print guid of local agent")
@@ -265,7 +353,7 @@ public class RpcScript implements Script {
 
 	// listening providers
 	@ScriptUsage(description = "list all bound services", arguments = { @ScriptArgument(name = "cid", type = "int", description = "connection id") })
-	public void bindings(String[] args) {
+	public void services(String[] args) {
 		int id = Integer.parseInt(args[0]);
 		RpcConnection conn = agent.findConnection(id);
 		if (conn == null) {
