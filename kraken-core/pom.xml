@@ -8,7 +8,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-core</artifactId>
-	<version>1.9.1</version>
+	<version>1.9.2</version>
 	<name>Kraken Core</name>
 	<packaging>jar</packaging>
 	<repositories>
@@ -36,12 +36,12 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.8.5</version>
+			<version>1.9.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-confdb</artifactId>
-			<version>0.2.0</version>
+			<version>0.3.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
