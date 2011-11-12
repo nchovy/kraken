@@ -49,9 +49,13 @@ public class Primitive {
 
 			sb.append("}");
 		} else {
-			sb.append("\"");
-			sb.append(o.toString());
-			sb.append("\"");
+			if (o == null)
+				sb.append("null");
+			else {
+				sb.append("\"");
+				sb.append(o.toString());
+				sb.append("\"");
+			}
 		}
 	}
 }
