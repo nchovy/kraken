@@ -88,10 +88,10 @@ public class LogQueryPlugin {
 		LogQuery query = service.getQuery(id);
 
 		if (query == null)
-			throw new MsgbusException("0", "query not found");
+			throw new MsgbusException("logdb", "query not found");
 
 		if (!query.isEnd())
-			throw new MsgbusException("0", "already running");
+			throw new MsgbusException("logdb", "already running");
 
 		LogQueryCallback qc = new MsgbusLogQueryCallback(orgId, query, offset, limit);
 		query.registerQueryCallback(qc);

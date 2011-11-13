@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -29,6 +30,7 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logdb.LogQuery;
+import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LookupHandler;
 import org.krakenapps.logdb.SyntaxProvider;
@@ -67,6 +69,12 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 	private Map<String, LookupHandler> lookupHandlers = new HashMap<String, LookupHandler>();
 
+	private CopyOnWriteArraySet<LogQueryEventListener> callbacks;
+
+	public LogQueryServiceImpl() {
+		this.callbacks = new CopyOnWriteArraySet<LogQueryEventListener>();
+	}
+
 	@Validate
 	public void start() {
 		@SuppressWarnings("unchecked")
@@ -91,12 +99,24 @@ public class LogQueryServiceImpl implements LogQueryService {
 		parsers.add(lookupParser);
 
 		syntaxProvider.addParsers(parsers);
+
+		// receive log table event and register it to data source registry
 	}
 
 	@Override
 	public LogQuery createQuery(String query) {
 		LogQuery lq = new LogQueryImpl(syntaxProvider, this, logStorage, tableRegistry, query);
 		queries.put(lq.getId(), lq);
+
+		// invoke callbacks
+		for (LogQueryEventListener callback : callbacks) {
+			try {
+				callback.onCreate(lq);
+			} catch (Exception e) {
+				logger.warn("kraken logdb: query event listener should not throw any exception", e);
+			}
+		}
+
 		return lq;
 	}
 
@@ -114,6 +134,15 @@ public class LogQueryServiceImpl implements LogQueryService {
 			fbl.close();
 
 		queries.remove(id);
+
+		// invoke callbacks
+		for (LogQueryEventListener callback : callbacks) {
+			try {
+				callback.onRemove(lq);
+			} catch (Exception e) {
+				logger.warn("kraken logdb: query event listener should not throwy any exception", e);
+			}
+		}
 	}
 
 	@Override
@@ -139,5 +168,15 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Override
 	public void removeLookupHandler(String name) {
 		lookupHandlers.remove(name);
+	}
+
+	@Override
+	public void addListener(LogQueryEventListener listener) {
+		callbacks.add(listener);
+	}
+
+	@Override
+	public void removeListener(LogQueryEventListener listener) {
+		callbacks.remove(listener);
 	}
 }

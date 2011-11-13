@@ -1,19 +1,29 @@
 package org.krakenapps.logdb.arbiter;
 
-import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.krakenapps.logdb.query.command.Rpc;
+import org.krakenapps.rpc.RpcConnection;
+import org.krakenapps.rpc.RpcConnectionProperties;
+
 public interface ArbiterService {
+	Rpc getRpcFrom(String guid);
+
+	Rpc getRpcTo(String guid);
+
 	List<ArbiterQueryStatus> getQueries();
 
 	ArbiterQueryStatus createQuery(String query);
-	
+
 	void startQuery(String guid);
 
-	void removeQuery(String query);
+	void removeQuery(String guid);
 
-	void connect(String guid, InetSocketAddress remoteAddress);
+	Collection<RpcConnection> getUpstreamConnections();
+
+	RpcConnection connect(RpcConnectionProperties props);
 
 	void disconnect(String guid);
 

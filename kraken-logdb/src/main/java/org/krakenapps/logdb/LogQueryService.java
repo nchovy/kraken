@@ -31,4 +31,8 @@ public interface LogQueryService {
 	LookupHandler getLookupHandler(String name);
 
 	void removeLookupHandler(String name);
+	
+	void addListener(LogQueryEventListener listener);
+	
+	void removeListener(LogQueryEventListener listener);
 }

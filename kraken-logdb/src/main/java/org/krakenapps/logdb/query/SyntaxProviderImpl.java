@@ -53,13 +53,13 @@ public class SyntaxProviderImpl implements SyntaxProvider {
 	}
 
 	@Override
-	public void addParsers(Collection<QueryParser> parsers) {
+	public void addParsers(Collection<? extends QueryParser> parsers) {
 		queryParsers.addAll(parsers);
 		rebuild();
 	}
 
 	@Override
-	public void removeParsers(Collection<QueryParser> parsers) {
+	public void removeParsers(Collection<? extends QueryParser> parsers) {
 		queryParsers.removeAll(parsers);
 		rebuild();
 	}
@@ -67,7 +67,8 @@ public class SyntaxProviderImpl implements SyntaxProvider {
 	private void rebuild() {
 		Syntax newSyntax = new Syntax();
 		for (QueryParser qp : queryParsers)
-			qp.addSyntax(newSyntax);
+			if (qp != null)
+				qp.addSyntax(newSyntax);
 
 		this.syntax = newSyntax;
 	}

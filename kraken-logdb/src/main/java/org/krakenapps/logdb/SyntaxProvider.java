@@ -26,7 +26,7 @@ public interface SyntaxProvider {
 
 	LogQueryCommand eval(LogQuery logQuery, String query) throws ParseException;
 
-	void addParsers(Collection<QueryParser> parsers);
+	void addParsers(Collection<? extends QueryParser> parsers);
 
-	void removeParsers(Collection<QueryParser> parsers);
+	void removeParsers(Collection<? extends QueryParser> parsers);
 }

@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,26 +29,40 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.logdb.DataSource;
+import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.arbiter.ArbiterQueryStatus;
 import org.krakenapps.logdb.arbiter.ArbiterService;
 import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logdb.query.command.Rpc;
+import org.krakenapps.rpc.RpcConnection;
+import org.krakenapps.rpc.RpcConnectionProperties;
 
 public class LogDBScript implements Script {
 	private LogQueryService qs;
+	private DataSourceRegistry dsr;
 	private ArbiterService arbiter;
 	private ScriptContext context;
 
-	public LogDBScript(LogQueryService qs, ArbiterService arbiter) {
+	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, ArbiterService arbiter) {
 		this.qs = qs;
+		this.dsr = dsr;
 		this.arbiter = arbiter;
 	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void datasources(String[] args) {
+		context.println("Data Sources");
+		context.println("--------------");
+		for (DataSource ds : dsr.getAll())
+			context.println(ds);
 	}
 
 	public void queries(String[] args) {
@@ -137,14 +152,31 @@ public class LogDBScript implements Script {
 
 	}
 
-	@ScriptUsage(description = "connect to arbiter")
+	public void upstreams(String[] args) {
+		context.println("Upstream Connections");
+		context.println("----------------------");
+		for (RpcConnection conn : arbiter.getUpstreamConnections())
+			context.println(conn);
+	}
+
+	@ScriptUsage(description = "connect to arbiter", arguments = {
+			@ScriptArgument(name = "host", type = "string", description = "host address"),
+			@ScriptArgument(name = "port", type = "int", description = "port"),
+			@ScriptArgument(name = "password", type = "string", description = "password") })
 	public void connect(String[] args) {
 		String host = args[0];
 		int port = Integer.valueOf(args[1]);
+
+		RpcConnectionProperties props = new RpcConnectionProperties(host, port);
+		props.setPassword(args[2]);
+		RpcConnection conn = arbiter.connect(props);
+		context.println("connected " + conn);
 	}
 
+	@ScriptUsage(description = "disconnect from arbiter", arguments = { @ScriptArgument(name = "guid", type = "string", description = "rpc peer guid") })
 	public void disconnect(String[] args) {
-
+		arbiter.disconnect(args[0]);
+		context.println("disconnected");
 	}
 
 	/**
@@ -160,6 +192,37 @@ public class LogDBScript implements Script {
 
 	public void distQuery(String[] args) {
 		ArbiterQueryStatus q = arbiter.createQuery(args[0]);
+		if (q == null) {
+			context.println("dist query failed");
+			return;
+		}
+
 		context.println(q);
+	}
+
+	@ScriptUsage(description = "push to rpcfrom", arguments = {
+			@ScriptArgument(name = "guid", type = "string", description = "dist query guid"),
+			@ScriptArgument(name = "sample string", type = "string", description = "sample string") })
+	public void rpcfrom(String[] args) {
+		Rpc rpc = arbiter.getRpcFrom(args[0]);
+		if (rpc == null) {
+			context.println("rpc not found");
+			return;
+		}
+
+		Map<String, Object> data = new HashMap<String, Object>();
+		data.put("data", args[1]);
+		rpc.push(data);
+	}
+
+	@ScriptUsage(description = "eof to rpcfrom", arguments = { @ScriptArgument(name = "guid", type = "string", description = "dist query guid") })
+	public void rpceof(String[] args) {
+		Rpc rpc = arbiter.getRpcFrom(args[0]);
+		if (rpc == null) {
+			context.println("rpc not found");
+			return;
+		}
+
+		rpc.eof();
 	}
 }
