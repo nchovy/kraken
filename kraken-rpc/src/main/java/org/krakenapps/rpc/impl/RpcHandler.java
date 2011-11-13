@@ -265,10 +265,15 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 	private class MessageHandler implements Runnable {
 		private MessageEvent event;
 		private Channel channel;
+		private RpcConnection conn;
 
 		public MessageHandler(Channel channel, MessageEvent event) {
 			this.channel = event.getChannel();
 			this.event = event;
+			this.conn = findConnection(channel.getId());
+
+			if (conn == null)
+				throw new IllegalStateException("channel " + channel.getId() + " not found. already disconnected.");
 		}
 
 		@Override
@@ -284,11 +289,6 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		}
 
 		private void handle() {
-			Channel channel = event.getChannel();
-			RpcConnection conn = findConnection(channel.getId());
-			if (conn == null)
-				throw new IllegalStateException("channel " + channel.getId() + " not found. already disconnected.");
-
 			conn.waitControlReady();
 
 			RpcMessage msg = new RpcMessage((Object[]) event.getMessage());
