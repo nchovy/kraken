@@ -23,7 +23,7 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryService;
-import org.krakenapps.logdb.arbiter.ArbiterService;
+import org.krakenapps.logdb.mapreduce.MapReduceService;
 
 @Component(name = "logdb-script-factory")
 @Provides
@@ -39,7 +39,7 @@ public class LogDBScriptFactory implements ScriptFactory {
 	private DataSourceRegistry dsr;
 	
 	@Requires
-	private ArbiterService arbiter;
+	private MapReduceService arbiter;
 
 	@Override
 	public Script createScript() {

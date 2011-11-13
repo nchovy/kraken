@@ -22,9 +22,15 @@ import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceEventListener;
 import org.krakenapps.logdb.DataSourceRegistry;
+import org.krakenapps.logdb.LogQuery;
+import org.krakenapps.logdb.LogQueryEventListener;
+import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.LogQueryStatus;
 import org.krakenapps.logdb.SyntaxProvider;
-import org.krakenapps.logdb.arbiter.ArbiterService;
-import org.krakenapps.logdb.arbiter.ArbiterQueryStatus;
+import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
+import org.krakenapps.logdb.mapreduce.MapReduceService;
+import org.krakenapps.logdb.mapreduce.RemoteQuery;
+import org.krakenapps.logdb.mapreduce.RemoteQueryKey;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Rpc;
 import org.krakenapps.logdb.query.parser.QueryParser;
@@ -40,11 +46,12 @@ import org.krakenapps.rpc.SimpleRpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "logdb-arbiter")
+@Component(name = "logdb-mapreduce")
 @Provides
-public class ArbiterRpcService extends SimpleRpcService implements ArbiterService, DataSourceEventListener {
-	private final Logger logger = LoggerFactory.getLogger(ArbiterRpcService.class.getName());
-	private ConcurrentMap<String, ArbiterQueryStatus> queries;
+public class MapReduceRpcService extends SimpleRpcService implements MapReduceService, LogQueryEventListener,
+		DataSourceEventListener {
+	private final Logger logger = LoggerFactory.getLogger(MapReduceRpcService.class.getName());
+	private ConcurrentMap<String, MapReduceQueryStatus> queries;
 
 	@Requires
 	private RpcAgent agent;
@@ -55,6 +62,9 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 	@Requires
 	private DataSourceRegistry dataSourceRegistry;
 
+	@Requires
+	private LogQueryService queryService;
+
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "rpc.name", value = "logdb-arbiter")
 	private String name;
@@ -64,21 +74,24 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 	private RpcFromParser rpcFromParser;
 	private RpcToParser rpcToParser;
 
+	private ConcurrentMap<RemoteQueryKey, RemoteQuery> remoteQueries;
 	private ConcurrentMap<String, RpcConnection> upstreams;
 
-	public ArbiterRpcService() {
+	public MapReduceRpcService() {
 	}
 
 	@Validate
 	public void start() {
-		queries = new ConcurrentHashMap<String, ArbiterQueryStatus>();
+		queries = new ConcurrentHashMap<String, MapReduceQueryStatus>();
 		rpcFromMap = new ConcurrentHashMap<String, Rpc>();
 		rpcToMap = new ConcurrentHashMap<String, Rpc>();
 		upstreams = new ConcurrentHashMap<String, RpcConnection>();
+		remoteQueries = new ConcurrentHashMap<RemoteQueryKey, RemoteQuery>();
 
 		rpcFromParser = new RpcFromParser();
 		syntaxProvider.addParsers(Arrays.asList(rpcFromParser, rpcToParser));
 		dataSourceRegistry.addListener(this);
+		queryService.addListener(this);
 	}
 
 	@Invalidate
@@ -132,30 +145,53 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 		return rpcToMap.get(guid);
 	}
 
-	@RpcMethod(name = "onDataSourceEvent")
-	public void onDataSourceEvent(String name, String action, Map<String, Object> state) {
+	@RpcMethod(name = "onDataSourceChange")
+	public void onDataSourceChange(String name, String action, Map<String, Object> metadata) {
 		RpcSession session = RpcContext.getSession();
-		String guid = (String) session.getProperty("guid");
+		String guid = session.getConnection().getPeerGuid();
 
-		if (action.equals("add") || action.equals("update"))
-			onUpsertDataSource(guid, name, state);
-		else if (action.equals("remove"))
-			onRemoveDataSource(guid, name);
+		if (action.equals("add") || action.equals("update")) {
+			logger.info("kraken logdb: on update data source [guid={}, name={}]", guid, name);
+			dataSourceRegistry.update(new RpcDataSource(guid, name, metadata));
+		} else if (action.equals("remove")) {
+			logger.info("kraken logdb: on remove data source [guid={}, name={}]", guid, name);
+			dataSourceRegistry.remove(new RpcDataSource(guid, name));
+		}
 	}
 
-	@RpcMethod(name = "onQueryEvent")
-	public void onQueryEvent(int queryId, String action, Map<String, Object> state) {
+	@RpcMethod(name = "onQueryStatusChange")
+	public void onQueryStatusChange(int queryId, String action, String queryString) {
 		RpcSession session = RpcContext.getSession();
-		String guid = (String) session.getProperty("guid");
+		String guid = session.getConnection().getPeerGuid();
+		RemoteQueryKey key = new RemoteQueryKey(guid, queryId);
+		LogQueryStatus status = LogQueryStatus.valueOf(action);
 
-		if (action.equals("create"))
-			onCreateQuery(guid, queryId, (String) state.get("query"));
-		else if (action.equals("remove"))
-			onRemoveQuery(guid, queryId);
-		else if (action.equals("start"))
-			onStartQuery(guid, queryId);
-		else if (action.equals("eof"))
-			onEofQuery(guid, queryId);
+		switch (status) {
+		case Created:
+			remoteQueries.put(key, new RemoteQuery(guid, queryId, queryString));
+			break;
+		case Removed:
+			remoteQueries.remove(key);
+			break;
+		case Started: {
+			RemoteQuery q = remoteQueries.get(key);
+			if (q != null)
+				q.setRunning(true);
+		}
+			break;
+		case Stopped: {
+			RemoteQuery q = remoteQueries.get(key);
+			if (q != null)
+				q.setRunning(false);
+		}
+			break;
+		case Eof: {
+			RemoteQuery q = remoteQueries.get(key);
+			if (q != null)
+				q.setEnd(true);
+		}
+			break;
+		}
 	}
 
 	@Override
@@ -166,12 +202,12 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 	}
 
 	@Override
-	public List<ArbiterQueryStatus> getQueries() {
-		return new ArrayList<ArbiterQueryStatus>(queries.values());
+	public List<MapReduceQueryStatus> getQueries() {
+		return new ArrayList<MapReduceQueryStatus>(queries.values());
 	}
 
 	@Override
-	public ArbiterQueryStatus createQuery(String query) {
+	public MapReduceQueryStatus createQuery(String query) {
 		return null;
 	}
 
@@ -185,6 +221,11 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 	public void removeQuery(String guid) {
 		rpcFromMap.remove(guid);
 		rpcToMap.remove(guid);
+	}
+
+	@Override
+	public List<RemoteQuery> getRemoteQueries() {
+		return new ArrayList<RemoteQuery>(remoteQueries.values());
 	}
 
 	@Override
@@ -213,7 +254,7 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 
 				for (DataSource ds : dataSourceRegistry.getAll())
 					if (!ds.getType().equals("rpc"))
-						notifyDataSourceUpdate(ds, conn);
+						notifyDataSourceChange(ds, "update", conn);
 
 				return conn;
 			}
@@ -231,54 +272,6 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 			conn.close();
 	}
 
-	@RpcMethod(name = "onUpsertDataSource")
-	public void onUpsertDataSource(String name, Map<String, Object> metadata) {
-		String guid = RpcContext.getConnection().getPeerGuid();
-		onUpsertDataSource(guid, name, metadata);
-	}
-
-	@Override
-	public void onUpsertDataSource(String guid, String name, Map<String, Object> metadata) {
-		logger.info("kraken logdb: on update data source [guid={}, name={}]", guid, name);
-		dataSourceRegistry.update(new RpcDataSource(guid, name, metadata));
-	}
-
-	@RpcMethod(name = "onRemoveDataSource")
-	public void onRemoveDataSource(String name) {
-		String guid = RpcContext.getConnection().getPeerGuid();
-		onRemoveDataSource(guid, name);
-	}
-
-	@Override
-	public void onRemoveDataSource(String guid, String name) {
-		logger.info("kraken logdb: on remove data source [guid={}, name={}]", guid, name);
-		dataSourceRegistry.remove(new RpcDataSource(guid, name));
-	}
-
-	@Override
-	public void onCreateQuery(String guid, int queryId, String string) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void onRemoveQuery(String guid, int queryId) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void onStartQuery(String guid, int queryId) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void onEofQuery(String guid, int queryId) {
-		// TODO Auto-generated method stub
-
-	}
-
 	//
 	// DataSourceEventListener callbacks
 	//
@@ -286,37 +279,55 @@ public class ArbiterRpcService extends SimpleRpcService implements ArbiterServic
 	@Override
 	public void onUpdate(DataSource ds) {
 		for (RpcConnection conn : upstreams.values()) {
-			notifyDataSourceUpdate(ds, conn);
+			notifyDataSourceChange(ds, "update", conn);
 		}
 	}
 
 	@Override
 	public void onRemove(DataSource ds) {
 		for (RpcConnection conn : upstreams.values()) {
-			RpcSession session = null;
-			try {
-				session = conn.createSession("logdb-arbiter");
-				session.post("onRemoveDataSource", ds.getName());
-			} catch (Exception e) {
-				logger.warn("kraken logdb: cannot remove datasource info", e);
-			} finally {
-				if (session != null)
-					session.close();
-			}
+			notifyDataSourceChange(ds, "remove", conn);
 		}
 	}
 
-	private void notifyDataSourceUpdate(DataSource ds, RpcConnection conn) {
+	private void notifyDataSourceChange(DataSource ds, String action, RpcConnection conn) {
 		RpcSession session = null;
 		try {
 			session = conn.createSession("logdb-arbiter");
-			session.post("onUpsertDataSource", ds.getName(), ds.getMetadata());
-			logger.info("kraken logdb: notified data source [type={}, name={}] update ", ds.getType(), ds.getName());
+			session.post("onDataSourceChange", ds.getName(), action, ds.getMetadata());
+			logger.info("kraken logdb: notified data source [type={}, name={}, action={}] ",
+					new Object[] { ds.getType(), ds.getName(), action });
 		} catch (Exception e) {
 			logger.warn("kraken logdb: cannot update datasource info", e);
 		} finally {
 			if (session != null)
 				session.close();
+		}
+	}
+
+	//
+	// LogQueryEventListener
+	//
+
+	@Override
+	public void onQueryStatusChange(LogQuery query, LogQueryStatus status) {
+		notifyQueryStatus(query.getId(), status, query.getQueryString());
+	}
+
+	private void notifyQueryStatus(int id, LogQueryStatus status, String queryString) {
+		for (RpcConnection conn : upstreams.values()) {
+			RpcSession session = null;
+			try {
+				session = conn.createSession("logdb-arbiter");
+				session.post("onQueryStatusChange", id, status.name(), queryString);
+				logger.info("kraken logdb: notified query status [id={}, status={}] to peer [{}]", new Object[] { id,
+						status, conn.getPeerGuid() });
+			} catch (Exception e) {
+				logger.warn("kraken logdb: cannot update datasource info", e);
+			} finally {
+				if (session != null)
+					session.close();
+			}
 		}
 	}
 

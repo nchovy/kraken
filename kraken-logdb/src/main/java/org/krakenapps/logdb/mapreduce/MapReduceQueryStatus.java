@@ -1,15 +1,15 @@
-package org.krakenapps.logdb.arbiter;
+package org.krakenapps.logdb.mapreduce;
 
 import java.util.List;
 
-public class ArbiterQueryStatus {
+public class MapReduceQueryStatus {
 	private String guid;
 	private String owner;
 	private String query;
-	private List<DistributedQuery> mapperQueries;
-	private DistributedQuery reducerQuery;
+	private List<MapReduceQuery> mapperQueries;
+	private MapReduceQuery reducerQuery;
 
-	public ArbiterQueryStatus(String guid, String owner, String query) {
+	public MapReduceQueryStatus(String guid, String owner, String query) {
 		this.guid = guid;
 		this.owner = owner;
 		this.query = query;
@@ -27,19 +27,19 @@ public class ArbiterQueryStatus {
 		return query;
 	}
 
-	public List<DistributedQuery> getMapperQueries() {
+	public List<MapReduceQuery> getMapperQueries() {
 		return mapperQueries;
 	}
 
-	public void setMapperQueries(List<DistributedQuery> mapperQueries) {
+	public void setMapperQueries(List<MapReduceQuery> mapperQueries) {
 		this.mapperQueries = mapperQueries;
 	}
 
-	public DistributedQuery getReducerQuery() {
+	public MapReduceQuery getReducerQuery() {
 		return reducerQuery;
 	}
 
-	public void setReducerQuery(DistributedQuery reducerQuery) {
+	public void setReducerQuery(MapReduceQuery reducerQuery) {
 		this.reducerQuery = reducerQuery;
 	}
 

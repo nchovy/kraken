@@ -27,7 +27,7 @@
 						<Private-Package>
 							org.krakenapps.logdb.impl,
 							org.krakenapps.logdb.query,
-							org.krakenapps.logdb.arbiter,
+							org.krakenapps.logdb.mapreduce,
 							org.krakenapps.logdb.query.command,
 							org.krakenapps.logdb.query.parser,
 							org.krakenapps.logdb.msgbus

@@ -34,8 +34,9 @@ import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.arbiter.ArbiterQueryStatus;
-import org.krakenapps.logdb.arbiter.ArbiterService;
+import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
+import org.krakenapps.logdb.mapreduce.MapReduceService;
+import org.krakenapps.logdb.mapreduce.RemoteQuery;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.command.Rpc;
 import org.krakenapps.rpc.RpcConnection;
@@ -44,10 +45,10 @@ import org.krakenapps.rpc.RpcConnectionProperties;
 public class LogDBScript implements Script {
 	private LogQueryService qs;
 	private DataSourceRegistry dsr;
-	private ArbiterService arbiter;
+	private MapReduceService arbiter;
 	private ScriptContext context;
 
-	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, ArbiterService arbiter) {
+	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter) {
 		this.qs = qs;
 		this.dsr = dsr;
 		this.arbiter = arbiter;
@@ -151,6 +152,15 @@ public class LogDBScript implements Script {
 
 	}
 
+	public void remoteQueries(String[] args) {
+		context.println("Remote Queries");
+		context.println("----------------------");
+
+		for (RemoteQuery q : arbiter.getRemoteQueries()) {
+			context.println(q);
+		}
+	}
+
 	public void upstreams(String[] args) {
 		context.println("Upstream Connections");
 		context.println("----------------------");
@@ -185,12 +195,12 @@ public class LogDBScript implements Script {
 		context.println("Arbiter Queries");
 		context.println("-----------------");
 
-		for (ArbiterQueryStatus q : arbiter.getQueries())
+		for (MapReduceQueryStatus q : arbiter.getQueries())
 			context.println(q);
 	}
 
 	public void distQuery(String[] args) {
-		ArbiterQueryStatus q = arbiter.createQuery(args[0]);
+		MapReduceQueryStatus q = arbiter.createQuery(args[0]);
 		if (q == null) {
 			context.println("dist query failed");
 			return;

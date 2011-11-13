@@ -1,11 +1,11 @@
-package org.krakenapps.logdb.arbiter;
+package org.krakenapps.logdb.mapreduce;
 
-public class DistributedQuery {
+public class MapReduceQuery {
 	private String guid;
 	private int queryId;
 	private String query;
 
-	public DistributedQuery(String nodeGuid, int queryId, String query) {
+	public MapReduceQuery(String nodeGuid, int queryId, String query) {
 		this.guid = nodeGuid;
 		this.queryId = queryId;
 		this.query = query;

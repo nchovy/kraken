@@ -29,9 +29,11 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logdb.EmptyLogQueryCallback;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.LogQueryStatus;
 import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.FileBufferList;
@@ -108,15 +110,8 @@ public class LogQueryServiceImpl implements LogQueryService {
 	public LogQuery createQuery(String query) {
 		LogQuery lq = new LogQueryImpl(syntaxProvider, this, logStorage, tableRegistry, query);
 		queries.put(lq.getId(), lq);
-
-		// invoke callbacks
-		for (LogQueryEventListener callback : callbacks) {
-			try {
-				callback.onCreate(lq);
-			} catch (Exception e) {
-				logger.warn("kraken logdb: query event listener should not throw any exception", e);
-			}
-		}
+		lq.registerQueryCallback(new EofReceiver(lq));
+		invokeCallbacks(lq, LogQueryStatus.Created);
 
 		return lq;
 	}
@@ -128,6 +123,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 			throw new IllegalArgumentException("invalid log query id: " + id);
 
 		new Thread(lq, "Log Query " + id).start();
+		invokeCallbacks(lq, LogQueryStatus.Started);
 	}
 
 	@Override
@@ -145,14 +141,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 		queries.remove(id);
 
-		// invoke callbacks
-		for (LogQueryEventListener callback : callbacks) {
-			try {
-				callback.onRemove(lq);
-			} catch (Exception e) {
-				logger.warn("kraken logdb: query event listener should not throwy any exception", e);
-			}
-		}
+		invokeCallbacks(lq, LogQueryStatus.Removed);
 	}
 
 	@Override
@@ -173,5 +162,28 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Override
 	public void removeListener(LogQueryEventListener listener) {
 		callbacks.remove(listener);
+	}
+
+	private void invokeCallbacks(LogQuery lq, LogQueryStatus status) {
+		for (LogQueryEventListener callback : callbacks) {
+			try {
+				callback.onQueryStatusChange(lq, status);
+			} catch (Exception e) {
+				logger.warn("kraken logdb: query event listener should not throw any exception", e);
+			}
+		}
+	}
+
+	private class EofReceiver extends EmptyLogQueryCallback {
+		private LogQuery query;
+
+		public EofReceiver(LogQuery query) {
+			this.query = query;
+		}
+
+		@Override
+		public void onEof() {
+			invokeCallbacks(query, LogQueryStatus.Eof);
+		}
 	}
 }

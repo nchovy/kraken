@@ -5,7 +5,7 @@
 	<instance component="logdb-script-factory" />
 	<instance component="logdb-msgbus" />
 	<instance component="logdb-query" />
-	<instance component="logdb-arbiter" />
+	<instance component="logdb-mapreduce" />
 	<instance component="logdb-syntax-provider" />
 	<instance component="logdb-lookup-registry" />
 	<instance component="data-source-registry" />
