@@ -45,13 +45,13 @@ import org.krakenapps.rpc.RpcConnectionProperties;
 public class LogDBScript implements Script {
 	private LogQueryService qs;
 	private DataSourceRegistry dsr;
-	private MapReduceService arbiter;
+	private MapReduceService mapreduce;
 	private ScriptContext context;
 
 	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter) {
 		this.qs = qs;
 		this.dsr = dsr;
-		this.arbiter = arbiter;
+		this.mapreduce = arbiter;
 	}
 
 	@Override
@@ -156,7 +156,7 @@ public class LogDBScript implements Script {
 		context.println("Remote Queries");
 		context.println("----------------------");
 
-		for (RemoteQuery q : arbiter.getRemoteQueries()) {
+		for (RemoteQuery q : mapreduce.getRemoteQueries()) {
 			context.println(q);
 		}
 	}
@@ -164,7 +164,14 @@ public class LogDBScript implements Script {
 	public void upstreams(String[] args) {
 		context.println("Upstream Connections");
 		context.println("----------------------");
-		for (RpcConnection conn : arbiter.getUpstreamConnections())
+		for (RpcConnection conn : mapreduce.getUpstreamConnections())
+			context.println(conn);
+	}
+
+	public void downstreams(String[] args) {
+		context.println("Downstream Connections");
+		context.println("----------------------");
+		for (RpcConnection conn : mapreduce.getDownstreamConnections())
 			context.println(conn);
 	}
 
@@ -178,31 +185,31 @@ public class LogDBScript implements Script {
 
 		RpcConnectionProperties props = new RpcConnectionProperties(host, port);
 		props.setPassword(args[2]);
-		RpcConnection conn = arbiter.connect(props);
+		RpcConnection conn = mapreduce.connect(props);
 		context.println("connected " + conn);
 	}
 
 	@ScriptUsage(description = "disconnect from arbiter", arguments = { @ScriptArgument(name = "guid", type = "string", description = "rpc peer guid") })
 	public void disconnect(String[] args) {
-		arbiter.disconnect(args[0]);
+		mapreduce.disconnect(args[0]);
 		context.println("disconnected");
 	}
 
 	/**
-	 * print all distributed queries
+	 * print all mapreduce queries
 	 */
-	public void distQueries(String[] args) {
-		context.println("Arbiter Queries");
+	public void mrqueries(String[] args) {
+		context.println("MapReduce Queries");
 		context.println("-----------------");
 
-		for (MapReduceQueryStatus q : arbiter.getQueries())
+		for (MapReduceQueryStatus q : mapreduce.getQueries())
 			context.println(q);
 	}
 
-	public void distQuery(String[] args) {
-		MapReduceQueryStatus q = arbiter.createQuery(args[0]);
+	public void mrquery(String[] args) {
+		MapReduceQueryStatus q = mapreduce.createQuery(args[0]);
 		if (q == null) {
-			context.println("dist query failed");
+			context.println("mapreduce query failed");
 			return;
 		}
 
@@ -213,7 +220,7 @@ public class LogDBScript implements Script {
 			@ScriptArgument(name = "guid", type = "string", description = "dist query guid"),
 			@ScriptArgument(name = "sample string", type = "string", description = "sample string") })
 	public void rpcfrom(String[] args) {
-		Rpc rpc = arbiter.getRpcFrom(args[0]);
+		Rpc rpc = mapreduce.getRpcFrom(args[0]);
 		if (rpc == null) {
 			context.println("rpc not found");
 			return;
@@ -226,7 +233,7 @@ public class LogDBScript implements Script {
 
 	@ScriptUsage(description = "eof to rpcfrom", arguments = { @ScriptArgument(name = "guid", type = "string", description = "dist query guid") })
 	public void rpceof(String[] args) {
-		Rpc rpc = arbiter.getRpcFrom(args[0]);
+		Rpc rpc = mapreduce.getRpcFrom(args[0]);
 		if (rpc == null) {
 			context.println("rpc not found");
 			return;

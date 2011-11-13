@@ -66,7 +66,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	private LogQueryService queryService;
 
 	@SuppressWarnings("unused")
-	@ServiceProperty(name = "rpc.name", value = "logdb-arbiter")
+	@ServiceProperty(name = "rpc.name", value = "logdb-mapreduce")
 	private String name;
 
 	private ConcurrentMap<String, Rpc> rpcFromMap;
@@ -76,6 +76,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 
 	private ConcurrentMap<RemoteQueryKey, RemoteQuery> remoteQueries;
 	private ConcurrentMap<String, RpcConnection> upstreams;
+	private ConcurrentMap<String, RpcConnection> downstreams;
 
 	public MapReduceRpcService() {
 	}
@@ -86,6 +87,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		rpcFromMap = new ConcurrentHashMap<String, Rpc>();
 		rpcToMap = new ConcurrentHashMap<String, Rpc>();
 		upstreams = new ConcurrentHashMap<String, RpcConnection>();
+		downstreams = new ConcurrentHashMap<String, RpcConnection>();
 		remoteQueries = new ConcurrentHashMap<RemoteQueryKey, RemoteQuery>();
 
 		rpcFromParser = new RpcFromParser();
@@ -234,6 +236,29 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	}
 
 	@Override
+	public Collection<RpcConnection> getDownstreamConnections() {
+		return Collections.unmodifiableCollection(downstreams.values());
+	}
+
+	/**
+	 * register downstream connection when any logdb session opened
+	 */
+	@Override
+	public void sessionOpened(RpcSessionEvent e) {
+		RpcConnection conn = e.getSession().getConnection();
+		if (!downstreams.containsKey(conn.getPeerGuid())) {
+			downstreams.put(conn.getPeerGuid(), conn);
+			logger.info("kraken logdb: downstream connection [{}] opened", conn);
+		}
+	}
+
+	@Override
+	public void connectionClosed(RpcConnection conn) {
+		downstreams.remove(conn.getPeerGuid());
+		logger.info("kraken logdb: downstream connection [{}] closed", conn);
+	}
+
+	@Override
 	public RpcConnection connect(RpcConnectionProperties props) {
 		try {
 			RpcClient client = new RpcClient(agent.getGuid());
@@ -293,7 +318,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	private void notifyDataSourceChange(DataSource ds, String action, RpcConnection conn) {
 		RpcSession session = null;
 		try {
-			session = conn.createSession("logdb-arbiter");
+			session = conn.createSession("logdb-mapreduce");
 			session.post("onDataSourceChange", ds.getName(), action, ds.getMetadata());
 			logger.info("kraken logdb: notified data source [type={}, name={}, action={}] ",
 					new Object[] { ds.getType(), ds.getName(), action });
@@ -318,7 +343,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		for (RpcConnection conn : upstreams.values()) {
 			RpcSession session = null;
 			try {
-				session = conn.createSession("logdb-arbiter");
+				session = conn.createSession("logdb-mapreduce");
 				session.post("onQueryStatusChange", id, status.name(), queryString);
 				logger.info("kraken logdb: notified query status [id={}, status={}] to peer [{}]", new Object[] { id,
 						status, conn.getPeerGuid() });

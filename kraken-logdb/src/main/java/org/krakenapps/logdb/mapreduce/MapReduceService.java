@@ -24,6 +24,8 @@ public interface MapReduceService {
 
 	Collection<RpcConnection> getUpstreamConnections();
 
+	Collection<RpcConnection> getDownstreamConnections();
+
 	RpcConnection connect(RpcConnectionProperties props);
 
 	void disconnect(String guid);
