@@ -24,8 +24,8 @@
 							org.krakenapps.msgbus
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.msgbus,
-							org.krakenapps.msgbus.handler
+							org.krakenapps.msgbus;version=1.2.0,
+							org.krakenapps.msgbus.handler;version=1.2.0
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.msgbus.impl
