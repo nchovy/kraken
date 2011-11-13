@@ -7,5 +7,6 @@
 	<instance component="logdb-query" />
 	<instance component="logdb-arbiter" />
 	<instance component="logdb-syntax-provider" />
+	<instance component="logdb-lookup-registry" />
 	<instance component="data-source-registry" />
 </ipojo>

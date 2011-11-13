@@ -93,8 +93,7 @@ public class LogDBScript implements Script {
 	public void query(String[] args) {
 		long begin = System.currentTimeMillis();
 		LogQuery lq = qs.createQuery(args[0]);
-		Thread t = new Thread(lq);
-		t.start();
+		qs.startQuery(lq.getId());
 
 		do {
 			try {

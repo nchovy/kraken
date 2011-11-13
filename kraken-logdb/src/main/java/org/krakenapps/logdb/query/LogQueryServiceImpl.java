@@ -32,7 +32,7 @@ import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
-import org.krakenapps.logdb.LookupHandler;
+import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.LogQueryImpl;
@@ -65,9 +65,10 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Requires
 	private SyntaxProvider syntaxProvider;
 
-	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
+	@Requires
+	private LookupHandlerRegistry lookupRegistry;
 
-	private Map<String, LookupHandler> lookupHandlers = new HashMap<String, LookupHandler>();
+	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
 
 	private CopyOnWriteArraySet<LogQueryEventListener> callbacks;
 
@@ -93,7 +94,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 		// add table and lookup (need some constructor injection)
 		TableParser tableParser = new TableParser(logStorage, tableRegistry);
-		LookupParser lookupParser = new LookupParser(this);
+		LookupParser lookupParser = new LookupParser(lookupRegistry);
 
 		parsers.add(tableParser);
 		parsers.add(lookupParser);
@@ -118,6 +119,15 @@ public class LogQueryServiceImpl implements LogQueryService {
 		}
 
 		return lq;
+	}
+
+	@Override
+	public void startQuery(int id) {
+		LogQuery lq = getQuery(id);
+		if (lq == null)
+			throw new IllegalArgumentException("invalid log query id: " + id);
+
+		new Thread(lq, "Log Query " + id).start();
 	}
 
 	@Override
@@ -153,21 +163,6 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Override
 	public LogQuery getQuery(int id) {
 		return queries.get(id);
-	}
-
-	@Override
-	public void addLookupHandler(String name, LookupHandler handler) {
-		lookupHandlers.put(name, handler);
-	}
-
-	@Override
-	public LookupHandler getLookupHandler(String name) {
-		return lookupHandlers.get(name);
-	}
-
-	@Override
-	public void removeLookupHandler(String name) {
-		lookupHandlers.remove(name);
 	}
 
 	@Override

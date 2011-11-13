@@ -15,20 +15,10 @@
  */
 package org.krakenapps.logdb;
 
-import java.util.Collection;
+public interface LookupHandlerRegistry {
+	LookupHandler getLookupHandler(String name);
 
-public interface LogQueryService {
-	Collection<LogQuery> getQueries();
+	void addLookupHandler(String name, LookupHandler handler);
 
-	LogQuery getQuery(int id);
-
-	LogQuery createQuery(String query);
-
-	void startQuery(int id);
-
-	void removeQuery(int id);
-
-	void addListener(LogQueryEventListener listener);
-
-	void removeListener(LogQueryEventListener listener);
+	void removeLookupHandler(String name);
 }

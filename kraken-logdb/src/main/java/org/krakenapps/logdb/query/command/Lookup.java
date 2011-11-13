@@ -18,11 +18,11 @@ package org.krakenapps.logdb.query.command;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LookupHandler;
+import org.krakenapps.logdb.LookupHandlerRegistry;
 
 public class Lookup extends LogQueryCommand {
-	private LogQueryService service;
+	private LookupHandlerRegistry registry;
 	private String handlerName;
 	private String srcField;
 	private String localSrcField;
@@ -41,14 +41,14 @@ public class Lookup extends LogQueryCommand {
 		this.localDstField = localDstField;
 	}
 
-	public void setLogQueryService(LogQueryService service) {
-		this.service = service;
+	public void setLogQueryService(LookupHandlerRegistry registry) {
+		this.registry = registry;
 	}
 
 	@Override
 	public void push(Map<String, Object> m) {
 		Object value = getData(localSrcField, m);
-		LookupHandler handler = service.getLookupHandler(handlerName);
+		LookupHandler handler = registry.getLookupHandler(handlerName);
 		if (handler != null)
 			m.put(localDstField, handler.lookup(srcField, dstField, value));
 		write(m);

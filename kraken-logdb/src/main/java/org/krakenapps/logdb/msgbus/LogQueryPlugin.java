@@ -87,12 +87,14 @@ public class LogQueryPlugin {
 
 		LogQuery query = service.getQuery(id);
 
+		// validation check
 		if (query == null)
 			throw new MsgbusException("logdb", "query not found");
 
 		if (!query.isEnd())
 			throw new MsgbusException("logdb", "already running");
 
+		// set query and timeline callback
 		LogQueryCallback qc = new MsgbusLogQueryCallback(orgId, query, offset, limit);
 		query.registerQueryCallback(qc);
 
@@ -102,7 +104,8 @@ public class LogQueryPlugin {
 			query.registerTimelineCallback(tc);
 		}
 
-		new Thread(query, "Log Query " + id).start();
+		// start query
+		service.startQuery(query.getId());
 	}
 
 	@MsgbusMethod
