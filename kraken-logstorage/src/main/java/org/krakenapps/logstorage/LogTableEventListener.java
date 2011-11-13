@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 NCHOVY
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,10 @@
  */
 package org.krakenapps.logstorage;
 
-import java.util.Collection;
 import java.util.Map;
 
-public interface LogTableRegistry {
-	boolean exists(String tableName);
+public interface LogTableEventListener {
+	void onCreate(String tableName, Map<String, String> tableMetadata);
 
-	Collection<String> getTableNames();
-
-	int getTableId(String tableName);
-
-	String getTableName(int tableId);
-
-	void createTable(String tableName, Map<String, String> tableMetadata);
-
-	void dropTable(String tableName);
-
-	TableMetadata getTableMetadata(int tableId);
-
-	void addListener(LogTableEventListener listener);
-
-	void removeListener(LogTableEventListener listener);
+	void onDrop(String tableName);
 }

@@ -26,11 +26,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableNotFoundException;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.TableMetadata;
@@ -52,9 +54,12 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 	private ConcurrentMap<String, LogTable> tableSchemas;
 	private ConcurrentMap<Integer, TableMetadata> metadataMap;
 
+	private CopyOnWriteArraySet<LogTableEventListener> callbacks;
+
 	public LogTableRegistryImpl() {
 		tableSchemas = new ConcurrentHashMap<String, LogTable>();
 		metadataMap = new ConcurrentHashMap<Integer, TableMetadata>();
+		callbacks = new CopyOnWriteArraySet<LogTableEventListener>();
 
 		// load table id mappings
 		loadTableMappings();
@@ -153,6 +158,15 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		}
 
 		tableSchemas.put(tableName, new LogTable(newId, tableName));
+
+		// invoke callbacks
+		for (LogTableEventListener callback : callbacks) {
+			try {
+				callback.onCreate(tableName, tableMetadata);
+			} catch (Exception e) {
+				logger.warn("kraken logstorage: table event listener should not throw any exception", e);
+			}
+		}
 	}
 
 	private void updateTableMappings() {
@@ -190,11 +204,30 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 			tableProps.remove(tableName);
 			updateTableMappings();
 		}
+
+		// invoke callbacks
+		for (LogTableEventListener callback : callbacks) {
+			try {
+				callback.onDrop(tableName);
+			} catch (Exception e) {
+				logger.warn("kraken logstorage: table event listener should not throw any exception", e);
+			}
+		}
 	}
 
 	@Override
 	public TableMetadata getTableMetadata(int tableId) {
 		return metadataMap.get(tableId);
+	}
+
+	@Override
+	public void addListener(LogTableEventListener listener) {
+		callbacks.add(listener);
+	}
+
+	@Override
+	public void removeListener(LogTableEventListener listener) {
+		callbacks.remove(listener);
 	}
 
 }
