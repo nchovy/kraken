@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -17,20 +18,26 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.Primitive;
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceEventListener;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
+import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
 import org.krakenapps.logdb.SyntaxProvider;
+import org.krakenapps.logdb.mapreduce.MapQuery;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
+import org.krakenapps.logdb.mapreduce.ReduceQuery;
+import org.krakenapps.logdb.mapreduce.RemoteMapQuery;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
 import org.krakenapps.logdb.mapreduce.RemoteQueryKey;
+import org.krakenapps.logdb.query.LogQueryImpl;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Rpc;
 import org.krakenapps.logdb.query.parser.QueryParser;
@@ -39,6 +46,7 @@ import org.krakenapps.rpc.RpcClient;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcContext;
+import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcMethod;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.rpc.RpcSessionEvent;
@@ -69,14 +77,56 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	@ServiceProperty(name = "rpc.name", value = "logdb-mapreduce")
 	private String name;
 
+	/**
+	 * mapreduce query guid to rpcfrom mappings
+	 */
 	private ConcurrentMap<String, Rpc> rpcFromMap;
+
+	/**
+	 * mapreduce query guid to rpcto mappings
+	 */
 	private ConcurrentMap<String, Rpc> rpcToMap;
+
+	/**
+	 * rpcfrom command parser
+	 */
 	private RpcFromParser rpcFromParser;
+
+	/**
+	 * rpcto command parser
+	 */
 	private RpcToParser rpcToParser;
 
+	/**
+	 * collected remote node's recent query statuses
+	 */
 	private ConcurrentMap<RemoteQueryKey, RemoteQuery> remoteQueries;
+
+	/**
+	 * search node connections
+	 */
 	private ConcurrentMap<String, RpcConnection> upstreams;
+
+	/**
+	 * connected from remote nodes. they push data source notifications, query
+	 * status changes, and log data using separate data connection
+	 */
 	private ConcurrentMap<String, RpcConnection> downstreams;
+
+	/**
+	 * mapreduce query guid to map query requests (from remote node)
+	 */
+	private ConcurrentMap<String, MapQuery> mapQueries;
+
+	/**
+	 * mapreduce query guid to local waiting reduce queries
+	 */
+	private ConcurrentMap<String, ReduceQuery> reduceQueries;
+
+	/**
+	 * remote map query to mapreduce query guid relation
+	 */
+	private ConcurrentMap<RemoteQueryKey, String> remoteQueryMappings;
 
 	public MapReduceRpcService() {
 	}
@@ -88,9 +138,13 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		rpcToMap = new ConcurrentHashMap<String, Rpc>();
 		upstreams = new ConcurrentHashMap<String, RpcConnection>();
 		downstreams = new ConcurrentHashMap<String, RpcConnection>();
+		mapQueries = new ConcurrentHashMap<String, MapQuery>();
+		reduceQueries = new ConcurrentHashMap<String, ReduceQuery>();
 		remoteQueries = new ConcurrentHashMap<RemoteQueryKey, RemoteQuery>();
+		remoteQueryMappings = new ConcurrentHashMap<RemoteQueryKey, String>();
 
 		rpcFromParser = new RpcFromParser();
+		rpcToParser = new RpcToParser();
 		syntaxProvider.addParsers(Arrays.asList(rpcFromParser, rpcToParser));
 		dataSourceRegistry.addListener(this);
 		queryService.addListener(this);
@@ -115,7 +169,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		@Override
 		public Object parse(Binding b) {
 			String guid = (String) b.getChildren()[1].getValue();
-			Rpc rpc = new Rpc(guid, false);
+			Rpc rpc = new Rpc(agent.getGuid(), null, guid, false);
 			rpcFromMap.put(guid, rpc);
 			return rpc;
 		}
@@ -131,7 +185,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		@Override
 		public Object parse(Binding b) {
 			String guid = (String) b.getChildren()[1].getValue();
-			Rpc rpc = new Rpc(guid, true);
+			MapQuery mq = mapQueries.get(guid);
+			Rpc rpc = new Rpc(agent.getGuid(), mq.getConnection(), guid, true);
 			rpcToMap.put(guid, rpc);
 			return rpc;
 		}
@@ -145,6 +200,63 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	@Override
 	public Rpc getRpcTo(String guid) {
 		return rpcToMap.get(guid);
+	}
+
+	@RpcMethod(name = "setLogStream")
+	public void setLogStream(String guid) {
+		RpcSession session = RpcContext.getSession();
+		session.setProperty("guid", guid);
+	}
+
+	@RpcMethod(name = "push")
+	public void push(Map<String, Object> data) {
+		RpcSession session = RpcContext.getSession();
+		String queryGuid = (String) session.getProperty("guid");
+		Rpc rpc = rpcFromMap.get(queryGuid);
+		rpc.push(data);
+
+		if (logger.isDebugEnabled()) {
+			String s = Primitive.stringify(data);
+			logger.debug("kraken logdb: pushed [{}] data [{}]", queryGuid, s);
+		}
+	}
+
+	@RpcMethod(name = "createMapQuery")
+	public int createMapQuery(String queryGuid, String query) {
+		try {
+			RpcSession session = RpcContext.getSession();
+			String guid = session.getConnection().getPeerGuid();
+
+			// map query should be set before rpc command parsing
+			MapQuery mq = new MapQuery(guid, session.getConnection());
+			mapQueries.put(queryGuid, mq);
+			mq.setQuery(queryService.createQuery(query));
+
+			logger.info("kraken logdb: created map query [{}]", queryGuid);
+			return mq.getQuery().getId();
+		} catch (Exception e) {
+			logger.error("kraken logdb: cannot create map query", e);
+			throw new RpcException(e.getMessage());
+		}
+	}
+
+	@RpcMethod(name = "startMapQuery")
+	public void startMapQuery(String queryGuid) {
+		MapQuery mq = mapQueries.get(queryGuid);
+		if (mq == null)
+			throw new RpcException("mapreduce query not found: " + queryGuid);
+
+		queryService.startQuery(mq.getQuery().getId());
+		logger.info("kraken logdb: started map query [{}]", queryGuid);
+	}
+
+	@RpcMethod(name = "removeMapQuery")
+	public void removeMapQuery(String queryGuid) {
+		MapQuery mq = mapQueries.remove(queryGuid);
+		if (mq == null)
+			throw new RpcException("mapreduce query not found: " + queryGuid);
+
+		logger.info("kraken logdb: removed map query [{}]", queryGuid);
 	}
 
 	@RpcMethod(name = "onDataSourceChange")
@@ -167,6 +279,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		String guid = session.getConnection().getPeerGuid();
 		RemoteQueryKey key = new RemoteQueryKey(guid, queryId);
 		LogQueryStatus status = LogQueryStatus.valueOf(action);
+
+		logger.info("kraken logdb: query status change [{}, status={}]", key, status);
 
 		switch (status) {
 		case Created:
@@ -191,6 +305,15 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 			RemoteQuery q = remoteQueries.get(key);
 			if (q != null)
 				q.setEnd(true);
+
+			// TODO: check if all mapper queries are ended
+			// for now, send eof if one mapper query is ended
+			String queryGuid = remoteQueryMappings.get(key);
+			Rpc rpc = rpcFromMap.get(queryGuid);
+			if (rpc != null)
+				rpc.eof();
+			else
+				logger.warn("kraken logdb: rpcfrom not found for mapreduce query [{}]", queryGuid);
 		}
 			break;
 		}
@@ -209,8 +332,84 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	}
 
 	@Override
-	public MapReduceQueryStatus createQuery(String query) {
-		return null;
+	public MapReduceQueryStatus createQuery(String queryString) {
+		String queryGuid = UUID.randomUUID().toString();
+		LogQuery lq = new LogQueryImpl(syntaxProvider, queryString);
+
+		boolean foundReducer = false;
+		List<LogQueryCommand> mapCommands = new ArrayList<LogQueryCommand>();
+		List<LogQueryCommand> reduceCommands = new ArrayList<LogQueryCommand>();
+
+		for (LogQueryCommand c : lq.getCommands()) {
+			if (c.isReducer())
+				foundReducer = true;
+
+			if (foundReducer)
+				reduceCommands.add(c);
+			else
+				mapCommands.add(c);
+		}
+
+		String mapQueryString = buildQueryString(mapCommands);
+		String reduceQueryString = buildQueryString(reduceCommands);
+
+		mapQueryString = mapQueryString + "|rpcto " + queryGuid;
+		reduceQueryString = "rpcfrom " + queryGuid + "|" + reduceQueryString;
+
+		logger.info("kraken logdb: map query [{}]", mapQueryString);
+		logger.info("kraken logdb: reduce query [{}]", reduceQueryString);
+
+		// create map queries
+		List<RemoteMapQuery> mapQueries = new ArrayList<RemoteMapQuery>();
+		for (RpcConnection c : downstreams.values()) {
+			RpcSession session = null;
+			try {
+				session = c.createSession("logdb-mapreduce");
+				int id = (Integer) session.call("createMapQuery", queryGuid, mapQueryString);
+				mapQueries.add(new RemoteMapQuery(queryGuid, c.getPeerGuid(), id));
+				remoteQueryMappings.put(new RemoteQueryKey(c.getPeerGuid(), id), queryGuid);
+			} catch (Exception e) {
+				logger.error("kraken logdb: cannot create mapquery", e);
+			} finally {
+				if (session != null)
+					session.close();
+			}
+		}
+
+		// create and start reduce query
+		LogQuery q = queryService.createQuery(reduceQueryString);
+		ReduceQuery r = new ReduceQuery(queryGuid, q);
+		reduceQueries.put(queryGuid, r);
+		queryService.startQuery(q.getId());
+
+		// start map queries (pumping)
+		for (RpcConnection c : downstreams.values()) {
+			RpcSession session = null;
+			try {
+				session = c.createSession("logdb-mapreduce");
+				session.call("startMapQuery", queryGuid);
+			} catch (Exception e) {
+				logger.error("kraken logdb: cannot start mapquery", e);
+			} finally {
+				if (session != null)
+					session.close();
+			}
+		}
+
+		return new MapReduceQueryStatus(queryGuid, queryString, mapQueries, r);
+	}
+
+	private String buildQueryString(List<LogQueryCommand> commands) {
+		StringBuilder sb = new StringBuilder();
+		int i = 0;
+		for (LogQueryCommand c : commands) {
+			if (i++ != 0)
+				sb.append("|");
+
+			sb.append(c.getQueryString());
+		}
+
+		return sb.toString();
 	}
 
 	@Override
@@ -246,7 +445,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	@Override
 	public void sessionOpened(RpcSessionEvent e) {
 		RpcConnection conn = e.getSession().getConnection();
-		if (!downstreams.containsKey(conn.getPeerGuid())) {
+		if (!upstreams.containsKey(conn.getPeerGuid()) && !downstreams.containsKey(conn.getPeerGuid())) {
 			downstreams.put(conn.getPeerGuid(), conn);
 			logger.info("kraken logdb: downstream connection [{}] opened", conn);
 		}
@@ -276,6 +475,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 				}
 
 				upstreams.put(conn.getPeerGuid(), conn);
+				conn.bind("logdb-mapreduce", this);
 
 				for (DataSource ds : dataSourceRegistry.getAll())
 					if (!ds.getType().equals("rpc"))

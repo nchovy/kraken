@@ -214,6 +214,21 @@ public class LogDBScript implements Script {
 		}
 
 		context.println(q);
+
+		LogQuery lq = q.getReduceQuery().getQuery();
+		do {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+			}
+		} while (!lq.isEnd());
+
+		List<Map<String, Object>> results = lq.getResult();
+		for (Map<String, Object> m : results)
+			printMap(m);
+		((FileBufferList<Map<String, Object>>) results).close();
+
+		qs.removeQuery(lq.getId());
 	}
 
 	@ScriptUsage(description = "push to rpcfrom", arguments = {

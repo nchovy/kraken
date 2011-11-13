@@ -29,10 +29,7 @@ import org.krakenapps.logdb.query.command.Result;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.SyntaxProvider;
-import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.query.LogQueryImpl;
@@ -50,9 +47,8 @@ public class LogQueryImpl implements LogQuery {
 	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
 
-	public LogQueryImpl(SyntaxProvider syntaxProvider, LogQueryService service, LogStorage logStorage,
-			LogTableRegistry tableRegistry, String query) {
-		this.queryString = query;
+	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString) {
+		this.queryString = queryString;
 
 		for (String q : queryString.split("\\|")) {
 			q = q.trim();
