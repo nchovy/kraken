@@ -433,8 +433,8 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 	@Override
 	public String toString() {
-		return String.format("id=%d, peer=%s, trusted level=%s, ssl=%s", channel.getId(), getRemoteAddress(),
-				trustedLevel, getPeerCertificate() != null);
+		return String.format("id=%d, peer=(%s, %s), trusted level=%s, ssl=%s", channel.getId(), getPeerGuid(),
+				getRemoteAddress(), trustedLevel, getPeerCertificate() != null);
 	}
 
 	private class NonPasswordPeering implements RpcAsyncCallback {
