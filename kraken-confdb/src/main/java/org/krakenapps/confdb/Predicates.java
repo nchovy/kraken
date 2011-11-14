@@ -46,6 +46,27 @@ public class Predicates {
 		return new Disjunction(pred);
 	}
 
+	public static Predicate not(Predicate pred) {
+		return new Not(pred);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Object getValue(Config c, String key) {
+		key = PrimitiveConverter.toUnderscoreName(key);
+		Object value = c.getDocument();
+		for (String k : key.split("/")) {
+			if (!(value instanceof Map))
+				return null;
+
+			Map<String, Object> m = (Map<String, Object>) value;
+			if (!m.containsKey(k))
+				return null;
+
+			value = m.get(k);
+		}
+		return value;
+	}
+
 	private static class EqObject implements Predicate {
 		private Object o;
 
@@ -71,40 +92,23 @@ public class Predicates {
 			this.terms = terms;
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		public boolean eval(Config c) {
 			Object doc = c.getDocument();
 			if (!(doc instanceof Map))
 				return false;
 
-			Map<String, Object> m = (Map<String, Object>) doc;
 			for (String k : terms.keySet()) {
-				String key = PrimitiveConverter.toUnderscoreName(k);
-				Object value = terms.get(k);
+				Object value = getValue(c, k);
+				Object comp = terms.get(k);
 
-				Map<String, Object> m2 = m;
-				String[] splittedKey = key.split("/");
-				for (int i = 0; i < splittedKey.length - 1; i++) {
-					if (!m2.containsKey(splittedKey[i]))
-						return false;
-					if (!(m2.get(splittedKey[i]) instanceof Map))
-						return false;
-					m2 = (Map<String, Object>) m2.get(splittedKey[i]);
-				}
-				key = splittedKey[splittedKey.length - 1];
-
-				if (!m2.containsKey(key))
+				if (value == null && comp != null)
 					return false;
 
-				Object v = m2.get(key);
-				if (v == null && value != null)
-					return false;
-
-				if (v == null && value == null)
+				if (value == null && comp == null)
 					continue;
 
-				if (!v.equals(value))
+				if (!value.equals(comp))
 					return false;
 			}
 
@@ -121,19 +125,9 @@ public class Predicates {
 			this.values = values;
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		public boolean eval(Config c) {
-			Object doc = c.getDocument();
-			if (!(doc instanceof Map))
-				return false;
-
-			Map<String, Object> m = (Map<String, Object>) doc;
-
-			if (!m.containsKey(key))
-				return false;
-
-			Object v = m.get(key);
+			Object v = getValue(c, key);
 			return values.contains(v);
 		}
 	}
@@ -172,4 +166,16 @@ public class Predicates {
 		}
 	}
 
+	private static class Not implements Predicate {
+		private Predicate pred;
+
+		public Not(Predicate pred) {
+			this.pred = pred;
+		}
+
+		@Override
+		public boolean eval(Config c) {
+			return !pred.eval(c);
+		}
+	}
 }
