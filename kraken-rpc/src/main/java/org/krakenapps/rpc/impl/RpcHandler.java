@@ -10,8 +10,12 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -43,7 +47,7 @@ import org.krakenapps.rpc.RpcSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEventListener {
+public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcConnectionEventListener {
 	final Logger logger = LoggerFactory.getLogger(RpcHandler.class.getName());
 	private static final int HIGH_WATERMARK = 10;
 
@@ -52,8 +56,14 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 	private ThreadPoolExecutor executor;
 	private LinkedBlockingQueue<Runnable> queue;
 
+	private volatile boolean doStop;
+	private Thread scheduler;
+
 	private Map<Integer, RpcConnectionImpl> connMap;
 	private ConcurrentHashMap<RpcService, String> serviceMap;
+
+	private ConcurrentMap<Channel, WorkStatus> worksheet;
+	private ConcurrentMap<Channel, ConcurrentLinkedQueue<RpcMessage>> channelMessages;
 
 	private CopyOnWriteArraySet<RpcConnectionEventListener> listeners;
 
@@ -63,22 +73,30 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		this.control = new RpcControlService(guid, peerRegistry);
 		this.serviceMap = new ConcurrentHashMap<RpcService, String>();
 		this.listeners = new CopyOnWriteArraySet<RpcConnectionEventListener>();
+		this.worksheet = new ConcurrentHashMap<Channel, WorkStatus>();
+		this.channelMessages = new ConcurrentHashMap<Channel, ConcurrentLinkedQueue<RpcMessage>>();
 	}
 
 	public void start() {
 		if (executor != null)
 			return;
 
+		scheduler = new Thread(this, "Kraken RPC Scheduler");
 		queue = new LinkedBlockingQueue<Runnable>();
-		executor = new ThreadPoolExecutor(4, 8, 10, TimeUnit.SECONDS, queue, new ThreadFactory() {
+		executor = new ThreadPoolExecutor(1, 8, 10, TimeUnit.SECONDS, queue, new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
 				return new Thread(r, "Kraken RPC Handler");
 			}
 		});
+
+		scheduler.start();
 	}
 
 	public void stop() {
+		doStop = true;
+		scheduler.interrupt();
+
 		if (executor != null) {
 			executor.shutdown();
 			executor = null;
@@ -88,6 +106,51 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			conn.close();
 
 		connMap.clear();
+	}
+
+	@Override
+	public void run() {
+
+		while (!doStop) {
+			try {
+				for (Channel channel : channelMessages.keySet()) {
+					if (!worksheet.containsKey(channel)) {
+						ConcurrentLinkedQueue<RpcMessage> q = channelMessages.get(channel);
+
+						// prepare rpc message list
+						List<RpcMessage> list = new ArrayList<RpcMessage>();
+						while (true) {
+							RpcMessage m = q.poll();
+							if (m == null)
+								break;
+
+							list.add(m);
+						}
+
+						if (executor != null && list.size() > 0) {
+							// prevent out-of-order execution per channel
+							worksheet.put(channel, new WorkStatus());
+							executor.submit(new MessageHandler(channel, list));
+						} else
+							logger.trace("kraken-rpc: handler threadpool stopped, drop msg");
+					}
+				}
+
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				logger.error("kraken rpc: rpc run scheduler interrupted");
+			} catch (Exception e) {
+				logger.error("kraken rpc: rpc run scheduler failed", e);
+			}
+		}
+
+		logger.error("kraken rpc: rpc run scheduler stopped");
+		doStop = false;
+	}
+
+	private static class WorkStatus {
+		@SuppressWarnings("unused")
+		private Date lastRun = new Date();
 	}
 
 	public RpcConnection newClientConnection(Channel channel, RpcConnectionProperties props) {
@@ -263,13 +326,13 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 	}
 
 	private class MessageHandler implements Runnable {
-		private MessageEvent event;
+		private List<RpcMessage> msgs;
 		private Channel channel;
 		private RpcConnection conn;
 
-		public MessageHandler(Channel channel, MessageEvent event) {
-			this.channel = event.getChannel();
-			this.event = event;
+		public MessageHandler(Channel channel, List<RpcMessage> msgs) {
+			this.channel = channel;
+			this.msgs = msgs;
 			this.conn = findConnection(channel.getId());
 
 			if (conn == null)
@@ -279,19 +342,25 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 		@Override
 		public void run() {
 			try {
-				handle();
+				if (logger.isDebugEnabled())
+					logger.debug("kraken rpc: channel [{}], begin {} request handling", channel.getId(), msgs.size());
+
+				for (RpcMessage msg : msgs)
+					handle(msg);
 			} catch (Exception e) {
 				logger.error("kraken-rpc: cannot handle message", e);
 			} finally {
+				// clear work status
+				worksheet.remove(channel);
+
 				if (channel.isOpen())
 					channel.setReadable(true);
 			}
 		}
 
-		private void handle() {
+		private void handle(RpcMessage msg) {
 			conn.waitControlReady();
 
-			RpcMessage msg = new RpcMessage((Object[]) event.getMessage());
 			Integer id = (Integer) msg.getHeader("id");
 			Integer sessionId = (Integer) msg.getHeader("session");
 			String type = (String) msg.getHeader("type");
@@ -348,25 +417,41 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 					RpcService service = binding.getService();
 					service.exceptionCaught(ex);
 				}
-			} else if (type.equals("rpc-ret") || type.equals("rpc-error")) {
-				RpcAsyncTable asyncTable = conn.getAsyncTable();
-				RpcBlockingTable blockingTable = conn.getBlockingTable();
-
-				int originalId = (Integer) msg.getHeader("ret-for");
-				if (logger.isDebugEnabled())
-					logger.debug("kraken-rpc: response for msg {}", originalId);
-
-				if (asyncTable.contains(originalId))
-					asyncTable.signal(originalId, msg);
-				else
-					blockingTable.signal(originalId, msg);
 			}
 		}
+	}
+
+	private void handleResponse(Channel channel, RpcMessage msg) {
+		RpcConnection conn = findConnection(channel.getId());
+		if (conn == null)
+			throw new IllegalStateException("channel " + channel.getId() + " not found. already disconnected.");
+
+		RpcAsyncTable asyncTable = conn.getAsyncTable();
+		RpcBlockingTable blockingTable = conn.getBlockingTable();
+
+		int originalId = (Integer) msg.getHeader("ret-for");
+		if (logger.isDebugEnabled())
+			logger.debug("kraken-rpc: response for msg {}", originalId);
+
+		if (asyncTable.contains(originalId))
+			asyncTable.signal(originalId, msg);
+		else
+			blockingTable.signal(originalId, msg);
 	}
 
 	@Override
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
 		Channel channel = ctx.getChannel();
+		RpcMessage msg = new RpcMessage((Object[]) event.getMessage());
+
+		// handle return or exception (fast and short path)
+		String type = (String) msg.getHeader("type");
+		if (type.equals("rpc-ret") || type.equals("rpc-error")) {
+			handleResponse(channel, msg);
+			return;
+		}
+
+		// schedule call or post handling (long running)
 		if (queue.size() > HIGH_WATERMARK) {
 			if (logger.isTraceEnabled())
 				logger.trace("kraken-rpc: pause channel [{}]", channel.getRemoteAddress());
@@ -374,10 +459,15 @@ public class RpcHandler extends SimpleChannelHandler implements RpcConnectionEve
 			channel.setReadable(false);
 		}
 
-		if (executor != null)
-			executor.submit(new MessageHandler(channel, event));
-		else
-			logger.trace("kraken-rpc: handler threadpool stopped, drop msg");
+		ConcurrentLinkedQueue<RpcMessage> q = channelMessages.get(channel);
+		if (q == null) {
+			q = new ConcurrentLinkedQueue<RpcMessage>();
+			ConcurrentLinkedQueue<RpcMessage> old = channelMessages.putIfAbsent(channel, q);
+			if (old != null)
+				q = old;
+		}
+
+		q.add(msg);
 	}
 
 	/**
