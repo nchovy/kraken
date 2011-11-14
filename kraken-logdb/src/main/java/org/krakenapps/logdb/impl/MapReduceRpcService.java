@@ -221,6 +221,20 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		}
 	}
 
+	@RpcMethod(name = "eof")
+	public void eof(String queryGuid) {
+		// TODO: check if all mapper queries are ended
+		// for now, send eof if one mapper query is ended
+		RpcSession session = RpcContext.getSession();
+		String nodeGuid = session.getConnection().getPeerGuid();
+
+		Rpc rpc = rpcFromMap.get(queryGuid);
+		if (rpc != null)
+			rpc.eof();
+		else
+			logger.warn("kraken logdb: rpcfrom not found for mapreduce query [{}]", queryGuid);
+	}
+
 	@RpcMethod(name = "createMapQuery")
 	public int createMapQuery(String queryGuid, String query) {
 		try {
@@ -305,15 +319,6 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 			RemoteQuery q = remoteQueries.get(key);
 			if (q != null)
 				q.setEnd(true);
-
-			// TODO: check if all mapper queries are ended
-			// for now, send eof if one mapper query is ended
-			String queryGuid = remoteQueryMappings.get(key);
-			Rpc rpc = rpcFromMap.get(queryGuid);
-			if (rpc != null)
-				rpc.eof();
-			else
-				logger.warn("kraken logdb: rpcfrom not found for mapreduce query [{}]", queryGuid);
 		}
 			break;
 		}

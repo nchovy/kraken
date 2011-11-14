@@ -18,7 +18,7 @@ public class Rpc extends LogQueryCommand {
 	private RpcConnection upstream;
 
 	/**
-	 * dist query guid
+	 * mapreduce query guid
 	 */
 	private String guid;
 
@@ -26,6 +26,7 @@ public class Rpc extends LogQueryCommand {
 
 	private RpcConnection datastream;
 	private RpcSession datasession;
+	private boolean end;
 
 	public Rpc(String agentGuid, RpcConnection upstream, String guid, boolean sender) {
 		this.agentGuid = agentGuid;
@@ -36,6 +37,11 @@ public class Rpc extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
+		if (end) {
+			logger.info("kraken logdb: loss (will be fixed) - {}", Primitive.stringify(m));
+			return;
+		}
+
 		if (sender) {
 			if (datastream == null) {
 				RpcClient client = new RpcClient(agentGuid);
@@ -76,6 +82,12 @@ public class Rpc extends LogQueryCommand {
 	@Override
 	public void eof() {
 		if (datasession != null) {
+			try {
+				datasession.call("eof", guid);
+			} catch (Exception e) {
+				logger.error("kraken logdb: eof fail for mapreduce query " + guid, e);
+			}
+
 			datastream.close();
 			datastream = null;
 			datasession = null;
@@ -83,6 +95,7 @@ public class Rpc extends LogQueryCommand {
 
 		logger.info("kraken logdb: closed rpc data stream for query guid [{}]", guid);
 		super.eof();
+		end = true;
 	}
 
 	@Override
