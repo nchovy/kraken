@@ -28,10 +28,15 @@ public class RpcDecoder extends FrameDecoder {
 		if (logger.isDebugEnabled())
 			logger.debug("kraken-rpc: current readable length {}", buf.readableBytes());
 
+		buf.markReaderIndex();
 		if (buf.readableBytes() < 2)
 			return null;
 
+		// read type byte
 		buf.readByte();
+
+		// read length bytes
+		int lengthBytes = 0;
 		byte b = 0;
 		boolean eon = false;
 		while (true) {
@@ -39,6 +44,8 @@ public class RpcDecoder extends FrameDecoder {
 				break;
 
 			b = buf.readByte();
+			lengthBytes++;
+
 			if ((b & 0x80) != 0x80) {
 				eon = true;
 				break;
@@ -51,21 +58,23 @@ public class RpcDecoder extends FrameDecoder {
 		}
 
 		buf.resetReaderIndex();
+
+		// read type byte
 		buf.readByte();
+
+		// byte buffer read does not modify readable index
 		long length = EncodingRule.decodeRawNumber(buf.toByteBuffer());
 
-		if (buf.readableBytes() > length) {
+		if (buf.readableBytes() >= lengthBytes + length) {
 			buf.resetReaderIndex();
-			int numLength = EncodingRule.lengthOfRawNumber(int.class, length);
-			ByteBuffer bb = ByteBuffer.allocate((int) length + numLength + 1);
+			ByteBuffer bb = ByteBuffer.allocate((int) length + lengthBytes + 1);
 			buf.readBytes(bb);
 			bb.flip();
 
 			Object decoded = EncodingRule.decode(bb);
 			if (logger.isDebugEnabled())
 				logger.debug("kraken-rpc: decoded one message, remaining {}", buf.readableBytes());
-			
-			buf.markReaderIndex();
+
 			return decoded;
 		}
 
