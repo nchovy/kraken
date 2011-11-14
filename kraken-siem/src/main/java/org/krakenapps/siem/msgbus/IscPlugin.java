@@ -235,13 +235,13 @@ public class IscPlugin {
 	private Map<String, Object> extract(Object obj) {
 		if (obj instanceof ArrayList) {
 			ArrayList<?> list = (ArrayList<?>) obj;
-			if (list.size() != 1)
+			if (list.isEmpty())
 				return null;
 			else
 				return (Map<String, Object>) list.get(0);
 		}
 
-		return null;
+		return (Map<String, Object>) obj;
 	}
 
 	private String optional(Request req, String key) {
