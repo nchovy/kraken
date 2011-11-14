@@ -48,6 +48,7 @@ import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcContext;
 import org.krakenapps.rpc.RpcException;
+import org.krakenapps.rpc.RpcExceptionEvent;
 import org.krakenapps.rpc.RpcMethod;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.rpc.RpcSessionEvent;
@@ -560,6 +561,11 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 					session.close();
 			}
 		}
+	}
+
+	@Override
+	public void exceptionCaught(RpcExceptionEvent e) {
+		logger.error("kraken logdb: mapreduce rpc fail", e);
 	}
 
 }

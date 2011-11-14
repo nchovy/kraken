@@ -3,6 +3,7 @@ package org.krakenapps.logdb.query.command;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.api.Primitive;
 import org.krakenapps.logdb.LogQueryCommand;
@@ -19,12 +20,14 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 
 	private Thread t;
 	private volatile boolean end;
+	private AtomicInteger counter;
 
 	private LinkedBlockingQueue<Map<String, Object>> queue;
 
 	public RpcFrom(String guid) {
 		this.guid = guid;
 		this.queue = new LinkedBlockingQueue<Map<String, Object>>();
+		this.counter = new AtomicInteger();
 	}
 
 	@Override
@@ -32,12 +35,25 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 		while (!end) {
 			try {
 				Map<String, Object> data = queue.poll(100, TimeUnit.MILLISECONDS);
-				if (data != null)
+				if (data != null) {
 					write(data);
+					counter.incrementAndGet();
+				}
 			} catch (InterruptedException e) {
 			}
 		}
 
+		// process all remainings
+		while (true) {
+			Map<String, Object> data = queue.poll();
+			if (data == null)
+				break;
+
+			write(data);
+			counter.incrementAndGet();
+		}
+
+		logger.info("kraken logdb: rpcfrom pass total [{}], remain [{}]", counter.get(), queue.size());
 		super.eof();
 		logger.info("kraken logdb: closed rpc reducer stream for query guid [{}]", guid);
 	}
