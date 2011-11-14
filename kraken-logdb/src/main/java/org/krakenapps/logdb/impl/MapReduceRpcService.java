@@ -39,7 +39,8 @@ import org.krakenapps.logdb.mapreduce.RemoteQuery;
 import org.krakenapps.logdb.mapreduce.RemoteQueryKey;
 import org.krakenapps.logdb.query.LogQueryImpl;
 import org.krakenapps.logdb.query.StringPlaceholder;
-import org.krakenapps.logdb.query.command.Rpc;
+import org.krakenapps.logdb.query.command.RpcFrom;
+import org.krakenapps.logdb.query.command.RpcTo;
 import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.rpc.RpcAgent;
 import org.krakenapps.rpc.RpcClient;
@@ -80,12 +81,12 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	/**
 	 * mapreduce query guid to rpcfrom mappings
 	 */
-	private ConcurrentMap<String, Rpc> rpcFromMap;
+	private ConcurrentMap<String, RpcFrom> rpcFromMap;
 
 	/**
 	 * mapreduce query guid to rpcto mappings
 	 */
-	private ConcurrentMap<String, Rpc> rpcToMap;
+	private ConcurrentMap<String, RpcTo> rpcToMap;
 
 	/**
 	 * rpcfrom command parser
@@ -134,8 +135,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	@Validate
 	public void start() {
 		queries = new ConcurrentHashMap<String, MapReduceQueryStatus>();
-		rpcFromMap = new ConcurrentHashMap<String, Rpc>();
-		rpcToMap = new ConcurrentHashMap<String, Rpc>();
+		rpcFromMap = new ConcurrentHashMap<String, RpcFrom>();
+		rpcToMap = new ConcurrentHashMap<String, RpcTo>();
 		upstreams = new ConcurrentHashMap<String, RpcConnection>();
 		downstreams = new ConcurrentHashMap<String, RpcConnection>();
 		mapQueries = new ConcurrentHashMap<String, MapQuery>();
@@ -169,7 +170,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		@Override
 		public Object parse(Binding b) {
 			String guid = (String) b.getChildren()[1].getValue();
-			Rpc rpc = new Rpc(agent.getGuid(), null, guid, false);
+			RpcFrom rpc = new RpcFrom(guid);
 			rpcFromMap.put(guid, rpc);
 			return rpc;
 		}
@@ -186,19 +187,19 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		public Object parse(Binding b) {
 			String guid = (String) b.getChildren()[1].getValue();
 			MapQuery mq = mapQueries.get(guid);
-			Rpc rpc = new Rpc(agent.getGuid(), mq.getConnection(), guid, true);
+			RpcTo rpc = new RpcTo(agent.getGuid(), mq.getConnection(), guid);
 			rpcToMap.put(guid, rpc);
 			return rpc;
 		}
 	}
 
 	@Override
-	public Rpc getRpcFrom(String guid) {
+	public RpcFrom getRpcFrom(String guid) {
 		return rpcFromMap.get(guid);
 	}
 
 	@Override
-	public Rpc getRpcTo(String guid) {
+	public RpcTo getRpcTo(String guid) {
 		return rpcToMap.get(guid);
 	}
 
@@ -212,7 +213,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	public void push(Map<String, Object> data) {
 		RpcSession session = RpcContext.getSession();
 		String queryGuid = (String) session.getProperty("guid");
-		Rpc rpc = rpcFromMap.get(queryGuid);
+		RpcFrom rpc = rpcFromMap.get(queryGuid);
 		rpc.push(data);
 
 		if (logger.isDebugEnabled()) {
@@ -228,7 +229,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		RpcSession session = RpcContext.getSession();
 		String nodeGuid = session.getConnection().getPeerGuid();
 
-		Rpc rpc = rpcFromMap.get(queryGuid);
+		RpcFrom rpc = rpcFromMap.get(queryGuid);
 		if (rpc != null)
 			rpc.eof();
 		else

@@ -38,7 +38,8 @@ import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
 import org.krakenapps.logdb.query.FileBufferList;
-import org.krakenapps.logdb.query.command.Rpc;
+import org.krakenapps.logdb.query.command.RpcFrom;
+import org.krakenapps.logdb.query.command.RpcTo;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
 
@@ -235,7 +236,7 @@ public class LogDBScript implements Script {
 			@ScriptArgument(name = "guid", type = "string", description = "dist query guid"),
 			@ScriptArgument(name = "sample string", type = "string", description = "sample string") })
 	public void rpcfrom(String[] args) {
-		Rpc rpc = mapreduce.getRpcFrom(args[0]);
+		RpcFrom rpc = mapreduce.getRpcFrom(args[0]);
 		if (rpc == null) {
 			context.println("rpc not found");
 			return;
@@ -248,7 +249,7 @@ public class LogDBScript implements Script {
 
 	@ScriptUsage(description = "eof to rpcfrom", arguments = { @ScriptArgument(name = "guid", type = "string", description = "dist query guid") })
 	public void rpceof(String[] args) {
-		Rpc rpc = mapreduce.getRpcFrom(args[0]);
+		RpcFrom rpc = mapreduce.getRpcFrom(args[0]);
 		if (rpc == null) {
 			context.println("rpc not found");
 			return;
