@@ -105,13 +105,14 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	private ConcurrentMap<RemoteQueryKey, RemoteQuery> remoteQueries;
 
 	/**
-	 * search node connections
+	 * search node connections by peer guid
 	 */
 	private ConcurrentMap<String, RpcConnection> upstreams;
 
 	/**
-	 * connected from remote nodes. they push data source notifications, query
-	 * status changes, and log data using separate data connection
+	 * search connected remote nodes by peer guid. they push data source
+	 * notifications, query status changes, and log data using separate data
+	 * connection
 	 */
 	private ConcurrentMap<String, RpcConnection> downstreams;
 
@@ -363,8 +364,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		mapQueryString = mapQueryString + "|rpcto " + queryGuid;
 		reduceQueryString = "rpcfrom " + queryGuid + "|" + reduceQueryString;
 
-		logger.info("kraken logdb: map query [{}]", mapQueryString);
-		logger.info("kraken logdb: reduce query [{}]", reduceQueryString);
+		logger.trace("kraken logdb: map query [{}]", mapQueryString);
+		logger.trace("kraken logdb: reduce query [{}]", reduceQueryString);
 
 		// create map queries
 		List<RemoteMapQuery> mapQueries = new ArrayList<RemoteMapQuery>();
@@ -387,23 +388,11 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		LogQuery q = queryService.createQuery(reduceQueryString);
 		ReduceQuery r = new ReduceQuery(queryGuid, q);
 		reduceQueries.put(queryGuid, r);
-		queryService.startQuery(q.getId());
 
-		// start map queries (pumping)
-		for (RpcConnection c : downstreams.values()) {
-			RpcSession session = null;
-			try {
-				session = c.createSession("logdb-mapreduce");
-				session.call("startMapQuery", queryGuid);
-			} catch (Exception e) {
-				logger.error("kraken logdb: cannot start mapquery", e);
-			} finally {
-				if (session != null)
-					session.close();
-			}
-		}
-
-		return new MapReduceQueryStatus(queryGuid, queryString, mapQueries, r);
+		// add to mapreduce query table
+		MapReduceQueryStatus status = new MapReduceQueryStatus(queryGuid, queryString, mapQueries, r);
+		queries.put(queryGuid, status);
+		return status;
 	}
 
 	private String buildQueryString(List<LogQueryCommand> commands) {
@@ -421,8 +410,23 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 
 	@Override
 	public void startQuery(String guid) {
-		// TODO Auto-generated method stub
+		// start reduce query
+		ReduceQuery r = reduceQueries.get(guid);
+		queryService.startQuery(r.getQuery().getId());
 
+		// start map queries (pumping)
+		for (RpcConnection c : downstreams.values()) {
+			RpcSession session = null;
+			try {
+				session = c.createSession("logdb-mapreduce");
+				session.call("startMapQuery", guid);
+			} catch (Exception e) {
+				logger.error("kraken logdb: cannot start mapquery", e);
+			} finally {
+				if (session != null)
+					session.close();
+			}
+		}
 	}
 
 	@Override
@@ -460,6 +464,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 
 	@Override
 	public void connectionClosed(RpcConnection conn) {
+		upstreams.remove(conn.getPeerGuid());
 		downstreams.remove(conn.getPeerGuid());
 		logger.info("kraken logdb: downstream connection [{}] closed", conn);
 	}
@@ -552,8 +557,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 			try {
 				session = conn.createSession("logdb-mapreduce");
 				session.post("onQueryStatusChange", id, status.name(), queryString);
-				logger.info("kraken logdb: notified query status [id={}, status={}] to peer [{}]", new Object[] { id,
-						status, conn.getPeerGuid() });
+				logger.info("kraken logdb: notified query status [id={}, status={}] to peer [{}]", new Object[] { id, status,
+						conn.getPeerGuid() });
 			} catch (Exception e) {
 				logger.warn("kraken logdb: cannot update datasource info", e);
 			} finally {

@@ -39,7 +39,6 @@ import org.krakenapps.logdb.mapreduce.MapReduceService;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.command.RpcFrom;
-import org.krakenapps.logdb.query.command.RpcTo;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
 
@@ -65,6 +64,27 @@ public class LogDBScript implements Script {
 		context.println("--------------");
 		for (DataSource ds : dsr.getAll())
 			context.println(ds);
+	}
+
+	@ScriptUsage(description = "print datasource metadata", arguments = {
+			@ScriptArgument(name = "node", type = "string", description = "node guid or 'local'"),
+			@ScriptArgument(name = "name", type = "string", description = "data source name") })
+	public void datasource(String[] args) {
+		String nodeGuid = args[0];
+		String name = args[1];
+
+		DataSource found = null;
+		for (DataSource ds : dsr.getAll())
+			if (ds.getNodeGuid().equals(nodeGuid) && ds.getName().equals(name))
+				found = ds;
+
+		if (found == null) {
+			context.println("data source not found");
+			return;
+		}
+
+		for (String key : found.getMetadata().keySet())
+			context.println(key + ": " + found.getMetadata().get(key));
 	}
 
 	public void queries(String[] args) {
@@ -187,7 +207,10 @@ public class LogDBScript implements Script {
 		RpcConnectionProperties props = new RpcConnectionProperties(host, port);
 		props.setPassword(args[2]);
 		RpcConnection conn = mapreduce.connect(props);
-		context.println("connected " + conn);
+		if (conn != null)
+			context.println("connected " + conn);
+		else
+			context.printf("cannot connect to %s:%d\n", host, port);
 	}
 
 	@ScriptUsage(description = "disconnect from arbiter", arguments = { @ScriptArgument(name = "guid", type = "string", description = "rpc peer guid") })
@@ -214,7 +237,8 @@ public class LogDBScript implements Script {
 			return;
 		}
 
-		context.println(q);
+		context.println("starting " + q);
+		mapreduce.startQuery(q.getGuid());
 
 		LogQuery lq = q.getReduceQuery().getQuery();
 		do {

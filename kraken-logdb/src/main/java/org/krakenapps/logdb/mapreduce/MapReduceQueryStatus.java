@@ -41,7 +41,7 @@ public class MapReduceQueryStatus {
 
 	@Override
 	public String toString() {
-		return "mapreduce query status: guid=" + guid + ", query=" + query;
+		return "guid=" + guid + ", query=" + query;
 	}
 
 }
