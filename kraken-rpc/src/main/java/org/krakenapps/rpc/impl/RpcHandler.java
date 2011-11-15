@@ -132,19 +132,19 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 							worksheet.put(workKey, new WorkStatus());
 							executor.submit(new MessageHandler(workKey, list));
 						} else
-							logger.trace("kraken-rpc: handler threadpool stopped, drop msg");
+							logger.trace("kraken rpc: handler threadpool stopped, drop msg");
 					}
 				}
 
 				Thread.sleep(100);
 			} catch (InterruptedException e) {
-				logger.error("kraken rpc: rpc run scheduler interrupted");
+				logger.trace("kraken rpc: rpc run scheduler interrupted");
 			} catch (Exception e) {
 				logger.error("kraken rpc: rpc run scheduler failed", e);
 			}
 		}
 
-		logger.error("kraken rpc: rpc run scheduler stopped");
+		logger.trace("kraken rpc: rpc run scheduler stopped");
 		doStop = false;
 	}
 
@@ -197,7 +197,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		try {
 			return initializeConnection(channel, props);
 		} catch (InterruptedException e) {
-			logger.warn("kraken-rpc: interrupted", e);
+			logger.warn("kraken rpc: interrupted", e);
 			return null;
 		}
 	}
@@ -224,7 +224,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		// add to connection
 		connMap.put(channel.getId(), newConnection);
 
-		logger.info("kraken-rpc: [{}] {} connected, remote={}", new Object[] { newConnection.getId(),
+		logger.trace("kraken rpc: [{}] {} connected, remote={}", new Object[] { newConnection.getId(),
 				newConnection.isClient() ? "client" : "server", addr });
 
 		// ssl handshake
@@ -257,12 +257,12 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			props.setPeerCert(peerCert);
 
 			String peerCommonName = peerCert.getSubjectDN().getName();
-			logger.info("kraken-rpc: new peer certificate subject={}, remote={}", peerCommonName, channel.getRemoteAddress());
+			logger.trace("kraken rpc: new peer certificate subject={}, remote={}", peerCommonName, channel.getRemoteAddress());
 
 			if (executor != null)
 				executor.submit(this);
 			else
-				logger.trace("kraken-rpc: handler threadpool stopped, drop ssl init");
+				logger.trace("kraken rpc: handler threadpool stopped, drop ssl init");
 		}
 
 		@Override
@@ -273,13 +273,13 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 	private void init(Channel channel, RpcConnectionProperties props) {
 		// client will initialize connection at caller side.
-		logger.trace("kraken-rpc: new channel {}", channel.getLocalAddress());
+		logger.trace("kraken rpc: new channel {}", channel.getLocalAddress());
 
 		try {
 			if (channel.getParent() != null)
 				initializeConnection(channel, props);
 		} catch (InterruptedException e) {
-			logger.warn("kraken-rpc: interrupted", e);
+			logger.trace("kraken rpc: interrupted", e);
 		}
 	}
 
@@ -337,7 +337,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		@Override
 		public void onCompleted(RpcConnection conn) {
 			if (conn.getTrustedLevel() == null || conn.getTrustedLevel() == RpcTrustLevel.Untrusted) {
-				logger.warn("kraken-rpc: {} peering failed with {}", conn.getId(), conn.getRemoteAddress());
+				logger.warn("kraken rpc: {} peering failed with {}", conn.getId(), conn.getRemoteAddress());
 			} else {
 				connectionOpened(conn);
 			}
@@ -348,16 +348,16 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
 		Throwable cause = e.getCause();
 		if (cause instanceof ConnectException) {
-			logger.debug("kraken-rpc: connect failed");
+			logger.debug("kraken rpc: connect failed");
 			return;
 		}
 
 		if (cause instanceof ClosedChannelException) {
-			logger.debug("kraken-rpc: connection [{}] closed", e.getChannel().getRemoteAddress());
+			logger.debug("kraken rpc: connection [{}] closed", e.getChannel().getRemoteAddress());
 			return;
 		}
 
-		logger.warn("kraken-rpc: unhandled exception", cause);
+		logger.warn("kraken rpc: unhandled exception", cause);
 
 		// close
 		e.getChannel().close();
@@ -388,7 +388,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 				for (RpcMessage msg : msgs)
 					handle(msg);
 			} catch (Exception e) {
-				logger.error("kraken-rpc: cannot handle message", e);
+				logger.error("kraken rpc: cannot handle message", e);
 			} finally {
 				// clear work status
 				worksheet.remove(workKey);
@@ -407,12 +407,12 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			String methodName = msg.getString("method");
 
 			if (logger.isTraceEnabled())
-				logger.trace("kraken-rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
+				logger.trace("kraken rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
 						new Object[] { conn.getId(), sessionId, id, type, methodName });
 
 			RpcSession session = conn.findSession(sessionId);
 			if (session == null) {
-				logger.warn("kraken-rpc: session {} not found, connection={}, peer={}", new Object[] { sessionId, conn.getId(),
+				logger.warn("kraken rpc: session {} not found, connection={}, peer={}", new Object[] { sessionId, conn.getId(),
 						conn.getRemoteAddress() });
 				return;
 			}
@@ -435,7 +435,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 					RpcMessage resp = RpcMessage.newResponse(newId, session.getId(), id, methodName, ret);
 					channel.write(resp);
 
-					logger.trace("kraken-rpc: return for [id={}, ret={}, session={}, method={}]", new Object[] { newId, id,
+					logger.trace("kraken rpc: return for [id={}, ret={}, session={}, method={}]", new Object[] { newId, id,
 							session.getId(), methodName });
 				} catch (Throwable t) {
 					if (t.getCause() != null)
@@ -443,7 +443,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 					cutStackTrace(t);
 
-					logger.trace("kraken-rpc: throws exception for call [" + conn.getId() + ", " + methodName + "]", t);
+					logger.trace("kraken rpc: throws exception for call [" + conn.getId() + ", " + methodName + "]", t);
 					RpcMessage error = RpcMessage.newException(newId, session.getId(), id, t.getMessage());
 					channel.write(error);
 				}
@@ -470,7 +470,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 		int originalId = (Integer) msg.getHeader("ret-for");
 		if (logger.isDebugEnabled())
-			logger.debug("kraken-rpc: response for msg {}", originalId);
+			logger.debug("kraken rpc: response for msg {}", originalId);
 
 		if (asyncTable.contains(originalId))
 			asyncTable.signal(originalId, msg);
@@ -493,7 +493,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		// schedule call or post handling (long running)
 		if (queue.size() > HIGH_WATERMARK) {
 			if (logger.isTraceEnabled())
-				logger.trace("kraken-rpc: pause channel [{}]", channel.getRemoteAddress());
+				logger.trace("kraken rpc: pause channel [{}]", channel.getRemoteAddress());
 
 			channel.setReadable(false);
 		}
@@ -549,7 +549,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		Integer sessionId = (Integer) msg.getHeader("session");
 		String methodName = msg.getString("method");
 
-		logger.trace("kraken-rpc: received rpc-call, connection={}, session={}, method={}", new Object[] { connectionId,
+		logger.trace("kraken rpc: received rpc-call, connection={}, session={}, method={}", new Object[] { connectionId,
 				sessionId, methodName });
 
 		Method method = binding.getMethod(methodName);

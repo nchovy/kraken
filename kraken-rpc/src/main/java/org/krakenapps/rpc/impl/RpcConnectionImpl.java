@@ -176,7 +176,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 		if (bindingMap.containsKey(name))
 			throw new IllegalStateException("duplicated service name: " + name);
 
-		logger.trace("kraken-rpc: binding {}:{} to {}", new Object[] { channel.getId(), name,
+		logger.trace("kraken rpc: binding {}:{} to {}", new Object[] { channel.getId(), name,
 				service.getClass().getName() });
 		bindingMap.put(name, new RpcServiceBindingImpl(name, service));
 	}
@@ -236,7 +236,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			service.sessionRequested(event);
 			if (session.getState() == RpcSessionState.Opened) {
 				if (!session.getServiceName().equals("rpc-control"))
-					logger.info("kraken-rpc: session created [{}]", session);
+					logger.trace("kraken rpc: session created [{}]", session);
 
 				sessionMap.put(newSessionId, session);
 
@@ -245,7 +245,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 				return session;
 			}
 		} catch (Exception e) {
-			logger.error("kraken-rpc: cannot create session", e);
+			logger.error("kraken rpc: cannot create session", e);
 		}
 
 		return null;
@@ -299,13 +299,13 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			try {
 				callback.connectionClosed(this);
 			} catch (Exception e) {
-				logger.warn("kraken-rpc: event listener should not throw exception", e);
+				logger.warn("kraken rpc: event listener should not throw exception", e);
 			}
 		}
 
 		// close socket
 		channel.close().awaitUninterruptibly();
-		logger.info("kraken-rpc: connection closed id={}, peer={}", channel.getId(), getRemoteAddress());
+		logger.trace("kraken rpc: connection closed id={}, peer={}", channel.getId(), getRemoteAddress());
 	}
 
 	@Override
@@ -483,7 +483,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			int trustedLevel = (Integer) tuple[2];
 			setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
 
-			logger.info("kraken-rpc: {} login success, trusted level = {}", new Object[] { peerGuid, trustedLevel });
+			logger.trace("kraken rpc: {} login success, trusted level = {}", new Object[] { peerGuid, trustedLevel });
 			RpcConnection conn = session.getConnection();
 			callback.onCompleted(conn);
 		}
@@ -505,7 +505,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			int trustedLevel = (Integer) ret[1];
 
 			// challenge result
-			logger.info("kraken-rpc: {} login result = {}, trusted level = {}", new Object[] { peerGuid, peered,
+			logger.trace("kraken rpc: {} login result = {}, trusted level = {}", new Object[] { peerGuid, peered,
 					trustedLevel });
 
 			if (peered)
