@@ -16,22 +16,24 @@
 package org.krakenapps.logstorage.engine;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableNotFoundException;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -44,70 +46,45 @@ import org.slf4j.LoggerFactory;
 public class LogTableRegistryImpl implements LogTableRegistry {
 	private final Logger logger = LoggerFactory.getLogger(LogTableRegistryImpl.class.getName());
 
-	private static final File tableMappingFile = new File(System.getProperty("kraken.data.dir"),
-			"kraken-logstorage/tables");
+	@Requires
+	private ConfigService conf;
 
-	// table managements
+	/**
+	 * table id generator
+	 */
 	private AtomicInteger nextTableId;
-	private Properties tableProps;
 
-	private ConcurrentMap<String, LogTable> tableSchemas;
-	private ConcurrentMap<Integer, TableMetadata> metadataMap;
+	/**
+	 * table id to name mappings
+	 */
+	private ConcurrentMap<Integer, String> tableNames;
+
+	/**
+	 * table name to schema mappings
+	 */
+	private ConcurrentMap<String, LogTableSchema> tableSchemas;
 
 	private CopyOnWriteArraySet<LogTableEventListener> callbacks;
 
 	public LogTableRegistryImpl() {
-		tableSchemas = new ConcurrentHashMap<String, LogTable>();
-		metadataMap = new ConcurrentHashMap<Integer, TableMetadata>();
+		tableSchemas = new ConcurrentHashMap<String, LogTableSchema>();
+		tableNames = new ConcurrentHashMap<Integer, String>();
 		callbacks = new CopyOnWriteArraySet<LogTableEventListener>();
 
 		// load table id mappings
 		loadTableMappings();
 	}
 
-	@Invalidate
-	public void stop() {
-		updateTableMappings();
-	}
-
 	private void loadTableMappings() {
 		int maxId = 0;
 
-		FileInputStream fis = null;
-		try {
-			if (!tableMappingFile.exists()) {
-				// avoid exception when parent path of tableMappingFile is not
-				// exists.
-				tableMappingFile.getParentFile().mkdirs();
-				new FileOutputStream(tableMappingFile).close();
-			}
-
-			fis = new FileInputStream(tableMappingFile);
-			tableProps = new Properties();
-			tableProps.load(fis);
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (fis != null)
-				try {
-					fis.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-		}
-
-		for (Object key : tableProps.keySet()) {
-			String tableName = key.toString();
-			if (!tableName.contains(".")) {
-				int id = Integer.valueOf(tableProps.getProperty(tableName));
-				if (id > maxId)
-					maxId = id;
-
-				logger.trace("log storage: loading table [{}]", tableName);
-				tableSchemas.put(tableName, new LogTable(id, tableName));
-				TableMetadata tm = new TableMetadata(tableProps, tableName);
-				metadataMap.put(id, tm);
-			}
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		ConfigIterator it = db.findAll(LogTableSchema.class);
+		for (LogTableSchema t : it.getDocuments(LogTableSchema.class)) {
+			tableNames.put(t.getId(), t.getName());
+			tableSchemas.put(t.getName(), t);
+			if (maxId < t.getId())
+				maxId = t.getId();
 		}
 
 		nextTableId = new AtomicInteger(maxId);
@@ -125,7 +102,7 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 
 	@Override
 	public int getTableId(String tableName) {
-		LogTable table = tableSchemas.get(tableName);
+		LogTableSchema table = tableSchemas.get(tableName);
 		if (table == null)
 			throw new LogTableNotFoundException(tableName);
 
@@ -134,10 +111,7 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 
 	@Override
 	public String getTableName(int tableId) {
-		if (metadataMap.containsKey(tableId))
-			return metadataMap.get(tableId).getTableName();
-		else
-			return null;
+		return tableNames.get(tableId);
 	}
 
 	@Override
@@ -146,18 +120,13 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 			throw new IllegalStateException("table already exists: " + tableName);
 
 		int newId = nextTableId.incrementAndGet();
+		LogTableSchema table = new LogTableSchema(newId, tableName);
 
-		synchronized (tableProps) {
-			tableProps.put(tableName, Integer.toString(newId));
-			TableMetadata tm = new TableMetadata(tableProps, tableName);
-			if (tableMetadata != null)
-				tm.putAll(tableMetadata);
-			metadataMap.put(newId, tm);
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		db.add(table, "kraken-logstorage", "created " + tableName + " table");
 
-			updateTableMappings();
-		}
-
-		tableSchemas.put(tableName, new LogTable(newId, tableName));
+		tableNames.put(table.getId(), table.getName());
+		tableSchemas.put(tableName, table);
 
 		// invoke callbacks
 		for (LogTableEventListener callback : callbacks) {
@@ -169,41 +138,20 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		}
 	}
 
-	private void updateTableMappings() {
-		FileOutputStream fos = null;
-
-		try {
-			synchronized (tableProps) {
-				fos = new FileOutputStream(tableMappingFile);
-				tableProps.store(fos, null);
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (fos != null)
-				try {
-					fos.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-		}
-	}
-
 	@Override
 	public void dropTable(String tableName) {
-		LogTable old = tableSchemas.remove(tableName);
+		LogTableSchema old = tableSchemas.remove(tableName);
 		if (old == null)
 			throw new IllegalStateException("table not found: " + tableName);
 
-		TableMetadata oldMetadata = metadataMap.remove(old.getId());
-		oldMetadata.clear();
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogTableSchema.class, Predicates.field("name", tableName));
+		if (c == null)
+			return;
 
-		synchronized (tableProps) {
-			tableProps.remove(tableName);
-			updateTableMappings();
-		}
+		LogTableSchema t = tableSchemas.remove(tableName);
+		if (t != null)
+			tableNames.remove(t.getId());
 
 		// invoke callbacks
 		for (LogTableEventListener callback : callbacks) {
@@ -217,7 +165,47 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 
 	@Override
 	public TableMetadata getTableMetadata(int tableId) {
-		return metadataMap.get(tableId);
+		String tableName = tableNames.get(tableId);
+		if (tableName == null)
+			return null;
+
+		LogTableSchema t = tableSchemas.get(tableName);
+		Map<String, String> m = new HashMap<String, String>();
+		for (String key : t.getMetadata().keySet()) {
+			Object value = t.getMetadata().get(key);
+			m.put(key, value == null ? null : value.toString());
+		}
+		return new TableMetadata(tableId, tableName, m);
+	}
+
+	@Override
+	public Set<String> getTableMetadataKeys(String tableName) {
+		LogTableSchema t = tableSchemas.get(tableName);
+		if (t == null)
+			throw new IllegalArgumentException("table not exists: " + tableName);
+
+		return t.getMetadata().keySet();
+	}
+
+	@Override
+	public String getTableMetadata(String tableName, String key) {
+		LogTableSchema t = tableSchemas.get(tableName);
+		if (t == null)
+			throw new IllegalArgumentException("table not exists: " + tableName);
+
+		return (String) t.getMetadata().get(key);
+	}
+
+	@Override
+	public void setTableMetadata(String tableName, String key, String value) {
+		LogTableSchema t = tableSchemas.get(tableName);
+		if (t == null)
+			throw new IllegalArgumentException("table not exists: " + tableName);
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogTableSchema.class, Predicates.field("name", tableName));
+		t.getMetadata().put(key, value);
+		db.update(c, t, false, "kraken-logstorage", "set table [" + tableName + "] metadata " + key + " to " + value);
 	}
 
 	@Override
@@ -229,5 +217,4 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 	public void removeListener(LogTableEventListener listener) {
 		callbacks.remove(listener);
 	}
-
 }

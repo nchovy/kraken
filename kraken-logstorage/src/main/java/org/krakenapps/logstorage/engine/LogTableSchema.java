@@ -15,13 +15,21 @@
  */
 package org.krakenapps.logstorage.engine;
 
-public class LogTable {
+import java.util.HashMap;
+import java.util.Map;
+
+public class LogTableSchema {
 	private int id;
 	private String name;
+	private Map<String, Object> metadata;
 
-	public LogTable(int id, String name) {
+	public LogTableSchema() {
+	}
+
+	public LogTableSchema(int id, String name) {
 		this.id = id;
 		this.name = name;
+		this.metadata = new HashMap<String, Object>();
 	}
 
 	public int getId() {
@@ -30,5 +38,9 @@ public class LogTable {
 
 	public String getName() {
 		return name;
+	}
+
+	public Map<String, Object> getMetadata() {
+		return metadata;
 	}
 }

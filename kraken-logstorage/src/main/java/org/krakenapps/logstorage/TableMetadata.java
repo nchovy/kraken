@@ -15,126 +15,88 @@
  */
 package org.krakenapps.logstorage;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
+@Deprecated
 public class TableMetadata implements Map<String, String> {
 	private int id;
 	private String tableName;
-	private String keyPrefix;
-	private Properties tableProps;
+	private Map<String, String> params;
 
-	public TableMetadata(Properties tableProps, String tableName) {
-		this.id = Integer.parseInt(tableProps.getProperty(tableName));
-		this.tableProps = tableProps;
+	public TableMetadata(int id, String tableName, Map<String, String> params) {
+		this.id = id;
 		this.tableName = tableName;
-		this.keyPrefix = id + ".";
+		this.params = params;
+	}
+
+	public int getTableId() {
+		return id;
 	}
 
 	public String getTableName() {
 		return tableName;
 	}
 
-	public void setTableName(String tableName) {
-		this.tableName = tableName;
-	}
-
 	@Override
 	public int size() {
-		throw new UnsupportedOperationException();
+		return params.size();
 	}
 
 	@Override
 	public boolean isEmpty() {
-		throw new UnsupportedOperationException();
+		return params.isEmpty();
 	}
 
 	@Override
 	public boolean containsKey(Object key) {
-		return tableProps.containsKey(getTableMetadataKey(key));
+		return params.containsKey(key);
 	}
 
 	@Override
 	public boolean containsValue(Object value) {
-		throw new UnsupportedOperationException();
+		return params.containsValue(value);
 	}
 
 	@Override
 	public String get(Object key) {
-		return tableProps.getProperty(getTableMetadataKey(key));
+		return (String) params.get(key);
 	}
 
 	@Override
 	public String put(String key, String value) {
-		return (String) tableProps.setProperty(getTableMetadataKey(key), value);
-	}
-
-	private String getTableMetadataKey(Object key) {
-		return keyPrefix + key;
+		return (String) params.put(key, value);
 	}
 
 	@Override
 	public String remove(Object key) {
-		return (String) tableProps.remove(getTableMetadataKey(key));
+		return (String) params.remove(key);
 	}
 
 	@Override
 	public void putAll(Map<? extends String, ? extends String> m) {
-		for (Entry<? extends String, ? extends String> entry : m.entrySet()) {
-			tableProps.put(getTableMetadataKey(entry.getKey()), entry.getValue());
-		}
+		params.putAll(m);
 	}
 
 	@Override
 	public void clear() {
-		LinkedList<Object> candidates = new LinkedList<Object>();
-		for (Entry<Object, Object> entry : tableProps.entrySet()) {
-			if (entry.getKey().toString().startsWith(keyPrefix)) {
-				candidates.add(entry.getKey());
-			}
-		}
-		for (Object obj : candidates) {
-			tableProps.remove(obj);
-		}
+		params.clear();
 	}
 
 	@Override
 	public Set<String> keySet() {
-		Set<String> result = Collections.newSetFromMap(new HashMap<String, Boolean>());
-		for (Object key : tableProps.keySet()) {
-			if (key.toString().startsWith(keyPrefix)) {
-				result.add(key.toString());
-			}
-		}
-		return result;
+		return params.keySet();
 	}
 
 	@Override
 	public Collection<String> values() {
-		Collection<String> result = new LinkedList<String>();
-		for (Object key : tableProps.keySet()) {
-			if (key.toString().startsWith(keyPrefix)) {
-				result.add(tableProps.getProperty(key.toString()));
-			}
-		}
-		return result;
+		return params.values();
 	}
 
 	@Override
-	public Set<java.util.Map.Entry<String, String>> entrySet() {
-		Set<Entry<String, String>> result = Collections.newSetFromMap(new HashMap<Entry<String, String>, Boolean>());
-		for (Object key : tableProps.keySet()) {
-			if (key.toString().startsWith(keyPrefix)) {
-				result.add(new SimpleEntry<String, String>(key.toString(), tableProps.get(key).toString()));
-			}
-		}
-		return result;
+	public Set<Map.Entry<String, String>> entrySet() {
+		return params.entrySet();
 	}
 
 }

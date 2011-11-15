@@ -15,31 +15,56 @@
  */
 package org.krakenapps.logstorage.engine;
 
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigService;
 
 public class ConfigUtil {
-	public static String get(PreferencesService prefsvc, Constants key) {
-		Preferences prefs = prefsvc.getSystemPreferences().node("/config");
-		return prefs.get(key.getName(), null);
+	public static String get(ConfigService conf, Constants key) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-confdb");
+		ConfigCollection col = db.ensureCollection("global_settings");
+		Config c = getGlobalConfig(col);
+		if (c == null)
+			return null;
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> m = (Map<String, Object>) c.getDocument();
+		return (String) m.get(key.getName());
 	}
 
-	public static void set(PreferencesService prefsvc, Constants key, String value) {
-		Logger logger = LoggerFactory.getLogger(ConfigUtil.class.getName());
+	@SuppressWarnings("unchecked")
+	public static void set(ConfigService conf, Constants key, String value) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-confdb");
+		ConfigCollection col = db.ensureCollection("global_settings");
 
+		Config c = getGlobalConfig(col);
+
+		Map<String, Object> doc = new HashMap<String, Object>();
+		if (c != null)
+			doc = (Map<String, Object>) c.getDocument();
+
+		doc.put(key.getName(), value);
+
+		if (c == null)
+			col.add(doc);
+		else
+			col.update(c);
+	}
+
+	private static Config getGlobalConfig(ConfigCollection col) {
+		ConfigIterator it = col.findAll();
 		try {
-			Preferences root = prefsvc.getSystemPreferences();
-			Preferences config = root.node("/config");
-			config.put(key.getName(), value);
+			if (!it.hasNext())
+				return null;
 
-			root.flush();
-			root.sync();
-		} catch (BackingStoreException e) {
-			logger.error("log storage: cannot save property [{}={}]", key, value);
+			return it.next();
+		} finally {
+			it.close();
 		}
-
 	}
 }

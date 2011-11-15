@@ -15,10 +15,31 @@
  */
 package org.krakenapps.logstorage;
 
+import java.io.File;
 import java.util.Collection;
 import java.util.Date;
 
 public interface LogStorage {
+	/**
+	 * @return the storage directory
+	 */
+	File getDirectory();
+
+	/**
+	 * @param tableName
+	 *            the table name
+	 * @return the directory path which contains table files
+	 */
+	File getTableDirectory(String tableName);
+
+	/**
+	 * set storage directory
+	 * 
+	 * @param f
+	 *            the storage directory path
+	 */
+	void setDirectory(File f);
+
 	LogStorageStatus getStatus();
 
 	void start();
@@ -42,20 +63,6 @@ public interface LogStorage {
 
 	void write(Collection<Log> logs);
 
-	int getMinFreeSpaceValue();
-
-	DiskSpaceType getMinFreeSpaceType();
-
-	void setMinFreeSpace(int value, DiskSpaceType type);
-
-	DiskLackAction getDiskLackAction();
-
-	void setDiskLackAction(DiskLackAction action);
-
-	void registerDiskLackCallback(DiskLackCallback callback);
-
-	void unregisterDiskLackCallback(DiskLackCallback callback);
-
 	Log getLog(LogKey logKey);
 
 	Log getLog(String tableName, Date date, int id);
@@ -72,4 +79,5 @@ public interface LogStorage {
 	void addLogListener(LogCallback callback);
 
 	void removeLogListener(LogCallback callback);
+
 }

@@ -18,18 +18,26 @@ package org.krakenapps.logstorage.script;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
+
+import javax.swing.text.NumberFormatter;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
@@ -37,18 +45,18 @@ import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.TableMetadata;
 import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.ConfigUtil;
-import org.osgi.service.prefs.PreferencesService;
+import org.krakenapps.logstorage.engine.LogTableSchema;
 
 public class LogStorageScript implements Script {
 	private ScriptContext context;
 	private LogTableRegistry tableRegistry;
 	private LogStorage storage;
-	private PreferencesService prefsvc;
+	private ConfigService conf;
 
-	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, PreferencesService prefsvc) {
+	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, ConfigService conf) {
 		this.tableRegistry = tableRegistry;
 		this.storage = archive;
-		this.prefsvc = prefsvc;
+		this.conf = conf;
 	}
 
 	@Override
@@ -56,9 +64,79 @@ public class LogStorageScript implements Script {
 		this.context = context;
 	}
 
+	@ScriptUsage(description = "migrate old properties to new confdb metadata")
+	public void migrate(String[] args) {
+		context.println("migrate table metadata from properties to confdb");
+
+		FileInputStream is = null;
+		try {
+			ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+			is = new FileInputStream(new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/tables"));
+
+			Properties p = new Properties();
+			p.load(is);
+
+			for (Object key : p.keySet()) {
+				String tableName = key.toString();
+				if (!tableName.contains(".")) {
+					int id = Integer.valueOf(p.getProperty(tableName));
+					LogTableSchema t = new LogTableSchema(id, tableName);
+					db.add(t, "kraken-logstorage", tableName + " metadata is migrated from old version");
+				}
+			}
+		} catch (IOException e) {
+			context.println(e.getMessage());
+		} finally {
+			if (is != null) {
+				try {
+					is.close();
+				} catch (IOException e) {
+				}
+			}
+		}
+	}
+
+	@ScriptUsage(description = "print table metadata", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "table metadata key", type = "string", description = "key", optional = true),
+			@ScriptArgument(name = "table metadata value", type = "string", description = "value", optional = true) })
+	public void table(String[] args) {
+		String tableName = args[0];
+
+		if (!tableRegistry.exists(tableName)) {
+			context.println("table not found");
+			return;
+		}
+
+		if (args.length == 1) {
+			context.println("Table Metadata");
+			context.println("----------");
+			for (String key : tableRegistry.getTableMetadataKeys(tableName)) {
+				String value = tableRegistry.getTableMetadata(tableName, key);
+				context.println(key + "=" + value);
+			}
+
+			long total = 0;
+			File dir = storage.getTableDirectory(tableName);
+			for (File f : dir.listFiles())
+				total += f.length();
+
+			context.println("Storage Consumption");
+			context.println("---------------------");
+			NumberFormat nf = NumberFormat.getNumberInstance();
+			context.println(nf.format(total) + " bytes");
+		} else if (args.length == 2) {
+			String value = tableRegistry.getTableMetadata(tableName, args[1]);
+			context.println(value);
+		} else if (args.length == 3) {
+			tableRegistry.setTableMetadata(tableName, args[1], args[2]);
+			context.println("set " + args[2]);
+		}
+	}
+
 	public void tables(String[] args) {
 		context.println("Tables");
-		context.println("---------------");
+		context.println("--------");
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		for (String tableName : tableRegistry.getTableNames()) {
 			Iterator<Date> it = storage.getLogDates(tableName).iterator();
@@ -83,15 +161,13 @@ public class LogStorageScript implements Script {
 		storage.reload();
 	}
 
-	@ScriptUsage(description = "create new table", arguments = { @ScriptArgument(name = "name", type = "string",
-			description = "log table name") })
+	@ScriptUsage(description = "create new table", arguments = { @ScriptArgument(name = "name", type = "string", description = "log table name") })
 	public void createTable(String[] args) {
 		storage.createTable(args[0]);
 		context.println("table created");
 	}
 
-	@ScriptUsage(description = "drop log table", arguments = { @ScriptArgument(name = "name", type = "string",
-			description = "log table name") })
+	@ScriptUsage(description = "drop log table", arguments = { @ScriptArgument(name = "name", type = "string", description = "log table name") })
 	public void dropTable(String[] args) {
 		try {
 			storage.dropTable(args[0]);
@@ -189,7 +265,7 @@ public class LogStorageScript implements Script {
 	@ScriptUsage(description = "print all parameters")
 	public void parameters(String[] args) {
 		for (Constants c : Constants.values()) {
-			context.println(c.getName() + ": " + ConfigUtil.get(prefsvc, c));
+			context.println(c.getName() + ": " + ConfigUtil.get(conf, c));
 		}
 	}
 
@@ -217,7 +293,7 @@ public class LogStorageScript implements Script {
 			}
 		}
 
-		ConfigUtil.set(prefsvc, configKey, value);
+		ConfigUtil.set(conf, configKey, value);
 		context.println("set");
 	}
 
@@ -356,8 +432,7 @@ public class LogStorageScript implements Script {
 		map.put("cs(User-Agent)",
 				"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 Safari/535.1");
 		map.put("cs-method", "GET");
-		map.put("cs-uri-query",
-				"q=cache:xgLxoOQBOoIJ:krakenapps.org/+krakenapps&cd=1&hl=en&ct=clnk&source=www.google.com");
+		map.put("cs-uri-query", "q=cache:xgLxoOQBOoIJ:krakenapps.org/+krakenapps&cd=1&hl=en&ct=clnk&source=www.google.com");
 		map.put("cs-uri-stem", "/search");
 		map.put("cs-username", "-");
 		map.put("date", "2011-08-22");

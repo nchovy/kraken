@@ -16,6 +16,7 @@
 package org.krakenapps.logstorage.engine;
 
 public enum Constants {
+	LogStorageDirectory("log_storage_dir"),
 	LogMaxIdleTime("log_max_idle_time"), 
 	LogFlushInterval("log_flush_interval"), 
 	LogMaxBuffering("log_max_buffering"),
