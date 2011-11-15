@@ -15,7 +15,6 @@
  */
 package org.krakenapps.siem.msgbus;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Map;
@@ -260,7 +259,7 @@ public class IscPlugin {
 		SimpleDateFormat to = new SimpleDateFormat("yyyyMMddHHmmss");
 		try {
 			return to.format(from.parse(date));
-		} catch (ParseException e) {
+		} catch (Exception e) {
 			return "";
 		}
 	}
