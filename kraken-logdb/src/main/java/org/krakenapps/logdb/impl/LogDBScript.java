@@ -34,6 +34,8 @@ import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogScript;
+import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
@@ -46,17 +48,27 @@ public class LogDBScript implements Script {
 	private LogQueryService qs;
 	private DataSourceRegistry dsr;
 	private MapReduceService mapreduce;
+	private LogScriptRegistry scriptRegistry;
 	private ScriptContext context;
 
-	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter) {
+	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter,
+			LogScriptRegistry scriptRegistry) {
 		this.qs = qs;
 		this.dsr = dsr;
 		this.mapreduce = arbiter;
+		this.scriptRegistry = scriptRegistry;
 	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void scripts(String[] args) {
+		context.println("Log Scripts");
+		context.println("--------------");
+		for (LogScript script : scriptRegistry.getScripts())
+			context.println(script);
 	}
 
 	public void datasources(String[] args) {

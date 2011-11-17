@@ -34,6 +34,7 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
+import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.FileBufferList;
@@ -45,11 +46,13 @@ import org.krakenapps.logdb.query.parser.LookupParser;
 import org.krakenapps.logdb.query.parser.OptionParser;
 import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.logdb.query.parser.RenameParser;
+import org.krakenapps.logdb.query.parser.ScriptParser;
 import org.krakenapps.logdb.query.parser.SearchParser;
 import org.krakenapps.logdb.query.parser.SortParser;
 import org.krakenapps.logdb.query.parser.StatsParser;
 import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,11 +73,16 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Requires
 	private LookupHandlerRegistry lookupRegistry;
 
+	@Requires
+	private LogScriptRegistry scriptRegistry;
+
+	private BundleContext bc;
 	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
 
 	private CopyOnWriteArraySet<LogQueryEventListener> callbacks;
 
-	public LogQueryServiceImpl() {
+	public LogQueryServiceImpl(BundleContext bc) {
+		this.bc = bc;
 		this.callbacks = new CopyOnWriteArraySet<LogQueryEventListener>();
 	}
 
@@ -97,9 +105,11 @@ public class LogQueryServiceImpl implements LogQueryService {
 		// add table and lookup (need some constructor injection)
 		TableParser tableParser = new TableParser(logStorage, tableRegistry);
 		LookupParser lookupParser = new LookupParser(lookupRegistry);
+		ScriptParser scriptParser = new ScriptParser(bc, scriptRegistry);
 
 		parsers.add(tableParser);
 		parsers.add(lookupParser);
+		parsers.add(scriptParser);
 
 		syntaxProvider.addParsers(parsers);
 
