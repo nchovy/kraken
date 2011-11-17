@@ -14,10 +14,9 @@ import java.util.Set;
 
 public class PrimitiveConverter {
 	@SuppressWarnings("unchecked")
-	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(byte.class, Byte.class,
-			short.class, Short.class, int.class, Integer.class, long.class, Long.class, float.class, Float.class,
-			double.class, Double.class, boolean.class, Boolean.class, char.class, Character.class, String.class,
-			Date.class));
+	private static Set<Class<?>> nonSerializeClasses = new HashSet<Class<?>>(Arrays.asList(byte.class, Byte.class, short.class,
+			Short.class, int.class, Integer.class, long.class, Long.class, float.class, Float.class, double.class, Double.class,
+			boolean.class, Boolean.class, char.class, Character.class, String.class, Date.class));
 
 	public static Object serialize(Object obj) {
 		return serialize(obj, obj, null, null);
@@ -76,22 +75,21 @@ public class PrimitiveConverter {
 				Object value = f.get(obj);
 
 				if (option != null && !option.nullable() && value == null)
-					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f
-							.getType().getSimpleName(), cls.getName(), f.getName()));
+					throw new IllegalArgumentException(String.format("Can not set %s field %s.%s to null value", f.getType()
+							.getSimpleName(), cls.getName(), f.getName()));
 
 				if (value instanceof Enum) {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
-								f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
 						m.put(fieldName, null);
 					else {
-						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f
-								.getAnnotation(ReferenceKey.class).value()) : null;
+						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f.getAnnotation(
+								ReferenceKey.class).value()) : null;
 						Object serialized = serialize(root, value, callback, referenceKey);
 						m.put(fieldName, serialized);
 					}
@@ -112,6 +110,9 @@ public class PrimitiveConverter {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T parse(Class<T> cls, Object obj, PrimitiveParseCallback callback) {
+		if (nonSerializeClasses.contains(obj.getClass()))
+			return (T) obj;
+
 		try {
 			Map<String, Object> m = (Map<String, Object>) obj;
 
@@ -137,21 +138,35 @@ public class PrimitiveConverter {
 				if (option != null && !option.nullable()) {
 					if (!m.containsKey(fieldName) || m.get(fieldName) == null)
 						throw new IllegalArgumentException(fieldName + " cannot be null.");
-					continue;
 				}
 
 				Object value = m.get(fieldName);
 				f.setAccessible(true);
+				if (value == null) {
+					f.set(n, null);
+					continue;
+				}
 
 				Class<?> fieldType = f.getType();
 				ReferenceKey refkey = f.getAnnotation(ReferenceKey.class);
 				if (refkey != null) {
-					Map<String, Object> keys = (Map<String, Object>) value;
-					if (callback != null)
-						f.set(n, callback.onParse(fieldType, keys));
-					else if (option != null && !option.nullable())
-						throw new IllegalArgumentException(fieldName + " requires parse callback");
-					continue;
+					if (value instanceof Map) {
+						Map<String, Object> keys = (Map<String, Object>) value;
+						if (callback != null)
+							f.set(n, callback.onParse(fieldType, keys));
+						else if (option != null && !option.nullable())
+							throw new IllegalArgumentException(fieldName + " requires parse callback");
+						continue;
+					} else if (value instanceof Object[]) {
+						for (Object v : (Object[]) value) {
+							Map<String, Object> keys = (Map<String, Object>) v;
+							if (callback != null)
+								f.set(n, callback.onParse(fieldType, keys));
+							else if (option != null && !option.nullable())
+								throw new IllegalArgumentException(fieldName + " requires parse callback");
+						}
+						continue;
+					}
 				}
 
 				if (fieldType.isEnum()) {
@@ -171,10 +186,15 @@ public class PrimitiveConverter {
 						else
 							f.set(n, value);
 					}
-				} else if (!Map.class.isAssignableFrom(fieldType) && value instanceof Map) {
-					f.set(n, parse(fieldType, (Map) value));
+				} else if (Map.class.isAssignableFrom(fieldType)) {
+					MapTypeHint hint = f.getAnnotation(MapTypeHint.class);
+					Map<Object, Object> v = (Map<Object, Object>) value;
+					Map<Object, Object> fmap = new HashMap<Object, Object>();
+					for (Object k : v.keySet())
+						fmap.put(parse(hint.value()[0], k, callback), parse(hint.value()[1], v.get(k), callback));
+					f.set(n, fmap);
 				} else {
-					f.set(n, value);
+					f.set(n, parse(fieldType, value, callback));
 				}
 			}
 
@@ -191,8 +211,7 @@ public class PrimitiveConverter {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll,
-			PrimitiveParseCallback callback) {
+	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll, PrimitiveParseCallback callback) {
 		Collection<T> result = new ArrayList<T>();
 		for (Object obj : coll) {
 			if (Map.class.isAssignableFrom(obj.getClass()))
