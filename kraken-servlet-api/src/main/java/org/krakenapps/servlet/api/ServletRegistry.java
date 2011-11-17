@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.webconsole;
+package org.krakenapps.servlet.api;
 
 import java.util.Collection;
 
 import javax.servlet.http.HttpServlet;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
 public interface ServletRegistry {
 	Collection<String> getPrefixes();
 
-	HttpServlet getContext(String prefix);
+	HttpServlet getServlet(String servletPath);
 
-	void service(ChannelHandlerContext ctx, HttpRequest req);
+	String getServletPath(String uri);
 
 	void register(String prefix, HttpServlet ctx);
 
 	void unregister(String prefix);
+
 }

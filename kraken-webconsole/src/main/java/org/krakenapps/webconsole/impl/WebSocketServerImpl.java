@@ -36,9 +36,9 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.msgbus.MessageBus;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.BundleResourceServlet;
 import org.krakenapps.webconsole.CometSessionStore;
-import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.krakenapps.webconsole.WebSocketServerParams;
 import org.osgi.framework.BundleContext;
@@ -86,11 +86,11 @@ public class WebSocketServerImpl implements WebSocketServer {
 	@Override
 	public void open(WebSocketServerParams params) {
 		// Configure the server.
-		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
+				Executors.newCachedThreadPool()));
 
 		// Set up the event pipeline factory.
-		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(msgbus, staticResourceApi, comet, params));
+		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(bc, msgbus, staticResourceApi, comet, params));
 
 		// Bind and start to accept incoming connections.
 		InetSocketAddress addr = params.getListenAddress();
@@ -183,8 +183,8 @@ public class WebSocketServerImpl implements WebSocketServer {
 
 	}
 
-	private WebSocketServerParams getWebSocketServerParams(String binding) throws KeyStoreException,
-			NoSuchAlgorithmException, UnrecoverableKeyException {
+	private WebSocketServerParams getWebSocketServerParams(String binding) throws KeyStoreException, NoSuchAlgorithmException,
+			UnrecoverableKeyException {
 		Preferences p = getConfig();
 		Preferences props = p.node(binding);
 

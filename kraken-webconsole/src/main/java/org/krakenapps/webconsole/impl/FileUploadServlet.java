@@ -33,8 +33,8 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.model.UploadedFile;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.MimeTypes;
-import org.krakenapps.webconsole.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

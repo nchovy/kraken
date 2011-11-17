@@ -15,6 +15,7 @@
  */
 package org.krakenapps.webconsole.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.Charset;
@@ -22,6 +23,11 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -43,12 +49,12 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrameDecoder;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrameEncoder;
-import org.jboss.netty.util.CharsetUtil;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.Session;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.CometSessionStore;
-import org.krakenapps.webconsole.ServletRegistry;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,11 +63,13 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 	private static final String WEBSOCKET_PATH = "/websocket";
 	private static final int MAX_WEBSOCKET_FRAME_SIZE = 8 * 1024 * 1024;
 
+	private BundleContext bc;
 	private MessageBus msgbus;
 	private ServletRegistry servletRegistry;
 	private CometSessionStore comet;
 
-	public WebSocketServerHandler(MessageBus msgbus, ServletRegistry servletRegistry, CometSessionStore comet) {
+	public WebSocketServerHandler(BundleContext bc, MessageBus msgbus, ServletRegistry servletRegistry, CometSessionStore comet) {
+		this.bc = bc;
 		this.msgbus = msgbus;
 		this.servletRegistry = servletRegistry;
 		this.comet = comet;
@@ -120,8 +128,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 				input.writeInt(a);
 				input.writeInt(b);
 				input.writeLong(c);
-				ChannelBuffer output = ChannelBuffers.wrappedBuffer(MessageDigest.getInstance("MD5").digest(
-						input.array()));
+				ChannelBuffer output = ChannelBuffers.wrappedBuffer(MessageDigest.getInstance("MD5").digest(input.array()));
 				resp.setContent(output);
 			} else {
 				// Old handshake method with no challenge
@@ -156,10 +163,37 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 		}
 
 		try {
-			servletRegistry.service(ctx, req);
-		} catch (IllegalArgumentException e) {
-			// send an error page otherwise
-			sendHttpResponse(ctx, req, new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
+			service(ctx, req);
+		} catch (Exception e) {
+			logger.error("kraken webconsole: servlet error", e);
+		}
+	}
+
+	public void service(ChannelHandlerContext ctx, HttpRequest req) throws IOException {
+		Response response = null;
+
+		try {
+			String servletPath = servletRegistry.getServletPath(req.getUri());
+			if (servletPath == null)
+				throw new IllegalArgumentException("invalid request path");
+
+			HttpServlet servlet = servletRegistry.getServlet(servletPath);
+
+			String pathInfo = req.getUri().substring(servletPath.length());
+			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
+			response = new Response(bc, ctx, req);
+
+			servlet.service(request, response);
+
+		} catch (FileNotFoundException e) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+		} catch (IOException e) {
+			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		} catch (ServletException e) {
+			logger.error("kraken webconsole: servlet service error.", e);
+		} finally {
+			if (response != null)
+				response.close();
 		}
 	}
 
@@ -233,18 +267,6 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 		Message msg = KrakenMessageDecoder.decode(session, frame.getTextData());
 		if (msg != null)
 			msgbus.dispatch(session, msg);
-	}
-
-	private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse resp) {
-		if (resp.getStatus().getCode() != 200) {
-			resp.setContent(ChannelBuffers.copiedBuffer(resp.getStatus().toString(), CharsetUtil.UTF_8));
-			HttpHeaders.setContentLength(resp, resp.getContent().readableBytes());
-		}
-
-		ChannelFuture f = ctx.getChannel().write(resp);
-		if (!HttpHeaders.isKeepAlive(req) || resp.getStatus().getCode() != 200) {
-			f.addListener(ChannelFutureListener.CLOSE);
-		}
 	}
 
 	@Override

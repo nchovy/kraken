@@ -15,7 +15,7 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.ca.util.CrlBuilder;
-import org.krakenapps.webconsole.ServletRegistry;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

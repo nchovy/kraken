@@ -22,8 +22,8 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.ProgramApi;
-import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 
 @Component(name = "webconsole-script-factory")

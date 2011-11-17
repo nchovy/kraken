@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!--
+  **  The actual Sun XSD for this stripped down XSD can be found at
+  **  http://java.sun.com/xml/ns/j2ee/web-jsptaglibrary_2_0.xsd
+  **  This XSD contains only the functional elements for programatic use.
+-->
+
+<xsd:schema targetNamespace="http://java.sun.com/xml/ns/j2ee" 
+            xmlns:j2ee="http://java.sun.com/xml/ns/j2ee" 
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            elementFormDefault="qualified" 
+            attributeFormDefault="unqualified" 
+            version="2.0">
+
+    <xsd:include schemaLocation="j2ee_1_4.xsd" />
+
+    <xsd:element name="taglib" type="j2ee:tldTaglibType">
+        <xsd:unique name="tag-name-uniqueness">
+            <xsd:selector xpath="j2ee:tag|j2ee:tag-file" />
+            <xsd:field xpath="j2ee:name" />
+        </xsd:unique>
+        <xsd:unique name="function-name-uniqueness">
+            <xsd:selector xpath="j2ee:function" />
+            <xsd:field xpath="j2ee:name" />
+        </xsd:unique>
+    </xsd:element>
+
+    <xsd:complexType name="body-contentType">
+        <xsd:simpleContent>
+            <xsd:restriction base="j2ee:string">
+                <xsd:enumeration value="tagdependent" />
+                <xsd:enumeration value="JSP" />
+                <xsd:enumeration value="empty" />
+                <xsd:enumeration value="scriptless" />
+            </xsd:restriction>
+        </xsd:simpleContent>
+    </xsd:complexType>
+
+    <xsd:complexType name="extensibleType" abstract="true">
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="functionType">
+        <xsd:sequence>
+            <xsd:group ref="j2ee:descriptionGroup" />
+            <xsd:element name="name" type="j2ee:tld-canonical-nameType"></xsd:element>
+            <xsd:element name="function-class" type="j2ee:fully-qualified-classType"></xsd:element>
+            <xsd:element name="function-signature" type="j2ee:string"></xsd:element>
+            <xsd:element name="example" type="j2ee:xsdStringType" minOccurs="0"></xsd:element>
+            <xsd:element name="function-extension" type="j2ee:tld-extensionType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="tagFileType">
+        <xsd:sequence>
+            <xsd:group ref="j2ee:descriptionGroup" />
+            <xsd:element name="name" type="j2ee:tld-canonical-nameType" />
+            <xsd:element name="path" type="j2ee:pathType" />
+            <xsd:element name="example" type="j2ee:xsdStringType" minOccurs="0"></xsd:element>
+            <xsd:element name="tag-extension" type="j2ee:tld-extensionType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="tagType">
+        <xsd:sequence>
+            <xsd:group ref="j2ee:descriptionGroup" />
+            <xsd:element name="name" type="j2ee:tld-canonical-nameType" />
+            <xsd:element name="tag-class" type="j2ee:fully-qualified-classType"></xsd:element>
+            <xsd:element name="tei-class" type="j2ee:fully-qualified-classType" minOccurs="0"></xsd:element>
+            <xsd:element name="body-content" type="j2ee:body-contentType"></xsd:element>
+            <xsd:element name="variable" type="j2ee:variableType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="attribute" type="j2ee:tld-attributeType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="dynamic-attributes" type="j2ee:generic-booleanType" minOccurs="0" />
+            <xsd:element name="example" type="j2ee:xsdStringType" minOccurs="0"></xsd:element>
+            <xsd:element name="tag-extension" type="j2ee:tld-extensionType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="tld-attributeType">
+        <xsd:sequence>
+            <xsd:element name="description" type="j2ee:descriptionType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="name" type="j2ee:java-identifierType" />
+            <xsd:element name="required" type="j2ee:generic-booleanType" minOccurs="0"></xsd:element>
+            <xsd:choice>
+                <xsd:sequence>
+                    <xsd:element name="rtexprvalue" type="j2ee:generic-booleanType" minOccurs="0"></xsd:element>
+                    <xsd:element name="type" type="j2ee:fully-qualified-classType" minOccurs="0"></xsd:element>
+                </xsd:sequence>
+                <xsd:element name="fragment" type="j2ee:generic-booleanType" minOccurs="0"></xsd:element>
+            </xsd:choice>
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="tld-canonical-nameType">
+        <xsd:simpleContent>
+            <xsd:restriction base="j2ee:xsdNMTOKENType" />
+        </xsd:simpleContent>
+    </xsd:complexType>
+
+    <xsd:complexType name="tld-extensionType">
+        <xsd:sequence>
+            <xsd:element name="extension-element" type="j2ee:extensibleType" maxOccurs="unbounded" />
+        </xsd:sequence>
+        <xsd:attribute name="namespace" use="required" type="xsd:anyURI" />
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="tldTaglibType">
+        <xsd:sequence>
+            <xsd:group ref="j2ee:descriptionGroup" />
+            <xsd:element name="tlib-version" type="j2ee:dewey-versionType"></xsd:element>
+            <xsd:element name="short-name" type="j2ee:tld-canonical-nameType"></xsd:element>
+            <xsd:element name="uri" type="j2ee:xsdAnyURIType" minOccurs="0"></xsd:element>
+            <xsd:element name="validator" type="j2ee:validatorType" minOccurs="0"></xsd:element>
+            <xsd:element name="listener" type="j2ee:listenerType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+            <xsd:element name="tag" type="j2ee:tagType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="tag-file" type="j2ee:tagFileType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="function" type="j2ee:functionType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="taglib-extension" type="j2ee:tld-extensionType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="version" type="j2ee:dewey-versionType" fixed="2.0" use="required"></xsd:attribute>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="validatorType">
+        <xsd:sequence>
+            <xsd:element name="description" type="j2ee:descriptionType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="validator-class" type="j2ee:fully-qualified-classType"></xsd:element>
+            <xsd:element name="init-param" type="j2ee:param-valueType" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+
+    <xsd:complexType name="variable-scopeType">
+        <xsd:simpleContent>
+
+            <xsd:restriction base="j2ee:string">
+                <xsd:enumeration value="NESTED" />
+                <xsd:enumeration value="AT_BEGIN" />
+                <xsd:enumeration value="AT_END" />
+            </xsd:restriction>
+        </xsd:simpleContent>
+    </xsd:complexType>
+
+    <xsd:complexType name="variableType">
+        <xsd:sequence>
+            <xsd:element name="description" type="j2ee:descriptionType" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:choice>
+                <xsd:element name="name-given" type="j2ee:java-identifierType"></xsd:element>
+                <xsd:element name="name-from-attribute" type="j2ee:java-identifierType"></xsd:element>
+            </xsd:choice>
+            <xsd:element name="variable-class" type="j2ee:fully-qualified-classType" minOccurs="0"></xsd:element>
+
+            <xsd:element name="declare" type="j2ee:generic-booleanType" minOccurs="0"></xsd:element>
+            <xsd:element name="scope" type="j2ee:variable-scopeType" minOccurs="0"></xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:ID" />
+    </xsd:complexType>
+</xsd:schema>

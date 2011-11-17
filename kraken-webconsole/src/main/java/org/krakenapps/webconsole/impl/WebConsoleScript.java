@@ -25,10 +25,10 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.FileResourceServlet;
 import org.krakenapps.webconsole.Program;
 import org.krakenapps.webconsole.ProgramApi;
-import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServer;
 import org.krakenapps.webconsole.WebSocketServerParams;
 import org.slf4j.Logger;
@@ -124,7 +124,7 @@ public class WebConsoleScript implements Script {
 
 	public void prefixes(String[] args) {
 		for (String prefix : staticResourceApi.getPrefixes()) {
-			HttpServlet servlet = staticResourceApi.getContext(prefix);
+			HttpServlet servlet = staticResourceApi.getServlet(prefix);
 			context.println(prefix + ": [" + servlet + "]");
 		}
 	}

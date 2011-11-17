@@ -25,18 +25,21 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.krakenapps.msgbus.MessageBus;
+import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.CometSessionStore;
-import org.krakenapps.webconsole.ServletRegistry;
 import org.krakenapps.webconsole.WebSocketServerParams;
+import org.osgi.framework.BundleContext;
 
 public class WebSocketServerPipelineFactory implements ChannelPipelineFactory {
+	private BundleContext bc;
 	private MessageBus msgbus;
 	private ServletRegistry staticResourceApi;
 	private CometSessionStore comet;
 	private WebSocketServerParams params;
 
-	public WebSocketServerPipelineFactory(MessageBus msgbus, ServletRegistry staticResourceApi,
+	public WebSocketServerPipelineFactory(BundleContext bc, MessageBus msgbus, ServletRegistry staticResourceApi,
 			CometSessionStore comet, WebSocketServerParams params) {
+		this.bc = bc;
 		this.msgbus = msgbus;
 		this.staticResourceApi = staticResourceApi;
 		this.comet = comet;
@@ -55,7 +58,7 @@ public class WebSocketServerPipelineFactory implements ChannelPipelineFactory {
 		pipeline.addLast("decoder", new HttpRequestDecoder());
 		pipeline.addLast("aggregator", new HttpChunkAggregator(params.getMaxContentLength()));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
-		pipeline.addLast("handler", new WebSocketServerHandler(msgbus, staticResourceApi, comet));
+		pipeline.addLast("handler", new WebSocketServerHandler(bc, msgbus, staticResourceApi, comet));
 		return pipeline;
 	}
 }

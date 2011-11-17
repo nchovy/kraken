@@ -29,11 +29,15 @@ public abstract class ResourceServlet extends HttpServlet {
 				if (!pathInfo.endsWith("/")) {
 					((Request) req).setPathInfo(pathInfo + "/index.html");
 					is = getInputStream(req);
-					if (is != null && is.available() > 0)
-						throw new PageNotFoundException(req.getServletPath() + pathInfo + "/");
+					if (is != null && is.available() > 0) {
+						resp.sendRedirect(req.getServletPath() + pathInfo + "/");
+						return;
+					}
 				}
 			}
-			throw new PageNotFoundException();
+
+			resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
 		}
 
 		try {
