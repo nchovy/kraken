@@ -1,19 +1,16 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.UploadToken;
 import org.krakenapps.dom.model.FileSpace;
-import org.krakenapps.dom.model.UploadedFile;
-import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.Session;
@@ -26,107 +23,86 @@ import org.slf4j.LoggerFactory;
 @Component(name = "dom-file-upload-plugin")
 @MsgbusPlugin
 public class FileUploadPlugin {
-	private final Logger logger = LoggerFactory.getLogger(FileUploadPlugin.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(FileUploadPlugin.class);
 
 	@Requires
-	private FileUploadApi upload;
+	private FileUploadApi fileUploadApi;
 
 	// session to download token mapping
-	private Map<Integer, String> tokens;
-
-	public FileUploadPlugin() {
-		tokens = new ConcurrentHashMap<Integer, String>();
-	}
+	private ConcurrentMap<Integer, String> tokens = new ConcurrentHashMap<Integer, String>();
 
 	@Invalidate
 	public void invalidate() {
-		for (String token : tokens.values()) {
-			upload.removeDownloadToken(token);
-		}
-
+		for (String token : tokens.values())
+			fileUploadApi.removeDownloadToken(token);
 		tokens.clear();
 	}
 
 	@MsgbusMethod
 	public void getFileSpaces(Request req, Response resp) {
-		List<FileSpace> spaces = upload.getFileSpaces(req.getOrgId());
-		resp.put("spaces", Marshaler.marshal(spaces));
+		Collection<FileSpace> spaces = fileUploadApi.getFileSpaces(req.getOrgDomain());
+		resp.put("spaces", PrimitiveConverter.serialize(spaces));
 	}
 
 	@MsgbusMethod
 	public void getFileSpace(Request req, Response resp) {
-		int spaceId = req.getInteger("id");
-		Collection<UploadedFile> files = upload.getFiles(req.getOrgId(), spaceId);
-		resp.put("files", Marshaler.marshal(files));
+		String guid = req.getString("guid");
+		FileSpace space = fileUploadApi.getFileSpace(req.getOrgDomain(), guid);
+		resp.put("space", PrimitiveConverter.serialize(space));
 	}
 
 	@MsgbusMethod
 	public void createFileSpace(Request req, Response resp) {
-		String spaceName = req.getString("name");
-		int id = upload.createFileSpace(req.getOrgId(), req.getAdminId(), spaceName);
-		resp.put("id", id);
+		FileSpace space = PrimitiveConverter.parse(FileSpace.class, req.getParams());
+		fileUploadApi.createFileSpace(req.getOrgDomain(), space);
+		resp.put("guid", space.getGuid());
+	}
+
+	@MsgbusMethod
+	public void updateFileSpace(Request req, Response resp) {
+		FileSpace space = PrimitiveConverter.parse(FileSpace.class, req.getParams());
+		fileUploadApi.updateFileSpace(req.getOrgDomain(), req.getAdminLoginName(), space);
 	}
 
 	@MsgbusMethod
 	public void removeFileSpace(Request req, Response resp) {
-		int spaceId = req.getInteger("id");
-		upload.removeFileSpace(req.getAdminId(), spaceId);
+		String guid = req.getString("guid");
+		fileUploadApi.removeFileSpace(req.getOrgDomain(), req.getAdminLoginName(), guid);
 	}
 
 	@MsgbusMethod
 	public void setUploadToken(Request req, Response resp) {
-		String token = UUID.randomUUID().toString();
-		Integer spaceId = req.getInteger("space_id");
+		String spaceGuid = req.getString("space_guid");
 		String fileName = req.getString("file_name");
 		long fileSize = req.getInteger("file_size");
+		UploadToken uploadToken = new UploadToken(req.getAdminLoginName(), spaceGuid, fileName, fileSize);
+		String token = fileUploadApi.setUploadToken(req.getOrgDomain(), uploadToken, null);
 
 		final String template = "kraken dom: set upload info, session [{}], token [{}], space [{}], filename [{}], size [{}]";
-		logger.info(template, new Object[] { req.getSession().getId(), token, spaceId, fileName, fileSize });
+		logger.info(template, new Object[] { req.getSession().getId(), token, spaceGuid, fileName, fileSize });
 
-		UploadToken uploadToken = new UploadToken(token, req.getAdminId(), spaceId, fileName, fileSize);
-		int fileId = upload.setUploadToken(uploadToken, null);
-		resp.put("file_id", fileId);
-		resp.put("file_name", fileName);
 		resp.put("token", token);
 	}
 
 	@MsgbusMethod
 	public void issueDownloadToken(Request req, Response resp) {
-		int sessionId = req.getSession().getId();
-		String token = getDownloadToken(sessionId);
-		upload.setDownloadToken(token, req.getAdminId());
-
+		String token = fileUploadApi.setDownloadToken(req.getOrgDomain(), req.getSession());
+		tokens.putIfAbsent(req.getSession().getId(), token);
 		resp.put("token", token);
 	}
 
-	private String getDownloadToken(int sessionId) {
-		String token = null;
-		if (tokens.containsKey(sessionId)) {
-			token = tokens.get(sessionId);
-		} else {
-			token = UUID.randomUUID().toString();
-		}
-		return token;
+	@MsgbusMethod
+	public void deleteFile(Request req, Response resp) {
+		String guid = req.getString("guid");
+		fileUploadApi.deleteFile(req.getOrgDomain(), req.getAdminLoginName(), guid);
 	}
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)
 	public void removeDownloadTokens(Session session) {
 		int sessionId = session.getId();
-		logger.info("kraken dom: clearing download token for session {}", sessionId);
-
+		logger.trace("kraken dom: clearing download token for session {}", sessionId);
 		String token = tokens.remove(sessionId);
 		if (token != null)
-			upload.removeDownloadToken(token);
-	}
-
-	@MsgbusMethod
-	public void deleteFile(Request req, Response resp) {
-		int fileId = req.getInteger("file_id");
-
-		try {
-			upload.deleteFile(req.getAdminId(), fileId);
-		} catch (Exception e) {
-			logger.error("kraken dom: failed to delete file", e);
-		}
+			fileUploadApi.removeDownloadToken(token);
 	}
 }

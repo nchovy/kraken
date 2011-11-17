@@ -6,8 +6,13 @@ public class PushCondition {
 	private Key k;
 	private Map<String, Object> options;
 
-	public PushCondition(int orgId, int sessionId, int processId, String callback, Map<String, Object> options) {
+	public PushCondition(Integer orgId, int sessionId, int processId, String callback, Map<String, Object> options) {
 		this.k = new Key(orgId, sessionId, processId, callback);
+		this.options = options;
+	}
+
+	public PushCondition(String orgDomain, int sessionId, int processId, String callback, Map<String, Object> options) {
+		this.k = new Key(orgDomain, sessionId, processId, callback);
 		this.options = options;
 	}
 
@@ -15,8 +20,13 @@ public class PushCondition {
 		return k;
 	}
 
-	public int getOrgId() {
+	@Deprecated
+	public Integer getOrgId() {
 		return k.orgId;
+	}
+
+	public String getOrgDomain() {
+		return k.orgDomain;
 	}
 
 	public void setOrgId(int orgId) {
@@ -56,20 +66,33 @@ public class PushCondition {
 	}
 
 	public static class Key {
-		private int orgId;
+		private Integer orgId;
+		private String orgDomain;
 		private int sessionId;
 		private int processId;
 		private String callback;
 
-		public Key(int orgId, int sessionId, int processId, String callback) {
+		public Key(Integer orgId, int sessionId, int processId, String callback) {
 			this.orgId = orgId;
 			this.sessionId = sessionId;
 			this.processId = processId;
 			this.callback = callback;
 		}
 
-		public int getOrgId() {
+		public Key(String orgDomain, int sessionId, int processId, String callback) {
+			this.orgDomain = orgDomain;
+			this.sessionId = sessionId;
+			this.processId = processId;
+			this.callback = callback;
+		}
+
+		@Deprecated
+		public Integer getOrgId() {
 			return orgId;
+		}
+
+		public String getOrgDomain() {
+			return orgDomain;
 		}
 
 		public int getSessionId() {
@@ -89,7 +112,8 @@ public class PushCondition {
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
-			result = prime * result + orgId;
+			result = prime * result + ((orgDomain == null) ? 0 : orgDomain.hashCode());
+			result = prime * result + ((orgId == null) ? 0 : orgId.hashCode());
 			result = prime * result + processId;
 			result = prime * result + sessionId;
 			return result;
@@ -109,7 +133,15 @@ public class PushCondition {
 					return false;
 			} else if (!callback.equals(other.callback))
 				return false;
-			if (orgId != other.orgId)
+			if (orgDomain == null) {
+				if (other.orgDomain != null)
+					return false;
+			} else if (!orgDomain.equals(other.orgDomain))
+				return false;
+			if (orgId == null) {
+				if (other.orgId != null)
+					return false;
+			} else if (!orgId.equals(other.orgId))
 				return false;
 			if (processId != other.processId)
 				return false;

@@ -19,18 +19,18 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.List;
 
 import org.krakenapps.dom.model.FileSpace;
 import org.krakenapps.dom.model.UploadedFile;
+import org.krakenapps.msgbus.Session;
 
-public interface FileUploadApi {
+public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	/**
 	 * Return the base upload directory.
 	 * 
 	 * @return the directory file
 	 */
-	File getBaseDirectory();
+	File getBaseDirectory(String domain);
 
 	/**
 	 * Set upload directory. Directory will be created automatically if not
@@ -39,47 +39,44 @@ public interface FileUploadApi {
 	 * @param dir
 	 *            the upload path.
 	 */
-	void setBaseDirectory(File dir);
+	void setBaseDirectory(String domain, File dir);
 
 	/**
 	 * Get all file spaces in the organization
 	 * 
-	 * @param orgId
-	 *            the organization id
+	 * @param domain
+	 *            the organization domain
 	 * @return
 	 */
-	List<FileSpace> getFileSpaces(int orgId);
+	Collection<FileSpace> getFileSpaces(String domain);
+
+	FileSpace findFileSpace(String domain, String guid);
+
+	FileSpace getFileSpace(String domain, String guid);
 
 	/**
 	 * Create new file space
 	 * 
-	 * @param orgId
-	 *            the organization id
-	 * @param userId
-	 *            the owner id
-	 * @param spaceName
-	 *            the space name
-	 * @return the created instance id
+	 * @param domain
+	 *            the organization domain
+	 * @param space
+	 *            new file space
 	 */
-	int createFileSpace(int orgId, int userId, String spaceName);
+	void createFileSpace(String domain, FileSpace space);
+
+	void updateFileSpace(String domain, String loginName, FileSpace space);
 
 	/**
 	 * Remove file space
 	 * 
-	 * @param userId
-	 *            the user id
-	 * @param spaceId
-	 *            the space id
+	 * @param domain
+	 *            the organization domain
+	 * @param loginName
+	 *            the owner login name
+	 * @param guid
+	 *            the space guid
 	 */
-	void removeFileSpace(int userId, int spaceId);
-
-	/**
-	 * Get all files in space.
-	 * 
-	 * @param spaceName
-	 * @return the uploaded files
-	 */
-	Collection<UploadedFile> getFiles(int orgId, int spaceId);
+	void removeFileSpace(String domain, String loginName, String guid);
 
 	/**
 	 * Set upload token. It will be used only once, and discarded after upload
@@ -89,25 +86,9 @@ public interface FileUploadApi {
 	 *            the upload description
 	 * @param callback
 	 *            may be null; invoked when upload is completed (even if failed)
-	 * @return the resource id for new upload file
+	 * @return the resource guid for new upload file
 	 */
-	int setUploadToken(UploadToken token, UploadCallback callback);
-
-	/**
-	 * Set token for access-controlled download
-	 * 
-	 * @param token
-	 *            the download token
-	 */
-	void setDownloadToken(String token, int userId);
-
-	/**
-	 * Remove download token.
-	 * 
-	 * @param token
-	 *            the download token
-	 */
-	void removeDownloadToken(String token);
+	String setUploadToken(String domain, UploadToken token, UploadCallback callback);
 
 	/**
 	 * Write file to preset location.
@@ -118,66 +99,45 @@ public interface FileUploadApi {
 	 * @throws IOException
 	 *             when temp file io failed
 	 */
-	void writeFile(String token, InputStream is) throws IOException;
+	void writeFile(String domain, String token, InputStream is) throws IOException;
 
 	/**
-	 * Write file segment. Partial saving is crucial for heap space management.
-	 * Entire file will be merged if all segments are received.
+	 * Set token for access-controlled download
 	 * 
+	 * @param session
+	 *            TODO
 	 * @param token
-	 *            the upload token
-	 * @param begin
-	 *            begin byte offset
-	 * @param end
-	 *            end byte offset
-	 * @param is
-	 *            the input stream
-	 * @throws IOException
-	 *             when temp file io or merging io failed
+	 *            the download token
 	 */
-	void writePartialFile(String token, long begin, long end, InputStream is) throws IOException;
+	String setDownloadToken(String domain, Session session);
 
 	/**
 	 * Get file metadata using download token, space id and resource id.
 	 * 
-	 * @param resourceId
+	 * @param tokenGuid
 	 *            the resource id that you obtained before using setUploadToken
-	 * @param token
-	 *            the download token
-	 * @param spaceId
-	 *            the space id as you notified through upload token
 	 * 
 	 * @return the uploaded file metadata
 	 * @throws IOException
 	 *             when file open failed
 	 */
-	UploadedFile getFileMetadata(int resourceId, String token) throws IOException;
+	UploadedFile getFileMetadata(String domain, String tokenGuid);
 
 	/**
-	 * Get file metadata for internal use
+	 * Remove download token.
 	 * 
-	 * @param resourceId
 	 * @param token
-	 * @return the file metadata
+	 *            the download token
 	 */
-	UploadedFile getFileMetadata(int resourceId);
+	void removeDownloadToken(String token);
 
 	/**
 	 * Delete uploaded file from space.
 	 * 
-	 * @param spaceId
-	 *            the space id
-	 * @param resourceId
-	 *            the resource id
-	 * 
+	 * @param guid
+	 *            the resource guid
 	 */
-	void deleteFile(int userId, int resourceId);
+	void deleteFile(String domain, String guid);
 
-	/**
-	 * Delete uploaded file for internal use
-	 * 
-	 * @param resourceId
-	 *            the resource id
-	 */
-	void deleteFile(int resourceId);
+	void deleteFile(String domain, String loginName, String guid);
 }

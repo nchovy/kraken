@@ -15,16 +15,13 @@
  */
 package org.krakenapps.dom.msgbus;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.model.Area;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -32,58 +29,45 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 
 @Component(name = "dom-area-plugin")
 @MsgbusPlugin
-@JpaConfig(factory = "dom")
 public class AreaPlugin {
 	@Requires
 	private AreaApi areaApi;
 
 	@MsgbusMethod
-	public void createArea(Request req, Response resp) {
-		int parentId = req.getInteger("parentId");
-		String name = req.getString("name");
-		String description = req.getString("description");
+	public void getAreas(Request req, Response resp) {
+		Collection<Area> areas = areaApi.getAreas(req.getOrgDomain());
+		resp.put("areas", PrimitiveConverter.serialize(areas));
+	}
 
-		Area area = areaApi.createArea(req.getOrgId(), parentId, name, description);
-		resp.put("id", area.getId());
+	@MsgbusMethod
+	public void getRootAreas(Request req, Response resp) {
+		Collection<Area> roots = areaApi.getRootAreas(req.getOrgDomain());
+		resp.put("areas", PrimitiveConverter.serialize(roots));
+	}
+
+	@MsgbusMethod
+	public void getArea(Request req, Response resp) {
+		String guid = req.getString("guid");
+		Area area = areaApi.getArea(req.getOrgDomain(), guid);
+		resp.put("areas", PrimitiveConverter.serialize(area));
+	}
+
+	@MsgbusMethod
+	public void createArea(Request req, Response resp) {
+		Area area = PrimitiveConverter.parse(Area.class, req.getParams());
+		areaApi.createArea(req.getOrgDomain(), area);
+		resp.put("guid", area.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateArea(Request req, Response resp) {
-		int areaId = req.getInteger("id");
-		String name = req.getString("name");
-		String description = req.getString("description");
-
-		areaApi.updateArea(req.getOrgId(), areaId, name, description);
+		Area area = PrimitiveConverter.parse(Area.class, req.getParams());
+		areaApi.updateArea(req.getOrgDomain(), area);
 	}
 
 	@MsgbusMethod
 	public void removeArea(Request req, Response resp) {
-		int areaId = req.getInteger("id");
-
-		areaApi.removeArea(req.getOrgId(), areaId);
-		resp.put("id", areaId);
-	}
-
-	@MsgbusMethod
-	public void getAreaTree(Request req, Response resp) {
-		Map<String, Object> tree = getAreaTree(req.getOrgId());
-		resp.put("areaTree", tree);
-	}
-
-	@Transactional
-	private Map<String, Object> getAreaTree(int organizationId) {
-		Area rootArea = areaApi.getRootArea(organizationId);
-		return serializeAreaTree(rootArea);
-	}
-
-	private Map<String, Object> serializeAreaTree(Area area) {
-		Map<String, Object> map = area.marshal();
-		List<Object> subTree = new ArrayList<Object>();
-		for (Area subArea : area.getAreas()) {
-			subTree.add(serializeAreaTree(subArea));
-		}
-
-		map.put("children", subTree);
-		return map;
+		String guid = req.getString("guid");
+		areaApi.removeArea(req.getOrgDomain(), guid);
 	}
 }

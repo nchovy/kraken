@@ -15,43 +15,48 @@
  */
 package org.krakenapps.dom.api;
 
-import java.util.List;
-import java.util.Set;
+import java.util.Collection;
 
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
 
 public interface HostApi extends EntityEventProvider<Host> {
-	HostExtension getHostExtension(String className);
+	Collection<Host> getHosts(String domain);
 
-	List<Host> getAllHosts();
+	Collection<Host> getHosts(String domain, String areaGuid, boolean includeChildren);
 
-	List<Host> getHosts(int organizationId);
+	Host findHost(String domain, String guid);
 
-	List<HostType> getHostTypes();
+	Host getHost(String domain, String guid);
 
-	List<HostType> getSentrySupportedHostTypes();
+	void createHost(String domain, Host host);
 
-	Host getHost(String guid);
+	void updateHost(String domain, Host host);
 
-	Host getHost(int organizationId, int hostId);
+	void removeHost(String domain, String guid);
 
-	List<Host> getHosts(int organizationId, int areaId);
+	Collection<HostType> getHostTypes(String domain);
 
-	List<Host> getHostsRecursively(int organizationId, int rootAreaId);
+	HostType findHostType(String domain, String guid);
 
-	Host createHost(int organizationId, int hostTypeId, int areaId, String name, String description);
+	HostType getHostType(String domain, String guid);
 
-	Host updateHost(int organizationId, int hostId, String name, String description);
+	void createHostType(String domain, HostType hostType);
 
-	Host updateHostGuid(int organizationId, int hostId, String guid);
+	void updateHostType(String domain, HostType hostType);
 
-	Host removeHost(int organizationId, int hostId);
+	void removeHostType(String domain, String guid);
 
-	Host moveHost(int organizationId, int hostId, int areaId);
+	Collection<HostExtension> getHostExtensions(String domain);
 
-	Host mapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames);
+	HostExtension findHostExtension(String domain, String guid);
 
-	Host unmapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames);
+	HostExtension getHostExtension(String domain, String guid);
+
+	void createHostExtension(String domain, HostExtension extension);
+
+	void updateHostExtension(String domain, HostExtension extension);
+
+	void removeHostExtension(String domain, String className);
 }

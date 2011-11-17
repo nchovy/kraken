@@ -15,13 +15,10 @@
  */
 package org.krakenapps.dom.msgbus;
 
-import java.util.List;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.RoleApi;
-import org.krakenapps.dom.model.Role;
-import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -35,14 +32,13 @@ public class RolePlugin {
 
 	@MsgbusMethod
 	public void getRoles(Request req, Response resp) {
-		List<Role> roles = roleApi.getGrantableRoles(req.getOrgId(), req.getAdminId());
-		resp.put("roles", Marshaler.marshal(roles));
+		resp.put("roles", PrimitiveConverter.serialize(roleApi.getRoles(req.getOrgDomain())));
 	}
 
 	@MsgbusMethod
-	public void checkPermission(Request req, Response resp) {
-		String name = req.getString("name");
-		boolean allowed = roleApi.checkPermission(req.getOrgId(), req.getAdminId(), name);
-		resp.put("result", allowed);
+	public void hasPermission(Request req, Response resp) {
+		String group = req.getString("group");
+		String permission = req.getString("permission");
+		resp.put("result", roleApi.hasPermission(req.getOrgDomain(), req.getAdminLoginName(), group, permission));
 	}
 }

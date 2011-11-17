@@ -20,35 +20,29 @@ import java.util.Collection;
 import org.krakenapps.dom.model.User;
 
 public interface UserApi extends EntityEventProvider<User> {
-	Collection<UserExtensionProvider> getExtensionProviders();
+	Collection<User> getUsers(String domain);
 
-	UserExtensionProvider getExtensionProvider(String name);
+	Collection<User> getUsers(String domain, Collection<String> loginNames);
 
-	Collection<User> getUsers();
+	Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren);
 
-	Collection<User> getUsers(int orgId, Collection<Integer> idList);
+	Collection<User> getUsers(String domain, String domainController);
 
-	Collection<User> getUsers(int orgId);
+	User findUser(String domain, String loginName);
 
-	Collection<User> getUsers(int orgId, Integer orgUnitId, boolean includeChildren);
+	User getUser(String domain, String loginName);
 
-	Collection<User> getUsers(String domainController);
+	void createUser(String domain, User user);
 
-	User getUser(int id);
+	void updateUser(String domain, User user);
 
-	User getUserByLoginName(String loginName);
+	void removeUser(String domain, String loginName);
 
-	User createUser(User user);
+	void setSaltLength(String domain, int length);
 
-	User updateUser(User user);
+	int getSaltLength(String domain);
 
-	User removeUser(int id);
-
-	boolean verifyPassword(String id, String password);
+	boolean verifyPassword(String domain, String loginName, String password);
 
 	String hashPassword(String salt, String text);
-
-	void setSaltLength(int length);
-
-	int getSaltLength();
 }

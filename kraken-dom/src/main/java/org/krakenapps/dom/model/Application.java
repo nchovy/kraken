@@ -15,63 +15,41 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.UUID;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.MapTypeHint;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
+public class Application {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_apps", uniqueConstraints = { @UniqueConstraint(columnNames = { "vendor_id", "name" }) })
-public class Application implements Marshalable {
-	@Id
-	@Column(length = 36)
-	private String guid;
-
-	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name = "vendor_id", nullable = true)
+	@FieldOption(nullable = false)
+	@ReferenceKey("guid")
 	private Vendor vendor;
 
-	@Column(length = 20)
+	@FieldOption(length = 20)
 	private String platform;
 
-	@Column(nullable = false, length = 60)
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
+	@FieldOption(nullable = false)
+	private Date updateDateTime = new Date();
 
-	@OneToMany(mappedBy = "key.application", cascade = CascadeType.ALL)
-	private List<ApplicationMetadata> metadatas = new ArrayList<ApplicationMetadata>();
+	@MapTypeHint({ String.class, Object.class })
+	private Map<String, Object> metadatas = new HashMap<String, Object>();
 
-	@OneToMany(mappedBy = "application", cascade = CascadeType.ALL)
-	private List<ApplicationVersion> applicationVersions = new ArrayList<ApplicationVersion>();
-
-	@ManyToMany
-	@JoinTable(name = "dom_apps_to_groups", joinColumns = @JoinColumn(name = "app_id"),
-			inverseJoinColumns = @JoinColumn(name = "group_id"))
-	private Set<ApplicationGroup> applicationGroups = new HashSet<ApplicationGroup>();
+	@FieldOption(skip = true)
+	private List<ApplicationVersion> versions;
 
 	public String getGuid() {
 		return guid;
@@ -89,20 +67,20 @@ public class Application implements Marshalable {
 		this.vendor = vendor;
 	}
 
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
 	public String getPlatform() {
 		return platform;
 	}
 
 	public void setPlatform(String platform) {
 		this.platform = platform;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public Date getCreateDateTime() {
@@ -121,41 +99,19 @@ public class Application implements Marshalable {
 		this.updateDateTime = updateDateTime;
 	}
 
-	public Set<ApplicationGroup> getApplicationGroups() {
-		return applicationGroups;
-	}
-
-	public void setApplicationGroups(Set<ApplicationGroup> applicationGroups) {
-		this.applicationGroups = applicationGroups;
-	}
-
-	public List<ApplicationMetadata> getMetadatas() {
+	public Map<String, Object> getMetadatas() {
 		return metadatas;
 	}
 
-	public void setMetadatas(List<ApplicationMetadata> metadatas) {
+	public void setMetadatas(Map<String, Object> metadatas) {
 		this.metadatas = metadatas;
 	}
 
 	public List<ApplicationVersion> getVersions() {
-		return applicationVersions;
+		return versions;
 	}
 
-	public void setVersions(List<ApplicationVersion> applicationVersions) {
-		this.applicationVersions = applicationVersions;
-	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("guid", guid);
-		m.put("vendor_guid", vendor != null ? vendor.getGuid() : null);
-		m.put("vendor_name", vendor != null ? vendor.getName() : null);
-		m.put("name", name);
-		m.put("platform", platform);
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("updated_at", dateFormat.format(updateDateTime));
-		return m;
+	public void setVersions(List<ApplicationVersion> versions) {
+		this.versions = versions;
 	}
 }

@@ -16,11 +16,11 @@
 package org.krakenapps.dom.api;
 
 public interface EntityEventListener<T> {
-	void entityAdded(T obj);
+	void entityAdded(String domain, T obj);
 
-	void entityUpdated(T obj);
+	void entityUpdated(String domain, T obj);
 
-	void entityRemoving(T obj);
+	void entityRemoving(String domain, T obj);
 
-	void entityRemoved(T obj);
+	void entityRemoved(String domain, T obj);
 }

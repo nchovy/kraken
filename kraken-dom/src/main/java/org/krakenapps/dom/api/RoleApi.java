@@ -15,16 +15,24 @@
  */
 package org.krakenapps.dom.api;
 
-import java.util.List;
+import java.util.Collection;
 
 import org.krakenapps.dom.model.Role;
 
-public interface RoleApi {
-	Role getRole(int id);
-	
-	Role getRole(String name);
+public interface RoleApi extends EntityEventProvider<Role> {
+	Collection<Role> getRoles(String domain);
 
-	List<Role> getGrantableRoles(int organizationId, int adminId);
+	Collection<Role> getGrantableRoles(String domain, String loginName);
 
-	boolean checkPermission(int organizationId, int adminId, String name);
+	Role findRole(String domain, String name);
+
+	Role getRole(String domain, String name);
+
+	void createRole(String domain, Role role);
+
+	void updateRole(String domain, Role role);
+
+	void removeRole(String domain, String name);
+
+	boolean hasPermission(String domain, String loginName, String group, String permission);
 }

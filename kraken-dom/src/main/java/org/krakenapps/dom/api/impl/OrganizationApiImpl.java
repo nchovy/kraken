@@ -15,124 +15,126 @@
  */
 package org.krakenapps.dom.api.impl;
 
-import java.util.Collection;
-import java.util.Date;
-import javax.persistence.EntityManager;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.dom.api.DOMException;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.OrganizationApi;
-import org.krakenapps.dom.api.OrganizationParameterApi;
-import org.krakenapps.dom.api.ProgramApi;
-import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.Organization;
-import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.ProgramProfile;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
 
 @Component(name = "dom-org-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class OrganizationApiImpl extends AbstractApi<Organization> implements OrganizationApi {
-	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization> implements OrganizationApi {
+	private static final String DB_PREFIX = "kraken-dom-";
+	private static final Class<Organization> cls = Organization.class;
+	private static final String NOT_FOUND = "organization-not-found";
+	private static final String ALREADY_EXIST = "organization-already-exist";
 
 	@Requires
-	private ProgramApi programApi;
+	private ConfigManager cfg;
 
 	@Requires
-	private OrganizationParameterApi orgParameterApi;
+	private ConfigService confsvc;
+
+	@Override
+	public Organization findOrganization(String domain) {
+		ConfigDatabase db = cfg.findDatabase(domain);
+		if (db == null)
+			return null;
+		Config c = db.findOne(cls, null);
+		return (c != null) ? c.getDocument(cls) : null;
+	}
+
+	@Override
+	public Organization getOrganization(String domain) {
+		Organization org = findOrganization(domain);
+		if (org == null)
+			throw new DOMException(NOT_FOUND);
+		return org;
+	}
+
+	@Override
+	public void createOrganization(Organization organization) {
+		ConfigDatabase db = cfg.findDatabase(organization.getDomain());
+		if (db != null)
+			throw new DOMException(ALREADY_EXIST);
+		db = confsvc.createDatabase(DB_PREFIX + organization.getDomain());
+		db.add(organization);
+		fireEntityAdded(organization.getDomain(), organization);
+	}
+
+	@Override
+	public void updateOrganization(Organization organization) {
+		ConfigDatabase db = cfg.getDatabase(organization.getDomain());
+		Config c = db.findOne(cls, null);
+		if (c != null) {
+			db.update(c, organization);
+			fireEntityUpdated(organization.getDomain(), organization);
+		} else {
+			db.add(organization);
+			fireEntityAdded(organization.getDomain(), organization);
+		}
+	}
+
+	@Override
+	public void removeOrganization(String domain) {
+		Config c = cfg.getDatabase(domain).findOne(cls, null);
+		Organization organization = null;
+		if (c != null)
+			organization = c.getDocument(cls);
+		confsvc.dropDatabase(DB_PREFIX + domain);
+		if (organization != null)
+			fireEntityRemoved(organization.getDomain(), organization);
+	}
+
+	@Override
+	public Map<String, Object> getOrganizationParameters(String domain) {
+		return getOrganization(domain).getParameters();
+	}
+
+	@Override
+	public Object getOrganizationParameter(String domain, String key) {
+		Map<String, Object> params = getOrganization(domain).getParameters();
+		return (params != null) ? params.get(key) : null;
+	}
 
 	@SuppressWarnings("unchecked")
-	@Transactional
 	@Override
-	public Collection<Organization> getOrganizations() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM Organization o").getResultList();
-	}
-
-	@Transactional
-	@Override
-	public Organization getOrganization(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.find(Organization.class, id);
-	}
-
-	@Transactional
-	@Override
-	public Organization getOrganizationForUser(int userId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Admin admin = em.find(Admin.class, userId);
-		if (admin == null)
-			throw new AdminNotFoundException(userId);
-
-		return admin.getUser().getOrganization();
+	public <T> T getOrganizationParameter(String domain, String key, Class<T> cls) {
+		Object param = getOrganizationParameter(domain, key);
+		try {
+			return (T) param;
+		} catch (ClassCastException e) {
+			return null;
+		}
 	}
 
 	@Override
-	public Organization createOrganization(Organization organization) {
-		Organization org = createOrganizationInternal(organization);
-		fireEntityAdded(org);
-		return org;
-	}
-
-	@Transactional
-	private Organization createOrganizationInternal(Organization organization) {
-		EntityManager em = entityManagerService.getEntityManager();
-		organization.setCreateDateTime(new Date());
-		organization.setEnabled(true);
-		em.persist(organization);
-
-		ProgramProfile profile = new ProgramProfile();
-		profile.setName("default");
-		profile.setOrganization(organization);
-		programApi.createProgramProfile(profile);
-
-		orgParameterApi.setOrganizationParameter(organization.getId(), "default_program_profile_id",
-				String.valueOf(profile.getId()));
-		return organization;
+	public void setOrganizationParameter(String domain, String key, Object value) {
+		Organization organization = getOrganization(domain);
+		Map<String, Object> params = organization.getParameters();
+		if (params == null)
+			params = new HashMap<String, Object>();
+		params.put(key, value);
+		organization.setParameters(params);
+		cfg.update(domain, cls, null, organization, NOT_FOUND, this);
 	}
 
 	@Override
-	public Organization updateOrganization(Organization organization) {
-		Organization org = updateOrganizationInternal(organization);
-		fireEntityUpdated(org);
-		return org;
-	}
-
-	@Transactional
-	private Organization updateOrganizationInternal(Organization organization) {
-		EntityManager em = entityManagerService.getEntityManager();
-		if (organization.getId() == 0)
-			throw new IllegalArgumentException("check organization id");
-
-		Organization org = em.find(Organization.class, organization.getId());
-		org.setName(organization.getName());
-		org.setAddress(organization.getAddress());
-		org.setPhone(organization.getPhone());
-		org.setDescription(organization.getDescription());
-		org.setDomainController(organization.getDomainController());
-		org.setBackupDomainController(organization.getBackupDomainController());
-		em.merge(org);
-		return org;
-	}
-
-	@Override
-	public Organization removeOrganization(int id) {
-		Organization org = removeOrganizationInternal(id);
-		fireEntityRemoved(org);
-		return org;
-	}
-
-	@Transactional
-	private Organization removeOrganizationInternal(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Organization organization = em.find(Organization.class, id);
-		em.remove(organization);
-		return organization;
+	public void unsetOrganizationParameter(String domain, String key) {
+		Organization organization = getOrganization(domain);
+		Map<String, Object> params = organization.getParameters();
+		if (params != null)
+			params.remove(key);
+		organization.setParameters(params);
+		cfg.update(domain, cls, null, organization, NOT_FOUND, this);
 	}
 }

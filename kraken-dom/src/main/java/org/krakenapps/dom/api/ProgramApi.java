@@ -15,27 +15,46 @@
  */
 package org.krakenapps.dom.api;
 
-import java.util.List;
+import java.util.Collection;
 
-import org.krakenapps.dom.exception.AdminNotFoundException;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
 import org.krakenapps.dom.model.ProgramProfile;
 
-public interface ProgramApi {
-	ProgramProfile getProgramProfile(int organizationId, int profileId);
+public interface ProgramApi extends EntityEventProvider<Program> {
+	Collection<ProgramProfile> getProgramProfiles(String domain);
 
-	List<ProgramProfile> getAvailableProgramProfiles(int organizationId);
+	ProgramProfile findProgramProfile(String domain, String name);
 
-	List<ProgramPack> getAvailableProgramPacks(int organizationId);
+	ProgramProfile getProgramProfile(String domain, String name);
 
-	List<Program> getAvailablePrograms(int organizationId, int adminId) throws AdminNotFoundException;
+	void createProgramProfile(String domain, ProgramProfile profile);
 
-	ProgramProfile createProgramProfile(ProgramProfile profile);
+	void updateProgramProfile(String domain, ProgramProfile profile);
 
-	ProgramProfile updateProgramProfile(ProgramProfile profile);
+	void removeProgramProfile(String domain, String name);
 
-	ProgramProfile removeProgramProfile(int programProfileId);
+	Collection<ProgramPack> getProgramPacks(String domain);
 
-	Program getProgram(int programId);
+	ProgramPack findProgramPack(String domain, String name);
+
+	ProgramPack getProgramPack(String domain, String name);
+
+	void createProgramPack(String domain, ProgramPack pack);
+
+	void updateProgramPack(String domain, ProgramPack pack);
+
+	void removeProgramPack(String domain, String name);
+
+	Collection<Program> getPrograms(String domain);
+
+	Program findProgram(String domain, String name);
+
+	Program getProgram(String domain, String name);
+
+	void createProgram(String domain, Program program);
+
+	void updateProgram(String domain, Program program);
+
+	void removeProgram(String domain, String name);
 }

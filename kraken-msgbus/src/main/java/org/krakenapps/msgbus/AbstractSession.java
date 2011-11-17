@@ -21,13 +21,13 @@ public abstract class AbstractSession implements Session {
 	}
 
 	@Override
-	public Integer getOrgId() {
-		return getInt("org_id");
+	public String getOrgDomain() {
+		return getString("org_domain");
 	}
 
 	@Override
-	public Integer getAdminId() {
-		return getInt("admin_id");
+	public String getAdminLoginName() {
+		return getString("admin_login_name");
 	}
 
 	@Override

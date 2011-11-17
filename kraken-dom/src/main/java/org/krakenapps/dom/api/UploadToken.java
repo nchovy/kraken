@@ -16,46 +16,35 @@
 package org.krakenapps.dom.api;
 
 public class UploadToken {
-	private String token;
-	private int userId;
-	private Integer spaceId;
+	private String loginName;
+	private String spaceGuid;
 	private String fileName;
 	private long fileSize;
 	private Object userData;
 
-	public UploadToken(String token, int userId, Integer spaceId, String fileName, long fileSize) {
-		this.token = token;
-		this.userId = userId;
-		this.spaceId = spaceId;
+	public UploadToken(String loginName, String spaceGuid, String fileName, long fileSize) {
+		this.loginName = loginName;
+		this.spaceGuid = spaceGuid;
 		this.fileName = fileName;
 		this.fileSize = fileSize;
 	}
 
 	/**
-	 * It should be universally unique identifier.
+	 * The user login name
 	 * 
-	 * @return the unique token
+	 * @return the user login name
 	 */
-	public String getToken() {
-		return token;
-	}
-
-	/**
-	 * The id of user id
-	 * 
-	 * @return the user id
-	 */
-	public int getUserId() {
-		return userId;
+	public String getLoginName() {
+		return loginName;
 	}
 
 	/**
 	 * The id of logically separated upload space.
 	 * 
-	 * @return the space id
+	 * @return the space guid
 	 */
-	public Integer getSpaceId() {
-		return spaceId;
+	public String getSpaceGuid() {
+		return spaceGuid;
 	}
 
 	/**

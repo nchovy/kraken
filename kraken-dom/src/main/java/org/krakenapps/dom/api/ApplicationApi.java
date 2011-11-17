@@ -16,44 +16,58 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
-import java.util.Map;
 
 import org.krakenapps.dom.model.Application;
+import org.krakenapps.dom.model.ApplicationGroup;
 import org.krakenapps.dom.model.ApplicationVersion;
 import org.krakenapps.dom.model.Vendor;
 
 public interface ApplicationApi extends EntityEventProvider<Application> {
-	Collection<Vendor> getVendors();
+	Collection<Vendor> getVendors(String domain);
 
-	Vendor getVendor(String guid);
+	Vendor findVendor(String domain, String guid);
 
-	Vendor createVendor(String name);
+	Vendor getVendor(String domain, String guid);
 
-	Vendor updateVendor(String guid, String name);
+	void createVendor(String domain, Vendor vendor);
 
-	Vendor removeVendor(String guid);
+	void updateVendor(String domain, Vendor vendor);
 
-	Collection<Application> getApplications();
+	void removeVendor(String domain, String guid);
 
-	Collection<Application> getApplications(String vendorGuid);
+	Collection<Application> getApplications(String domain);
 
-	Application getApplication(String guid);
+	Application findApplication(String domain, String guid);
 
-	Application getApplication(String vendorName, String name);
+	Application getApplication(String domain, String guid);
 
-	Application createApplication(String name, String platform, Map<String, String> props);
+	void createApplication(String domain, Application application);
 
-	Application createApplication(String vendorGuid, String name, String platform, Map<String, String> props);
+	void updateApplication(String domain, Application application);
 
-	Application updateApplication(String guid, String name, Map<String, String> props);
+	void removeApplication(String domain, String guid);
 
-	Application removeApplication(String guid);
+	Collection<ApplicationVersion> getApplicationVersions(String domain);
 
-	Collection<ApplicationVersion> getApplicationVersions(String vendorName, String appName);
+	ApplicationVersion findApplicationVersion(String domain, String guid);
 
-	ApplicationVersion createApplicationVersion(String vendorName, String appName, String version);
+	ApplicationVersion getApplicationVersion(String domain, String guid);
 
-	ApplicationVersion updateApplicationVersion(String guid, String version);
+	void createApplicationVersion(String domain, ApplicationVersion version);
 
-	ApplicationVersion removeApplicationVersion(String guid);
+	void updateApplicationVersion(String domain, ApplicationVersion version);
+
+	void removeApplicationVersion(String domain, String guid);
+
+	Collection<ApplicationGroup> getApplicationGroups(String domain);
+
+	ApplicationGroup findApplicationGroup(String domain, String guid);
+
+	ApplicationGroup getApplicationGroup(String domain, String guid);
+
+	void createApplicationGroup(String domain, ApplicationGroup group);
+
+	void updateApplicationGroup(String domain, ApplicationGroup group);
+
+	void removeApplicationGroup(String domain, String guid);
 }

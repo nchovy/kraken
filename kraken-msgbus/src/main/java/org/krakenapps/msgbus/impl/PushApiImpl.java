@@ -29,25 +29,102 @@ public class PushApiImpl implements PushApi {
 	private MessageBus msgbus;
 
 	// organization to sessions (id set)
-	private ConcurrentMap<Integer, Set<Integer>> orgSessionMap;
+	private ConcurrentMap<String, Set<Integer>> orgSessionMap = new ConcurrentHashMap<String, Set<Integer>>();
 
 	// session to processes (id set)
-	private ConcurrentMap<String, Set<Binding>> pushBindingsMap;
+	private ConcurrentMap<String, Set<Binding>> pushBindingsMap = new ConcurrentHashMap<String, Set<Binding>>();
 
-	private ConcurrentMap<String, PushInterceptor> pushInterceptorsMap;
+	private ConcurrentMap<String, PushInterceptor> pushInterceptorsMap = new ConcurrentHashMap<String, PushInterceptor>();
+	private ConcurrentMap<PushCondition.Key, PushCondition> pushConditions = new ConcurrentHashMap<PushCondition.Key, PushCondition>();
 
-	private ConcurrentMap<PushCondition.Key, PushCondition> pushConditions;
+	@Deprecated
+	@Override
+	public void subscribe(int orgId, int sessionId, int processId, String callback) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		subscribe(orgId, sessionId, processId, callback, m);
+	}
 
-	public PushApiImpl() {
-		orgSessionMap = new ConcurrentHashMap<Integer, Set<Integer>>();
-		pushBindingsMap = new ConcurrentHashMap<String, Set<Binding>>();
-		pushInterceptorsMap = new ConcurrentHashMap<String, PushInterceptor>();
-		pushConditions = new ConcurrentHashMap<PushCondition.Key, PushCondition>();
+	@Deprecated
+	@Override
+	public void subscribe(int orgId, int sessionId, int processId, String callback, Map<String, Object> options) {
+		subscribe(Integer.toString(orgId), sessionId, processId, callback);
 	}
 
 	@Override
+	public void subscribe(String orgDomain, int sessionId, int processId, String callback) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		subscribe(orgDomain, sessionId, processId, callback, m);
+	}
+
+	@Override
+	public void subscribe(String orgDomain, int sessionId, int processId, String callback, Map<String, Object> options) {
+		Set<Integer> sessions = orgSessionMap.get(orgDomain);
+		if (sessions == null)
+			orgSessionMap.putIfAbsent(orgDomain, Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>()));
+
+		Set<Binding> bindings = pushBindingsMap.get(sessionId);
+		if (bindings == null)
+			pushBindingsMap.putIfAbsent(callback, Collections.newSetFromMap(new ConcurrentHashMap<Binding, Boolean>()));
+
+		sessions = orgSessionMap.get(orgDomain);
+		sessions.add(sessionId);
+
+		bindings = pushBindingsMap.get(callback);
+		Binding binding = new Binding(sessionId, processId);
+		bindings.add(binding);
+
+		PushCondition condition = new PushCondition(orgDomain, binding.sessionId, binding.processId, callback, options);
+		pushConditions.put(condition.getKey(), condition);
+
+		logger.trace("kraken msgbus: subscribe push, org [{}], session [{}], callback [{}]",
+				new Object[] { orgDomain, sessionId, callback });
+	}
+
+	@Deprecated
+	@Override
+	public void unsubscribe(int orgId, int sessionId, int processId, String callback) {
+		unsubscribe(Integer.toString(orgId), sessionId, processId, callback);
+	}
+
+	@Override
+	public void unsubscribe(String orgDomain, int sessionId, int processId, String callback) {
+		logger.trace("kraken msgbus: unsubscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgDomain, sessionId,
+				callback });
+
+		Set<Binding> bindings = pushBindingsMap.get(callback);
+		if (bindings != null) {
+			bindings.remove(new Binding(sessionId, processId));
+			if (bindings.isEmpty()) {
+				pushBindingsMap.remove(callback);
+			}
+		}
+
+		// clear condition
+		pushConditions.remove(new PushCondition.Key(orgDomain, sessionId, processId, callback));
+	}
+
+	@Override
+	public void addInterceptor(String callback, PushInterceptor interceptor) {
+		if (pushInterceptorsMap.putIfAbsent(callback, interceptor) != null)
+			throw new IllegalStateException("already added");
+		logger.trace("dom push api: add interceptor, callback [{}]", new Object[] { callback });
+	}
+
+	@Override
+	public void removeInterceptor(String callback) {
+		pushInterceptorsMap.remove(callback);
+		logger.trace("dom push api: remove interceptor, callback [{}]", new Object[] { callback });
+	}
+
+	@Deprecated
+	@Override
 	public void push(int orgId, String callback, Map<String, Object> m) {
-		Set<Integer> sessions = orgSessionMap.get(orgId);
+		push(Integer.toString(orgId), callback, m);
+	}
+
+	@Override
+	public void push(String orgDomain, String callback, Map<String, Object> m) {
+		Set<Integer> sessions = orgSessionMap.get(orgDomain);
 		if (sessions == null)
 			return;
 
@@ -57,9 +134,9 @@ public class PushApiImpl implements PushApi {
 
 		for (Binding binding : bindings) {
 			if (sessions.contains(binding.sessionId)) {
-				Message msg = createMessage(orgId, binding, callback, m);
+				Message msg = createMessage(orgDomain, binding, callback, m);
 				if (logger.isTraceEnabled())
-					tracePush(orgId, callback, m, binding.sessionId, binding);
+					tracePush(orgDomain, callback, m, binding.sessionId, binding);
 				msgbus.send(msg);
 			}
 		}
@@ -72,15 +149,15 @@ public class PushApiImpl implements PushApi {
 			return;
 		for (Binding binding : bindings) {
 			if (binding.sessionId == session.getId()) {
-				Message msg = createMessage(session.getOrgId(), binding, callback, m);
+				Message msg = createMessage(session.getOrgDomain(), binding, callback, m);
 				if (logger.isTraceEnabled())
-					tracePush(session.getOrgId(), callback, m, binding.sessionId, binding);
+					tracePush(session.getOrgDomain(), callback, m, binding.sessionId, binding);
 				msgbus.send(msg);
 			}
 		}
 	}
 
-	private Message createMessage(int orgId, Binding binding, String callback, Map<String, Object> m) {
+	private Message createMessage(String orgDomain, Binding binding, String callback, Map<String, Object> m) {
 		Message msg = new Message();
 		msg.setSession(binding.sessionId);
 		msg.setType(Message.Type.Trap);
@@ -90,7 +167,7 @@ public class PushApiImpl implements PushApi {
 		Map<String, Object> params = null;
 		PushInterceptor interceptor = pushInterceptorsMap.get(callback);
 		if (interceptor != null) {
-			PushCondition.Key key = new PushCondition.Key(orgId, binding.sessionId, binding.processId, callback);
+			PushCondition.Key key = new PushCondition.Key(orgDomain, binding.sessionId, binding.processId, callback);
 			PushCondition condition = pushConditions.get(key);
 			params = interceptor.onPush(condition, m);
 		} else {
@@ -104,7 +181,7 @@ public class PushApiImpl implements PushApi {
 		return msg;
 	}
 
-	private void tracePush(int orgId, String method, Map<String, Object> m, Integer sessionId, Binding binding) {
+	private void tracePush(String orgDomain, String method, Map<String, Object> m, Integer sessionId, Binding binding) {
 		StringBuilder sb = new StringBuilder();
 		int i = 0;
 		for (String key : m.keySet()) {
@@ -117,63 +194,22 @@ public class PushApiImpl implements PushApi {
 		}
 
 		final String template = "kraken msgbus: push org [{}], session [{}], process [{}], callback [{}], msg [{}]";
-		logger.trace(template, new Object[] { orgId, sessionId, binding.processId, method, sb.toString() });
+		logger.trace(template, new Object[] { orgDomain, sessionId, binding.processId, method, sb.toString() });
 	}
 
-	@Override
-	public void subscribe(int orgId, int sessionId, int processId, String callback) {
-		Map<String, Object> m = new HashMap<String, Object>();
-		subscribe(orgId, sessionId, processId, callback, m);
-	}
-
-	@Override
-	public void subscribe(int orgId, int sessionId, int processId, String callback, Map<String, Object> options) {
-		Set<Integer> sessions = orgSessionMap.get(orgId);
-		if (sessions == null)
-			orgSessionMap.putIfAbsent(orgId, Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>()));
-
-		Set<Binding> bindings = pushBindingsMap.get(sessionId);
-		if (bindings == null)
-			pushBindingsMap.putIfAbsent(callback, Collections.newSetFromMap(new ConcurrentHashMap<Binding, Boolean>()));
-
-		sessions = orgSessionMap.get(orgId);
-		sessions.add(sessionId);
-
-		bindings = pushBindingsMap.get(callback);
-		Binding binding = new Binding(sessionId, processId);
-		bindings.add(binding);
-
-		PushCondition condition = new PushCondition(orgId, binding.sessionId, binding.processId, callback, options);
-		pushConditions.put(condition.getKey(), condition);
-
-		logger.trace("kraken msgbus: subscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgId, sessionId,
-				callback });
-	}
-
-	@Override
-	public void unsubscribe(int orgId, int sessionId, int processId, String callback) {
-		logger.trace("kraken msgbus: unsubscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgId,
-				sessionId, callback });
-
-		Set<Binding> bindings = pushBindingsMap.get(callback);
-		if (bindings != null) {
-			bindings.remove(new Binding(sessionId, processId));
-			if (bindings.isEmpty()) {
-				pushBindingsMap.remove(callback);
-			}
-		}
-
-		// clear condition
-		pushConditions.remove(new PushCondition.Key(orgId, sessionId, processId, callback));
-	}
-
+	@Deprecated
 	@Override
 	public void sessionClosed(int orgId, int sessionId) {
-		logger.trace("kraken msgbus: push session closed, org [{}], session [{}]", orgId, sessionId);
-		cleanSession(orgId, sessionId);
+		sessionClosed(Integer.toString(orgId), sessionId);
 	}
 
-	private void cleanSession(int orgId, int sessionId) {
+	@Override
+	public void sessionClosed(String orgDoamin, int sessionId) {
+		logger.trace("kraken msgbus: push session closed, org [{}], session [{}]", orgDoamin, sessionId);
+		cleanSession(orgDoamin, sessionId);
+	}
+
+	private void cleanSession(String orgDomain, int sessionId) {
 		Set<String> bindingsToRemove = Collections.newSetFromMap(new HashMap<String, Boolean>());
 		for (Entry<String, Set<Binding>> entry : pushBindingsMap.entrySet()) {
 			Set<Binding> bindings = entry.getValue();
@@ -189,27 +225,14 @@ public class PushApiImpl implements PushApi {
 		for (String callback : bindingsToRemove)
 			pushBindingsMap.remove(callback);
 
-		Set<Integer> sessions = orgSessionMap.get(orgId);
+		Set<Integer> sessions = orgSessionMap.get(orgDomain);
 		if (sessions != null)
 			sessions.remove(sessionId);
 
 		// clear all related conditions
 		for (PushCondition.Key key : pushConditions.keySet())
-			if (key.getOrgId() == orgId && key.getSessionId() == sessionId)
+			if (key.getOrgDomain() == orgDomain && key.getSessionId() == sessionId)
 				pushConditions.remove(key);
-	}
-
-	@Override
-	public void addInterceptor(String callback, PushInterceptor interceptor) {
-		if (pushInterceptorsMap.putIfAbsent(callback, interceptor) != null)
-			throw new IllegalStateException("already added");
-		logger.trace("dom push api: add interceptor, callback [{}]", new Object[] { callback });
-	}
-
-	@Override
-	public void removeInterceptor(String callback) {
-		pushInterceptorsMap.remove(callback);
-		logger.trace("dom push api: remove interceptor, callback [{}]", new Object[] { callback });
 	}
 
 	private static class Binding {

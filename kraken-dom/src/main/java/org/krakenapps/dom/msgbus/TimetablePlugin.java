@@ -15,18 +15,11 @@
  */
 package org.krakenapps.dom.msgbus;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.TimetableApi;
-import org.krakenapps.dom.model.Schedule;
 import org.krakenapps.dom.model.Timetable;
-import org.krakenapps.msgbus.Marshaler;
-import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -40,79 +33,32 @@ public class TimetablePlugin {
 
 	@MsgbusMethod
 	public void getTimetables(Request req, Response resp) {
-		int organizationId = req.getSession().getOrgId();
-		Collection<Timetable> timetables = timetableApi.getTimetables(organizationId);
-		resp.put("timetables", Marshaler.marshal(timetables));
+		resp.put("timetables", PrimitiveConverter.serialize(timetableApi.getTimetables(req.getOrgDomain())));
 	}
 
 	@MsgbusMethod
 	public void getTimetable(Request req, Response resp) {
-		int organizationId = req.getSession().getOrgId();
-		int id = req.getInteger("id");
-
-		Timetable timetable = timetableApi.getTimetable(organizationId, id);
-		Map<String, Object> m = timetable.marshal();
-		m.put("schedules", Marshaler.marshal(timetable.getSchedules()));
-		resp.put("schedules", m);
+		String guid = req.getString("guid");
+		Timetable timetable = timetableApi.getTimetable(req.getOrgDomain(), guid);
+		resp.put("schedules", PrimitiveConverter.serialize(timetable));
 	}
 
-	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void createTimetable(Request req, Response resp) {
-		try {
-			int organizationId = req.getSession().getOrgId();
-			String name = req.getString("name");
-			List<Schedule> schedules = parseSchedules((Collection<Object>) req.get("schedules"));
-			Timetable newTime = timetableApi.createTimetable(organizationId, name, schedules);
-			resp.put("id", newTime.getId());
-		} catch (IllegalStateException e) {
-			if (e.getMessage().startsWith("duplicated"))
-				throw new MsgbusException("dom", "duplicated-timetable-name");
-			throw e;
-		}
+		Timetable timetable = PrimitiveConverter.parse(Timetable.class, req.getParams());
+		timetableApi.createTimetable(req.getOrgDomain(), timetable);
+		resp.put("guid", timetable.getGuid());
 	}
 
-	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void updateTimetable(Request req, Response resp) {
-		try {
-			int organizationId = req.getSession().getOrgId();
-			int id = req.getInteger("id");
-			String name = req.getString("name");
-			List<Schedule> schedules = parseSchedules((Collection<Object>) req.get("schedules"));
-			timetableApi.updateTimetable(organizationId, id, name, schedules);
-		} catch (IllegalStateException e) {
-			if (e.getMessage().startsWith("duplicated"))
-				throw new MsgbusException("dom", "duplicated-timetable-name");
-			throw e;
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private List<Schedule> parseSchedules(Collection<Object> schedules) {
-		List<Schedule> l = new ArrayList<Schedule>();
-
-		for (Object o : schedules) {
-			Map<String, Object> schedule = (Map<String, Object>) o;
-			Schedule s = new Schedule();
-			s.setDayOfWeek((Integer) schedule.get("day"));
-			s.setBeginSecond((Integer) schedule.get("begin"));
-			s.setEndSecond((Integer) schedule.get("end"));
-
-			if (s.getBeginSecond() > s.getEndSecond())
-				throw new IllegalArgumentException();
-			
-			l.add(s);
-		}
-
-		return l;
+		Timetable timetable = PrimitiveConverter.parse(Timetable.class, req.getParams());
+		timetableApi.updateTimetable(req.getOrgDomain(), timetable);
 	}
 
 	@MsgbusMethod
 	public void removeTimetable(Request req, Response resp) {
-		int organizationId = req.getSession().getOrgId();
-		int id = req.getInteger("id");
-
-		timetableApi.removeTimetable(organizationId, id);
+		String guid = req.getString("guid");
+		timetableApi.removeTimetable(req.getOrgDomain(), guid);
 	}
 }

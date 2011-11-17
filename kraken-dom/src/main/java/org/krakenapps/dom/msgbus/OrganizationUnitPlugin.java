@@ -19,12 +19,9 @@ import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.OrganizationUnitApi;
-import org.krakenapps.dom.exception.OrganizationNotFoundException;
-import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
-import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -35,53 +32,40 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @MsgbusPlugin
 public class OrganizationUnitPlugin {
 	@Requires
-	private OrganizationApi orgApi;
-
-	@Requires
 	private OrganizationUnitApi orgUnitApi;
 
 	@MsgbusMethod
 	public void getOrganizationUnits(Request req, Response resp) {
-		Organization organization = orgApi.getOrganization(req.getOrgId());
-		if (organization == null)
-			throw new OrganizationNotFoundException(req.getOrgId());
+		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits(req.getOrgDomain());
+		resp.put("org_units", PrimitiveConverter.serialize(orgUnits));
+	}
 
-		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits(organization);
-		resp.put("org_units", Marshaler.marshal(orgUnits));
+	@MsgbusMethod
+	public void getOrganizationUnit(Request req, Response resp) {
+		String guid = req.getString("guid");
+		OrganizationUnit orgUnit = orgUnitApi.getOrganizationUnit(req.getOrgDomain(), guid);
+		resp.put("org_unit", PrimitiveConverter.serialize(orgUnit));
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createOrganizationUnit(Request req, Response resp) {
-		OrganizationUnit orgUnit = toOrganizationUnit(req);
-		orgUnitApi.createOrganizationUnit(orgUnit);
-		resp.put("id", orgUnit.getId());
+		OrganizationUnit orgUnit = PrimitiveConverter.parse(OrganizationUnit.class, req.getParams());
+		orgUnitApi.createOrganizationUnit(req.getOrgDomain(), orgUnit);
+		resp.put("guid", orgUnit.getGuid());
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateOrganizationUnit(Request req, Response resp) {
-		OrganizationUnit orgUnit = toOrganizationUnit(req);
-		orgUnit.setId(req.getInteger("id"));
-		orgUnitApi.updateOrganizationUnit(orgUnit);
-	}
-
-	private OrganizationUnit toOrganizationUnit(Request req) {
-		OrganizationUnit orgUnit = new OrganizationUnit();
-		orgUnit.setOrganization(orgApi.getOrganization(req.getOrgId()));
-		if (req.getInteger("parent_id") != null)
-			orgUnit.setParent(orgUnitApi.getOrganizationUnit(req.getInteger("parent_id")));
-		else
-			orgUnit.setParent(null);
-		orgUnit.setName(req.getString("name"));
-		orgUnit.setDomainController(req.getString("dc"));
-		orgUnit.setFromLdap(false);
-		return orgUnit;
+		OrganizationUnit orgUnit = PrimitiveConverter.parse(OrganizationUnit.class, req.getParams());
+		orgUnitApi.updateOrganizationUnit(req.getOrgDomain(), orgUnit);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeOrganizationUnit(Request req, Response resp) {
-		orgUnitApi.removeOrganizationUnit(req.getInteger("id"));
+		String guid = req.getString("guid");
+		orgUnitApi.removeOrganizationUnit(req.getOrgDomain(), guid);
 	}
 }

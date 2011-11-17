@@ -21,94 +21,50 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.MapTypeHint;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
-
-@Entity
-@Table(name = "dom_admins")
-public class Admin implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@OneToOne
-	@JoinColumn(name = "user_id", nullable = false, unique = true)
+public class Admin {
+	@FieldOption(skip = true)
 	private User user;
 
-	@ManyToOne
-	@JoinColumn(name = "role_id", nullable = false)
+	@FieldOption(nullable = false)
+	@ReferenceKey("name")
 	private Role role;
 
-	@ManyToOne
-	@JoinColumn(name = "profile_id", nullable = false)
-	private ProgramProfile programProfile;
+	@FieldOption(nullable = false)
+	@ReferenceKey("name")
+	private ProgramProfile profile;
 
-	@Column(length = 16)
+	@FieldOption(length = 16)
 	private String lang;
 
-	@Column(name = "use_login_lock", nullable = false)
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
+
 	private boolean useLoginLock;
-
-	@Column(name = "login_lock_count", nullable = false)
 	private int loginLockCount;
-
-	@Column(name = "login_failures", nullable = false)
 	private int loginFailures;
-
-	@Column(name = "last_login_failed_at")
 	private Date lastLoginFailedDateTime;
-
-	@Column(name = "use_idle_timeout", nullable = false)
 	private boolean useIdleTimeout;
-
-	// in seconds
-	@Column(name = "idle_timeout", nullable = false)
-	private int idleTimeout;
-
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
-
-	@Column(name = "last_login_at")
+	private int idleTimeout; // in seconds
 	private Date lastLoginDateTime;
-
-	@Column(name = "is_enabled", nullable = false)
 	private boolean isEnabled;
-
-	@Column(name = "use_otp", nullable = false)
 	private boolean useOtp;
-
-	@Column(name = "otp_seed")
 	private String otpSeed;
-
-	@Column(name = "use_acl", nullable = false)
 	private boolean useAcl;
+	private List<String> trustHosts = new ArrayList<String>();
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
-	private List<Widget> widgets = new ArrayList<Widget>();
+	@MapTypeHint({ String.class, Object.class })
+	private Map<String, Object> settings = new HashMap<String, Object>();
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
-	private List<AdminSetting> settings = new ArrayList<AdminSetting>();
-
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "admin")
-	private List<AdminTrustHost> trustHosts = new ArrayList<AdminTrustHost>();
-
-	public int getId() {
-		return id;
+	public User getUser() {
+		return user;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	public Role getRole() {
@@ -119,12 +75,12 @@ public class Admin implements Marshalable {
 		this.role = role;
 	}
 
-	public ProgramProfile getProgramProfile() {
-		return programProfile;
+	public ProgramProfile getProfile() {
+		return profile;
 	}
 
-	public void setProgramProfile(ProgramProfile programProfile) {
-		this.programProfile = programProfile;
+	public void setProfile(ProgramProfile profile) {
+		this.profile = profile;
 	}
 
 	public String getLang() {
@@ -133,6 +89,14 @@ public class Admin implements Marshalable {
 
 	public void setLang(String lang) {
 		this.lang = lang;
+	}
+
+	public Date getCreateDateTime() {
+		return createDateTime;
+	}
+
+	public void setCreateDateTime(Date createDateTime) {
+		this.createDateTime = createDateTime;
 	}
 
 	public boolean isUseLoginLock() {
@@ -183,14 +147,6 @@ public class Admin implements Marshalable {
 		this.idleTimeout = idleTimeout;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
 	public Date getLastLoginDateTime() {
 		return lastLoginDateTime;
 	}
@@ -205,14 +161,6 @@ public class Admin implements Marshalable {
 
 	public void setEnabled(boolean isEnabled) {
 		this.isEnabled = isEnabled;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public void setUser(User user) {
-		this.user = user;
 	}
 
 	public boolean isUseOtp() {
@@ -239,60 +187,19 @@ public class Admin implements Marshalable {
 		this.useAcl = useAcl;
 	}
 
-	public List<Widget> getWidgets() {
-		return widgets;
-	}
-
-	public void setWidgets(List<Widget> widgets) {
-		this.widgets = widgets;
-	}
-
-	public List<AdminSetting> getSettings() {
-		return settings;
-	}
-
-	public void setSettings(List<AdminSetting> settings) {
-		this.settings = settings;
-	}
-
-	public List<AdminTrustHost> getTrustHosts() {
+	public List<String> getTrustHosts() {
 		return trustHosts;
 	}
 
-	public void setTrustHosts(List<AdminTrustHost> trustHosts) {
+	public void setTrustHosts(List<String> trustHosts) {
 		this.trustHosts = trustHosts;
 	}
 
-	public void validate() throws IllegalArgumentException {
-		if (role == null)
-			throw new IllegalArgumentException("role");
+	public Map<String, Object> getSettings() {
+		return settings;
 	}
 
-	@Override
-	public Map<String, Object> marshal() {
-		List<String> acl = new ArrayList<String>();
-		for (AdminTrustHost h : trustHosts)
-			acl.add(h.getIp());
-
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("user_id", user.getId());
-		m.put("role_id", role.getId());
-		m.put("role", role.getName());
-		m.put("profile_id", programProfile.getId());
-		m.put("use_login_lock", useLoginLock);
-		m.put("login_lock_count", loginLockCount);
-		m.put("login_failures", loginFailures);
-		m.put("last_login_failed_at", lastLoginFailedDateTime);
-		m.put("use_idle_timeout", useIdleTimeout);
-		m.put("idle_timeout", idleTimeout);
-		m.put("created_at", createDateTime);
-		m.put("last_login", lastLoginDateTime);
-		m.put("is_enabled", isEnabled);
-		m.put("use_otp", useOtp);
-		m.put("otp_seed", otpSeed);
-		m.put("use_acl", useAcl);
-		m.put("acl", acl);
-		return m;
+	public void setSettings(Map<String, Object> settings) {
+		this.settings = settings;
 	}
 }

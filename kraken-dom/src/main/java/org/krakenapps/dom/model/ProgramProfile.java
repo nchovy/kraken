@@ -15,62 +15,22 @@
  */
 package org.krakenapps.dom.model;
 
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
-
-@Entity
-@Table(name = "dom_program_profiles")
-public class ProgramProfile implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
+public class ProgramProfile {
+	@FieldOption(nullable = false)
 	private String name;
 
 	private String description;
 
-	@OneToMany(mappedBy = "programProfile")
-	private List<Admin> admins;
-
-	@ManyToMany
-	@JoinTable(name = "dom_profiles_to_programs", joinColumns = @JoinColumn(name = "profile_id"), inverseJoinColumns = @JoinColumn(name = "program_id"))
-	private Set<Program> programs = new HashSet<Program>();
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public Organization getOrganization() {
-		return organization;
-	}
-
-	public void setOrganization(Organization organization) {
-		this.organization = organization;
-	}
+	@ReferenceKey("name")
+	@CollectionTypeHint(Program.class)
+	private List<Program> programs = new ArrayList<Program>();
 
 	public String getName() {
 		return name;
@@ -88,29 +48,11 @@ public class ProgramProfile implements Marshalable {
 		this.description = description;
 	}
 
-	public List<Admin> getAdmins() {
-		return admins;
-	}
-
-	public void setAdmins(List<Admin> admins) {
-		this.admins = admins;
-	}
-
-	public Set<Program> getPrograms() {
+	public List<Program> getPrograms() {
 		return programs;
 	}
 
-	public void setPrograms(Set<Program> programs) {
+	public void setPrograms(List<Program> programs) {
 		this.programs = programs;
 	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("name", name);
-		m.put("description", description);
-		return m;
-	}
-
 }

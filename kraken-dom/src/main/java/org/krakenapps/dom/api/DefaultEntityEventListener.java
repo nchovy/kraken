@@ -17,18 +17,18 @@ package org.krakenapps.dom.api;
 
 public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
 	@Override
-	public void entityAdded(T obj) {
+	public void entityAdded(String domain, T obj) {
 	}
 
 	@Override
-	public void entityRemoved(T obj) {
+	public void entityUpdated(String domain, T obj) {
 	}
 
 	@Override
-	public void entityRemoving(T obj) {
+	public void entityRemoving(String domain, T obj) {
 	}
 
 	@Override
-	public void entityUpdated(T obj) {
+	public void entityRemoved(String domain, T obj) {
 	}
 }

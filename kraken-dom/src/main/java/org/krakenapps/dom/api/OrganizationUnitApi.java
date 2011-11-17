@@ -17,21 +17,18 @@ package org.krakenapps.dom.api;
 
 import java.util.Collection;
 
-import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
 
 public interface OrganizationUnitApi extends EntityEventProvider<OrganizationUnit> {
-	Collection<OrganizationUnit> getOrganizationUnits();
+	Collection<OrganizationUnit> getOrganizationUnits(String domain);
 
-	Collection<OrganizationUnit> getOrganizationUnits(Organization org);
+	OrganizationUnit findOrganizationUnit(String domain, String guid);
 
-	OrganizationUnit getOrganizationUnit(int id);
+	OrganizationUnit getOrganizationUnit(String domain, String guid);
 
-	Collection<OrganizationUnit> getParents(int orgId, int id);
+	void createOrganizationUnit(String domain, OrganizationUnit orgUnit);
 
-	OrganizationUnit createOrganizationUnit(OrganizationUnit orgUnit);
+	void updateOrganizationUnit(String domain, OrganizationUnit orgUnit);
 
-	OrganizationUnit updateOrganizationUnit(OrganizationUnit orgUnit);
-
-	OrganizationUnit removeOrganizationUnit(int id);
+	void removeOrganizationUnit(String domain, String guid);
 }

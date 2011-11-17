@@ -18,12 +18,22 @@ public class Request {
 		return session;
 	}
 
+	@Deprecated
 	public Integer getOrgId() {
 		return session.getOrgId();
 	}
 
+	public String getOrgDomain() {
+		return session.getOrgDomain();
+	}
+
+	@Deprecated
 	public Integer getAdminId() {
 		return session.getAdminId();
+	}
+
+	public String getAdminLoginName() {
+		return session.getAdminLoginName();
 	}
 
 	public String getMethod() {

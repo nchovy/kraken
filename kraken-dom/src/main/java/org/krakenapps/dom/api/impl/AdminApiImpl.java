@@ -15,57 +15,53 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.AdminApi;
+import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.LoginCallback;
-import org.krakenapps.dom.api.OrganizationParameterApi;
+import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OtpApi;
-import org.krakenapps.dom.api.UserExtensionProvider;
-import org.krakenapps.dom.exception.AccessControlException;
-import org.krakenapps.dom.exception.AdminLockedException;
-import org.krakenapps.dom.exception.CannotRemoveRequestingAdminException;
-import org.krakenapps.dom.exception.InvalidOtpPasswordException;
-import org.krakenapps.dom.exception.InvalidPasswordException;
-import org.krakenapps.dom.exception.LoginFailedException;
-import org.krakenapps.dom.exception.MaxSessionException;
-import org.krakenapps.dom.exception.OrganizationNotFoundException;
-import org.krakenapps.dom.exception.AdminNotFoundException;
-import org.krakenapps.dom.model.AdminTrustHost;
-import org.krakenapps.dom.model.Organization;
+import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.Role;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Session;
 
 @Component(name = "dom-admin-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserExtensionProvider {
-	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+public class AdminApiImpl implements AdminApi {
+	private static final Class<User> cls = User.class;
+	private static final String EXT_KEY = "admin";
+	private static final String NOT_FOUND = "admin-not-found";
+	private static final String ALREADY_EXIST = "admin-already-setted";
+	private static final String LOCKED_ADMIN = "locked-admin";
 
 	@Requires
-	private OrganizationParameterApi orgParamApi;
+	private ConfigManager cfg;
+
+	@Requires
+	private OrganizationApi orgApi;
+
+	@Requires
+	private UserApi userApi;
 
 	@Requires
 	private PushApi pushApi;
@@ -76,37 +72,149 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	private Set<LoginCallback> callbacks = new HashSet<LoginCallback>();
 	private PriorityQueue<LoggedInAdmin> loggedIn = new PriorityQueue<LoggedInAdmin>(11, new LoggedInAdminComparator());
 
-	@Override
-	public String getName() {
-		return "admin";
+	private Predicate getPred() {
+		return Predicates.not(Predicates.field("ext/admin", null));
+	}
+
+	private Predicate getPred(String loginName) {
+		return Predicates.and(getPred(), Predicates.field("loginName", loginName));
 	}
 
 	@Override
-	public Admin login(Session session, String nick, String hash, boolean force) throws LoginFailedException {
-		Admin admin = getAdminByLoginName(nick);
-		if (admin == null)
-			throw new AdminNotFoundException(nick);
+	public Collection<Admin> getAdmins(String domain) {
+		Collection<Admin> admins = new ArrayList<Admin>();
+		for (User user : cfg.ensureCollection(domain, cls).find(getPred()).getDocuments(cls))
+			admins.add(parseAdmin(user));
+		return admins;
+	}
+
+	@Override
+	public Admin findAdmin(String domain, String loginName) {
+		return parseAdmin(cfg.find(domain, cls, getPred(loginName)));
+	}
+
+	@Override
+	public Admin getAdmin(String domain, String loginName) {
+		return parseAdmin(cfg.get(domain, cls, getPred(loginName), NOT_FOUND));
+	}
+
+	@Override
+	public Admin getAdmin(User user) {
+		Object o = user.getExt().get(EXT_KEY);
+		if (o == null)
+			return null;
+
+		if (o instanceof Admin)
+			return (Admin) o;
+		else if (o instanceof Map)
+			return parseAdmin(user);
+
+		return null;
+	}
+
+	private Admin parseAdmin(User user) {
+		Admin admin = PrimitiveConverter.parse(Admin.class, user.getExt().get(EXT_KEY));
+		admin.setUser(user);
+		return admin;
+	}
+
+	@Override
+	public void setAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin) {
+		checkPermissionLevel(domain, requestAdminLoginName, admin, "set-admin-permission-denied");
+
+		if (findAdmin(domain, targetUserLoginName) != null)
+			throw new DOMException(ALREADY_EXIST);
+
+		prepare(admin);
+		User target = userApi.getUser(domain, targetUserLoginName);
+		target.getExt().put(EXT_KEY, admin);
+		userApi.updateUser(domain, target);
+	}
+
+	@Override
+	public void updateAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin) {
+		checkPermissionLevel(domain, requestAdminLoginName, admin, "update-admin-permission-denied");
+
+		prepare(admin);
+		User target = getAdmin(domain, targetUserLoginName).getUser();
+		target.getExt().put(EXT_KEY, admin);
+		userApi.updateUser(domain, target);
+	}
+
+	@Override
+	public String updateOtpSeed(String domain, String requestAdminLoginName, String targetUserLoginName) {
+		Admin admin = getAdmin(domain, targetUserLoginName);
+		String newSeed = createOtpSeed();
+		admin.setOtpSeed(newSeed);
+		updateAdmin(domain, requestAdminLoginName, targetUserLoginName, admin);
+		return newSeed;
+	}
+
+	private void prepare(Admin admin) {
+		if (admin.getLang() == null)
+			admin.setLang("en");
+		if (admin.isUseOtp() && admin.getOtpSeed() == null)
+			admin.setOtpSeed(createOtpSeed());
+		else if (!admin.isUseOtp())
+			admin.setOtpSeed(null);
+	}
+
+	private static final char[] chars = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+			'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+			's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+
+	private String createOtpSeed() {
+		Random random = new Random();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < 10; i++)
+			sb.append(chars[random.nextInt(chars.length)]);
+		return sb.toString();
+	}
+
+	@Override
+	public void unsetAdmin(String domain, String requestAdminLoginName, String targetUserLoginName) {
+		if (requestAdminLoginName.equals(targetUserLoginName))
+			throw new DOMException("cannot-remove-requesting-admin");
+
+		Admin target = getAdmin(domain, targetUserLoginName);
+		checkPermissionLevel(domain, requestAdminLoginName, target, "unset-admin-permission-denied");
+
+		User user = target.getUser();
+		user.getExt().remove(EXT_KEY);
+		userApi.updateUser(domain, user);
+	}
+
+	private void checkPermissionLevel(String domain, String requestAdminLoginName, Admin admin, String exceptionMessage) {
+		Admin request = findAdmin(domain, requestAdminLoginName);
+		if (requestAdminLoginName == null || request == null)
+			throw new DOMException("request-admin-not-found");
+		if (request.getRole().getLevel() < admin.getRole().getLevel())
+			throw new DOMException(exceptionMessage);
+	}
+
+	@Override
+	public Admin login(Session session, String loginName, String hash, boolean force) {
+		String domain = session.getOrgDomain();
+		Admin admin = getAdmin(domain, loginName);
 
 		try {
 			checkAcl(session, admin);
 
 			if (!admin.isEnabled()) {
-				Date failed = admin.getLastLoginFailedDateTime();
-
 				int lockTime = 180;
-				String time = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
-						"login_lock_time");
-				if (time != null) {
+				Object param = orgApi.getOrganizationParameter(domain, "login_lock_time");
+				if (param != null) {
 					try {
-						lockTime = Integer.parseInt(time);
+						lockTime = (Integer) param;
 					} catch (NumberFormatException e) {
 					}
 				}
-
 				Calendar c = Calendar.getInstance();
-				c.add(Calendar.SECOND, lockTime);
+				c.add(Calendar.SECOND, -lockTime);
+
+				Date failed = admin.getLastLoginFailedDateTime();
 				if (failed != null && failed.after(c.getTime()))
-					throw new AdminLockedException();
+					throw new DOMException(LOCKED_ADMIN);
 			}
 
 			String password = null;
@@ -117,77 +225,98 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 
 			if (!hash.equals(Sha1.hash(password + session.getString("nonce")))) {
 				if (admin.isUseOtp())
-					throw new InvalidOtpPasswordException();
+					throw new DOMException("invalid-otp-password");
 				else
-					throw new InvalidPasswordException();
+					throw new DOMException("invalid-password");
 			}
 
-			String maxSession = orgParamApi.getOrganizationParameter(admin.getUser().getOrganization().getId(),
-					"max_sessions");
+			Integer maxSession = orgApi.getOrganizationParameter(domain, "max_sessions", Integer.class);
 			if (maxSession != null) {
-				try {
-					int maxSessions = Integer.parseInt(maxSession);
-					if (maxSessions > 0) {
-						if (force) {
-							while (loggedIn.size() >= maxSessions) {
-								if (loggedIn.peek().level > admin.getRole().getLevel())
-									throw new MaxSessionException();
-								LoggedInAdmin ban = loggedIn.poll();
-								Map<String, Object> m = new HashMap<String, Object>();
-								m.put("type", "terminate");
-								m.put("kick_by", admin.getUser().getLoginName());
-								pushApi.push(ban.session, "kraken-system-event", m);
-								ban.session.close();
+				if (maxSession > 0) {
+					if (force) {
+						while (loggedIn.size() >= maxSession) {
+							if (loggedIn.peek().level > admin.getRole().getLevel())
+								throw new DOMException("max-session");
+
+							LoggedInAdmin ban = loggedIn.poll();
+							Map<String, Object> m = new HashMap<String, Object>();
+							m.put("type", "terminate");
+							m.put("kick_by", admin.getUser().getLoginName());
+							pushApi.push(ban.session, "kraken-system-event", m);
+
+							long wait = System.currentTimeMillis() + 5000;
+							while (loggedIn.contains(ban) && System.currentTimeMillis() < wait) {
+								try {
+									Thread.sleep(100);
+								} catch (InterruptedException e) {
+								}
 							}
-						} else if (loggedIn.size() >= maxSessions) {
-							LoggedInAdmin peek = loggedIn.peek();
-							throw new MaxSessionException(peek.loginName, peek.session);
+							ban.session.close();
 						}
+					} else if (loggedIn.size() >= maxSession) {
+						LoggedInAdmin peek = loggedIn.peek();
+						Map<String, Object> m = new HashMap<String, Object>();
+						m.put("login_name", peek.loginName);
+						m.put("session_id", peek.session.getId());
+						m.put("ip", session.getRemoteAddress().getHostAddress());
+						throw new DOMException("max-session", m);
 					}
-				} catch (NumberFormatException e) {
 				}
 			}
 
-			updateLoginFailures(admin, true);
-			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser()
-					.getLoginName()));
+			updateLoginFailures(domain, admin, true);
+			loggedIn.add(new LoggedInAdmin(admin.getRole().getLevel(), new Date(), session, admin.getUser().getLoginName()));
 
 			for (LoginCallback callback : callbacks)
 				callback.onLoginSuccess(admin, session);
 
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("type", "login");
-			m.put("login_name", admin.getUser().getLoginName());
-			for (LoggedInAdmin user : loggedIn) {
-				pushApi.push(user.session, "kraken-system-event", m);
-			}
-
 			return admin;
-		} catch (LoginFailedException e) {
-			updateLoginFailures(admin, false);
-
+		} catch (DOMException e) {
+			updateLoginFailures(domain, admin, false);
 			for (LoginCallback callback : callbacks) {
-				if (e instanceof AdminLockedException)
+				if (e.getErrorCode().equals(LOCKED_ADMIN))
 					callback.onLoginLocked(admin, session);
 				else
 					callback.onLoginFailed(admin, session, e);
 			}
-
 			throw e;
 		}
 	}
 
 	private void checkAcl(Session session, Admin admin) {
-		if (admin.isUseAcl()) {
-			boolean found = false;
-			String remote = session.getRemoteAddress().getHostAddress();
+		if (!admin.isUseAcl())
+			return;
 
-			for (AdminTrustHost h : admin.getTrustHosts())
-				if (h.getIp() != null && h.getIp().equals(remote))
-					found = true;
+		String remote = session.getRemoteAddress().getHostAddress();
+		for (String host : admin.getTrustHosts()) {
+			if (host != null && host.equals(remote))
+				return;
+		}
+		throw new DOMException("not-trust-host");
+	}
 
-			if (!found)
-				throw new AccessControlException();
+	private void updateLoginFailures(String domain, Admin admin, boolean success) {
+		if (success) {
+			admin.setLastLoginDateTime(new Date());
+			admin.setLoginFailures(0);
+			admin.setEnabled(true);
+		} else {
+			admin.setLastLoginFailedDateTime(new Date());
+			admin.setLoginFailures(admin.getLoginFailures() + 1);
+			if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
+				admin.setEnabled(false);
+		}
+		String loginName = admin.getUser().getLoginName();
+		updateAdmin(domain, loginName, loginName, admin);
+	}
+
+	@Override
+	public void logout(Session session) {
+		if (session.getOrgDomain() != null) {
+			Admin admin = getAdmin(session.getOrgDomain(), session.getAdminLoginName());
+			loggedIn.remove(new LoggedInAdmin(session));
+			for (LoginCallback callback : callbacks)
+				callback.onLogout(admin, session);
 		}
 	}
 
@@ -252,16 +381,6 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	}
 
 	@Override
-	public void logout(Session session) {
-		if (session.getOrgId() != null) {
-			Admin admin = getAdmin(session.getOrgId(), session.getAdminId());
-			loggedIn.remove(new LoggedInAdmin(session));
-			for (LoginCallback callback : callbacks)
-				callback.onLogout(admin, session);
-		}
-	}
-
-	@Override
 	public void registerLoginCallback(LoginCallback callback) {
 		callbacks.add(callback);
 	}
@@ -269,260 +388,5 @@ public class AdminApiImpl extends AbstractApi<Admin> implements AdminApi, UserEx
 	@Override
 	public void unregisterLoginCallback(LoginCallback callback) {
 		callbacks.remove(callback);
-	}
-
-	@Transactional
-	private void updateLoginFailures(Admin admin, boolean success) {
-		EntityManager em = entityManagerService.getEntityManager();
-		admin = em.find(Admin.class, admin.getId());
-
-		if (success) {
-			admin.setLastLoginDateTime(new Date());
-			admin.setLoginFailures(0);
-			admin.setEnabled(true);
-		} else {
-			admin.setLastLoginFailedDateTime(new Date());
-			admin.setLoginFailures(admin.getLoginFailures() + 1);
-			if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
-				admin.setEnabled(false);
-		}
-
-		em.merge(admin);
-	}
-
-	@Override
-	public Admin createAdmin(int organizationId, Integer requestAdminId, Admin admin) {
-		Admin a = createAdminInternal(organizationId, requestAdminId, admin);
-		fireEntityAdded(a);
-		return a;
-	}
-
-	@Transactional
-	private Admin createAdminInternal(int organizationId, Integer requestAdminId, Admin admin) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Organization organization = em.find(Organization.class, organizationId);
-		if (organization == null)
-			throw new OrganizationNotFoundException(organizationId);
-
-		if (requestAdminId != null) {
-			Admin requestAdmin = em.find(Admin.class, requestAdminId);
-			if (requestAdmin.getRole().getLevel() < admin.getRole().getLevel())
-				throw new SecurityException("create admin");
-		}
-
-		if (admin.getLang() == null)
-			admin.setLang("en");
-		admin.setCreateDateTime(new Date());
-		if (admin.isUseOtp())
-			admin.setOtpSeed(createOtpSeed());
-
-		em.persist(admin);
-
-		// add acl
-		for (AdminTrustHost host : admin.getTrustHosts()) {
-			host.setAdmin(admin);
-			em.persist(host);
-		}
-
-		return admin;
-	}
-
-	@Transactional
-	@Override
-	public Admin getAdmin(int organizationId, int adminId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Admin admin = em.find(Admin.class, adminId);
-		if (admin == null || admin.getUser().getOrganization().getId() != organizationId)
-			return null;
-
-		// enforce lazy loading
-		admin.getRole().getPermissions().size();
-		admin.getTrustHosts().size();
-
-		return admin;
-	}
-
-	@Transactional
-	@Override
-	public Admin getAdminByLoginName(String loginName) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Admin admin = (Admin) em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.loginName = ?")
-				.setParameter(1, loginName).getSingleResult();
-
-		admin.getRole().getPermissions().size();
-		admin.getTrustHosts().size();
-
-		return admin;
-	}
-
-	@Transactional
-	@Override
-	public Admin getAdminByUser(int organizationId, int userId) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		try {
-			Admin admin = (Admin) em
-					.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.organization.id = ? AND u.id = ?")
-					.setParameter(1, organizationId).setParameter(2, userId).getSingleResult();
-
-			admin.getRole().getPermissions().size();
-			admin.getTrustHosts().size();
-
-			return admin;
-		} catch (NoResultException e) {
-			return null;
-		}
-	}
-
-	@Transactional
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<Admin> getAdmins(int organizationId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.organization.id = ?")
-				.setParameter(1, organizationId).getResultList();
-	}
-
-	@Override
-	public boolean matchPassword(int organizationId, int adminId, String password) {
-		Admin admin = getAdmin(organizationId, adminId);
-		if (admin == null)
-			throw new AdminNotFoundException(adminId);
-
-		String hashedPassword = hashPassword(admin.getUser().getSalt(), password);
-		return admin.getUser().getPassword().equals(hashedPassword);
-	}
-
-	@Override
-	public String hashPassword(String salt, String text) {
-		return Sha1.hashPassword(salt, text);
-	}
-
-	@Override
-	public String hash(String text) {
-		return Sha1.hash(text);
-	}
-
-	@Override
-	public Admin updateAdmin(int organizationId, Integer requestAdminId, Admin targetAdmin) {
-		Admin admin = updateAdminInternal(organizationId, requestAdminId, targetAdmin);
-		fireEntityUpdated(admin);
-		return admin;
-	}
-
-	@Transactional
-	private Admin updateAdminInternal(int organizationId, Integer requestAdminId, Admin targetAdmin) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		try {
-			if (requestAdminId != null) {
-				Admin requestAdmin = em.find(Admin.class, requestAdminId);
-				if (requestAdmin == null)
-					throw new AdminNotFoundException(requestAdminId);
-
-				if (requestAdmin.getRole().getLevel() < targetAdmin.getRole().getLevel())
-					throw new SecurityException("update admin");
-			}
-
-			Admin admin = (Admin) em
-					.createQuery("SELECT a FROM Admin a LEFT JOIN a.user u WHERE u.organization.id = ? AND a.id = ?")
-					.setParameter(1, organizationId).setParameter(2, targetAdmin.getId()).getSingleResult();
-
-			Role role = em.find(Role.class, targetAdmin.getRole().getId());
-
-			admin.setRole(role);
-			admin.setLastLoginDateTime(targetAdmin.getLastLoginDateTime());
-			admin.setProgramProfile(targetAdmin.getProgramProfile());
-			admin.setUseIdleTimeout(targetAdmin.isUseIdleTimeout());
-			admin.setUseLoginLock(targetAdmin.isUseLoginLock());
-			admin.setIdleTimeout(targetAdmin.getIdleTimeout());
-			admin.setLoginLockCount(targetAdmin.getLoginLockCount());
-			admin.setUseOtp(targetAdmin.isUseOtp());
-			if (admin.isUseOtp()) {
-				if (targetAdmin.getOtpSeed() != null)
-					admin.setOtpSeed(targetAdmin.getOtpSeed());
-				else if (admin.getOtpSeed() == null)
-					admin.setOtpSeed(createOtpSeed());
-			} else
-				admin.setOtpSeed(null);
-
-			admin.setUseAcl(targetAdmin.isUseAcl());
-
-			if (!admin.isEnabled() && targetAdmin.isEnabled())
-				admin.setLoginFailures(0);
-
-			admin.setEnabled(targetAdmin.isEnabled());
-
-			// reset acl
-			for (AdminTrustHost h : admin.getTrustHosts())
-				em.remove(h);
-
-			admin.getTrustHosts().clear();
-
-			for (AdminTrustHost h : targetAdmin.getTrustHosts()) {
-				h.setAdmin(admin);
-				admin.getTrustHosts().add(h);
-			}
-			em.merge(admin);
-
-			return admin;
-		} catch (NoResultException e) {
-			throw new AdminNotFoundException(targetAdmin.getId());
-		}
-	}
-
-	@Override
-	public Admin removeAdmin(int organizationId, Integer requestAdminId, int adminId) {
-		Admin admin = removeAdminInternal(organizationId, requestAdminId, adminId);
-		fireEntityRemoved(admin);
-		return admin;
-	}
-
-	@Transactional
-	private Admin removeAdminInternal(int organizationId, Integer requestAdminId, int adminId) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		Admin admin = (Admin) em.find(Admin.class, adminId);
-		if (admin.getUser().getOrganization().getId() != organizationId)
-			throw new AdminNotFoundException(adminId);
-
-		if (requestAdminId != null) {
-			Admin requestAdmin = em.find(Admin.class, requestAdminId);
-			if (requestAdmin == null)
-				throw new AdminNotFoundException(requestAdminId);
-
-			if (requestAdmin.getRole().getLevel() < admin.getRole().getLevel())
-				throw new SecurityException("remove admin");
-
-			if (requestAdminId == adminId) {
-				throw new CannotRemoveRequestingAdminException(requestAdminId);
-			}
-		}
-
-		em.remove(admin);
-
-		return admin;
-	}
-
-	private static final char[] chars = new char[62];
-	static {
-		int i = 0;
-		char c = 'a';
-		for (; i < 26; i++)
-			chars[i] = c++;
-		c = 'A';
-		for (; i < 52; i++)
-			chars[i] = c++;
-		c = '0';
-		for (; i < 62; i++)
-			chars[i] = c++;
-	}
-
-	private String createOtpSeed() {
-		Random random = new Random();
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < 10; i++)
-			sb.append(chars[random.nextInt(62)]);
-		return sb.toString();
 	}
 }

@@ -56,5 +56,4 @@ public class Sha1 {
 		}
 		return buf.toString();
 	}
-
 }

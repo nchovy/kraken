@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-dom</artifactId>
-	<version>1.3.6</version>
+	<version>2.0.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken DOM</name>
 	<build>
@@ -25,22 +25,14 @@
 						<Bundle-SymbolicName>org.krakenapps.dom</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.dom.api,
-							org.krakenapps.dom.model,
-							org.krakenapps.dom.exception
+							org.krakenapps.dom.model
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.dom.api.impl,
 							org.krakenapps.dom.script,
 							org.krakenapps.dom.msgbus
 						</Private-Package>
-						<Import-Package>
-							javassist.util.proxy,
-							org.hibernate.proxy,
-							org.hibernate.exception,
-							org.hibernate,
-							org.hibernate.dialect,
-							javax.persistence,*
-						</Import-Package>
+						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -67,17 +59,17 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.8.0</version>
+			<version>1.9.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-jpa</artifactId>
-			<version>1.5.1</version>
+			<artifactId>kraken-confdb</artifactId>
+			<version>0.3.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-msgbus</artifactId>
-			<version>1.1.4</version>
+			<version>1.3.0</version>
 		</dependency>
 	</dependencies>
 </project>

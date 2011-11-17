@@ -16,56 +16,27 @@
 package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
-
-@Entity
-@Table(name = "dom_program_packs")
-public class ProgramPack implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@Column(nullable = false, length = 60)
+public class ProgramPack {
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(nullable = false, length = 255)
+	@FieldOption(nullable = false, length = 255)
 	private String dll;
 
-	@Column(length = 60)
+	@FieldOption(length = 60)
 	private String description;
 
-	@Column(nullable = false)
 	private int seq;
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "pack")
+	@ReferenceKey("name")
+	@CollectionTypeHint(Program.class)
 	private List<Program> programs = new ArrayList<Program>();
-
-	@ManyToMany(mappedBy = "programPacks")
-	private Set<Organization> organizations = new HashSet<Organization>();
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
 
 	public String getName() {
 		return name;
@@ -91,14 +62,6 @@ public class ProgramPack implements Marshalable {
 		this.description = description;
 	}
 
-	public List<Program> getPrograms() {
-		return programs;
-	}
-
-	public void setPrograms(List<Program> programs) {
-		this.programs = programs;
-	}
-
 	public int getSeq() {
 		return seq;
 	}
@@ -107,23 +70,11 @@ public class ProgramPack implements Marshalable {
 		this.seq = seq;
 	}
 
-	public Set<Organization> getOrganizations() {
-		return organizations;
+	public List<Program> getPrograms() {
+		return programs;
 	}
 
-	public void setOrganizations(Set<Organization> organizations) {
-		this.organizations = organizations;
+	public void setPrograms(List<Program> programs) {
+		this.programs = programs;
 	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("id", id);
-		map.put("name", name);
-		map.put("dll", dll);
-		map.put("description", description);
-		map.put("seq", seq);
-		return map;
-	}
-
 }

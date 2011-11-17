@@ -19,9 +19,8 @@ import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.OrganizationApi;
-import org.krakenapps.dom.api.OrganizationParameterApi;
-import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -33,79 +32,67 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @MsgbusPlugin
 public class OrganizationPlugin {
 	@Requires
-	private OrganizationApi organizationApi;
-
-	@Requires
-	private OrganizationParameterApi organizationParameterApi;
+	private OrganizationApi orgApi;
 
 	@MsgbusMethod
 	public void getOrganization(Request req, Response response) {
-		int organizationId = req.getOrgId();
-		Organization organization = organizationApi.getOrganization(organizationId);
-		if (organization == null)
-			throw new OrganizationNotFoundException(organizationId);
-
-		response.put("result", organization.marshal());
+		String domain = req.getString("domain");
+		Organization organization = orgApi.getOrganization(domain);
+		response.put("result", PrimitiveConverter.serialize(organization));
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createOrganization(Request req, Response resp) {
-		Organization organization = toOrganization(req);
-		organizationApi.createOrganization(organization);
-		resp.put("new_id", organization.getId());
+		Organization organization = PrimitiveConverter.parse(Organization.class, req.getParams());
+		orgApi.createOrganization(organization);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateOrganization(Request req, Response resp) {
-		Organization organization = toOrganization(req);
-		organization.setId(req.getInteger("id"));
-		organizationApi.updateOrganization(organization);
-	}
-
-	private Organization toOrganization(Request req) {
-		Organization organization = new Organization();
-		organization.setName(req.getString("name"));
-		organization.setAddress(req.getString("address"));
-		organization.setPhone(req.getString("phone"));
-		organization.setDescription(req.getString("description"));
-		organization.setDomainController(req.getString("dc"));
-		organization.setBackupDomainController(req.getString("bdc"));
-		return organization;
+		Organization organization = PrimitiveConverter.parse(Organization.class, req.getParams());
+		orgApi.updateOrganization(organization);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeOrganization(Request req, Response resp) {
-		int id = req.getInteger("id");
-		organizationApi.removeOrganization(id);
+		String domain = req.getString("domain");
+		orgApi.removeOrganization(domain);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void getOrganizationParameters(Request req, Response resp) {
-		Map<String, String> parameters = organizationParameterApi.getOrganizationParameters(req.getOrgId());
-		resp.put("result", parameters);
+		String domain = req.getString("domain");
+		Map<String, Object> params = orgApi.getOrganizationParameters(domain);
+		resp.put("result", PrimitiveConverter.serialize(params));
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void getOrganizationParameter(Request req, Response resp) {
-		String value = organizationParameterApi.getOrganizationParameter(req.getOrgId(), req.getString("name"));
-		resp.put("result", value);
+		String domain = req.getString("domain");
+		String key = req.getString("key");
+		Object param = orgApi.getOrganizationParameter(domain, key);
+		resp.put("result", PrimitiveConverter.serialize(param));
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void setOrganizationParameter(Request req, Response resp) {
-		organizationParameterApi
-				.setOrganizationParameter(req.getOrgId(), req.getString("name"), req.getString("value"));
+		String domain = req.getString("domain");
+		String key = req.getString("key");
+		Object value = req.get("value");
+		orgApi.setOrganizationParameter(domain, key, value);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void unsetOrganizationParameter(Request req, Response resp) {
-		organizationParameterApi.unsetOrganizationParameter(req.getOrgId(), req.getString("name"));
+		String domain = req.getString("domain");
+		String key = req.getString("key");
+		orgApi.unsetOrganizationParameter(domain, key);
 	}
 }

@@ -15,60 +15,40 @@
  */
 package org.krakenapps.dom.model;
 
-import java.io.File;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.UUID;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
+public class UploadedFile {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_uploaded_files")
-public class UploadedFile implements Marshalable {
-	@Id
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "space_id")
-	private FileSpace fileSpace;
-
-	@ManyToOne
-	@JoinColumn(name = "owner_id", nullable = false)
+	@FieldOption(nullable = false)
+	@ReferenceKey("loginName")
 	private User owner;
 
-	@Column(name = "file_name", length = 128, nullable = false)
+	@ReferenceKey("guid")
+	private FileSpace space;
+
+	@FieldOption(nullable = false, length = 128)
 	private String fileName;
 
-	@Column(name = "file_size", nullable = false)
 	private long fileSize;
 
-	@Column(length = 512, nullable = false)
+	@FieldOption(nullable = false)
 	private String path;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	public int getId() {
-		return id;
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public FileSpace getFileSpace() {
-		return fileSpace;
-	}
-
-	public void setFileSpace(FileSpace fileSpace) {
-		this.fileSpace = fileSpace;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public User getOwner() {
@@ -77,6 +57,14 @@ public class UploadedFile implements Marshalable {
 
 	public void setOwner(User owner) {
 		this.owner = owner;
+	}
+
+	public FileSpace getSpace() {
+		return space;
+	}
+
+	public void setSpace(FileSpace space) {
+		this.space = space;
 	}
 
 	public String getFileName() {
@@ -103,29 +91,11 @@ public class UploadedFile implements Marshalable {
 		this.path = path;
 	}
 
-	public File getFile() {
-		return new File(path);
-	}
-
 	public Date getCreateDateTime() {
 		return createDateTime;
 	}
 
 	public void setCreateDateTime(Date createDateTime) {
 		this.createDateTime = createDateTime;
-	}
-
-	@Override
-	public String toString() {
-		return String.format("id [%d], filename [%s], size [%d], path [%s]", id, fileName, fileSize, path);
-	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("file_name", fileName);
-		m.put("file_size", fileSize);
-		return m;
 	}
 }

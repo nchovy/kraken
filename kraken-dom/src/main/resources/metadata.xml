@@ -1,7 +1,10 @@
 <ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
+	<instance component="dom-config-manager" />
+
 	<instance component="dom-org-api" />
+	<instance component="dom-global-config-api" />
 	<instance component="dom-admin-api" />
 	<instance component="dom-role-api" />
 	<instance component="dom-program-api" />
@@ -22,6 +25,7 @@
 	<instance component="dom-org-parameter-api" />
 	<instance component="dom-localization-api" />
 	<instance component="dom-file-upload-api" />
+	<instance component="dom-map-api" />
 
 	<instance component="dom-org-plugin" />
 	<instance component="dom-admin-plugin" />
@@ -43,6 +47,7 @@
 	<instance component="dom-user-plugin" />
 	<instance component="dom-localization-plugin" />
 	<instance component="dom-file-upload-plugin" />
+	<instance component="dom-map-plugin" />
 
 	<instance component="dom-script-factory" />
 </ipojo>

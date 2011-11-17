@@ -15,133 +15,131 @@
  */
 package org.krakenapps.dom.api.impl;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import javax.persistence.EntityManager;
+import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.ProgramApi;
-import org.krakenapps.dom.api.AdminApi;
-import org.krakenapps.dom.exception.AdminNotFoundException;
-import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
 import org.krakenapps.dom.model.ProgramProfile;
-import org.krakenapps.dom.model.Admin;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
 
 @Component(name = "dom-program-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class ProgramApiImpl extends AbstractApi<ProgramProfile> implements ProgramApi {
+public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implements ProgramApi {
+	private static final Class<ProgramProfile> prof = ProgramProfile.class;
+	private static final String PROF_NOT_FOUND = "program-profile-not-found";
+	private static final String PROF_ALREADY_EXIST = "program-profile-already-exist";
+	private static DefaultEntityEventProvider<ProgramProfile> profileEventProvider = new DefaultEntityEventProvider<ProgramProfile>();
+
+	private static final Class<ProgramPack> pack = ProgramPack.class;
+	private static final String PACK_NOT_FOUND = "program-pack-not-found";
+	private static final String PACK_ALREADY_EXIST = "program-pack-already-exist";
+	private static DefaultEntityEventProvider<ProgramPack> packEventProvider = new DefaultEntityEventProvider<ProgramPack>();
+
+	private static final Class<Program> prog = Program.class;
+	private static final String PROG_NOT_FOUND = "program-not-found";
+	private static final String PROG_ALREADY_EXIST = "program-already-exist";
+
 	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
-	@Requires
-	private AdminApi adminApi;
+	private ConfigManager cfg;
 
-	@Transactional
-	@Override
-	public ProgramProfile getProgramProfile(int organizationId, int profileId) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		ProgramProfile profile = em.find(ProgramProfile.class, profileId);
-		if (profile == null || profile.getOrganization().getId() != organizationId)
-			return null;
-
-		return profile;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public List<ProgramProfile> getAvailableProgramProfiles(int organizationId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM ProgramProfile p WHERE p.organization.id = ?").setParameter(1, organizationId)
-				.getResultList();
-	}
-
-	@Transactional
-	@Override
-	public List<ProgramPack> getAvailableProgramPacks(int organizationId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Organization organization = em.find(Organization.class, organizationId);
-		organization.getProgramPacks().size(); // enforce fetch
-		return new ArrayList<ProgramPack>(organization.getProgramPacks());
-	}
-
-	@Transactional
-	@Override
-	public List<Program> getAvailablePrograms(int organizationId, int adminId) throws AdminNotFoundException {
-		Admin admin = adminApi.getAdmin(organizationId, adminId);
-		if (admin == null)
-			throw new AdminNotFoundException(adminId);
-
-		Set<Program> programs = admin.getProgramProfile().getPrograms();
-		programs.size(); // enforce fetch
-		return new ArrayList<Program>(programs);
-	}
-
-	@Transactional
-	@Override
-	public Program getProgram(int programId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.find(Program.class, programId);
+	private Predicate getPred(String name) {
+		return Predicates.field("name", name);
 	}
 
 	@Override
-	public ProgramProfile createProgramProfile(ProgramProfile profile) {
-		ProgramProfile pp = createProgramProfileInternal(profile);
-		fireEntityAdded(pp);
-		return pp;
-	}
-
-	@Transactional
-	private ProgramProfile createProgramProfileInternal(ProgramProfile profile) {
-		EntityManager em = entityManagerService.getEntityManager();
-		em.persist(profile);
-		return profile;
+	public Collection<ProgramProfile> getProgramProfiles(String domain) {
+		return cfg.ensureCollection(domain, prof).findAll().getDocuments(prof);
 	}
 
 	@Override
-	public ProgramProfile updateProgramProfile(ProgramProfile profile) {
-		ProgramProfile pp = updateProgramProfileInternal(profile);
-		fireEntityUpdated(pp);
-		return pp;
-	}
-
-	@Transactional
-	private ProgramProfile updateProgramProfileInternal(ProgramProfile profile) {
-		EntityManager em = entityManagerService.getEntityManager();
-		if (profile.getId() == 0)
-			throw new IllegalArgumentException("check program profile id");
-
-		ProgramProfile pp = em.find(ProgramProfile.class, profile.getId());
-		pp.setName(profile.getName());
-		pp.setDescription(profile.getDescription());
-		em.merge(pp);
-		return pp;
+	public ProgramProfile findProgramProfile(String domain, String name) {
+		return cfg.find(domain, prof, getPred(name));
 	}
 
 	@Override
-	public ProgramProfile removeProgramProfile(int programProfileId) {
-		ProgramProfile profile = removeProgramProfileInternal(programProfileId);
-		fireEntityRemoved(profile);
-		return profile;
+	public ProgramProfile getProgramProfile(String domain, String name) {
+		return cfg.get(domain, prof, getPred(name), PROF_NOT_FOUND);
 	}
 
-	@Transactional
-	private ProgramProfile removeProgramProfileInternal(int programProfileId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		ProgramProfile profile = em.find(ProgramProfile.class, programProfileId);
-		em.remove(profile);
-		return profile;
+	@Override
+	public void createProgramProfile(String domain, ProgramProfile profile) {
+		cfg.add(domain, prof, getPred(profile.getName()), profile, PROF_ALREADY_EXIST, profileEventProvider);
 	}
 
+	@Override
+	public void updateProgramProfile(String domain, ProgramProfile profile) {
+		cfg.update(domain, prof, getPred(profile.getName()), profile, PROF_NOT_FOUND, profileEventProvider);
+	}
+
+	@Override
+	public void removeProgramProfile(String domain, String name) {
+		cfg.remove(domain, prof, getPred(name), PROF_NOT_FOUND, profileEventProvider);
+	}
+
+	@Override
+	public Collection<ProgramPack> getProgramPacks(String domain) {
+		return cfg.ensureCollection(domain, pack).findAll().getDocuments(pack);
+	}
+
+	@Override
+	public ProgramPack findProgramPack(String domain, String name) {
+		return cfg.find(domain, pack, getPred(name));
+	}
+
+	@Override
+	public ProgramPack getProgramPack(String domain, String name) {
+		return cfg.get(domain, pack, getPred(name), PACK_NOT_FOUND);
+	}
+
+	@Override
+	public void createProgramPack(String domain, ProgramPack pack) {
+		cfg.add(domain, ProgramApiImpl.pack, getPred(pack.getName()), pack, PACK_ALREADY_EXIST, packEventProvider);
+	}
+
+	@Override
+	public void updateProgramPack(String domain, ProgramPack pack) {
+		cfg.update(domain, ProgramApiImpl.pack, getPred(pack.getName()), pack, PACK_NOT_FOUND, packEventProvider);
+	}
+
+	@Override
+	public void removeProgramPack(String domain, String name) {
+		cfg.remove(domain, ProgramApiImpl.pack, getPred(name), PACK_NOT_FOUND, packEventProvider);
+	}
+
+	@Override
+	public Collection<Program> getPrograms(String domain) {
+		return cfg.ensureCollection(domain, prog).findAll().getDocuments(prog);
+	}
+
+	@Override
+	public Program findProgram(String domain, String name) {
+		return cfg.find(domain, prog, getPred(name));
+	}
+
+	@Override
+	public Program getProgram(String domain, String name) {
+		return cfg.get(domain, prog, getPred(name), PROG_NOT_FOUND);
+	}
+
+	@Override
+	public void createProgram(String domain, Program program) {
+		cfg.add(domain, prog, getPred(program.getName()), program, PROG_ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateProgram(String domain, Program program) {
+		cfg.update(domain, prog, getPred(program.getName()), program, PROG_NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeProgram(String domain, String name) {
+		cfg.remove(domain, prog, getPred(name), PROG_NOT_FOUND, this);
+	}
 }

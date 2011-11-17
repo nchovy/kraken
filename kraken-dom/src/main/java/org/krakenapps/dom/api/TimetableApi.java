@@ -16,19 +16,19 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
-import java.util.List;
 
-import org.krakenapps.dom.model.Schedule;
 import org.krakenapps.dom.model.Timetable;
 
 public interface TimetableApi {
-	Collection<Timetable> getTimetables(int organizationId);
+	Collection<Timetable> getTimetables(String domain);
 
-	Timetable getTimetable(int organizationId, int id);
+	Timetable findTimetable(String domain, String guid);
 
-	Timetable createTimetable(int organizationId, String name, List<Schedule> schedules);
+	Timetable getTimetable(String domain, String guid);
 
-	Timetable updateTimetable(int organizationId, int id, String name, List<Schedule> schedules);
+	void createTimetable(String domain, Timetable timetable);
 
-	Timetable removeTimetable(int organizationId, int id);
+	void updateTimetable(String domain, Timetable timetable);
+
+	void removeTimetable(String domain, String guid);
 }

@@ -131,12 +131,12 @@ public class MsgbusPluginHandler extends PrimitiveHandler implements MessageHand
 			throw new IllegalStateException("session not found for request [" + req.getMethod() + "]");
 
 		Handler handler = messageHandlerMap.get(req.getMethod());
-		if (!handler.allowGuestAccess && (session.getOrgId() == null || session.getAdminId() == null))
+		if (!handler.allowGuestAccess && (session.getOrgDomain() == null || session.getAdminLoginName() == null))
 			throw new SecurityException("guest cannot request [" + req.getMethod() + "]");
 
 		for (MsgbusPermission perm : handler.perms) {
 			if (!msgbus.checkPermission(session, perm.group(), perm.code())) {
-				String subject = req.getAdminId() == null ? "guest" : "[" + req.getAdminId() + "]";
+				String subject = req.getAdminLoginName() == null ? "guest" : "[" + req.getAdminLoginName() + "]";
 				throw new SecurityException(subject + " has no [" + perm.group() + "/" + perm.code() + "] permission");
 			}
 		}

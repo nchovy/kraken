@@ -15,51 +15,41 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
+import java.util.UUID;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.ManyToMany;
-import javax.persistence.Table;
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
+public class ApplicationGroup {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_app_groups")
-public class ApplicationGroup implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@Column(nullable = false, length = 60)
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(nullable = false, length = 250)
+	@FieldOption(nullable = false, length = 250)
 	private String description;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
+	@FieldOption(nullable = false)
+	private Date updateDateTime = new Date();
 
-	@ManyToMany(mappedBy = "applicationGroups")
-	private Set<Application> applications = new HashSet<Application>();
+	@ReferenceKey("guid")
+	@CollectionTypeHint(Application.class)
+	private List<Application> applications = new ArrayList<Application>();
 
-	public int getId() {
-		return id;
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public String getName() {
@@ -78,14 +68,6 @@ public class ApplicationGroup implements Marshalable {
 		this.description = description;
 	}
 
-	public Set<Application> getApplications() {
-		return applications;
-	}
-
-	public void setApplications(Set<Application> applications) {
-		this.applications = applications;
-	}
-
 	public Date getCreateDateTime() {
 		return createDateTime;
 	}
@@ -102,16 +84,11 @@ public class ApplicationGroup implements Marshalable {
 		this.updateDateTime = updateDateTime;
 	}
 
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("name", name);
-		m.put("description", description);
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("updated_at", dateFormat.format(updateDateTime));
-		return m;
+	public List<Application> getApplications() {
+		return applications;
 	}
 
+	public void setApplications(List<Application> applications) {
+		this.applications = applications;
+	}
 }

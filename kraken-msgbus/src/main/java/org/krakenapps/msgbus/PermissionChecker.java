@@ -12,5 +12,5 @@ public interface PermissionChecker {
 	 *            the permission code
 	 * @return false if permission is not allowed
 	 */
-	boolean check(Session session, String group, String code);
+	boolean check(Session session, String group, String permission);
 }

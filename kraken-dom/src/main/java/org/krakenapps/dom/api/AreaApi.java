@@ -17,26 +17,20 @@ package org.krakenapps.dom.api;
 
 import java.util.Collection;
 
-import org.krakenapps.dom.exception.AreaNotFoundException;
-import org.krakenapps.dom.exception.UndeletableAreaException;
 import org.krakenapps.dom.model.Area;
 
 public interface AreaApi extends EntityEventProvider<Area> {
-	Collection<Area> getAllAreas();
+	Collection<Area> getAreas(String domain);
 
-	Collection<Area> getAllRootAreas();
+	Collection<Area> getRootAreas(String domain);
 
-	Area getRootArea(int organizationId);
+	Area findArea(String domain, String guid);
 
-	Area getArea(int organizationId, int areaId);
+	Area getArea(String domain, String guid);
 
-	Collection<Area> getSubAreas(int organizationId, int areaId);
+	void createArea(String domain, Area area);
 
-	Area moveArea(int organizationId, int newParentId, int id) throws AreaNotFoundException;
+	void updateArea(String domain, Area area);
 
-	Area createArea(int organizationId, int parentId, String name, String description) throws AreaNotFoundException;
-
-	Area updateArea(int organizationId, int areaId, String name, String description) throws AreaNotFoundException;
-
-	Area removeArea(int organizationId, int areaId) throws AreaNotFoundException, UndeletableAreaException;
+	void removeArea(String domain, String guid);
 }

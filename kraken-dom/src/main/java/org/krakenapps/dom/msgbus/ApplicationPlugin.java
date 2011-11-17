@@ -16,17 +16,14 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.model.Application;
-import org.krakenapps.dom.model.ApplicationMetadata;
+import org.krakenapps.dom.model.ApplicationGroup;
 import org.krakenapps.dom.model.Vendor;
-import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -40,85 +37,97 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void getVendors(Request req, Response resp) {
-		Collection<Vendor> vendors = appApi.getVendors();
-		resp.put("vendors", Marshaler.marshal(vendors));
+		Collection<Vendor> vendors = appApi.getVendors(req.getOrgDomain());
+		resp.put("vendors", PrimitiveConverter.serialize(vendors));
+	}
+
+	@MsgbusMethod
+	public void getVendor(Request req, Response resp) {
+		String guid = req.getString("guid");
+		Vendor vendor = appApi.getVendor(req.getOrgDomain(), guid);
+		resp.put("vendor", PrimitiveConverter.serialize(vendor));
 	}
 
 	@MsgbusMethod
 	public void createVendor(Request req, Response resp) {
-		String name = req.getString("name");
-		Vendor vendor = appApi.createVendor(name);
+		Vendor vendor = PrimitiveConverter.parse(Vendor.class, req.getParams());
+		appApi.createVendor(req.getOrgDomain(), vendor);
 		resp.put("guid", vendor.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateVendor(Request req, Response resp) {
-		String guid = req.getString("guid");
-		String name = req.getString("name");
-		appApi.updateVendor(guid, name);
+		Vendor vendor = PrimitiveConverter.parse(Vendor.class, req.getParams());
+		appApi.updateVendor(req.getOrgDomain(), vendor);
 	}
 
 	@MsgbusMethod
 	public void removeVendor(Request req, Response resp) {
 		String guid = req.getString("guid");
-		appApi.removeVendor(guid);
+		appApi.removeVendor(req.getOrgDomain(), guid);
 	}
 
 	@MsgbusMethod
 	public void getApplications(Request req, Response resp) {
-		String vendorGuid = req.getString("vendor_guid");
-		Collection<Application> apps = appApi.getApplications(vendorGuid);
-		resp.put("apps", Marshaler.marshal(apps));
+		Collection<Application> applications = appApi.getApplications(req.getOrgDomain());
+		resp.put("apps", PrimitiveConverter.serialize(applications));
 	}
 
 	@MsgbusMethod
 	public void getApplication(Request req, Response resp) {
 		String guid = req.getString("guid");
-		Application app = appApi.getApplication(guid);
-		if (app == null) {
-			resp.put("app", null);
-			return;
-		}
-
-		Map<String, Object> m = app.marshal();
-		m.put("metadata", marshal(app.getMetadatas()));
-
-		resp.put("app", m);
+		Application application = appApi.getApplication(req.getOrgDomain(), guid);
+		resp.put("app", PrimitiveConverter.serialize(application));
 	}
 
-	private Map<String, String> marshal(List<ApplicationMetadata> l) {
-		Map<String, String> m = new HashMap<String, String>();
-		for (ApplicationMetadata meta : l)
-			m.put(meta.getKey().getName(), meta.getValue());
-
-		return m;
-	}
-
-	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
-		String vendorGuid = req.getString("vendor_guid");
-		String name = req.getString("name");
-		String platform = req.getString("platform");
-		Map<String, String> props = (Map<String, String>) req.get("metadata");
-
-		Application app = appApi.createApplication(vendorGuid, name, platform, props);
-		resp.put("guid", app.getGuid());
+		Application application = PrimitiveConverter.parse(Application.class, req.getParams());
+		appApi.createApplication(req.getOrgDomain(), application);
+		resp.put("guid", application.getGuid());
 	}
 
-	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void updateApplication(Request req, Response resp) {
-		String guid = req.getString("guid");
-		String name = req.getString("name");
-		Map<String, String> props = (Map<String, String>) req.get("metadata");
-
-		appApi.updateApplication(guid, name, props);
+		Application application = PrimitiveConverter.parse(Application.class, req.getParams());
+		appApi.updateApplication(req.getOrgDomain(), application);
 	}
 
 	@MsgbusMethod
 	public void removeApplication(Request req, Response resp) {
 		String guid = req.getString("guid");
-		appApi.removeApplication(guid);
+		appApi.removeApplication(req.getOrgDomain(), guid);
+	}
+
+	@MsgbusMethod
+	public void getApplicationGroups(Request req, Response resp) {
+		Collection<ApplicationGroup> groups = appApi.getApplicationGroups(req.getOrgDomain());
+		resp.put("groups", PrimitiveConverter.serialize(groups));
+	}
+
+	@MsgbusMethod
+	public void getApplicationGroup(Request req, Response resp) {
+		String guid = req.getString("guid");
+		ApplicationGroup group = appApi.getApplicationGroup(req.getOrgDomain(), guid);
+		resp.put("group", PrimitiveConverter.serialize(group));
+	}
+
+	@MsgbusMethod
+	public void createApplicationGroups(Request req, Response resp) {
+		ApplicationGroup group = PrimitiveConverter.parse(ApplicationGroup.class, req.getParams());
+		appApi.createApplicationGroup(req.getOrgDomain(), group);
+		resp.put("guid", group.getGuid());
+	}
+
+	@MsgbusMethod
+	public void updateApplicationGroups(Request req, Response resp) {
+		ApplicationGroup group = PrimitiveConverter.parse(ApplicationGroup.class, req.getParams());
+		appApi.updateApplicationGroup(req.getOrgDomain(), group);
+	}
+
+	@MsgbusMethod
+	public void removeApplicationGroups(Request req, Response resp) {
+		String guid = req.getString("guid");
+		appApi.removeApplicationGroup(req.getOrgDomain(), guid);
 	}
 }

@@ -15,44 +15,34 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.UUID;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
+public class ApplicationVersion {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_app_versions")
-public class ApplicationVersion implements Marshalable {
-	@Id
-	private int guid;
-
-	@ManyToOne
-	@JoinColumn(name = "app_id")
+	@FieldOption(nullable = false)
+	@ReferenceKey("guid")
 	private Application application;
 
-	@Column(nullable = false, length = 60)
+	@FieldOption(nullable = false, length = 60)
 	private String version;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
+	@FieldOption(nullable = false)
+	private Date updateDateTime = new Date();
 
-	public int getGuid() {
+	public String getGuid() {
 		return guid;
 	}
 
-	public void setGuid(int guid) {
+	public void setGuid(String guid) {
 		this.guid = guid;
 	}
 
@@ -87,18 +77,4 @@ public class ApplicationVersion implements Marshalable {
 	public void setUpdateDateTime(Date updateDateTime) {
 		this.updateDateTime = updateDateTime;
 	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("guid", guid);
-		m.put("vendor", application.getVendor().getName());
-		m.put("name", application.getName());
-		m.put("version", version);
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("updated_at", dateFormat.format(updateDateTime));
-		return m;
-	}
-
 }

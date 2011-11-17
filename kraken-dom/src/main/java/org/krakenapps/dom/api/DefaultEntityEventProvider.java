@@ -20,76 +20,70 @@ import java.util.WeakHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AbstractApi<T> implements EntityEventProvider<T> {
-	private final Logger logger = LoggerFactory.getLogger(AbstractApi.class);
-	private WeakHashMap<EntityEventListener<T>, Integer> listeners;
-
-	public AbstractApi() {
-		listeners = new WeakHashMap<EntityEventListener<T>, Integer>();
-	}
-
-	public void fireEntityAdded(T t) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
-			if (listener != null) {
-				try {
-					listener.entityAdded(t);
-				} catch (Exception e) {
-					logger.warn("abstract entity api: entity event callback should not throw any exception", e);
-				}
-			}
-		}
-	}
-
-	public void fireEntityUpdated(T t) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
-			if (listener != null) {
-				try {
-					listener.entityUpdated(t);
-				} catch (Exception e) {
-					logger.warn("abstract entity api: entity event callback should not throw any exception", e);
-				}
-			}
-		}
-	}
-
-	public void fireEntityRemoving(T t) {
-		// do NOT add try-catch. it's intentional exception throwing
-		for (EntityEventListener<T> listener : listeners.keySet()) {
-			if (listener != null) {
-				listener.entityRemoving(t);
-			}
-		}
-	}
-
-	public void fireEntityRemoved(T t) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
-			if (listener != null) {
-				try {
-					listener.entityRemoved(t);
-				} catch (Exception e) {
-					logger.warn("abstract entity api: entity event callback should not throw any exception", e);
-				}
-			}
-		}
-	}
+public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
+	private final Logger logger = LoggerFactory.getLogger(DefaultEntityEventProvider.class);
+	private WeakHashMap<EntityEventListener<T>, Integer> listeners = new WeakHashMap<EntityEventListener<T>, Integer>();
 
 	@Override
 	public void addEntityEventListener(EntityEventListener<T> listener) {
 		if (listener == null) {
-			logger.warn("abstract entity api: listener is null at subscribe()");
+			logger.warn("kraken dom: listener is null at subscribe()");
 			return;
 		}
-
 		listeners.put(listener, null);
 	}
 
 	@Override
 	public void removeEntityEventListener(EntityEventListener<T> listener) {
 		if (listener == null) {
-			logger.warn("abstract entity api: listener is null at unsubscribe()");
+			logger.warn("kraken dom: listener is null at unsubscribe()");
 			return;
 		}
-
 		listeners.remove(listener);
+	}
+
+	public void fireEntityAdded(String domain, T t) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				try {
+					listener.entityAdded(domain, t);
+				} catch (Exception e) {
+					logger.warn("kraken dom: entity event callback should not throw any exception", e);
+				}
+			}
+		}
+	}
+
+	public void fireEntityUpdated(String domain, T t) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				try {
+					listener.entityUpdated(domain, t);
+				} catch (Exception e) {
+					logger.warn("kraken dom: entity event callback should not throw any exception", e);
+				}
+			}
+		}
+	}
+
+	public void fireEntityRemoving(String domain, T t) {
+		// do NOT add try-catch. it's intentional exception throwing
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				listener.entityRemoving(domain, t);
+			}
+		}
+	}
+
+	public void fireEntityRemoved(String domain, T t) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				try {
+					listener.entityRemoved(domain, t);
+				} catch (Exception e) {
+					logger.warn("kraken dom: entity event callback should not throw any exception", e);
+				}
+			}
+		}
 	}
 }

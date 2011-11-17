@@ -15,105 +15,58 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.MapTypeHint;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
-
-@Entity
-@Table(name = "dom_users", uniqueConstraints = { @UniqueConstraint(columnNames = { "login_name" }) })
-public class User implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
-	@ManyToOne
-	@JoinColumn(name = "ou_id")
-	private OrganizationUnit organizationUnit;
-
-	@Column(name = "login_name", length = 60, nullable = false)
+public class User {
+	@FieldOption(nullable = false, length = 60)
 	private String loginName;
 
-	@Column(length = 60, nullable = false)
+	@ReferenceKey("guid")
+	private OrganizationUnit orgUnit;
+
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(length = 250)
+	@FieldOption(length = 250)
 	private String description;
 
-	@Column(name = "pwd", length = 60)
+	@FieldOption(length = 60)
 	private String password;
 
-	@Column(name = "salt", length = 20)
+	@FieldOption(length = 20)
 	private String salt;
 
-	@Column(length = 60)
+	@FieldOption(length = 60)
 	private String title;
 
-	@Column(length = 60)
+	@FieldOption(length = 60)
 	private String department;
 
-	@Column(length = 60)
+	@FieldOption(length = 60)
 	private String email;
 
-	@Column(length = 60)
+	@FieldOption(length = 60)
 	private String phone;
 
-	@Column(name = "external", nullable = false)
 	private boolean external;
 
-	@Column(name = "dc", length = 60)
+	@FieldOption(length = 60)
 	private String domainController;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
+	@FieldOption(nullable = false)
+	private Date updateDateTime = new Date();
 
-	@OneToOne(mappedBy = "user", cascade = CascadeType.REMOVE)
-	private Admin admin;
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public Organization getOrganization() {
-		return organization;
-	}
-
-	public void setOrganization(Organization organization) {
-		this.organization = organization;
-	}
-
-	public OrganizationUnit getOrganizationUnit() {
-		return organizationUnit;
-	}
-
-	public void setOrganizationUnit(OrganizationUnit organizationUnit) {
-		this.organizationUnit = organizationUnit;
-	}
+	@MapTypeHint({ String.class, Object.class })
+	private Map<String, Object> ext = new HashMap<String, Object>();
 
 	public String getLoginName() {
 		return loginName;
@@ -121,6 +74,14 @@ public class User implements Marshalable {
 
 	public void setLoginName(String loginName) {
 		this.loginName = loginName;
+	}
+
+	public OrganizationUnit getOrgUnit() {
+		return orgUnit;
+	}
+
+	public void setOrgUnit(OrganizationUnit orgUnit) {
+		this.orgUnit = orgUnit;
 	}
 
 	public String getName() {
@@ -219,31 +180,11 @@ public class User implements Marshalable {
 		this.updateDateTime = updateDateTime;
 	}
 
-	public Admin getAdmin() {
-		return admin;
+	public Map<String, Object> getExt() {
+		return ext;
 	}
 
-	public void setAdmin(Admin admin) {
-		this.admin = admin;
-	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("ou_id", organizationUnit == null ? null : organizationUnit.getId());
-		m.put("name", name);
-		m.put("login_name", loginName);
-		m.put("description", description);
-		m.put("external", external);
-		m.put("dc", domainController);
-		m.put("email", email);
-		m.put("phone", phone);
-		m.put("title", title);
-		m.put("department", department);
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("updated_at", dateFormat.format(updateDateTime));
-		return m;
+	public void setExt(Map<String, Object> ext) {
+		this.ext = ext;
 	}
 }

@@ -93,5 +93,4 @@ public class ResourceKey {
 	public String toString() {
 		return String.format("group=%s, key=%s, locale=%s", group, key, locale);
 	}
-
 }

@@ -16,53 +16,19 @@
 package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.FieldOption;
 
-import org.krakenapps.msgbus.Marshalable;
-
-@Entity
-@Table(name = "dom_roles")
-public class Role implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@Column(nullable = false, length = 60)
+public class Role {
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(nullable = false)
 	private int level; // high value means higher privilege
 
-	@ManyToMany(cascade = CascadeType.ALL)
-	@JoinTable(name = "dom_roles_to_permissions", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "perm_id"))
-	private Set<Permission> permissions = new HashSet<Permission>();
-
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "role")
-	private List<Admin> users = new ArrayList<Admin>();
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
+	@CollectionTypeHint(Permission.class)
+	private List<Permission> permissions = new ArrayList<Permission>();
 
 	public String getName() {
 		return name;
@@ -80,29 +46,11 @@ public class Role implements Marshalable {
 		this.level = level;
 	}
 
-	public Set<Permission> getPermissions() {
+	public List<Permission> getPermissions() {
 		return permissions;
 	}
 
-	public void setPermissions(Set<Permission> permissions) {
+	public void setPermissions(List<Permission> permissions) {
 		this.permissions = permissions;
 	}
-
-	public List<Admin> getUsers() {
-		return users;
-	}
-
-	public void setUsers(List<Admin> users) {
-		this.users = users;
-	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("name", name);
-		m.put("level", level);
-		return m;
-	}
-
 }

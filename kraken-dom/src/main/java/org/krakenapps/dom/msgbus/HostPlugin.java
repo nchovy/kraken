@@ -15,21 +15,13 @@
  */
 package org.krakenapps.dom.msgbus;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.HostApi;
-import org.krakenapps.dom.exception.HostNotFoundException;
 import org.krakenapps.dom.model.Host;
-import org.krakenapps.dom.model.HostExtension;
-import org.krakenapps.dom.model.HostType;
-import org.krakenapps.msgbus.Marshaler;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -42,113 +34,34 @@ public class HostPlugin {
 	private HostApi hostApi;
 
 	@MsgbusMethod
-	public void getHostTypes(Request req, Response resp) {
-		List<HostType> hostTypes = hostApi.getHostTypes();
-		resp.put("host_types", Marshaler.marshal(hostTypes));
-	}
-
-	@MsgbusMethod
-	public void getHostExtensions(Request req, Response resp) {
-		int orgId = req.getOrgId();
-		int hostId = req.getInteger("host_id");
-		Host host = hostApi.getHost(orgId, hostId);
-		if (host == null)
-			throw new HostNotFoundException();
-
-		List<HostExtension> extensions = new ArrayList<HostExtension>(host.getExtensions());
-		Collections.sort(extensions, new Comparator<HostExtension>() {
-			@Override
-			public int compare(HostExtension o1, HostExtension o2) {
-				return o1.getOrdinal() - o2.getOrdinal();
-			}
-		});
-
-		resp.put("extensions", Marshaler.marshal(extensions));
-	}
-
-	@MsgbusMethod
 	public void getHosts(Request req, Response resp) {
-		int organizationId = req.getOrgId();
-		List<Host> hosts = hostApi.getHosts(organizationId);
-		resp.put("hosts", Marshaler.marshal(hosts));
+		Collection<Host> hosts = hostApi.getHosts(req.getOrgDomain());
+		resp.put("hosts", PrimitiveConverter.serialize(hosts));
 	}
 
 	@MsgbusMethod
 	public void getHost(Request req, Response resp) {
-		Host host = hostApi.getHost(req.getOrgId(), req.getInteger("host_id"));
-		if (host == null)
-			throw new HostNotFoundException();
-
-		resp.put("host", host.marshal());
+		String guid = req.getString("guid");
+		Host host = hostApi.getHost(req.getOrgDomain(), guid);
+		resp.put("host", PrimitiveConverter.serialize(host));
 	}
 
 	@MsgbusMethod
 	public void createHost(Request req, Response resp) {
-		int organizationId = req.getOrgId();
-		int hostTypeId = req.getInteger("host_type_id");
-		int areaId = req.getInteger("area_id");
-		String name = req.getString("name");
-		String description = req.getString("description");
-
-		Host host = hostApi.createHost(organizationId, hostTypeId, areaId, name, description);
-		resp.put("id", host.getId());
+		Host host = PrimitiveConverter.parse(Host.class, req.getParams());
+		hostApi.createHost(req.getOrgDomain(), host);
+		resp.put("guid", host.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateHost(Request req, Response resp) {
-		int organizationId = req.getOrgId();
-		int hostId = req.getInteger("host_id");
-		String name = req.getString("name");
-		String description = req.getString("description");
-
-		hostApi.updateHost(organizationId, hostId, name, description);
-	}
-
-	@MsgbusMethod
-	public void updateHostGuid(Request req, Response resp) {
-		int hostId = req.getInteger("host_id");
-		String guid = req.getString("host_guid");
-		hostApi.updateHostGuid(req.getOrgId(), hostId, guid);
+		Host host = PrimitiveConverter.parse(Host.class, req.getParams());
+		hostApi.updateHost(req.getOrgDomain(), host);
 	}
 
 	@MsgbusMethod
 	public void removeHost(Request req, Response resp) {
-		int organizationId = req.getOrgId();
-		int hostId = req.getInteger("host_id");
-		hostApi.removeHost(organizationId, hostId);
-	}
-
-	@MsgbusMethod
-	public void moveHost(Request req, Response resp) {
-		int organizationId = req.getOrgId();
-		int hostId = req.getInteger("host_id");
-		int areaId = req.getInteger("area_id");
-
-		hostApi.moveHost(organizationId, hostId, areaId);
-	}
-
-	@MsgbusMethod
-	public void mapHostExtensions(Request req, Response resp) {
-		int hostId = req.getInteger("host_id");
-		Set<String> hostExtensionNames = parseHostExtensionNames(req);
-		hostApi.mapHostExtensions(req.getOrgId(), hostId, hostExtensionNames);
-	}
-
-	@MsgbusMethod
-	public void unmapHostExtensions(Request req, Response resp) {
-		int hostId = req.getInteger("host_id");
-		Set<String> hostExtensionNames = parseHostExtensionNames(req);
-		hostApi.unmapHostExtensions(req.getOrgId(), hostId, hostExtensionNames);
-	}
-
-	@SuppressWarnings("unchecked")
-	private Set<String> parseHostExtensionNames(Request req) {
-		Set<String> names = new HashSet<String>();
-		List<String> array = (List<String>) req.get("extensions");
-		for (String className : array) {
-			names.add(className);
-		}
-
-		return names;
+		String guid = req.getString("guid");
+		hostApi.removeHost(req.getOrgDomain(), guid);
 	}
 }

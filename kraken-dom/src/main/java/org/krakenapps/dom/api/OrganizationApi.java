@@ -15,20 +15,28 @@
  */
 package org.krakenapps.dom.api;
 
-import java.util.Collection;
+import java.util.Map;
 
 import org.krakenapps.dom.model.Organization;
 
 public interface OrganizationApi extends EntityEventProvider<Organization> {
-	Collection<Organization> getOrganizations();
+	Organization findOrganization(String domain);
 
-	Organization getOrganization(int id);
+	Organization getOrganization(String domain);
 
-	Organization getOrganizationForUser(int userId);
+	void createOrganization(Organization organization);
 
-	Organization createOrganization(Organization organization);
+	void updateOrganization(Organization organization);
 
-	Organization updateOrganization(Organization organization);
+	void removeOrganization(String domain);
 
-	Organization removeOrganization(int id);
+	Map<String, Object> getOrganizationParameters(String domain);
+
+	Object getOrganizationParameter(String domain, String key);
+
+	<T> T getOrganizationParameter(String domain, String key, Class<T> cls);
+
+	void setOrganizationParameter(String domain, String key, Object value);
+
+	void unsetOrganizationParameter(String domain, String key);
 }

@@ -15,61 +15,23 @@
  */
 package org.krakenapps.dom.model;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import org.krakenapps.api.FieldOption;
 
-@Entity
-@Table(name = "dom_network_interfaces")
 public class NetworkInterface {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "host_id", nullable = false)
-	private Host host;
-
-	@Column(name = "no", nullable = false)
 	private int index;
-
-	@Column(nullable = false)
 	private int type;
 
-	@Column(nullable = false, length = 255)
+	@FieldOption(nullable = false, length = 255)
 	private String description;
 
-	@Column(name = "mac", length = 20)
+	@FieldOption(length = 20)
 	private String macAddress;
 
-	@Column(name = "ip", length = 20)
+	@FieldOption(length = 20)
 	private String ipAddress;
 
 	private Long bandwidth;
-
-	@Column(name = "is_up", nullable = false)
 	private int isUp;
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public Host getHost() {
-		return host;
-	}
-
-	public void setHost(Host host) {
-		this.host = host;
-	}
 
 	public int getIndex() {
 		return index;
@@ -119,12 +81,11 @@ public class NetworkInterface {
 		this.bandwidth = bandwidth;
 	}
 
-	public boolean isUp() {
-		return isUp == 1;
+	public int getIsUp() {
+		return isUp;
 	}
 
-	public void setIsUp(boolean isUp) {
-		this.isUp = isUp ? 1 : 0;
+	public void setIsUp(int isUp) {
+		this.isUp = isUp;
 	}
-
 }

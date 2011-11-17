@@ -15,39 +15,27 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import org.krakenapps.api.FieldOption;
 
-import org.krakenapps.msgbus.Marshalable;
+public class Vendor {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_vendors")
-public class Vendor implements Marshalable {
-	@Id
-	private String guid;
-
-	@Column(nullable = false, length = 60, unique = true)
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
+	@FieldOption(nullable = false)
+	private Date updateDateTime = new Date();
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "vendor")
-	private List<HostType> hostTypes = new ArrayList<HostType>();
+	@FieldOption(skip = true)
+	private List<Application> applications;
 
 	public String getGuid() {
 		return guid;
@@ -63,14 +51,6 @@ public class Vendor implements Marshalable {
 
 	public void setName(String name) {
 		this.name = name;
-	}
-
-	public List<HostType> getHostTypes() {
-		return hostTypes;
-	}
-
-	public void setHostTypes(List<HostType> hostTypes) {
-		this.hostTypes = hostTypes;
 	}
 
 	public Date getCreateDateTime() {
@@ -89,14 +69,11 @@ public class Vendor implements Marshalable {
 		this.updateDateTime = updateDateTime;
 	}
 
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("guid", guid);
-		m.put("name", name);
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("updated_at", dateFormat.format(updateDateTime));
-		return m;
+	public List<Application> getApplications() {
+		return applications;
+	}
+
+	public void setApplications(List<Application> applications) {
+		this.applications = applications;
 	}
 }

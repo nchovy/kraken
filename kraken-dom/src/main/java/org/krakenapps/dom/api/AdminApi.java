@@ -15,38 +15,34 @@
  */
 package org.krakenapps.dom.api;
 
-import java.util.List;
+import java.util.Collection;
 
-import org.krakenapps.dom.exception.LoginFailedException;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Session;
 
-public interface AdminApi extends EntityEventProvider<Admin> {
-	Admin login(Session session, String nick, String hash, boolean force) throws LoginFailedException;
+public interface AdminApi {
+	Collection<Admin> getAdmins(String domain);
+
+	Admin findAdmin(String domain, String loginName);
+
+	Admin getAdmin(String domain, String loginName);
+
+	Admin getAdmin(User user);
+
+	void setAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin);
+
+	void updateAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin);
+
+	String updateOtpSeed(String domain, String requestAdminLoginName, String targetUserLoginName);
+
+	void unsetAdmin(String domain, String requestAdminLoginName, String targetUserLoginName);
+
+	Admin login(Session session, String loginName, String hash, boolean force);
 
 	void logout(Session session);
 
 	void registerLoginCallback(LoginCallback callback);
 
 	void unregisterLoginCallback(LoginCallback callback);
-
-	List<Admin> getAdmins(int organizationId);
-
-	Admin getAdmin(int organizationId, int adminId);
-
-	Admin getAdminByLoginName(String loginName);
-
-	Admin getAdminByUser(int organizationId, int userId);
-
-	Admin createAdmin(int organizationId, Integer requestAdminId, Admin admin);
-
-	Admin updateAdmin(int organizationId, Integer requestAdminId, Admin admin);
-
-	Admin removeAdmin(int organizationId, Integer requestAdminId, int adminId);
-
-	boolean matchPassword(int organizationId, int adminId, String password);
-
-	String hash(String text);
-
-	String hashPassword(String salt, String text);
 }

@@ -19,19 +19,19 @@ public class PushPlugin {
 	public void subscribe(Request req, Response resp) {
 		int processId = Integer.parseInt(req.getSource());
 		String method = req.getString("callback");
-		pushApi.subscribe(req.getOrgId(), req.getSession().getId(), processId, method);
+		pushApi.subscribe(req.getOrgDomain(), req.getSession().getId(), processId, method);
 	}
 
 	@MsgbusMethod
 	public void unsubscribe(Request req, Response resp) {
 		int processId = Integer.parseInt(req.getSource());
 		String method = req.getString("callback");
-		pushApi.unsubscribe(req.getOrgId(), req.getSession().getId(), processId, method);
+		pushApi.unsubscribe(req.getOrgDomain(), req.getSession().getId(), processId, method);
 	}
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)
 	public void sessionClosed(Session session) {
-		if (pushApi != null && session != null && session.getOrgId() != null)
-			pushApi.sessionClosed(session.getOrgId(), session.getId());
+		if (pushApi != null && session != null && session.getOrgDomain() != null)
+			pushApi.sessionClosed(session.getOrgDomain(), session.getId());
 	}
 }

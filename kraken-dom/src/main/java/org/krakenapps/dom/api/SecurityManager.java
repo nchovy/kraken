@@ -16,5 +16,5 @@
 package org.krakenapps.dom.api;
 
 public interface SecurityManager {
-	boolean checkPermission(int organizationId, int userId, String permission);
+	boolean hasPermission(String domain, String loginName, String permission);
 }

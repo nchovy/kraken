@@ -13,32 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.dom.exception;
+package org.krakenapps.dom.model;
 
-public class AdminNotFoundException extends LoginFailedException {
-	private static final long serialVersionUID = 1L;
-	private int userId;
-	private String nick;
+import org.krakenapps.api.FieldOption;
 
-	public AdminNotFoundException(String nick) {
-		super("admin-not-found");
-		this.nick = nick;
+public class GlobalConfig {
+	@FieldOption(nullable = false, length = 60)
+	private String key;
+
+	@FieldOption(nullable = false)
+	private Object value;
+
+	private boolean isHidden; // UI should not know this
+
+	public String getKey() {
+		return key;
 	}
 
-	public AdminNotFoundException(int userId) {
-		super("admin-not-found");
-		this.userId = userId;
+	public void setKey(String key) {
+		this.key = key;
 	}
 
-	public int getUserId() {
-		return userId;
+	public Object getValue() {
+		return value;
 	}
 
-	public String getNick() {
-		return nick;
+	public void setValue(Object value) {
+		this.value = value;
 	}
 
-	public void setNick(String nick) {
-		this.nick = nick;
+	public boolean isHidden() {
+		return isHidden;
+	}
+
+	public void setHidden(boolean isHidden) {
+		this.isHidden = isHidden;
 	}
 }

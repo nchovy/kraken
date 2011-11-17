@@ -15,249 +15,116 @@
  */
 package org.krakenapps.dom.api.impl;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.PreferencesService;
-import org.osgi.util.tracker.ServiceTracker;
 
 @Component(name = "dom-user-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class UserApiImpl extends AbstractApi<User> implements UserApi {
-	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi {
+	private static final Class<User> cls = User.class;
+	private static final String NOT_FOUND = "user-not-found";
+	private static final String ALREADY_EXIST = "user-already-exist";
+	private static final int DEFAULT_SALT_LENGTH = 10;
 
 	@Requires
-	private PreferencesService prefsvc;
+	private ConfigManager cfg;
 
-	private UserExtensionProviderTracker tracker;
+	@Requires
+	private OrganizationApi orgApi;
 
-	private Map<String, UserExtensionProvider> userExtensionProviders;
+	@Requires
+	private OrganizationUnitApi orgUnitApi;
 
-	public UserApiImpl(BundleContext bc) {
-		tracker = new UserExtensionProviderTracker(bc);
-	}
-
-	@Validate
-	public void start() {
-		userExtensionProviders = new ConcurrentHashMap<String, UserExtensionProvider>();
-		tracker.open();
-	}
-
-	@Invalidate
-	public void stop() {
-		tracker.close();
+	private Predicate getPred(String loginName) {
+		return Predicates.field("loginName", loginName);
 	}
 
 	@Override
-	public Collection<UserExtensionProvider> getExtensionProviders() {
-		return new ArrayList<UserExtensionProvider>(userExtensionProviders.values());
+	public Collection<User> getUsers(String domain) {
+		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
 	}
 
 	@Override
-	public UserExtensionProvider getExtensionProvider(String name) {
-		return userExtensionProviders.get(name);
+	public Collection<User> getUsers(String domain, Collection<String> loginNames) {
+		return cfg.ensureCollection(domain, cls).find(Predicates.in("loginName", loginNames)).getDocuments(cls);
 	}
 
-	@SuppressWarnings("unchecked")
-	@Transactional
 	@Override
-	public Collection<User> getUsers() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM User u").getResultList();
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public Collection<User> getUsers(int orgId, Collection<Integer> idList) {
-		if (idList == null || idList.size() == 0)
-			return new ArrayList<User>();
-
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM User u WHERE u.organization.id = :org AND u.id IN (:users)").setParameter("org", orgId)
-				.setParameter("users", idList).getResultList();
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public Collection<User> getUsers(int orgId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM User u WHERE u.organization.id = ?").setParameter(1, orgId).getResultList();
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public Collection<User> getUsers(int orgId, Integer orgUnitId, boolean includeChildren) {
-		EntityManager em = entityManagerService.getEntityManager();
-		if (!includeChildren)
-			return em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId).getResultList();
-		else
-			return getChildren(em, orgId, orgUnitId);
-	}
-
-	@SuppressWarnings("unchecked")
-	private Collection<User> getChildren(EntityManager em, int orgId, Integer orgUnitId) {
-		Collection<User> users = new ArrayList<User>();
-		Collection<OrganizationUnit> children = null;
-		if (orgUnitId != null) {
-			children = em.createQuery("FROM OrganizationUnit o WHERE o.parent.id = ?").setParameter(1, orgUnitId).getResultList();
-			users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id = ?").setParameter(1, orgUnitId).getResultList());
-		} else {
-			children = em.createQuery("FROM OrganizationUnit o WHERE o.parent IS NULL").getResultList();
-			users.addAll(em.createQuery("FROM User u WHERE u.organizationUnit.id IS NULL").getResultList());
-		}
-
-		for (OrganizationUnit child : children)
-			users.addAll(getChildren(em, child.getOrganization().getId(), child.getId()));
-
-		return users;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public Collection<User> getUsers(String domainController) {
-		EntityManager em = entityManagerService.getEntityManager();
-		List<User> users = em.createQuery("FROM User u WHERE u.domainController = ?").setParameter(1, domainController)
-				.getResultList();
-		for (User user : users) {
-			if (user.getAdmin() != null)
-				user.getAdmin().getTrustHosts().size();
+	public Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren) {
+		Collection<User> users = cfg.ensureCollection(domain, cls).find(Predicates.field("orgUnit/guid", orgUnitGuid)).getDocuments(cls);
+		if (includeChildren) {
+			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
+			for (OrganizationUnit ou : parent.getChildren())
+				users.addAll(getUsers(domain, ou.getGuid(), includeChildren));
 		}
 		return users;
 	}
 
-	@Transactional
 	@Override
-	public User getUser(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.find(User.class, id);
-	}
-
-	@Transactional
-	@Override
-	public User getUserByLoginName(String loginName) {
-		try {
-			EntityManager em = entityManagerService.getEntityManager();
-			return (User) em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, loginName).getSingleResult();
-		} catch (NoResultException e) {
-			return null;
-		}
+	public Collection<User> getUsers(String domain, String domainController) {
+		return cfg.ensureCollection(domain, cls).find(Predicates.field("domainController", domainController)).getDocuments(cls);
 	}
 
 	@Override
-	public User createUser(User user) {
-		User u = createUserInternal(user);
-		fireEntityAdded(u);
-		return u;
-	}
-
-	@Transactional
-	private User createUserInternal(User user) {
-		EntityManager em = entityManagerService.getEntityManager();
-		try {
-			em.createQuery("FROM User u WHERE u.loginName = ?").setParameter(1, user.getLoginName()).getSingleResult();
-			throw new IllegalStateException("duplicate login name");
-		} catch (NoResultException e) {
-		}
-
-		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
-		user.setCreateDateTime(new Date());
-		user.setUpdateDateTime(new Date());
-		em.persist(user);
-		return user;
+	public User findUser(String domain, String loginName) {
+		return cfg.find(domain, cls, getPred(loginName));
 	}
 
 	@Override
-	public User updateUser(User user) {
-		User u = updateUserInternal(user);
-		fireEntityUpdated(u);
-		return u;
-	}
-
-	@Transactional
-	private User updateUserInternal(User user) {
-		EntityManager em = entityManagerService.getEntityManager();
-		if (user.getId() == 0)
-			throw new IllegalArgumentException("check user id");
-
-		try {
-			if (em.createQuery("FROM User u WHERE u.id <> ? AND u.loginName = ?").setParameter(1, user.getId())
-					.setParameter(2, user.getLoginName()).getSingleResult() != null)
-				throw new IllegalStateException("duplicate login name");
-		} catch (NoResultException e) {
-		}
-
-		User u = em.find(User.class, user.getId());
-		u.setOrganizationUnit(user.getOrganizationUnit());
-		u.setLoginName(user.getLoginName());
-		u.setName(user.getName());
-		u.setDescription(user.getDescription());
-		if (user.getPassword() != null && !user.getPassword().isEmpty())
-			u.setPassword(hashPassword(user.getSalt(), user.getPassword()));
-		u.setTitle(user.getTitle());
-		u.setEmail(user.getEmail());
-		u.setPhone(user.getPhone());
-		u.setDomainController(user.getDomainController());
-		u.setUpdateDateTime(new Date());
-		u.setAdmin(user.getAdmin());
-		em.merge(u);
-		return u;
+	public User getUser(String domain, String loginName) {
+		return cfg.get(domain, cls, getPred(loginName), NOT_FOUND);
 	}
 
 	@Override
-	public User removeUser(int id) {
-		User user = removeUserInternal(id);
-		fireEntityRemoved(user);
-		return user;
-	}
-
-	@Transactional
-	private User removeUserInternal(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		User user = em.find(User.class, id);
-		em.remove(user);
-		return user;
+	public void createUser(String domain, User user) {
+		cfg.add(domain, cls, getPred(user.getLoginName()), user, ALREADY_EXIST, this);
 	}
 
 	@Override
-	public boolean verifyPassword(String id, String password) {
-		User user = getUserByLoginName(id);
-		if (user == null)
-			return false;
+	public void updateUser(String domain, User user) {
+		cfg.update(domain, cls, getPred(user.getLoginName()), user, NOT_FOUND, this);
+	}
 
+	@Override
+	public void removeUser(String domain, String loginName) {
+		cfg.remove(domain, cls, getPred(loginName), NOT_FOUND, this);
+	}
+
+	@Override
+	public void setSaltLength(String domain, int length) {
+		if (length < 0 || length > 20)
+			throw new IllegalArgumentException("invalid salt length. (valid: 0~20)");
+		orgApi.setOrganizationParameter(domain, "salt_length", length);
+	}
+
+	@Override
+	public int getSaltLength(String domain) {
+		Object length = orgApi.getOrganizationParameter(domain, "salt_length");
+		if (length == null || !(length instanceof Integer))
+			return DEFAULT_SALT_LENGTH;
+		return (Integer) length;
+	}
+
+	@Override
+	public boolean verifyPassword(String domain, String loginName, String password) {
+		User user = getUser(domain, loginName);
 		String hash = hashPassword(user.getSalt(), password);
 
 		// null check
 		if (user.getPassword() == null || hash == null)
-			return password == hash;
+			return (password == hash);
 
 		return user.getPassword().equals(hash);
 	}
@@ -265,44 +132,5 @@ public class UserApiImpl extends AbstractApi<User> implements UserApi {
 	@Override
 	public String hashPassword(String salt, String text) {
 		return Sha1.hashPassword(salt, text);
-	}
-
-	@Override
-	public void setSaltLength(int length) {
-		if (length < 0 || length > 20)
-			throw new IllegalArgumentException("invalid salt length. (valid: 0~20)");
-
-		try {
-			prefsvc.getSystemPreferences().putInt("salt_length", length);
-			prefsvc.getSystemPreferences().flush();
-			prefsvc.getSystemPreferences().sync();
-		} catch (BackingStoreException e) {
-			throw new RuntimeException("kraken dom: cannot set salt length", e);
-		}
-	}
-
-	@Override
-	public int getSaltLength() {
-		return prefsvc.getSystemPreferences().getInt("salt_length", 10);
-	}
-
-	private class UserExtensionProviderTracker extends ServiceTracker {
-		public UserExtensionProviderTracker(BundleContext bc) {
-			super(bc, UserExtensionProvider.class.getName(), null);
-		}
-
-		@Override
-		public Object addingService(ServiceReference reference) {
-			UserExtensionProvider p = (UserExtensionProvider) super.addingService(reference);
-			userExtensionProviders.put(p.getName(), p);
-			return p;
-		}
-
-		@Override
-		public void removedService(ServiceReference reference, Object service) {
-			UserExtensionProvider p = (UserExtensionProvider) service;
-			userExtensionProviders.remove(p.getName());
-			super.removedService(reference, service);
-		}
 	}
 }

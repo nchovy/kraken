@@ -15,17 +15,17 @@
  */
 package org.krakenapps.dom.msgbus;
 
-import java.util.List;
+import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.model.Program;
-import org.krakenapps.dom.model.ProgramProfile;
-import org.krakenapps.msgbus.Marshaler;
+import org.krakenapps.dom.model.ProgramPack;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
-import org.krakenapps.msgbus.Session;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 
@@ -35,26 +35,19 @@ public class ProgramPlugin {
 	@Requires
 	private ProgramApi programApi;
 
+	@Requires
+	private AdminApi adminApi;
+
 	@MsgbusMethod
 	public void getProgramProfiles(Request req, Response resp) {
-		List<ProgramProfile> profiles = programApi.getAvailableProgramProfiles(req.getOrgId());
-		resp.put("profiles", Marshaler.marshal(profiles));
+		resp.put("profiles", PrimitiveConverter.serialize(programApi.getProgramProfiles(req.getOrgDomain())));
 	}
 
 	@MsgbusMethod
 	public void getAvailablePrograms(Request req, Response resp) {
-		Session session = req.getSession();
-		resp.put("packs", fetchProgramPacks(session.getOrgId()));
-		resp.put("programs", fetchPrograms(session));
+		Collection<ProgramPack> packs = programApi.getProgramPacks(req.getOrgDomain());
+		Collection<Program> programs = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName()).getProfile().getPrograms();
+		resp.put("packs", PrimitiveConverter.serialize(packs));
+		resp.put("programs", PrimitiveConverter.serialize(programs));
 	}
-
-	private List<Object> fetchProgramPacks(int organizationId) {
-		return Marshaler.marshal(programApi.getAvailableProgramPacks(organizationId));
-	}
-
-	private List<Object> fetchPrograms(Session session) {
-		List<Program> programs = programApi.getAvailablePrograms(session.getOrgId(), session.getAdminId());
-		return Marshaler.marshal(programs);
-	}
-
 }

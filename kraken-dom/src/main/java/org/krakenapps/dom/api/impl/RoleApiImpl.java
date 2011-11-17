@@ -15,81 +15,89 @@
  */
 package org.krakenapps.dom.api.impl;
 
-import java.util.List;
-
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.RoleApi;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AdminApi;
-import org.krakenapps.dom.api.SecurityManager;
-import org.krakenapps.dom.exception.AdminNotFoundException;
-import org.krakenapps.dom.model.Role;
+import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.model.Admin;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
+import org.krakenapps.dom.model.Permission;
+import org.krakenapps.dom.model.Role;
 
 @Component(name = "dom-role-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class RoleApiImpl implements RoleApi, SecurityManager {
+public class RoleApiImpl extends DefaultEntityEventProvider<Role> implements RoleApi {
+	private static final Class<Role> cls = Role.class;
+	private static final String NOT_FOUND = "role-not-found";
+	private static final String ALREADY_EXIST = "role-already-exist";
+
+	@Requires
+	private ConfigManager cfg;
+
 	@Requires
 	private AdminApi adminApi;
-	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
 
-	@Transactional
-	@Override
-	public Role getRole(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.find(Role.class, id);
+	private Predicate getPred(String name) {
+		return Predicates.field("name", name);
 	}
 
-	@Transactional
 	@Override
-	public Role getRole(String name) {
-		EntityManager em = entityManagerService.getEntityManager();
-		try {
-			return (Role) em.createQuery("FROM Role r WHERE r.name = ?").setParameter(1, name).getSingleResult();
-		} catch (NoResultException e) {
-			return null;
+	public Collection<Role> getRoles(String domain) {
+		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
+	}
+
+	@Override
+	public Collection<Role> getGrantableRoles(String domain, String loginName) {
+		Collection<Role> roles = new ArrayList<Role>();
+
+		Admin admin = adminApi.getAdmin(domain, loginName);
+		for (Role role : getRoles(domain)) {
+			if (role.getLevel() < admin.getRole().getLevel())
+				roles.add(role);
 		}
+
+		return roles;
 	}
 
-	@SuppressWarnings("unchecked")
-	@Transactional
 	@Override
-	public List<Role> getGrantableRoles(int organizationId, int adminId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Admin admin = getAdmin(organizationId, adminId);
-		int level = admin.getRole().getLevel();
-		return em.createQuery("FROM Role r WHERE r.level <= ?").setParameter(1, level).getResultList();
+	public Role findRole(String domain, String name) {
+		return cfg.find(domain, cls, getPred(name));
 	}
 
-	private Admin getAdmin(int organizationId, int adminId) {
-		Admin admin = adminApi.getAdmin(organizationId, adminId);
-		if (admin == null)
-			throw new AdminNotFoundException(adminId);
-		return admin;
-	}
-
-	@Transactional
 	@Override
-	public boolean checkPermission(int organizationId, int adminId, String permission) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Admin admin = getAdmin(organizationId, adminId);
+	public Role getRole(String domain, String name) {
+		return cfg.get(domain, cls, getPred(name), NOT_FOUND);
+	}
 
-		try {
-			em.createQuery("FROM Permission p LEFT JOIN p.roles r WHERE r.id = ? and p.name = ?")
-					.setParameter(1, admin.getRole().getId()).setParameter(2, permission).getSingleResult();
-			return true;
-		} catch (NoResultException e) {
-			return false;
+	@Override
+	public void createRole(String domain, Role role) {
+		cfg.add(domain, cls, getPred(role.getName()), role, ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateRole(String domain, Role role) {
+		cfg.update(domain, cls, getPred(role.getName()), role, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeRole(String domain, String name) {
+		cfg.remove(domain, cls, getPred(name), NOT_FOUND, this);
+	}
+
+	@Override
+	public boolean hasPermission(String domain, String loginName, String group, String permission) {
+		Admin admin = adminApi.getAdmin(domain, loginName);
+		for (Permission perm : admin.getRole().getPermissions()) {
+			if (perm.getGroup().equals(group) && perm.getPermission().equals(permission))
+				return true;
 		}
+		return false;
 	}
-
 }

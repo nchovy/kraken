@@ -17,338 +17,161 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AreaApi;
+import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.HostApi;
-import org.krakenapps.dom.exception.AreaNotFoundException;
-import org.krakenapps.dom.exception.HostNotFoundException;
-import org.krakenapps.dom.exception.HostTypeNotFoundException;
-import org.krakenapps.dom.exception.OrganizationNotFoundException;
 import org.krakenapps.dom.model.Area;
-import org.krakenapps.dom.model.DefaultHostExtension;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
-import org.krakenapps.dom.model.Organization;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
 
 @Component(name = "dom-host-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class HostApiImpl extends AbstractApi<Host> implements HostApi {
+public class HostApiImpl extends DefaultEntityEventProvider<Host> implements HostApi {
+	private static final Class<Host> host = Host.class;
+	private static final String HOST_NOT_FOUND = "host-not-found";
+	private static final String HOST_ALREADY_EXIST = "host-already-exist";
+
+	private static final Class<HostType> type = HostType.class;
+	private static final String TYPE_NOT_FOUND = "host-type-not-found";
+	private static final String TYPE_ALREADY_EXIST = "host-type-already-exist";
+	private static DefaultEntityEventProvider<HostType> typeEventProvider = new DefaultEntityEventProvider<HostType>();
+
+	private static final Class<HostExtension> ext = HostExtension.class;
+	private static final String EXT_NOT_FOUND = "host-extension-not-found";
+	private static final String EXT_ALREADY_EXIST = "host-extension-already-exist";
+	private static DefaultEntityEventProvider<HostExtension> extEventProvider = new DefaultEntityEventProvider<HostExtension>();
+
 	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+	private ConfigManager cfg;
+
 	@Requires
 	private AreaApi areaApi;
 
-	@Transactional
+	private Predicate getPred(String guid) {
+		return Predicates.field("guid", guid);
+	}
+
+	private Predicate getExtPred(String className) {
+		return Predicates.field("className", className);
+	}
+
 	@Override
-	public HostExtension getHostExtension(String className) {
-		EntityManager em = entityManagerService.getEntityManager();
-		try {
-			return (HostExtension) em.createQuery("FROM HostExtension e WHERE e.className = ?")
-					.setParameter(1, className).getSingleResult();
-		} catch (NoResultException e) {
-			return null;
+	public Collection<Host> getHosts(String domain) {
+		return cfg.ensureCollection(domain, host).findAll().getDocuments(host);
+	}
+
+	@Override
+	public Collection<Host> getHosts(String domain, String areaGuid, boolean includeChildren) {
+		Collection<Host> hosts = new ArrayList<Host>();
+		hosts.addAll(cfg.ensureCollection(domain, host).find(Predicates.field("area/guid", areaGuid)).getDocuments(host));
+		if (includeChildren) {
+			Area area = areaApi.getArea(domain, areaGuid);
+			for (Area child : area.getChildren())
+				hosts.addAll(getHosts(domain, child.getGuid(), includeChildren));
 		}
-	}
-
-	@Transactional
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<HostType> getHostTypes() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM HostType").getResultList();
-	}
-
-	@Transactional
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<HostType> getSentrySupportedHostTypes() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM HostType t WHERE t.isSentrySupported = true").getResultList();
+		return hosts;
 	}
 
 	@Override
-	public Host createHost(int organizationId, int hostTypeId, int areaId, String name, String description) {
-		Host host = createHostInternal(organizationId, hostTypeId, areaId, name, description);
-		fireEntityAdded(host);
-		return host;
-	}
-
-	@Transactional
-	private Host createHostInternal(int organizationId, int hostTypeId, int areaId, String name, String description) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		Organization organization = em.find(Organization.class, organizationId);
-		if (organization == null)
-			throw new OrganizationNotFoundException(organizationId);
-
-		HostType hostType = em.find(HostType.class, hostTypeId);
-		if (hostType == null)
-			throw new HostTypeNotFoundException();
-
-		Area area = em.find(Area.class, areaId);
-		if (area == null)
-			throw new AreaNotFoundException(areaId);
-
-		Host host = new Host();
-		host.setOrganization(organization);
-		host.setArea(area);
-		host.setHostType(hostType);
-		host.setName(name);
-		host.setDescription(description);
-		host.setGuid(UUID.randomUUID().toString());
-
-		em.persist(host);
-
-		// add default extensions
-		for (DefaultHostExtension def : hostType.getDefaultExtensions()) {
-			HostExtension ext = def.getKey().getExtension();
-			host.getExtensions().add(ext);
-			ext.getHosts().add(host);
-
-			em.merge(ext);
-			em.merge(host);
-		}
-
-		return host;
+	public Host findHost(String domain, String guid) {
+		return cfg.find(domain, host, getPred(guid));
 	}
 
 	@Override
-	public Host updateHost(int organizationId, int hostId, String name, String description) {
-		Host host = updateHostInternal(organizationId, hostId, name, description);
-		fireEntityUpdated(host);
-		return host;
-	}
-
-	@Transactional
-	private Host updateHostInternal(int organizationId, int hostId, String name, String description) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		try {
-			Host host = getHost(organizationId, hostId);
-			if (host == null)
-				throw new HostNotFoundException();
-
-			host.setName(name);
-			host.setDescription(description);
-
-			em.merge(host);
-
-			return host;
-		} catch (NoResultException e) {
-			throw new HostNotFoundException();
-		}
+	public Host getHost(String domain, String guid) {
+		return cfg.get(domain, host, getPred(guid), HOST_NOT_FOUND);
 	}
 
 	@Override
-	public Host updateHostGuid(int organizationId, int hostId, String guid) {
-		Host host = updateHostGuidInternal(organizationId, hostId, guid);
-		fireEntityUpdated(host);
-		return host;
-	}
-
-	@Transactional
-	private Host updateHostGuidInternal(int organizationId, int hostId, String guid) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Host host = getHost(organizationId, hostId);
-		if (host == null)
-			throw new HostNotFoundException();
-
-		host.setGuid(guid);
-		em.merge(host);
-		return host;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public List<Host> getAllHosts() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM Host").getResultList();
-	}
-
-	@Transactional
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<Host> getHosts(int organizationId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createNamedQuery("Host.findAll").setParameter(1, organizationId).getResultList();
-	}
-
-	@Transactional
-	@Override
-	public Host getHost(String guid) {
-		EntityManager em = entityManagerService.getEntityManager();
-		try {
-			return (Host) em.createQuery("FROM Host h WHERE h.guid = ?").setParameter(1, guid).getSingleResult();
-		} catch (NoResultException e) {
-		}
-
-		return null;
-	}
-
-	@Transactional
-	@Override
-	public Host getHost(int organizationId, int hostId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		try {
-			Host host = (Host) em.createNamedQuery("Host.findById").setParameter(1, organizationId)
-					.setParameter(2, hostId).getSingleResult();
-
-			host.getExtensions().size(); // force loading
-			return host;
-		} catch (NoResultException e) {
-			return null;
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public List<Host> getHosts(int organizationId, int areaId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createNamedQuery("Host.findByArea").setParameter(1, organizationId).setParameter(2, areaId)
-				.getResultList();
+	public void createHost(String domain, Host host) {
+		cfg.add(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_ALREADY_EXIST, this);
 	}
 
 	@Override
-	public Host moveHost(int organizationId, int hostId, int areaId) {
-		Host host = moveHostInternal(organizationId, hostId, areaId);
-		fireEntityUpdated(host);
-		return host;
-	}
-
-	@Transactional
-	private Host moveHostInternal(int organizationId, int hostId, int areaId) {
-		EntityManager em = entityManagerService.getEntityManager();
-
-		Host host = getHost(organizationId, hostId);
-		if (host == null)
-			throw new HostNotFoundException();
-
-		Area area = areaApi.getArea(organizationId, areaId);
-		host.setArea(area);
-
-		em.merge(host);
-		return host;
+	public void updateHost(String domain, Host host) {
+		cfg.update(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_NOT_FOUND, this);
 	}
 
 	@Override
-	public Host removeHost(int organizationId, int hostId) {
-		Host host = getHost(organizationId, hostId);
-		if (host == null)
-			throw new HostNotFoundException();
-		fireEntityRemoving(host);
-		removeHostInternal(organizationId, hostId);
-		fireEntityRemoved(host);
-		return host;
-	}
-
-	@Transactional
-	private void removeHostInternal(int organizationId, int hostId) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Host host = getHost(organizationId, hostId);
-		host.getExtensions().clear();
-		em.remove(host);
+	public void removeHost(String domain, String guid) {
+		cfg.remove(domain, HostApiImpl.host, getPred(guid), HOST_NOT_FOUND, this);
 	}
 
 	@Override
-	public Host mapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames) {
-		Host host = mapHostExtensionsInternal(organizationId, hostId, hostExtensionNames);
-		fireEntityUpdated(host);
-		return host;
-	}
-
-	@Transactional
-	private Host mapHostExtensionsInternal(int organizationId, int hostId, Set<String> hostExtensionNames) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Host host = getHost(organizationId, hostId);
-		if (host == null)
-			throw new HostNotFoundException();
-
-		for (String className : hostExtensionNames) {
-			HostExtension ext = findHostExtension(em, className);
-			if (ext == null)
-				continue;
-
-			host.getExtensions().add(ext);
-			ext.getHosts().add(host);
-
-			em.merge(ext);
-			em.merge(host);
-		}
-
-		return host;
-	}
-
-	private HostExtension findHostExtension(EntityManager em, String className) {
-		try {
-			HostExtension ext = (HostExtension) em.createQuery("FROM HostExtension e WHERE e.className = ?")
-					.setParameter(1, className).getSingleResult();
-			return ext;
-		} catch (NoResultException e) {
-			return null;
-		}
+	public Collection<HostType> getHostTypes(String domain) {
+		return cfg.ensureCollection(domain, type).findAll().getDocuments(type);
 	}
 
 	@Override
-	public Host unmapHostExtensions(int organizationId, int hostId, Set<String> hostExtensionNames) {
-		Host host = unmapHostExtensionsInternal(organizationId, hostId, hostExtensionNames);
-		fireEntityUpdated(host);
-		return host;
+	public HostType findHostType(String domain, String guid) {
+		return cfg.find(domain, type, getPred(guid));
 	}
 
-	@Transactional
-	private Host unmapHostExtensionsInternal(int organizationId, int hostId, Set<String> hostExtensionNames) {
-		EntityManager em = entityManagerService.getEntityManager();
-		Host host = getHost(organizationId, hostId);
-		if (host == null)
-			throw new HostNotFoundException();
-
-		for (String className : hostExtensionNames) {
-			HostExtension ext = findHostExtension(em, className);
-			if (ext == null)
-				continue;
-
-			host.getExtensions().remove(ext);
-			ext.getHosts().remove(host);
-
-			em.merge(ext);
-			em.merge(host);
-		}
-
-		return host;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
 	@Override
-	public List<Host> getHostsRecursively(int organizationId, int rootAreaId) {
-		Collection<Area> subAreas = areaApi.getSubAreas(organizationId, rootAreaId);
-		List<Integer> ids = new ArrayList<Integer>(subAreas.size());
-		for (Area area : subAreas)
-			ids.add(area.getId());
-
-		if (ids.size() == 0)
-			return new ArrayList<Host>();
-
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createNamedQuery("Host.findByAreas").setParameter(1, organizationId).setParameter("ids", ids)
-				.getResultList();
+	public HostType getHostType(String domain, String guid) {
+		return cfg.get(domain, type, getPred(guid), TYPE_NOT_FOUND);
 	}
 
+	@Override
+	public void createHostType(String domain, HostType hostType) {
+		cfg.add(domain, type, getPred(hostType.getGuid()), hostType, TYPE_ALREADY_EXIST, typeEventProvider);
+	}
+
+	@Override
+	public void updateHostType(String domain, HostType hostType) {
+		cfg.update(domain, type, getPred(hostType.getGuid()), hostType, TYPE_NOT_FOUND, typeEventProvider);
+	}
+
+	@Override
+	public void removeHostType(String domain, String guid) {
+		cfg.remove(domain, type, getPred(guid), TYPE_NOT_FOUND, typeEventProvider);
+	}
+
+	@Override
+	public Collection<HostExtension> getHostExtensions(String domain) {
+		List<HostExtension> extensions = (List<HostExtension>) cfg.ensureCollection(domain, ext).findAll().getDocuments(ext);
+		Collections.sort(extensions, new Comparator<HostExtension>() {
+			@Override
+			public int compare(HostExtension o1, HostExtension o2) {
+				return o1.getOrd() - o2.getOrd();
+			}
+		});
+		return extensions;
+	}
+
+	@Override
+	public HostExtension findHostExtension(String domain, String guid) {
+		return cfg.find(domain, ext, getPred(guid));
+	}
+
+	@Override
+	public HostExtension getHostExtension(String domain, String guid) {
+		return cfg.get(domain, ext, getPred(guid), EXT_NOT_FOUND);
+	}
+
+	@Override
+	public void createHostExtension(String domain, HostExtension extension) {
+		cfg.add(domain, ext, getExtPred(extension.getClassName()), extension, EXT_ALREADY_EXIST, extEventProvider);
+	}
+
+	@Override
+	public void updateHostExtension(String domain, HostExtension extension) {
+		cfg.update(domain, ext, getExtPred(extension.getClassName()), extension, EXT_NOT_FOUND, extEventProvider);
+	}
+
+	@Override
+	public void removeHostExtension(String domain, String className) {
+		cfg.remove(domain, ext, getExtPred(className), EXT_NOT_FOUND, extEventProvider);
+	}
 }

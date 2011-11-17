@@ -20,9 +20,9 @@ public interface UploadCallback {
 	 * 
 	 * @param token
 	 *            the associated upload token
-	 * @param resourceId
-	 *            if upload is succeeded, resource id will be positive number,
+	 * @param guid
+	 *            if upload is succeeded, resource id will be guid,
 	 *            else it will be null.
 	 */
-	void onUploadFile(UploadToken token, Integer resourceId);
+	void onUploadFile(UploadToken token, String guid);
 }

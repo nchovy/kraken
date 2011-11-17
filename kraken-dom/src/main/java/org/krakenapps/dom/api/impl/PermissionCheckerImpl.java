@@ -18,7 +18,7 @@ package org.krakenapps.dom.api.impl;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.PermissionApi;
+import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.msgbus.PermissionChecker;
 import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
@@ -27,17 +27,14 @@ import org.slf4j.LoggerFactory;
 @Component(name = "dom-permission-checker")
 @Provides
 public class PermissionCheckerImpl implements PermissionChecker {
-	private final Logger logger = LoggerFactory.getLogger(PermissionCheckerImpl.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(PermissionCheckerImpl.class);
 
 	@Requires
-	private PermissionApi permApi;
+	private RoleApi roleApi;
 
 	@Override
-	public boolean check(Session session, String group, String code) {
-		logger.trace("kraken dom: checking permission, session [{}], group [{}], code [{}]", new Object[] { session,
-				group, code });
-
-		return permApi.isPermitted(session.getOrgId(), session.getAdminId(), group, code);
+	public boolean check(Session session, String group, String permission) {
+		logger.trace("kraken dom: checking permission, session [{}], group [{}], code [{}]", new Object[] { session, group, permission });
+		return roleApi.hasPermission(session.getOrgDomain(), session.getAdminLoginName(), group, permission);
 	}
-
 }

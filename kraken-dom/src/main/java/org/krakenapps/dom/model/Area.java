@@ -15,86 +15,41 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
+public class Area {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_areas")
-public class Area implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "parent", nullable = true)
-	private Area parent;
-
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "parent")
-	private List<Area> areas = new ArrayList<Area>();
-
-	@ManyToOne
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
-	@Column(nullable = false, length = 60)
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(length = 255)
+	@FieldOption(length = 255)
 	private String description;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "area")
-	private List<Host> hosts;
+	@ReferenceKey("guid")
+	private Area parent;
 
-	public int getId() {
-		return id;
+	@ReferenceKey("guid")
+	@CollectionTypeHint(Area.class)
+	private List<Area> children = new ArrayList<Area>();
+
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public Area getParent() {
-		return parent;
-	}
-
-	public void setParent(Area parent) {
-		this.parent = parent;
-	}
-
-	public List<Area> getAreas() {
-		return areas;
-	}
-
-	public void setAreas(List<Area> areas) {
-		this.areas = areas;
-	}
-
-	public Organization getOrganization() {
-		return organization;
-	}
-
-	public void setOrganization(Organization organization) {
-		this.organization = organization;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public String getName() {
@@ -121,23 +76,19 @@ public class Area implements Marshalable {
 		this.createDateTime = createDateTime;
 	}
 
-	public List<Host> getHosts() {
-		return hosts;
+	public Area getParent() {
+		return parent;
 	}
 
-	public void setHosts(List<Host> hosts) {
-		this.hosts = hosts;
+	public void setParent(Area parent) {
+		this.parent = parent;
 	}
 
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("id", id);
-		map.put("name", name);
-		map.put("description", description);
-		map.put("created_at", dateFormat.format(createDateTime));
-		return map;
+	public List<Area> getChildren() {
+		return children;
 	}
 
+	public void setChildren(List<Area> areas) {
+		this.children = areas;
+	}
 }

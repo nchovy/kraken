@@ -15,131 +15,59 @@
  */
 package org.krakenapps.dom.api.impl;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-
-import javax.persistence.EntityManager;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.dom.api.AbstractApi;
+import org.krakenapps.confdb.Predicate;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.OrganizationUnitApi;
-import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.model.Organization;
 import org.krakenapps.dom.model.OrganizationUnit;
-import org.krakenapps.dom.model.User;
-import org.krakenapps.jpa.ThreadLocalEntityManagerService;
-import org.krakenapps.jpa.handler.JpaConfig;
-import org.krakenapps.jpa.handler.Transactional;
 
 @Component(name = "dom-org-unit-api")
 @Provides
-@JpaConfig(factory = "dom")
-public class OrganizationUnitApiImpl extends AbstractApi<OrganizationUnit> implements OrganizationUnitApi {
-	@Requires
-	private ThreadLocalEntityManagerService entityManagerService;
+public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<OrganizationUnit> implements OrganizationUnitApi {
+	private static final Class<OrganizationUnit> cls = OrganizationUnit.class;
+	private static final String NOT_FOUND = "org-unit-not-found";
+	private static final String ALREADY_EXIST = "org-unit-already-exist";
 
 	@Requires
-	private UserApi userApi;
+	private ConfigManager cfg;
 
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public Collection<OrganizationUnit> getOrganizationUnits() {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM OrganizationUnit o").getResultList();
-	}
-
-	@SuppressWarnings("unchecked")
-	@Transactional
-	@Override
-	public Collection<OrganizationUnit> getOrganizationUnits(Organization org) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.createQuery("FROM OrganizationUnit o WHERE o.organization = ?").setParameter(1, org).getResultList();
-	}
-
-	@Transactional
-	@Override
-	public OrganizationUnit getOrganizationUnit(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		return em.find(OrganizationUnit.class, id);
-	}
-
-	@Transactional
-	@Override
-	public Collection<OrganizationUnit> getParents(int orgId, int id) {
-		OrganizationUnit unit = getOrganizationUnit(id);
-		List<OrganizationUnit> parents = new ArrayList<OrganizationUnit>();
-		while (unit.getParent() != null) {
-			parents.add(unit.getParent());
-			unit = unit.getParent();
-		}
-
-		return parents;
+	private Predicate getPred(String guid) {
+		return Predicates.field("guid", guid);
 	}
 
 	@Override
-	public OrganizationUnit createOrganizationUnit(OrganizationUnit orgUnit) {
-		OrganizationUnit ou = createOrganizationUnitInternal(orgUnit);
-		fireEntityAdded(ou);
-		return ou;
-	}
-
-	@Transactional
-	private OrganizationUnit createOrganizationUnitInternal(OrganizationUnit orgUnit) {
-		EntityManager em = entityManagerService.getEntityManager();
-		orgUnit.setCreateDateTime(new Date());
-		em.persist(orgUnit);
-		return orgUnit;
+	public Collection<OrganizationUnit> getOrganizationUnits(String domain) {
+		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
 	}
 
 	@Override
-	public OrganizationUnit updateOrganizationUnit(OrganizationUnit orgUnit) {
-		OrganizationUnit ou = updateOrganizationUnitInternal(orgUnit);
-		fireEntityUpdated(ou);
-		return ou;
-	}
-
-	@Transactional
-	private OrganizationUnit updateOrganizationUnitInternal(OrganizationUnit orgUnit) {
-		EntityManager em = entityManagerService.getEntityManager();
-		if (orgUnit.getId() == 0)
-			throw new IllegalArgumentException("check organization unit id");
-
-		OrganizationUnit ou = em.find(OrganizationUnit.class, orgUnit.getId());
-		ou.setName(orgUnit.getName());
-		ou.setParent(orgUnit.getParent());
-		ou.setDomainController(orgUnit.getDomainController());
-		em.merge(ou);
-		return ou;
+	public OrganizationUnit findOrganizationUnit(String domain, String guid) {
+		return cfg.find(domain, cls, getPred(guid));
 	}
 
 	@Override
-	public OrganizationUnit removeOrganizationUnit(int id) {
-		// remove all related users
-		OrganizationUnit ou = getOrganizationUnit(id);
-		if (ou == null)
-			throw new IllegalStateException("organization unit not found: " + id);
-
-		Collection<User> users = userApi.getUsers(ou.getOrganization().getId(), ou.getId(), true);
-		for (User user : users)
-			userApi.removeUser(user.getId());
-
-		// remove org unit
-		OrganizationUnit orgUnit = removeOrganizationUnitInternal(id);
-		fireEntityRemoved(orgUnit);
-		return orgUnit;
+	public OrganizationUnit getOrganizationUnit(String domain, String guid) {
+		return cfg.get(domain, cls, getPred(guid), NOT_FOUND);
 	}
 
-	@Transactional
-	private OrganizationUnit removeOrganizationUnitInternal(int id) {
-		EntityManager em = entityManagerService.getEntityManager();
-		OrganizationUnit orgUnit = em.find(OrganizationUnit.class, id);
-		em.remove(orgUnit);
-		return orgUnit;
+	@Override
+	public void createOrganizationUnit(String domain, OrganizationUnit orgUnit) {
+		cfg.add(domain, cls, getPred(orgUnit.getGuid()), orgUnit, ALREADY_EXIST, this);
 	}
 
+	@Override
+	public void updateOrganizationUnit(String domain, OrganizationUnit orgUnit) {
+		cfg.update(domain, cls, getPred(orgUnit.getGuid()), orgUnit, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeOrganizationUnit(String domain, String guid) {
+		cfg.remove(domain, cls, getPred(guid), NOT_FOUND, this);
+	}
 }

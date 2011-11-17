@@ -15,53 +15,26 @@
  */
 package org.krakenapps.dom.model;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.UUID;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.ReferenceKey;
 
-import org.krakenapps.msgbus.Marshalable;
+public class Sentry {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_sentries")
-public class Sentry implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@OneToOne(optional = true)
-	@JoinColumn(name = "host_id", nullable = false)
+	@ReferenceKey("guid")
 	private Host host;
 
-	@ManyToOne
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
-	@Column(name = "is_connected", nullable = false)
 	private boolean isConnected;
 
-	public int getId() {
-		return id;
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public Organization getOrganization() {
-		return organization;
-	}
-
-	public void setOrganization(Organization organization) {
-		this.organization = organization;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public Host getHost() {
@@ -79,13 +52,4 @@ public class Sentry implements Marshalable {
 	public void setConnected(boolean isConnected) {
 		this.isConnected = isConnected;
 	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("host_id", host.getId());
-		m.put("is_connected", isConnected);
-		return m;
-	}
-
 }

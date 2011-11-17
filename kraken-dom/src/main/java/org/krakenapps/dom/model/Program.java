@@ -15,59 +15,20 @@
  */
 package org.krakenapps.dom.model;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import org.krakenapps.api.FieldOption;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-
-import org.krakenapps.msgbus.Marshalable;
-
-@Entity
-@Table(name = "dom_programs")
-public class Program implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@Column(nullable = false, length = 60)
+public class Program {
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(length = 255)
+	@FieldOption(length = 255)
 	private String description;
 
-	@Column(name = "type", length = 255)
+	@FieldOption(length = 255)
 	private String typeName;
 
-	@ManyToOne
-	@JoinColumn(name = "pack_id", nullable = false)
-	private ProgramPack pack;
-
-	@Column(nullable = false)
 	private boolean visible; // in start menu
-
-	@Column(nullable = false)
 	private int seq;
-
-	@ManyToMany(mappedBy = "programs")
-	private Set<ProgramProfile> profiles = new HashSet<ProgramProfile>();
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
 
 	public String getName() {
 		return name;
@@ -93,14 +54,6 @@ public class Program implements Marshalable {
 		this.typeName = typeName;
 	}
 
-	public ProgramPack getPack() {
-		return pack;
-	}
-
-	public void setPack(ProgramPack pack) {
-		this.pack = pack;
-	}
-
 	public boolean isVisible() {
 		return visible;
 	}
@@ -116,26 +69,4 @@ public class Program implements Marshalable {
 	public void setSeq(int seq) {
 		this.seq = seq;
 	}
-
-	public Set<ProgramProfile> getProgramProfiles() {
-		return profiles;
-	}
-
-	public void setProgramProfiles(Set<ProgramProfile> profiles) {
-		this.profiles = profiles;
-	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("id", id);
-		map.put("name", name);
-		map.put("description", description);
-		map.put("type", typeName);
-		map.put("pack_id", pack.getId());
-		map.put("visible", visible);
-		map.put("seq", seq);
-		return map;
-	}
-
 }

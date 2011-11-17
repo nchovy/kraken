@@ -6,8 +6,12 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.jpa.JpaService;
-import org.osgi.framework.BundleContext;
+import org.krakenapps.dom.api.AreaApi;
+import org.krakenapps.dom.api.GlobalConfigApi;
+import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.ProgramApi;
+import org.krakenapps.dom.api.RoleApi;
+import org.krakenapps.dom.api.UserApi;
 
 @Component(name = "dom-script-factory")
 @Provides
@@ -16,18 +20,26 @@ public class DomScriptFactory implements ScriptFactory {
 	@ServiceProperty(name = "alias", value = "dom")
 	private String alias;
 
-	private BundleContext bc;
+	@Requires
+	private GlobalConfigApi globalConfigApi;
 
 	@Requires
-	private JpaService jpa;
+	private OrganizationApi orgApi;
 
-	public DomScriptFactory(BundleContext bc) {
-		this.bc = bc;
-	}
+	@Requires
+	private UserApi userApi;
+
+	@Requires
+	private RoleApi roleApi;
+
+	@Requires
+	private ProgramApi programApi;
+
+	@Requires
+	private AreaApi areaApi;
 
 	@Override
 	public Script createScript() {
-		return new DomScript(bc, jpa);
+		return new DomScript(globalConfigApi, orgApi, userApi, roleApi, programApi, areaApi);
 	}
-
 }

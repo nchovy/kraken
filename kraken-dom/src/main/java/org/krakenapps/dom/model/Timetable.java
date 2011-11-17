@@ -15,65 +15,36 @@
  */
 package org.krakenapps.dom.model;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.FieldOption;
 
-import org.krakenapps.msgbus.Marshalable;
+public class Timetable {
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 
-@Entity
-@Table(name = "dom_timetables", uniqueConstraints = @UniqueConstraint(columnNames = { "org_id", "name" }))
-public class Timetable implements Marshalable {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-
-	@ManyToOne
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
-	@Column(length = 60, nullable = false)
+	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@Column(name = "created_at", nullable = false)
-	private Date createDateTime;
+	@FieldOption(nullable = false)
+	private Date createDateTime = new Date();
 
-	@Column(name = "updated_at", nullable = false)
-	private Date updateDateTime;
+	@FieldOption(nullable = false)
+	private Date updateDateTime = new Date();
 
-	@OneToMany(cascade = CascadeType.ALL, mappedBy = "timetable", fetch = FetchType.EAGER)
+	@CollectionTypeHint(Schedule.class)
 	private List<Schedule> schedules = new ArrayList<Schedule>();
 
-	public int getId() {
-		return id;
+	public String getGuid() {
+		return guid;
 	}
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public Organization getOrganization() {
-		return organization;
-	}
-
-	public void setOrganization(Organization organization) {
-		this.organization = organization;
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public String getName() {
@@ -106,16 +77,5 @@ public class Timetable implements Marshalable {
 
 	public void setSchedules(List<Schedule> schedules) {
 		this.schedules = schedules;
-	}
-
-	@Override
-	public Map<String, Object> marshal() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("id", id);
-		m.put("name", name);
-		m.put("created_at", dateFormat.format(createDateTime));
-		m.put("updated_at", dateFormat.format(updateDateTime));
-		return m;
 	}
 }
