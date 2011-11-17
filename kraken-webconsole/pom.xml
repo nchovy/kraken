@@ -24,10 +24,10 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.webconsole</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.webconsole,
-							org.krakenapps.webconsole.plugins
+							org.krakenapps.webconsole;version=${project.version},
+							org.krakenapps.webconsole.plugins;version=${project.version}
 						</Export-Package>
-						<Import-Package>*</Import-Package>
+						<Import-Package>org.krakenapps.msgbus;version="1.3.0",*</Import-Package>
 						<Private-Package>org.krakenapps.webconsole.impl</Private-Package>
 					</instructions>
 				</configuration>
