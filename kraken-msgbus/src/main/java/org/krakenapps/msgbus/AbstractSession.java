@@ -21,6 +21,16 @@ public abstract class AbstractSession implements Session {
 	}
 
 	@Override
+	public Integer getOrgId() {
+		return getInt("org_id");
+	}
+
+	@Override
+	public Integer getAdminId() {
+		return getInt("admin_id");
+	}
+
+	@Override
 	public String getOrgDomain() {
 		return getString("org_domain");
 	}

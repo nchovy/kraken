@@ -76,8 +76,8 @@ public class PushApiImpl implements PushApi {
 		PushCondition condition = new PushCondition(orgDomain, binding.sessionId, binding.processId, callback, options);
 		pushConditions.put(condition.getKey(), condition);
 
-		logger.trace("kraken msgbus: subscribe push, org [{}], session [{}], callback [{}]",
-				new Object[] { orgDomain, sessionId, callback });
+		logger.trace("kraken msgbus: subscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgDomain, sessionId,
+				callback });
 	}
 
 	@Deprecated
@@ -88,8 +88,8 @@ public class PushApiImpl implements PushApi {
 
 	@Override
 	public void unsubscribe(String orgDomain, int sessionId, int processId, String callback) {
-		logger.trace("kraken msgbus: unsubscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgDomain, sessionId,
-				callback });
+		logger.trace("kraken msgbus: unsubscribe push, org [{}], session [{}], callback [{}]", new Object[] { orgDomain,
+				sessionId, callback });
 
 		Set<Binding> bindings = pushBindingsMap.get(callback);
 		if (bindings != null) {
@@ -149,9 +149,15 @@ public class PushApiImpl implements PushApi {
 			return;
 		for (Binding binding : bindings) {
 			if (binding.sessionId == session.getId()) {
-				Message msg = createMessage(session.getOrgDomain(), binding, callback, m);
+				String orgDomain = session.getOrgDomain();
+
+				// for backward compatibility
+				if (orgDomain == null)
+					orgDomain = session.getOrgId().toString();
+
+				Message msg = createMessage(orgDomain, binding, callback, m);
 				if (logger.isTraceEnabled())
-					tracePush(session.getOrgDomain(), callback, m, binding.sessionId, binding);
+					tracePush(orgDomain, callback, m, binding.sessionId, binding);
 				msgbus.send(msg);
 			}
 		}

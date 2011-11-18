@@ -52,6 +52,17 @@ public class CometSession implements Session {
 		return channel.getId();
 	}
 
+	// TODO:
+	@Override
+	public boolean has(String key) {
+		return false;
+	}
+
+	@Override
+	public Object get(String key) {
+		return comet.get(key, key);
+	}
+
 	@Override
 	public InetAddress getLocalAddress() {
 		return ((InetSocketAddress) channel.getLocalAddress()).getAddress();
@@ -60,6 +71,16 @@ public class CometSession implements Session {
 	@Override
 	public InetAddress getRemoteAddress() {
 		return ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
+	}
+
+	@Override
+	public String getOrgDomain() {
+		return getString("org_domain");
+	}
+
+	@Override
+	public String getAdminLoginName() {
+		return getString("admin_login_name");
 	}
 
 	@Override
@@ -78,16 +99,6 @@ public class CometSession implements Session {
 			return new Locale("en");
 
 		return new Locale(getString("locale"));
-	}
-
-	@Override
-	public boolean has(String key) {
-		return false;
-	}
-
-	@Override
-	public Object get(String key) {
-		return comet.get(key, key);
 	}
 
 	@Override

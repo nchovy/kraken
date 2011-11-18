@@ -19,19 +19,36 @@ public class PushPlugin {
 	public void subscribe(Request req, Response resp) {
 		int processId = Integer.parseInt(req.getSource());
 		String method = req.getString("callback");
-		pushApi.subscribe(req.getOrgDomain(), req.getSession().getId(), processId, method);
+		String orgDomain = getOrgDomain(req.getSession());
+
+		pushApi.subscribe(orgDomain, req.getSession().getId(), processId, method);
 	}
 
 	@MsgbusMethod
 	public void unsubscribe(Request req, Response resp) {
 		int processId = Integer.parseInt(req.getSource());
 		String method = req.getString("callback");
-		pushApi.unsubscribe(req.getOrgDomain(), req.getSession().getId(), processId, method);
+		String orgDomain = getOrgDomain(req.getSession());
+
+		pushApi.unsubscribe(orgDomain, req.getSession().getId(), processId, method);
 	}
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)
 	public void sessionClosed(Session session) {
-		if (pushApi != null && session != null && session.getOrgDomain() != null)
-			pushApi.sessionClosed(session.getOrgDomain(), session.getId());
+		String orgDomain = getOrgDomain(session);
+
+		if (pushApi != null && session != null && orgDomain != null)
+			pushApi.sessionClosed(orgDomain, session.getId());
+	}
+
+	@SuppressWarnings("deprecation")
+	private String getOrgDomain(Session session) {
+		String orgDomain = session.getOrgDomain();
+
+		// for backward compatibility
+		if (orgDomain == null)
+			orgDomain = session.getOrgId().toString();
+		
+		return orgDomain;
 	}
 }
