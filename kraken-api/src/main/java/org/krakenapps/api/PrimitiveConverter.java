@@ -110,7 +110,7 @@ public class PrimitiveConverter {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T parse(Class<T> cls, Object obj, PrimitiveParseCallback callback) {
-		if (nonSerializeClasses.contains(obj.getClass()))
+		if (nonSerializeClasses.contains(cls))
 			return (T) obj;
 
 		try {
@@ -188,11 +188,15 @@ public class PrimitiveConverter {
 					}
 				} else if (Map.class.isAssignableFrom(fieldType)) {
 					MapTypeHint hint = f.getAnnotation(MapTypeHint.class);
-					Map<Object, Object> v = (Map<Object, Object>) value;
-					Map<Object, Object> fmap = new HashMap<Object, Object>();
-					for (Object k : v.keySet())
-						fmap.put(parse(hint.value()[0], k, callback), parse(hint.value()[1], v.get(k), callback));
-					f.set(n, fmap);
+					if (hint == null) {
+						f.set(n, value);
+					} else {
+						Map<Object, Object> v = (Map<Object, Object>) value;
+						Map<Object, Object> fmap = new HashMap<Object, Object>();
+						for (Object k : v.keySet())
+							fmap.put(parse(hint.value()[0], k, callback), parse(hint.value()[1], v.get(k), callback));
+						f.set(n, fmap);
+					}
 				} else {
 					f.set(n, parse(fieldType, value, callback));
 				}
