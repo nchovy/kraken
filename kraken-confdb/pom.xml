@@ -50,7 +50,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.9.2</version>
+			<version>1.9.3</version>
 		</dependency>
 	</dependencies>
 </project>

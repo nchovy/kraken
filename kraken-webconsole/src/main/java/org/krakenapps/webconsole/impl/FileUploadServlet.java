@@ -116,7 +116,7 @@ public class FileUploadServlet extends HttpServlet {
 			}
 		} catch (Exception e) {
 			resp.setStatus(500);
-			logger.warn("kraken webconsole: cannot download id " + resourceId);
+			logger.warn("kraken webconsole: cannot download id " + resourceId, e);
 		} finally {
 			if (is != null)
 				try {
