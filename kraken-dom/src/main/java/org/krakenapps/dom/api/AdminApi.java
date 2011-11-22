@@ -28,7 +28,7 @@ public interface AdminApi {
 
 	Admin getAdmin(String domain, String loginName);
 
-	Admin getAdmin(User user);
+	Admin getAdmin(String domain, User user);
 
 	void setAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin);
 

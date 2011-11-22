@@ -45,7 +45,7 @@ public class AdminPlugin {
 	@MsgbusMethod
 	public void getAdminByUser(Request req, Response resp) {
 		User user = userApi.getUser(req.getOrgDomain(), req.getString("login_name"));
-		Admin admin = adminApi.getAdmin(user);
+		Admin admin = adminApi.getAdmin(req.getOrgDomain(), user);
 		resp.put("admin", PrimitiveConverter.serialize(admin));
 	}
 

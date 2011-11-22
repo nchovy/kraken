@@ -64,6 +64,7 @@ public class LoginPlugin {
 	@MsgbusMethod
 	public void login(Request req, Response resp) {
 		Session session = req.getSession();
+		session.setProperty("org_domain", "localhost");
 		String nick = req.getString("nick");
 		String hash = req.getString("hash");
 		String nonce = session.getString("nonce");
@@ -78,8 +79,7 @@ public class LoginPlugin {
 			resp.put("idle_timeout", admin.getIdleTimeout());
 
 		session.unsetProperty("nonce");
-		session.setProperty("domain", "localhost");
-		session.setProperty("login_name", admin.getUser().getLoginName());
+		session.setProperty("admin_login_name", admin.getUser().getLoginName());
 		session.setProperty("locale", admin.getLang());
 	}
 

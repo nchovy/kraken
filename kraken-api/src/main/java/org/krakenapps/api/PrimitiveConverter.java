@@ -82,14 +82,15 @@ public class PrimitiveConverter {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
+								f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
 						m.put(fieldName, null);
 					else {
-						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f.getAnnotation(
-								ReferenceKey.class).value()) : null;
+						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f
+								.getAnnotation(ReferenceKey.class).value()) : null;
 						Object serialized = serialize(root, value, callback, referenceKey);
 						m.put(fieldName, serialized);
 					}
@@ -110,7 +111,7 @@ public class PrimitiveConverter {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T parse(Class<T> cls, Object obj, PrimitiveParseCallback callback) {
-		if (nonSerializeClasses.contains(cls))
+		if (!(obj instanceof Map) || cls.equals(Object.class))
 			return (T) obj;
 
 		try {
@@ -158,13 +159,22 @@ public class PrimitiveConverter {
 							throw new IllegalArgumentException(fieldName + " requires parse callback");
 						continue;
 					} else if (value instanceof Object[]) {
+						List<Object> coll = new ArrayList<Object>();
 						for (Object v : (Object[]) value) {
 							Map<String, Object> keys = (Map<String, Object>) v;
-							if (callback != null)
-								f.set(n, callback.onParse(fieldType, keys));
-							else if (option != null && !option.nullable())
+							if (callback != null) {
+								coll.add(callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(), keys));
+							} else if (option != null && !option.nullable())
 								throw new IllegalArgumentException(fieldName + " requires parse callback");
 						}
+
+						// TODO
+						if (List.class.isAssignableFrom(fieldType))
+							f.set(n, coll);
+						else if(Set.class.isAssignableFrom(fieldType))
+							f.set(n, new HashSet<Object>(coll));
+						else if(fieldType.isArray())
+							f.set(n, coll.toArray());
 						continue;
 					}
 				}

@@ -84,22 +84,22 @@ public class AdminApiImpl implements AdminApi {
 	public Collection<Admin> getAdmins(String domain) {
 		Collection<Admin> admins = new ArrayList<Admin>();
 		for (User user : cfg.ensureCollection(domain, cls).find(getPred()).getDocuments(cls))
-			admins.add(parseAdmin(user));
+			admins.add(parseAdmin(domain, user));
 		return admins;
 	}
 
 	@Override
 	public Admin findAdmin(String domain, String loginName) {
-		return parseAdmin(cfg.find(domain, cls, getPred(loginName)));
+		return parseAdmin(domain, cfg.find(domain, cls, getPred(loginName)));
 	}
 
 	@Override
 	public Admin getAdmin(String domain, String loginName) {
-		return parseAdmin(cfg.get(domain, cls, getPred(loginName), NOT_FOUND));
+		return parseAdmin(domain, cfg.get(domain, cls, getPred(loginName), NOT_FOUND));
 	}
 
 	@Override
-	public Admin getAdmin(User user) {
+	public Admin getAdmin(String domain, User user) {
 		Object o = user.getExt().get(EXT_KEY);
 		if (o == null)
 			return null;
@@ -107,13 +107,13 @@ public class AdminApiImpl implements AdminApi {
 		if (o instanceof Admin)
 			return (Admin) o;
 		else if (o instanceof Map)
-			return parseAdmin(user);
+			return parseAdmin(domain, user);
 
 		return null;
 	}
 
-	private Admin parseAdmin(User user) {
-		Admin admin = PrimitiveConverter.parse(Admin.class, user.getExt().get(EXT_KEY));
+	private Admin parseAdmin(String domain, User user) {
+		Admin admin = PrimitiveConverter.parse(Admin.class, user.getExt().get(EXT_KEY), cfg.getParseCallback(domain));
 		admin.setUser(user);
 		return admin;
 	}

@@ -75,8 +75,8 @@ public class FileUploadPlugin {
 		String spaceGuid = req.getString("space_guid");
 		String fileName = req.getString("file_name");
 		long fileSize = req.getInteger("file_size");
-		UploadToken uploadToken = new UploadToken(req.getAdminLoginName(), spaceGuid, fileName, fileSize);
-		String token = fileUploadApi.setUploadToken(req.getOrgDomain(), uploadToken, null);
+		UploadToken uploadToken = new UploadToken(req.getSession(), spaceGuid, fileName, fileSize);
+		String token = fileUploadApi.setUploadToken(uploadToken, null);
 
 		final String template = "kraken dom: set upload info, session [{}], token [{}], space [{}], filename [{}], size [{}]";
 		logger.info(template, new Object[] { req.getSession().getId(), token, spaceGuid, fileName, fileSize });
@@ -86,7 +86,7 @@ public class FileUploadPlugin {
 
 	@MsgbusMethod
 	public void issueDownloadToken(Request req, Response resp) {
-		String token = fileUploadApi.setDownloadToken(req.getOrgDomain(), req.getSession());
+		String token = fileUploadApi.setDownloadToken(req.getSession());
 		tokens.putIfAbsent(req.getSession().getId(), token);
 		resp.put("token", token);
 	}

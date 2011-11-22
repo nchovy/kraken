@@ -98,13 +98,19 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = findOne(db, cls, pred, notFoundMessage);
 		db.remove(c);
 		T doc = c.getDocument(cls, getCallback(domain));
 		if (provider != null)
 			provider.fireEntityRemoved(domain, doc);
+	}
+
+	@Override
+	public PrimitiveParseCallback getParseCallback(String domain) {
+		return callbacks.get(domain);
 	}
 
 	private class ParseCallback implements PrimitiveParseCallback {

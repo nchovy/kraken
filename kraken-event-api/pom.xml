@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-event-api</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Event API</name>
 	<build>
@@ -25,12 +25,7 @@
 						<Bundle-SymbolicName>org.krakenapps.event.api</Bundle-SymbolicName>
 						<Export-Package>org.krakenapps.event.api</Export-Package>
 						<Private-Package>org.krakenapps.event.api.impl</Private-Package>
-						<Import-Package> javassist.util.proxy,
-							org.hibernate.proxy,
-							org.hibernate.exception,
-							org.hibernate,
-							org.hibernate.dialect,
-							javax.persistence,*</Import-Package>
+						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>

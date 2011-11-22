@@ -15,18 +15,26 @@
  */
 package org.krakenapps.dom.api;
 
+import org.krakenapps.msgbus.Session;
+
 public class UploadToken {
+	private String orgDomain;
 	private String loginName;
 	private String spaceGuid;
 	private String fileName;
 	private long fileSize;
 	private Object userData;
 
-	public UploadToken(String loginName, String spaceGuid, String fileName, long fileSize) {
-		this.loginName = loginName;
+	public UploadToken(Session session, String spaceGuid, String fileName, long fileSize) {
+		this.orgDomain = session.getOrgDomain();
+		this.loginName = session.getAdminLoginName();
 		this.spaceGuid = spaceGuid;
 		this.fileName = fileName;
 		this.fileSize = fileSize;
+	}
+
+	public String getOrgDomain() {
+		return orgDomain;
 	}
 
 	/**

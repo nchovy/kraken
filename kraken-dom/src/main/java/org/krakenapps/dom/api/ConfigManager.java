@@ -1,5 +1,6 @@
 package org.krakenapps.dom.api;
 
+import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
@@ -23,4 +24,6 @@ public interface ConfigManager {
 	<T> void update(String domain, Class<T> cls, Predicate pred, T doc, String notFoundMessage, DefaultEntityEventProvider<T> provider);
 
 	<T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider);
+	
+	PrimitiveParseCallback getParseCallback(String domain);
 }

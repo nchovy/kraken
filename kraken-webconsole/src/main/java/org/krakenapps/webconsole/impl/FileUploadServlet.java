@@ -77,16 +77,16 @@ public class FileUploadServlet extends HttpServlet {
 		FileInputStream is = null;
 		ServletOutputStream os = null;
 		String token = null;
-		int resourceId = 0;
+		String resource = null;
 
 		try {
 			token = getDownloadToken(req);
-			resourceId = Integer.parseInt(req.getParameter("resource"));
+			resource = req.getParameter("resource");
 
 			if (token == null)
 				throw new IllegalStateException("download token not found");
 
-			f = upload.getFileMetadata(resourceId, token);
+			f = upload.getFileMetadata(resource, token);
 			is = new FileInputStream(f.getFile());
 			os = resp.getOutputStream();
 			logger.trace("kraken webconsole: open downstream for {}", f.getFile().getAbsolutePath());
@@ -116,7 +116,7 @@ public class FileUploadServlet extends HttpServlet {
 			}
 		} catch (Exception e) {
 			resp.setStatus(500);
-			logger.warn("kraken webconsole: cannot download id " + resourceId, e);
+			logger.warn("kraken webconsole: cannot download id " + resource, e);
 		} finally {
 			if (is != null)
 				try {
@@ -173,7 +173,9 @@ public class FileUploadServlet extends HttpServlet {
 					throw new IllegalArgumentException("begin should be smaller than end range");
 
 				logger.info("kraken webconsole: partial upload, token [{}], [{}~{}]", new Object[] { token, begin, end });
-				upload.writePartialFile(token, begin, end, is);
+
+				// TODO: after complete dom porting
+				// upload.writePartialFile(token, begin, end, is);
 			}
 
 			resp.setStatus(200);

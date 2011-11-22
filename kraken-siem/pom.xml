@@ -34,13 +34,7 @@
 							org.krakenapps.siem.msgbus,
 							org.krakenapps.siem.script
 						</Private-Package>
-						<Import-Package>
-							javassist.util.proxy,
-							org.hibernate.proxy,
-							org.hibernate.exception,
-							org.hibernate,
-							org.hibernate.dialect,
-							javax.persistence,*</Import-Package>
+						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>

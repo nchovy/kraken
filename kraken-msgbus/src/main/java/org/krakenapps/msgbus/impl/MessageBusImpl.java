@@ -339,8 +339,8 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 				handler.handleMessage(request, response);
 				respondMessage.setParameters(response);
 			} catch (SecurityException e) {
-				logger.warn("kraken msgbus: security violation [admin_id={}, method={}]",
-						new Object[] { session.getInt("admin_id"), message.getMethod() });
+				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]", new Object[] {
+						session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
 				logger.debug("kraken msgbus: security violation stacktrace", e);
 				respondMessage = Message.createError(session, message, "security", "Security Violation");
 			} catch (IllegalArgumentException e) {
@@ -376,7 +376,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 					respondMessage = Message.createError(session, message, "general-error", "invocation target exception");
 				}
 
-				//reduceStackTrace(e);
+				// reduceStackTrace(e);
 
 				logger.error("kraken msgbus: message handler failed", e);
 			} catch (Exception e) {

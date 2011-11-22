@@ -88,7 +88,7 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 *            may be null; invoked when upload is completed (even if failed)
 	 * @return the resource guid for new upload file
 	 */
-	String setUploadToken(String domain, UploadToken token, UploadCallback callback);
+	String setUploadToken(UploadToken token, UploadCallback callback);
 
 	/**
 	 * Write file to preset location.
@@ -99,7 +99,7 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @throws IOException
 	 *             when temp file io failed
 	 */
-	void writeFile(String domain, String token, InputStream is) throws IOException;
+	void writeFile(String token, InputStream is) throws IOException;
 
 	/**
 	 * Set token for access-controlled download
@@ -109,7 +109,7 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @param token
 	 *            the download token
 	 */
-	String setDownloadToken(String domain, Session session);
+	String setDownloadToken(Session session);
 
 	/**
 	 * Get file metadata using download token, space id and resource id.

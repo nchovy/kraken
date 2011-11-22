@@ -128,22 +128,23 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	}
 
 	@Override
-	public String setUploadToken(String domain, UploadToken token, UploadCallback callback) {
-		userApi.getUser(domain, token.getLoginName());
+	public String setUploadToken(UploadToken token, UploadCallback callback) {
+		userApi.getUser(token.getOrgDomain(), token.getLoginName());
 		UploadItem item = new UploadItem(token, callback);
 		uploadTokens.putIfAbsent(item.guid, item);
 		return item.guid;
 	}
 
 	@Override
-	public void writeFile(String domain, String token, InputStream is) throws IOException {
+	public void writeFile(String token, InputStream is) throws IOException {
 		UploadItem item = uploadTokens.remove(token);
 		if (item == null)
 			throw new DOMException("upload-token-not-found");
 
 		OutputStream os = null;
 		try {
-			File temp = File.createTempFile("tmp-", null, getBaseDirectory(domain));
+			String orgDomain = item.token.getOrgDomain();
+			File temp = File.createTempFile("tmp-", null, getBaseDirectory(orgDomain));
 			if (temp.exists())
 				temp.delete();
 			os = new FileOutputStream(temp);
@@ -160,15 +161,15 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 			String guid = null;
 			if (totalSize == item.token.getFileSize()) {
-				File newFile = new File(getBaseDirectory(domain), "");
+				File newFile = new File(getBaseDirectory(orgDomain), "");
 
 				UploadedFile uploaded = new UploadedFile();
 				guid = uploaded.getGuid();
-				uploaded.setOwner(userApi.findUser(domain, item.token.getLoginName()));
+				uploaded.setOwner(userApi.findUser(orgDomain, item.token.getLoginName()));
 				uploaded.setFileName(item.token.getFileName());
 				uploaded.setFileSize(item.token.getFileSize());
 				uploaded.setPath(newFile.getAbsolutePath());
-				cfg.add(domain, UploadedFile.class, getPred(guid), uploaded, FILE_ALREADY_EXIST, fileEventProvider);
+				cfg.add(orgDomain, UploadedFile.class, getPred(guid), uploaded, FILE_ALREADY_EXIST, fileEventProvider);
 			} else {
 				temp.delete();
 			}
@@ -193,12 +194,12 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	}
 
 	@Override
-	public String setDownloadToken(String domain, Session session) {
+	public String setDownloadToken(Session session) {
 		if (downloadTokens.containsKey(session.getId()))
 			return downloadTokens.get(session.getId()).guid;
 
-		userApi.getUser(domain, session.getAdminLoginName());
-		DownloadToken token = new DownloadToken(session.getAdminLoginName());
+		userApi.getUser(session.getOrgDomain(), session.getAdminLoginName());
+		DownloadToken token = new DownloadToken(session.getOrgDomain(), session.getAdminLoginName());
 		downloadTokens.putIfAbsent(session.getId(), token);
 		return token.guid;
 	}
@@ -208,6 +209,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		DownloadToken token = downloadTokens.get(tokenGuid);
 		if (token == null)
 			throw new DOMException("download-token-not-found");
+
 		UploadedFile uploaded = cfg.get(domain, file, getPred(tokenGuid), FILE_NOT_FOUND);
 		if (!token.loginName.equals(uploaded.getOwner().getLoginName())) {
 			Map<String, Object> params = new HashMap<String, Object>();
@@ -225,9 +227,11 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	private class DownloadToken {
 		private String guid = UUID.randomUUID().toString();
+		private String orgDomain;
 		private String loginName;
 
-		public DownloadToken(String loginName) {
+		public DownloadToken(String orgDomain, String loginName) {
+			this.orgDomain = orgDomain;
 			this.loginName = loginName;
 		}
 	}

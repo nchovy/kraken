@@ -30,9 +30,7 @@ public class GlobalConfigApiImpl implements GlobalConfigApi {
 
 	@Override
 	public Map<String, Object> getConfigs(boolean getHidden) {
-		ConfigDatabase db = confsvc.getDatabase(DB_NAME);
-		if (db == null)
-			return null;
+		ConfigDatabase db = confsvc.ensureDatabase(DB_NAME);
 		Collection<GlobalConfig> configs = db.findAll(cls).getDocuments(cls);
 		Map<String, Object> m = new HashMap<String, Object>();
 		for (GlobalConfig config : configs) {
@@ -44,9 +42,7 @@ public class GlobalConfigApiImpl implements GlobalConfigApi {
 
 	@Override
 	public Object getConfig(String key) {
-		ConfigDatabase db = confsvc.getDatabase(DB_NAME);
-		if (db == null)
-			return null;
+		ConfigDatabase db = confsvc.ensureDatabase(DB_NAME);
 		Config c = db.findOne(cls, Predicates.field("key", key));
 		return (c != null) ? c.getDocument(cls) : null;
 	}
@@ -58,9 +54,7 @@ public class GlobalConfigApiImpl implements GlobalConfigApi {
 
 	@Override
 	public void setConfig(String key, Object value, boolean isHidden) {
-		ConfigDatabase db = confsvc.getDatabase(DB_NAME);
-		if (db == null)
-			db = confsvc.createDatabase(DB_NAME);
+		ConfigDatabase db = confsvc.ensureDatabase(DB_NAME);
 		Config c = db.findOne(cls, Predicates.field("key", key));
 		if (c == null) {
 			GlobalConfig param = new GlobalConfig();
@@ -78,12 +72,11 @@ public class GlobalConfigApiImpl implements GlobalConfigApi {
 
 	@Override
 	public void unsetConfig(String key) {
-		ConfigDatabase db = confsvc.getDatabase(DB_NAME);
-		if (db == null)
-			db = confsvc.createDatabase(DB_NAME);
+		ConfigDatabase db = confsvc.ensureDatabase(DB_NAME);
 		Config c = db.findOne(cls, Predicates.field("key", key));
 		if (c == null)
 			return;
+
 		db.remove(c);
 	}
 }

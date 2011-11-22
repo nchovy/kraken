@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.model;
 
+import java.io.File;
 import java.util.Date;
 import java.util.UUID;
 
@@ -97,5 +98,9 @@ public class UploadedFile {
 
 	public void setCreateDateTime(Date createDateTime) {
 		this.createDateTime = createDateTime;
+	}
+
+	public File getFile() {
+		return new File(path);
 	}
 }
