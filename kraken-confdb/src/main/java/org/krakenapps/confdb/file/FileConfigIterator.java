@@ -45,6 +45,7 @@ class FileConfigIterator implements ConfigIterator {
 	private Predicate pred;
 	private Config prefetch;
 	private boolean loaded;
+	private boolean closed;
 
 	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot, Predicate pred) {
 		this.db = db;
@@ -56,12 +57,16 @@ class FileConfigIterator implements ConfigIterator {
 
 	@Override
 	public boolean hasNext() {
+		if (closed)
+			return false;
+
 		if (loaded)
 			return prefetch != null;
 
 		try {
 			prefetch = getNextMatch();
 		} catch (IOException e) {
+			close();
 			return false;
 		}
 
@@ -73,9 +78,12 @@ class FileConfigIterator implements ConfigIterator {
 		if (!it.hasNext() && !loaded)
 			throw new NoSuchElementException("no more config item in collection");
 
-		if (it.hasNext() && !loaded)
-			if (!hasNext())
+		if (it.hasNext() && !loaded) {
+			if (!hasNext()) {
+				close();
 				throw new NoSuchElementException("no more config item in collection");
+			}
+		}
 
 		loaded = false;
 		Config r = prefetch;
@@ -96,7 +104,7 @@ class FileConfigIterator implements ConfigIterator {
 			}
 		}
 
-		loaded = matched != null;
+		loaded = (matched != null);
 		return matched;
 	}
 
@@ -130,11 +138,13 @@ class FileConfigIterator implements ConfigIterator {
 		ConfigIterator it = this;
 		while (it.hasNext())
 			docs.add(it.next().getDocument(clazz));
+		close();
 		return docs;
 	}
 
 	@Override
 	public void close() {
 		reader.close();
+		closed = true;
 	}
 }

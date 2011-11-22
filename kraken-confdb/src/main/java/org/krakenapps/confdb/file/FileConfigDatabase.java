@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.api.PrimitiveSerializeCallback;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
@@ -59,7 +60,7 @@ import org.slf4j.LoggerFactory;
  * 
  */
 public class FileConfigDatabase implements ConfigDatabase {
-	private final Logger logger = LoggerFactory.getLogger(FileConfigDatabase.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(FileConfigDatabase.class);
 
 	private final File baseDir;
 	private final File dbDir;
@@ -217,7 +218,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigCollection getCollection(Class<?> cls) {
-		return getCollection(cls.getName());
+		return getCollection(getCollectionName(cls));
 	}
 
 	@Override
@@ -241,7 +242,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigCollection ensureCollection(Class<?> cls) {
-		return ensureCollection(cls.getName());
+		return ensureCollection(getCollectionName(cls));
 	}
 
 	@Override
@@ -280,7 +281,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public void dropCollection(Class<?> cls) {
-		dropCollection(cls.getName());
+		dropCollection(getCollectionName(cls));
 	}
 
 	@Override
@@ -290,6 +291,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 		} finally {
 			unlock();
 		}
+	}
+
+	private String getCollectionName(Class<?> cls) {
+		CollectionName conf = cls.getAnnotation(CollectionName.class);
+		return (conf == null) ? cls.getName() : conf.value();
 	}
 
 	public File getDbDirectory() {

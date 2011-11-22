@@ -20,19 +20,19 @@ public enum CommitOp {
 
 	private int code;
 
-	CommitOp(int code) {
+	private CommitOp(int code) {
 		this.code = code;
 	}
-	
+
 	public int getCode() {
 		return code;
 	}
-	
+
 	public static CommitOp parse(int code) {
 		for (CommitOp op : values())
 			if (op.getCode() == code)
 				return op;
-		
+
 		return null;
 	}
 }
