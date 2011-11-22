@@ -176,6 +176,7 @@ public final class MimeTypes {
 		set("Z", "application/x-compress");
 		set("z", "application/x-compress");
 		set("zip", "application/zip");
+		set("apk", "application/vnd.android.package-archive");
 	}
 	
 	private void set(String ext, String mime) {
