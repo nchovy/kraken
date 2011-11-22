@@ -22,16 +22,16 @@ import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.FunctionPlaceholder;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Function;
 import org.krakenapps.logdb.query.command.Timechart;
 import org.krakenapps.logdb.query.command.Timechart.Span;
 import org.krakenapps.logdb.query.parser.FunctionParser;
-import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
 
-public class TimechartParser implements QueryParser {
+public class TimechartParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("timechart", new TimechartParser(), k("timechart"), ref("option"), ref("timechart_function"),

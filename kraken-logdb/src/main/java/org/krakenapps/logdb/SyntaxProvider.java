@@ -19,14 +19,13 @@ import java.text.ParseException;
 import java.util.Collection;
 
 import org.krakenapps.bnf.Syntax;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
 public interface SyntaxProvider {
 	Syntax getSyntax();
 
 	LogQueryCommand eval(LogQuery logQuery, String query) throws ParseException;
 
-	void addParsers(Collection<? extends QueryParser> parsers);
+	void addParsers(Collection<? extends LogQueryParser> parsers);
 
-	void removeParsers(Collection<? extends QueryParser> parsers);
+	void removeParsers(Collection<? extends LogQueryParser> parsers);
 }

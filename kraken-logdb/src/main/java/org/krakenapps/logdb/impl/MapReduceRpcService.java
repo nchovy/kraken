@@ -29,6 +29,7 @@ import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.mapreduce.MapQuery;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
@@ -41,7 +42,6 @@ import org.krakenapps.logdb.query.LogQueryImpl;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.RpcFrom;
 import org.krakenapps.logdb.query.command.RpcTo;
-import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.rpc.RpcAgent;
 import org.krakenapps.rpc.RpcClient;
 import org.krakenapps.rpc.RpcConnection;
@@ -162,7 +162,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 			dataSourceRegistry.removeListener(this);
 	}
 
-	private class RpcFromParser implements QueryParser {
+	private class RpcFromParser implements LogQueryParser {
 		@Override
 		public void addSyntax(Syntax syntax) {
 			syntax.add("rpcfrom", this, k("rpcfrom"), new StringPlaceholder());
@@ -178,7 +178,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		}
 	}
 
-	private class RpcToParser implements QueryParser {
+	private class RpcToParser implements LogQueryParser {
 		@Override
 		public void addSyntax(Syntax syntax) {
 			syntax.add("rpcto", this, k("rpcto"), new StringPlaceholder());

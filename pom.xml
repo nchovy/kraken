@@ -107,6 +107,7 @@
     <module>kraken-snmpmon</module>
     <module>kraken-servlet-api</module>
     <module>kraken-logdb-jython</module>
+    <module>kraken-logdb-pcap</module>
   </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>

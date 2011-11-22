@@ -23,12 +23,12 @@ import java.util.List;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.FunctionPlaceholder;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Function;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class FunctionParser implements QueryParser {
+public class FunctionParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("function", this, new FunctionPlaceholder(),

@@ -19,11 +19,11 @@ import static org.krakenapps.bnf.Syntax.*;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Rename;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class RenameParser implements QueryParser {
+public class RenameParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("rename", this, k("rename"), new StringPlaceholder(), k("as"), new StringPlaceholder());

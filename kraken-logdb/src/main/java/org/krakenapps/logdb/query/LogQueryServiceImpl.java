@@ -36,6 +36,7 @@ import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
 import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.LogQueryImpl;
@@ -44,7 +45,6 @@ import org.krakenapps.logdb.query.parser.FieldsParser;
 import org.krakenapps.logdb.query.parser.FunctionParser;
 import org.krakenapps.logdb.query.parser.LookupParser;
 import org.krakenapps.logdb.query.parser.OptionParser;
-import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.logdb.query.parser.RenameParser;
 import org.krakenapps.logdb.query.parser.ScriptParser;
 import org.krakenapps.logdb.query.parser.SearchParser;
@@ -89,12 +89,12 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Validate
 	public void start() {
 		@SuppressWarnings("unchecked")
-		List<Class<? extends QueryParser>> parserClazzes = Arrays.asList(DropParser.class, SearchParser.class,
+		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, SearchParser.class,
 				FieldsParser.class, FunctionParser.class, OptionParser.class, RenameParser.class, SortParser.class,
 				StatsParser.class, TimechartParser.class);
 
-		List<QueryParser> parsers = new ArrayList<QueryParser>();
-		for (Class<? extends QueryParser> clazz : parserClazzes) {
+		List<LogQueryParser> parsers = new ArrayList<LogQueryParser>();
+		for (Class<? extends LogQueryParser> clazz : parserClazzes) {
 			try {
 				parsers.add(clazz.newInstance());
 			} catch (Exception e) {

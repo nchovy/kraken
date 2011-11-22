@@ -21,11 +21,11 @@ import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logdb.LookupHandlerRegistry;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Lookup;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class LookupParser implements QueryParser {
+public class LookupParser implements LogQueryParser {
 	private LookupHandlerRegistry registry;
 
 	public LookupParser(LookupHandlerRegistry registry) {

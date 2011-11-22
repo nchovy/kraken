@@ -25,13 +25,13 @@ import java.util.Map;
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Sort;
 import org.krakenapps.logdb.query.command.Sort.SortField;
-import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.logdb.query.parser.SortParser;
 
-public class SortParser implements QueryParser {
+public class SortParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("sort", this, k("sort"), ref("option"), ref("sort_field"));

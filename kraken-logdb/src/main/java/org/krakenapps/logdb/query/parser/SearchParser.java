@@ -23,13 +23,13 @@ import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Search;
 import org.krakenapps.logdb.query.command.Search.Term;
 import org.krakenapps.logdb.query.command.Search.Term.Operator;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class SearchParser implements QueryParser {
+public class SearchParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off

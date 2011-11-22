@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logdb.query.parser;
+package org.krakenapps.logdb;
 
 import org.krakenapps.bnf.Parser;
 import org.krakenapps.bnf.Syntax;
 
-public interface QueryParser extends Parser {
+public interface LogQueryParser extends Parser {
 	void addSyntax(Syntax syntax);
 }

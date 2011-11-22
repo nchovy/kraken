@@ -27,9 +27,9 @@ import org.krakenapps.bnf.Placeholder;
 import org.krakenapps.bnf.Result;
 import org.krakenapps.bnf.StringUtil;
 import org.krakenapps.bnf.Syntax;
-import org.krakenapps.logdb.query.parser.QueryParser;
+import org.krakenapps.logdb.LogQueryParser;
 
-public class OptionParser implements QueryParser {
+public class OptionParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("option", this, repeat(new OptionPlaceholder()));

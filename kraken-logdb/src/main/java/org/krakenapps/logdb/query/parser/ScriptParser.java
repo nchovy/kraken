@@ -6,11 +6,12 @@ import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logdb.LogScript;
 import org.krakenapps.logdb.LogScriptRegistry;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Script;
 import org.osgi.framework.BundleContext;
 
-public class ScriptParser implements QueryParser {
+public class ScriptParser implements LogQueryParser {
 	private BundleContext bc;
 	private LogScriptRegistry scriptRegistry;
 

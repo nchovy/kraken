@@ -4,10 +4,10 @@ import static org.krakenapps.bnf.Syntax.*;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.command.Drop;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class DropParser implements QueryParser {
+public class DropParser implements LogQueryParser {
 	@Override
 	public Object parse(Binding b) {
 		return new Drop();

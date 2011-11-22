@@ -25,18 +25,18 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.SyntaxProvider;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
 @Component(name = "logdb-syntax-provider")
 @Provides
 public class SyntaxProviderImpl implements SyntaxProvider {
 	private Syntax syntax;
-	private CopyOnWriteArraySet<QueryParser> queryParsers;
+	private CopyOnWriteArraySet<LogQueryParser> queryParsers;
 
 	@Validate
 	public void start() {
-		queryParsers = new CopyOnWriteArraySet<QueryParser>();
+		queryParsers = new CopyOnWriteArraySet<LogQueryParser>();
 	}
 
 	@Override
@@ -53,20 +53,20 @@ public class SyntaxProviderImpl implements SyntaxProvider {
 	}
 
 	@Override
-	public void addParsers(Collection<? extends QueryParser> parsers) {
+	public void addParsers(Collection<? extends LogQueryParser> parsers) {
 		queryParsers.addAll(parsers);
 		rebuild();
 	}
 
 	@Override
-	public void removeParsers(Collection<? extends QueryParser> parsers) {
+	public void removeParsers(Collection<? extends LogQueryParser> parsers) {
 		queryParsers.removeAll(parsers);
 		rebuild();
 	}
 
 	private void rebuild() {
 		Syntax newSyntax = new Syntax();
-		for (QueryParser qp : queryParsers)
+		for (LogQueryParser qp : queryParsers)
 			if (qp != null)
 				qp.addSyntax(newSyntax);
 

@@ -24,12 +24,12 @@ import java.util.List;
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Function;
 import org.krakenapps.logdb.query.command.Stats;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class StatsParser implements QueryParser {
+public class StatsParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("stats", this, k("stats"), ref("option"), ref("function"), option(k("by"), ref("stats_field")));

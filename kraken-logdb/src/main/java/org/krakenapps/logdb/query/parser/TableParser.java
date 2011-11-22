@@ -25,15 +25,15 @@ import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Table;
-import org.krakenapps.logdb.query.parser.QueryParser;
 import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.TableMetadata;
 
-public class TableParser implements QueryParser {
+public class TableParser implements LogQueryParser {
 	private LogStorage logStorage;
 	private LogTableRegistry tableRegistry;
 

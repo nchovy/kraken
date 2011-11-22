@@ -22,11 +22,11 @@ import java.util.List;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Fields;
-import org.krakenapps.logdb.query.parser.QueryParser;
 
-public class FieldsParser implements QueryParser {
+public class FieldsParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		syntax.add("fields", this, k("fields"), repeat(new StringPlaceholder(new char[] { ' ', ',' })));
