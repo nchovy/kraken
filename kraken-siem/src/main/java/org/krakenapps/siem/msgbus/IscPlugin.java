@@ -17,6 +17,7 @@ package org.krakenapps.siem.msgbus;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -37,6 +38,19 @@ public class IscPlugin {
 
 	@Requires
 	private IscClient client;
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void call(Request req, Response resp) {
+		try {
+			String method = req.getString("method");
+			List<Object> args = (List<Object>) req.get("args");
+			resp.putAll(extract(client.call(method, args.toArray())));
+		} catch (Exception e) {
+			logger.error("kraken siem: isc rpc error", e);
+			throw new MsgbusException("siem", "rpc-error");
+		}
+	}
 
 	@MsgbusMethod
 	public void getThreatcon(Request req, Response resp) {
