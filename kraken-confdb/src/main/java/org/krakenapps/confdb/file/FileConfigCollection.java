@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
@@ -327,7 +328,12 @@ public class FileConfigCollection implements ConfigCollection {
 		}
 
 		@Override
-		public <T> Collection<T> getDocuments(Class<T> clazz) {
+		public <T> Collection<T> getDocuments(Class<T> cls) {
+			return new ArrayList<T>();
+		}
+
+		@Override
+		public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback) {
 			return new ArrayList<T>();
 		}
 
