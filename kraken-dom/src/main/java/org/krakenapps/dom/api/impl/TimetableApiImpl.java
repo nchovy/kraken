@@ -16,6 +16,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
+import java.util.Date;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -63,6 +64,7 @@ public class TimetableApiImpl extends DefaultEntityEventProvider<Timetable> impl
 
 	@Override
 	public void updateTimetable(String domain, Timetable timetable) {
+		timetable.setUpdateDateTime(new Date());
 		cfg.update(domain, cls, getPred(timetable.getGuid()), timetable, NOT_FOUND, this);
 	}
 

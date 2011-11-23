@@ -39,10 +39,10 @@ public class GeoIpLocationImpl implements GeoIpLocation {
 		latitude = Double.parseDouble(t[5]);
 		longitude = Double.parseDouble(t[6]);
 
-		if (t.length > 7)
+		if (t.length > 7 && !t[7].isEmpty())
 			metroCode = Integer.parseInt(t[7]);
 
-		if (t.length > 8)
+		if (t.length > 8 && !t[8].isEmpty())
 			areaCode = Integer.parseInt(t[8]);
 	}
 
@@ -93,8 +93,8 @@ public class GeoIpLocationImpl implements GeoIpLocation {
 
 	@Override
 	public String toString() {
-		return String.format("id=%d, country=%s, region=%s, city=%s, latitude=%f, longitude=%f", id, country, region,
-				city, latitude, longitude);
+		return String.format("id=%d, country=%s, region=%s, city=%s, latitude=%f, longitude=%f", id, country, region, city, latitude,
+				longitude);
 	}
 
 }
