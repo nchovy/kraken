@@ -16,6 +16,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
+import java.util.Date;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -94,6 +95,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void updateUser(String domain, User user) {
+		user.setUpdateDateTime(new Date());
 		cfg.update(domain, cls, getPred(user.getLoginName()), user, NOT_FOUND, this);
 	}
 
