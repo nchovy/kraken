@@ -91,7 +91,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Override
 	public Collection<FileSpace> getFileSpaces(String domain) {
-		return cfg.ensureCollection(domain, fsp).findAll().getDocuments(fsp);
+		return cfg.all(domain, fsp);
 	}
 
 	@Override

@@ -55,7 +55,7 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 
 	@Override
 	public Collection<ProgramProfile> getProgramProfiles(String domain) {
-		return cfg.ensureCollection(domain, prof).findAll().getDocuments(prof);
+		return cfg.all(domain, prof);
 	}
 
 	@Override
@@ -85,7 +85,7 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 
 	@Override
 	public Collection<ProgramPack> getProgramPacks(String domain) {
-		return cfg.ensureCollection(domain, pack).findAll().getDocuments(pack);
+		return cfg.all(domain, pack);
 	}
 
 	@Override
@@ -115,7 +115,7 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 
 	@Override
 	public Collection<Program> getPrograms(String domain) {
-		return cfg.ensureCollection(domain, prog).findAll().getDocuments(prog);
+		return cfg.all(domain, prog);
 	}
 
 	@Override

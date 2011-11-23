@@ -44,7 +44,7 @@ public class TimetableApiImpl extends DefaultEntityEventProvider<Timetable> impl
 
 	@Override
 	public Collection<Timetable> getTimetables(String domain) {
-		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
+		return cfg.all(domain, cls);
 	}
 
 	@Override

@@ -43,7 +43,7 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 
 	@Override
 	public Collection<OrganizationUnit> getOrganizationUnits(String domain) {
-		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
+		return cfg.all(domain, cls);
 	}
 
 	@Override

@@ -54,17 +54,17 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public Collection<User> getUsers(String domain) {
-		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
+		return cfg.all(domain, cls);
 	}
 
 	@Override
 	public Collection<User> getUsers(String domain, Collection<String> loginNames) {
-		return cfg.ensureCollection(domain, cls).find(Predicates.in("loginName", loginNames)).getDocuments(cls);
+		return cfg.all(domain, cls, Predicates.in("loginName", loginNames));
 	}
 
 	@Override
 	public Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren) {
-		Collection<User> users = cfg.ensureCollection(domain, cls).find(Predicates.field("orgUnit/guid", orgUnitGuid)).getDocuments(cls);
+		Collection<User> users = cfg.all(domain, cls, Predicates.field("orgUnit/guid", orgUnitGuid));
 		if (includeChildren) {
 			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
 			for (OrganizationUnit ou : parent.getChildren())
@@ -75,7 +75,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public Collection<User> getUsers(String domain, String domainController) {
-		return cfg.ensureCollection(domain, cls).find(Predicates.field("domainController", domainController)).getDocuments(cls);
+		return cfg.all(domain, cls, Predicates.field("domainController", domainController));
 	}
 
 	@Override

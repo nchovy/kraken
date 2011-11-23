@@ -1,5 +1,6 @@
 package org.krakenapps.dom.api.impl;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +11,6 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
-import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicate;
@@ -47,22 +47,18 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public ConfigCollection ensureCollection(String domain, Class<?> cls) {
-		ConfigDatabase db = getDatabase(domain);
-		return db.ensureCollection(cls);
+	public <T> Collection<T> all(String domain, Class<T> cls) {
+		return all(domain, cls, null);
 	}
 
 	@Override
-	public Config findOne(ConfigDatabase db, Class<?> cls, Predicate pred, String notFoundMessage) {
-		Config c = db.findOne(cls, pred);
-		if (c == null)
-			throw new DOMException(notFoundMessage);
-		return c;
+	public <T> Collection<T> all(String domain, Class<T> cls, Predicate pred) {
+		return getDatabase(domain).ensureCollection(cls).find(pred).getDocuments(cls, getCallback(domain));
 	}
 
 	@Override
 	public <T> T find(String domain, Class<T> cls, Predicate pred) {
-		Config c = ensureCollection(domain, cls).findOne(pred);
+		Config c = getDatabase(domain).ensureCollection(cls).findOne(pred);
 		if (c == null)
 			return null;
 		return c.getDocument(cls, getCallback(domain));
@@ -98,8 +94,7 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
-			DefaultEntityEventProvider<T> provider) {
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = findOne(db, cls, pred, notFoundMessage);
 		db.remove(c);
@@ -108,9 +103,16 @@ public class ConfigManagerImpl implements ConfigManager {
 			provider.fireEntityRemoved(domain, doc);
 	}
 
+	private Config findOne(ConfigDatabase db, Class<?> cls, Predicate pred, String notFoundMessage) {
+		Config c = db.findOne(cls, pred);
+		if (c == null)
+			throw new DOMException(notFoundMessage);
+		return c;
+	}
+
 	@Override
 	public PrimitiveParseCallback getParseCallback(String domain) {
-		return callbacks.get(domain);
+		return getCallback(domain);
 	}
 
 	private class ParseCallback implements PrimitiveParseCallback {
