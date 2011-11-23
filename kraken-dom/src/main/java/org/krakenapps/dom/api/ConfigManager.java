@@ -1,8 +1,8 @@
 package org.krakenapps.dom.api;
 
+import java.util.Collection;
+
 import org.krakenapps.api.PrimitiveParseCallback;
-import org.krakenapps.confdb.Config;
-import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.Predicate;
 
@@ -11,9 +11,9 @@ public interface ConfigManager {
 
 	ConfigDatabase getDatabase(String domain);
 
-	ConfigCollection ensureCollection(String domain, Class<?> cls);
-
-	Config findOne(ConfigDatabase db, Class<?> cls, Predicate pred, String notFoundMessage);
+	<T> Collection<T> all(String domain, Class<T> cls);
+	
+	<T> Collection<T> all(String domain, Class<T> cls, Predicate pred);
 
 	<T> T find(String domain, Class<T> cls, Predicate pred);
 

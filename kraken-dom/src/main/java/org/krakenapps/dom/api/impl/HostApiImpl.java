@@ -68,13 +68,13 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public Collection<Host> getHosts(String domain) {
-		return cfg.ensureCollection(domain, host).findAll().getDocuments(host);
+		return cfg.all(domain, host);
 	}
 
 	@Override
 	public Collection<Host> getHosts(String domain, String areaGuid, boolean includeChildren) {
 		Collection<Host> hosts = new ArrayList<Host>();
-		hosts.addAll(cfg.ensureCollection(domain, host).find(Predicates.field("area/guid", areaGuid)).getDocuments(host));
+		hosts.addAll(cfg.all(domain, host, Predicates.field("area/guid", areaGuid)));
 		if (includeChildren) {
 			Area area = areaApi.getArea(domain, areaGuid);
 			for (Area child : area.getChildren())
@@ -110,7 +110,7 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public Collection<HostType> getHostTypes(String domain) {
-		return cfg.ensureCollection(domain, type).findAll().getDocuments(type);
+		return cfg.all(domain, type);
 	}
 
 	@Override
@@ -140,7 +140,7 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public Collection<HostExtension> getHostExtensions(String domain) {
-		List<HostExtension> extensions = (List<HostExtension>) cfg.ensureCollection(domain, ext).findAll().getDocuments(ext);
+		List<HostExtension> extensions = (List<HostExtension>) cfg.all(domain, ext);
 		Collections.sort(extensions, new Comparator<HostExtension>() {
 			@Override
 			public int compare(HostExtension o1, HostExtension o2) {

@@ -83,7 +83,7 @@ public class AdminApiImpl implements AdminApi {
 	@Override
 	public Collection<Admin> getAdmins(String domain) {
 		Collection<Admin> admins = new ArrayList<Admin>();
-		for (User user : cfg.ensureCollection(domain, cls).find(getPred()).getDocuments(cls))
+		for (User user : cfg.all(domain, cls, getPred()))
 			admins.add(parseAdmin(domain, user));
 		return admins;
 	}

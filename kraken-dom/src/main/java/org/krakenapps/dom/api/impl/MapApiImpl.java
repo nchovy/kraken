@@ -28,7 +28,7 @@ public class MapApiImpl extends DefaultEntityEventProvider<MapInfo> implements M
 
 	@Override
 	public Collection<MapInfo> getMaps(String domain) {
-		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
+		return cfg.all(domain, cls);
 	}
 
 	@Override

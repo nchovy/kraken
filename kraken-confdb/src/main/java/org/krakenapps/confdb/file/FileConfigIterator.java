@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
@@ -133,11 +134,16 @@ class FileConfigIterator implements ConfigIterator {
 	}
 
 	@Override
-	public <T> Collection<T> getDocuments(Class<T> clazz) {
+	public <T> Collection<T> getDocuments(Class<T> cls) {
+		return getDocuments(cls, null);
+	}
+
+	@Override
+	public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback) {
 		Collection<T> docs = new ArrayList<T>();
 		ConfigIterator it = this;
 		while (it.hasNext())
-			docs.add(it.next().getDocument(clazz));
+			docs.add(it.next().getDocument(cls, callback));
 		close();
 		return docs;
 	}

@@ -67,13 +67,13 @@ public class MsgbusScript implements Script {
 	}
 
 	@ScriptUsage(description = "run msgbus method", arguments = {
-			@ScriptArgument(name = "org id", type = "int", description = "org id"),
-			@ScriptArgument(name = "admin id", type = "int", description = "admin id"),
+			@ScriptArgument(name = "org domain", type = "string", description = "org domain"),
+			@ScriptArgument(name = "admin login name", type = "string", description = "admin login name"),
 			@ScriptArgument(name = "method", type = "string", description = "package.method format"),
 			@ScriptArgument(name = "arguments", type = "string", description = "key=value format arguments", optional = true) })
 	public void run(String[] args) throws InterruptedException {
-		Integer orgId = Integer.valueOf(args[0]);
-		Integer adminId = Integer.valueOf(args[1]);
+		String orgDomain = args[0];
+		String adminLoginName = args[1];
 		String method = args[2];
 
 		Map<String, Object> m = new HashMap<String, Object>();
@@ -96,7 +96,7 @@ public class MsgbusScript implements Script {
 		msg.setParameters(m);
 
 		Date begin = new Date();
-		ScriptSession s = new ScriptSession(orgId, adminId);
+		ScriptSession s = new ScriptSession(orgDomain, adminLoginName);
 		msgbus.dispatch(s, msg);
 		while (true) {
 			if (s.completed)
@@ -110,8 +110,7 @@ public class MsgbusScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "send", arguments = {
-			@ScriptArgument(name = "session id", type = "int", description = "session id"),
+	@ScriptUsage(description = "send", arguments = { @ScriptArgument(name = "session id", type = "int", description = "session id"),
 			@ScriptArgument(name = "callback name", type = "string", description = "callback name"),
 			@ScriptArgument(name = "data string", type = "string", description = "data string") })
 	public void send(String[] args) {
@@ -135,22 +134,22 @@ public class MsgbusScript implements Script {
 
 	private class ScriptSession extends AbstractSession {
 		private boolean completed;
-		private int orgId;
-		private int adminId;
+		private String orgDomain;
+		private String adminLoginName;
 
-		public ScriptSession(int orgId, int adminId) {
-			this.orgId = orgId;
-			this.adminId = adminId;
+		public ScriptSession(String orgDomain, String adminLoginName) {
+			this.orgDomain = orgDomain;
+			this.adminLoginName = adminLoginName;
 		}
 
 		@Override
-		public Integer getOrgId() {
-			return orgId;
+		public String getOrgDomain() {
+			return orgDomain;
 		}
 
 		@Override
-		public Integer getAdminId() {
-			return adminId;
+		public String getAdminLoginName() {
+			return adminLoginName;
 		}
 
 		@Override

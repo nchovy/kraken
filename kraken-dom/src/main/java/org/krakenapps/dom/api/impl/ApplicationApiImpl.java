@@ -62,7 +62,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public Collection<Vendor> getVendors(String domain) {
-		return cfg.ensureCollection(domain, ven).findAll().getDocuments(ven);
+		return cfg.all(domain, ven);
 	}
 
 	@Override
@@ -93,7 +93,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public Collection<Application> getApplications(String domain) {
-		return cfg.ensureCollection(domain, app).findAll().getDocuments(app);
+		return cfg.all(domain, app);
 	}
 
 	@Override
@@ -124,7 +124,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public Collection<ApplicationVersion> getApplicationVersions(String domain) {
-		return cfg.ensureCollection(domain, ver).findAll().getDocuments(ver);
+		return cfg.all(domain, ver);
 	}
 
 	@Override
@@ -155,7 +155,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public Collection<ApplicationGroup> getApplicationGroups(String domain) {
-		return cfg.ensureCollection(domain, grp).findAll().getDocuments(grp);
+		return cfg.all(domain, grp);
 	}
 
 	@Override

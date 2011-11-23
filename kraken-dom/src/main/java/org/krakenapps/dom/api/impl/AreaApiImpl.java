@@ -43,12 +43,12 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 
 	@Override
 	public Collection<Area> getAreas(String domain) {
-		return cfg.ensureCollection(domain, cls).findAll().getDocuments(cls);
+		return cfg.all(domain, cls);
 	}
 
 	@Override
 	public Collection<Area> getRootAreas(String domain) {
-		return cfg.ensureCollection(domain, cls).find(Predicates.field("parent", null)).getDocuments(cls);
+		return cfg.all(domain, cls, Predicates.field("parent", null));
 	}
 
 	@Override
