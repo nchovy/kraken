@@ -19,11 +19,8 @@ public class MapInfo {
 	private double width;
 	private double height;
 
-	@CollectionTypeHint(MapImage.class)
-	private List<MapImage> images = new ArrayList<MapImage>();
-
-	@CollectionTypeHint(MapLabel.class)
-	private List<MapLabel> labels = new ArrayList<MapLabel>();
+	@CollectionTypeHint(MapElement.class)
+	private List<MapElement> elements = new ArrayList<MapElement>();
 
 	@CollectionTypeHint(MapConnector.class)
 	private List<MapConnector> connectors = new ArrayList<MapConnector>();
@@ -76,20 +73,12 @@ public class MapInfo {
 		this.height = height;
 	}
 
-	public List<MapImage> getImages() {
-		return images;
+	public List<MapElement> getElements() {
+		return elements;
 	}
 
-	public void setImages(List<MapImage> images) {
-		this.images = images;
-	}
-
-	public List<MapLabel> getLabels() {
-		return labels;
-	}
-
-	public void setLabels(List<MapLabel> labels) {
-		this.labels = labels;
+	public void setElements(List<MapElement> elements) {
+		this.elements = elements;
 	}
 
 	public List<MapConnector> getConnectors() {
