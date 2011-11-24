@@ -81,6 +81,19 @@ public class InitialSchema {
 	}
 
 	public static void createPrograms(ScriptContext context, OrganizationApi orgApi, ProgramApi programApi) {
+		if (programApi.findProgramPack(DEFAULT_DOMAIN, "System") == null) {
+			ProgramPack pack = new ProgramPack();
+			pack.setName("System");
+			pack.setDll("Nchovy.WatchCat.Plugins.Core.dll");
+			pack.setSeq(1);
+			try {
+				programApi.createProgramPack(DEFAULT_DOMAIN, pack);
+			} catch (Exception e) {
+				logger.error("kraken dom: program pack initialize failed", e);
+				context.println("program pack initialize failed");
+			}
+		}
+
 		List<Program> programs = new ArrayList<Program>();
 		programs.add(createProgram(context, programApi, "Account Manager", "Nchovy.WatchCat.Plugins.Core.AccountManager.AccountPlugin", 1));
 		programs.add(createProgram(context, programApi, "Task Manager", "Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 2));
@@ -99,27 +112,14 @@ public class InitialSchema {
 			}
 			orgApi.setOrganizationParameter(DEFAULT_DOMAIN, "default_program_profile_id", "all");
 		}
-
-		if (programApi.findProgramPack(DEFAULT_DOMAIN, "System") == null) {
-			ProgramPack pack = new ProgramPack();
-			pack.setName("System");
-			pack.setDll("Nchovy.WatchCat.Plugins.Core.dll");
-			pack.setSeq(1);
-			pack.setPrograms(programs);
-			try {
-				programApi.createProgramPack(DEFAULT_DOMAIN, pack);
-			} catch (Exception e) {
-				logger.error("kraken dom: program pack initialize failed", e);
-				context.println("program pack initialize failed");
-			}
-		}
 	}
 
 	private static Program createProgram(ScriptContext context, ProgramApi programApi, String name, String type, int seq) {
-		if (programApi.findProgram(DEFAULT_DOMAIN, name) != null)
-			return programApi.findProgram(DEFAULT_DOMAIN, name);
+		if (programApi.findProgram(DEFAULT_DOMAIN, "System", name) != null)
+			return programApi.findProgram(DEFAULT_DOMAIN, "System", name);
 
 		Program program = new Program();
+		program.setPackName("System");
 		program.setName(name);
 		program.setTypeName(type);
 		program.setSeq(seq);

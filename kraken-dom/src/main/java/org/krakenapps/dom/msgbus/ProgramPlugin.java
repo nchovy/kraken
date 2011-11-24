@@ -47,7 +47,7 @@ public class ProgramPlugin {
 	public void getAvailablePrograms(Request req, Response resp) {
 		Collection<ProgramPack> packs = programApi.getProgramPacks(req.getOrgDomain());
 		Collection<Program> programs = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName()).getProfile().getPrograms();
-		resp.put("packs", PrimitiveConverter.serialize(packs));
+		resp.put("packs", PrimitiveConverter.serialize(packs, PrimitiveConverter.SerializeOption.INCLUDE_SKIP_FIELD));
 		resp.put("programs", PrimitiveConverter.serialize(programs));
 	}
 }

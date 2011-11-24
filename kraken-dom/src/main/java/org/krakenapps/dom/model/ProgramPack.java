@@ -15,12 +15,9 @@
  */
 package org.krakenapps.dom.model;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
-import org.krakenapps.api.ReferenceKey;
 
 public class ProgramPack {
 	@FieldOption(nullable = false, length = 60)
@@ -34,9 +31,8 @@ public class ProgramPack {
 
 	private int seq;
 
-	@ReferenceKey("name")
-	@CollectionTypeHint(Program.class)
-	private List<Program> programs = new ArrayList<Program>();
+	@FieldOption(skip = true)
+	private List<Program> programs;
 
 	public String getName() {
 		return name;

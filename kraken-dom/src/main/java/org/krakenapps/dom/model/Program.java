@@ -18,6 +18,9 @@ package org.krakenapps.dom.model;
 import org.krakenapps.api.FieldOption;
 
 public class Program {
+	@FieldOption(nullable = false)
+	private String packName;
+
 	@FieldOption(nullable = false, length = 60)
 	private String name;
 
@@ -29,6 +32,14 @@ public class Program {
 
 	private boolean visible; // in start menu
 	private int seq;
+
+	public String getPackName() {
+		return packName;
+	}
+
+	public void setPackName(String packName) {
+		this.packName = packName;
+	}
 
 	public String getName() {
 		return name;

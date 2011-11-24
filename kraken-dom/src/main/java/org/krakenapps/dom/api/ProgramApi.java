@@ -48,13 +48,15 @@ public interface ProgramApi extends EntityEventProvider<Program> {
 
 	Collection<Program> getPrograms(String domain);
 
-	Program findProgram(String domain, String name);
+	Collection<Program> getPrograms(String domain, String packName);
 
-	Program getProgram(String domain, String name);
+	Program findProgram(String domain, String packName, String name);
+
+	Program getProgram(String domain, String packName, String name);
 
 	void createProgram(String domain, Program program);
 
 	void updateProgram(String domain, Program program);
 
-	void removeProgram(String domain, String name);
+	void removeProgram(String domain, String packName, String name);
 }

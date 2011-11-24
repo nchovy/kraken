@@ -16,6 +16,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -53,6 +54,10 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 		return Predicates.field("name", name);
 	}
 
+	private Predicate getPred(String packName, String name) {
+		return Predicates.and(Predicates.field("packName", packName), Predicates.field("name", name));
+	}
+
 	@Override
 	public Collection<ProgramProfile> getProgramProfiles(String domain) {
 		return cfg.all(domain, prof);
@@ -85,17 +90,26 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 
 	@Override
 	public Collection<ProgramPack> getProgramPacks(String domain) {
-		return cfg.all(domain, pack);
+		Collection<ProgramPack> packs = cfg.all(domain, pack);
+		for (ProgramPack p : packs)
+			p.setPrograms((List<Program>) getPrograms(domain, p.getName()));
+		return packs;
 	}
 
 	@Override
 	public ProgramPack findProgramPack(String domain, String name) {
-		return cfg.find(domain, pack, getPred(name));
+		ProgramPack p = cfg.find(domain, pack, getPred(name));
+		if (p == null)
+			return null;
+		p.setPrograms((List<Program>) getPrograms(domain, p.getName()));
+		return p;
 	}
 
 	@Override
 	public ProgramPack getProgramPack(String domain, String name) {
-		return cfg.get(domain, pack, getPred(name), PACK_NOT_FOUND);
+		ProgramPack p = cfg.get(domain, pack, getPred(name), PACK_NOT_FOUND);
+		p.setPrograms((List<Program>) getPrograms(domain, p.getName()));
+		return p;
 	}
 
 	@Override
@@ -111,6 +125,8 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	@Override
 	public void removeProgramPack(String domain, String name) {
 		cfg.remove(domain, ProgramApiImpl.pack, getPred(name), PACK_NOT_FOUND, packEventProvider);
+		for (Program p : getPrograms(domain, name))
+			removeProgram(domain, name, p.getName());
 	}
 
 	@Override
@@ -119,27 +135,32 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	}
 
 	@Override
-	public Program findProgram(String domain, String name) {
-		return cfg.find(domain, prog, getPred(name));
+	public Collection<Program> getPrograms(String domain, String packName) {
+		return cfg.all(domain, prog, Predicates.field("packName", packName));
 	}
 
 	@Override
-	public Program getProgram(String domain, String name) {
-		return cfg.get(domain, prog, getPred(name), PROG_NOT_FOUND);
+	public Program findProgram(String domain, String packName, String name) {
+		return cfg.find(domain, prog, getPred(packName, name));
+	}
+
+	@Override
+	public Program getProgram(String domain, String packName, String name) {
+		return cfg.get(domain, prog, getPred(packName, name), PROG_NOT_FOUND);
 	}
 
 	@Override
 	public void createProgram(String domain, Program program) {
-		cfg.add(domain, prog, getPred(program.getName()), program, PROG_ALREADY_EXIST, this);
+		cfg.add(domain, prog, getPred(program.getPackName(), program.getName()), program, PROG_ALREADY_EXIST, this);
 	}
 
 	@Override
 	public void updateProgram(String domain, Program program) {
-		cfg.update(domain, prog, getPred(program.getName()), program, PROG_NOT_FOUND, this);
+		cfg.update(domain, prog, getPred(program.getPackName(), program.getName()), program, PROG_NOT_FOUND, this);
 	}
 
 	@Override
-	public void removeProgram(String domain, String name) {
-		cfg.remove(domain, prog, getPred(name), PROG_NOT_FOUND, this);
+	public void removeProgram(String domain, String packName, String name) {
+		cfg.remove(domain, prog, getPred(packName, name), PROG_NOT_FOUND, this);
 	}
 }
