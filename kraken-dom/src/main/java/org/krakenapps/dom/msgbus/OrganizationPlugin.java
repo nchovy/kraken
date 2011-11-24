@@ -36,7 +36,7 @@ public class OrganizationPlugin {
 
 	@MsgbusMethod
 	public void getOrganization(Request req, Response response) {
-		String domain = req.getString("domain");
+		String domain = req.has("domain") ? req.getString("domain") : req.getOrgDomain();
 		Organization organization = orgApi.getOrganization(domain);
 		response.put("result", PrimitiveConverter.serialize(organization));
 	}

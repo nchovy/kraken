@@ -59,8 +59,6 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	private static DefaultEntityEventProvider<UploadedFile> fileEventProvider = new DefaultEntityEventProvider<UploadedFile>();
 
 	private ConcurrentMap<String, UploadItem> uploadTokens = new ConcurrentHashMap<String, FileUploadApiImpl.UploadItem>();
-	// private ConcurrentMap<String, String> downloadTokens = new
-	// ConcurrentHashMap<String, String>(); // token-loginName
 	private ConcurrentMap<Integer, DownloadToken> downloadTokens = new ConcurrentHashMap<Integer, DownloadToken>(); // session-token
 
 	@Requires
@@ -199,7 +197,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 			return downloadTokens.get(session.getId()).guid;
 
 		userApi.getUser(session.getOrgDomain(), session.getAdminLoginName());
-		DownloadToken token = new DownloadToken(session.getOrgDomain(), session.getAdminLoginName());
+		DownloadToken token = new DownloadToken(session);
 		downloadTokens.putIfAbsent(session.getId(), token);
 		return token.guid;
 	}
@@ -211,7 +209,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 			throw new DOMException("download-token-not-found");
 
 		UploadedFile uploaded = cfg.get(domain, file, getPred(tokenGuid), FILE_NOT_FOUND);
-		if (!token.loginName.equals(uploaded.getOwner().getLoginName())) {
+		if (!token.session.getAdminLoginName().equals(uploaded.getOwner().getLoginName())) {
 			Map<String, Object> params = new HashMap<String, Object>();
 			params.put("guid", uploaded.getGuid());
 			params.put("owner", uploaded.getOwner().getLoginName());
@@ -227,12 +225,10 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	private class DownloadToken {
 		private String guid = UUID.randomUUID().toString();
-		private String orgDomain;
-		private String loginName;
+		private Session session;
 
-		public DownloadToken(String orgDomain, String loginName) {
-			this.orgDomain = orgDomain;
-			this.loginName = loginName;
+		public DownloadToken(Session session) {
+			this.session = session;
 		}
 	}
 

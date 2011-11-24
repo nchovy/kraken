@@ -49,7 +49,6 @@ import org.krakenapps.msgbus.Session;
 @Provides
 public class AdminApiImpl implements AdminApi {
 	private static final Class<User> cls = User.class;
-	private static final String EXT_KEY = "admin";
 	private static final String NOT_FOUND = "admin-not-found";
 	private static final String ALREADY_EXIST = "admin-already-setted";
 	private static final String LOCKED_ADMIN = "locked-admin";
@@ -71,6 +70,11 @@ public class AdminApiImpl implements AdminApi {
 
 	private Set<LoginCallback> callbacks = new HashSet<LoginCallback>();
 	private PriorityQueue<LoggedInAdmin> loggedIn = new PriorityQueue<LoggedInAdmin>(11, new LoggedInAdminComparator());
+
+	@Override
+	public String getExtensionName() {
+		return "admin";
+	}
 
 	private Predicate getPred() {
 		return Predicates.not(Predicates.field("ext/admin", null));
@@ -100,7 +104,7 @@ public class AdminApiImpl implements AdminApi {
 
 	@Override
 	public Admin getAdmin(String domain, User user) {
-		Object o = user.getExt().get(EXT_KEY);
+		Object o = user.getExt().get(getExtensionName());
 		if (o == null)
 			return null;
 
@@ -113,7 +117,7 @@ public class AdminApiImpl implements AdminApi {
 	}
 
 	private Admin parseAdmin(String domain, User user) {
-		Admin admin = PrimitiveConverter.parse(Admin.class, user.getExt().get(EXT_KEY), cfg.getParseCallback(domain));
+		Admin admin = PrimitiveConverter.parse(Admin.class, user.getExt().get(getExtensionName()), cfg.getParseCallback(domain));
 		admin.setUser(user);
 		return admin;
 	}
@@ -127,7 +131,7 @@ public class AdminApiImpl implements AdminApi {
 
 		prepare(admin);
 		User target = userApi.getUser(domain, targetUserLoginName);
-		target.getExt().put(EXT_KEY, admin);
+		target.getExt().put(getExtensionName(), admin);
 		userApi.updateUser(domain, target);
 	}
 
@@ -137,7 +141,7 @@ public class AdminApiImpl implements AdminApi {
 
 		prepare(admin);
 		User target = getAdmin(domain, targetUserLoginName).getUser();
-		target.getExt().put(EXT_KEY, admin);
+		target.getExt().put(getExtensionName(), admin);
 		userApi.updateUser(domain, target);
 	}
 
@@ -180,7 +184,7 @@ public class AdminApiImpl implements AdminApi {
 		checkPermissionLevel(domain, requestAdminLoginName, target, "unset-admin-permission-denied");
 
 		User user = target.getUser();
-		user.getExt().remove(EXT_KEY);
+		user.getExt().remove(getExtensionName());
 		userApi.updateUser(domain, user);
 	}
 

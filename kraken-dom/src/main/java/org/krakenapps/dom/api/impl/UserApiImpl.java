@@ -17,10 +17,14 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
@@ -28,8 +32,12 @@ import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+import org.osgi.util.tracker.ServiceTracker;
 
 @Component(name = "dom-user-api")
 @Provides
@@ -47,6 +55,23 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Requires
 	private OrganizationUnitApi orgUnitApi;
+
+	private UserExtensionProviderTracker tracker;
+	private ConcurrentMap<String, UserExtensionProvider> userExtensionProviders = new ConcurrentHashMap<String, UserExtensionProvider>();
+
+	public UserApiImpl(BundleContext bc) {
+		this.tracker = new UserExtensionProviderTracker(bc);
+	}
+
+	@Validate
+	public void validate() {
+		tracker.open();
+	}
+
+	@Invalidate
+	public void invalidate() {
+		tracker.close();
+	}
 
 	private Predicate getPred(String loginName) {
 		return Predicates.field("loginName", loginName);
@@ -105,6 +130,16 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
+	public Collection<UserExtensionProvider> getExtensionProviders() {
+		return userExtensionProviders.values();
+	}
+
+	@Override
+	public UserExtensionProvider getExtensionProvider(String name) {
+		return userExtensionProviders.get(name);
+	}
+
+	@Override
 	public void setSaltLength(String domain, int length) {
 		if (length < 0 || length > 20)
 			throw new IllegalArgumentException("invalid salt length. (valid: 0~20)");
@@ -134,5 +169,25 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	@Override
 	public String hashPassword(String salt, String text) {
 		return Sha1.hashPassword(salt, text);
+	}
+
+	private class UserExtensionProviderTracker extends ServiceTracker {
+		public UserExtensionProviderTracker(BundleContext bc) {
+			super(bc, UserExtensionProvider.class.getName(), null);
+		}
+
+		@Override
+		public Object addingService(ServiceReference reference) {
+			UserExtensionProvider p = (UserExtensionProvider) super.addingService(reference);
+			userExtensionProviders.put(p.getExtensionName(), p);
+			return p;
+		}
+
+		@Override
+		public void removedService(ServiceReference reference, Object service) {
+			UserExtensionProvider p = (UserExtensionProvider) service;
+			userExtensionProviders.remove(p.getExtensionName());
+			super.removedService(reference, service);
+		}
 	}
 }

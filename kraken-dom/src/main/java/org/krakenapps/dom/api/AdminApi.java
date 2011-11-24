@@ -21,7 +21,7 @@ import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Session;
 
-public interface AdminApi {
+public interface AdminApi extends UserExtensionProvider {
 	Collection<Admin> getAdmins(String domain);
 
 	Admin findAdmin(String domain, String loginName);

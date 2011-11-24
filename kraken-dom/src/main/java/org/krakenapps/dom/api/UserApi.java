@@ -38,6 +38,10 @@ public interface UserApi extends EntityEventProvider<User> {
 
 	void removeUser(String domain, String loginName);
 
+	Collection<UserExtensionProvider> getExtensionProviders();
+
+	UserExtensionProvider getExtensionProvider(String name);
+
 	void setSaltLength(String domain, int length);
 
 	int getSaltLength(String domain);

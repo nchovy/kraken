@@ -16,7 +16,6 @@
 package org.krakenapps.dom.model;
 
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 import org.krakenapps.api.FieldOption;
@@ -33,9 +32,6 @@ public class Vendor {
 
 	@FieldOption(nullable = false)
 	private Date updateDateTime = new Date();
-
-	@FieldOption(skip = true)
-	private List<Application> applications;
 
 	public String getGuid() {
 		return guid;
@@ -67,13 +63,5 @@ public class Vendor {
 
 	public void setUpdateDateTime(Date updateDateTime) {
 		this.updateDateTime = updateDateTime;
-	}
-
-	public List<Application> getApplications() {
-		return applications;
-	}
-
-	public void setApplications(List<Application> applications) {
-		this.applications = applications;
 	}
 }
