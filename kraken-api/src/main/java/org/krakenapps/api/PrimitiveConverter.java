@@ -28,6 +28,9 @@ public class PrimitiveConverter {
 
 	@SuppressWarnings("unchecked")
 	private static Object serialize(Object root, Object obj, PrimitiveSerializeCallback callback, List<String> refkey) {
+		if (obj == null)
+			return null;
+
 		Class<?> cls = obj.getClass();
 
 		// Primitive Object
