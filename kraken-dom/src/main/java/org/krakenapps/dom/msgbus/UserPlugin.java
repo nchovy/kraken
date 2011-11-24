@@ -49,14 +49,15 @@ public class UserPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
-		User user = PrimitiveConverter.parse(User.class, req.getParams());
+		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams());
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateUser(Request req, Response resp) {
-		User user = PrimitiveConverter.parse(User.class, req.getParams());
+		User before = userApi.getUser(req.getOrgDomain(), req.getString("loginName"));
+		User user = (User) PrimitiveConverter.overwrite(before, req.getParams());
 		userApi.updateUser(req.getOrgDomain(), user);
 	}
 

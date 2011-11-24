@@ -250,13 +250,13 @@ public class PrimitiveConverter {
 		return result;
 	}
 
-	public static void overwrite(Object obj, Map<String, Object> m) {
+	public static Object overwrite(Object obj, Map<String, Object> m) {
 		Object newObj = parse(obj.getClass(), m);
-		overwrite(obj, newObj, m);
+		return overwrite(obj, newObj, m);
 	}
 
 	@SuppressWarnings("unchecked")
-	private static void overwrite(Object before, Object after, Map<String, Object> m) {
+	private static Object overwrite(Object before, Object after, Map<String, Object> m) {
 		try {
 			for (Field f : before.getClass().getDeclaredFields()) {
 				String fieldName = toUnderscoreName(f.getName());
@@ -274,6 +274,7 @@ public class PrimitiveConverter {
 		} catch (Exception e) {
 			throw new RuntimeException("Primitive overwrite failed", e);
 		}
+		return before;
 	}
 
 	public static String toUnderscoreName(String s) {

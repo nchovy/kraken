@@ -44,14 +44,15 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createOrganization(Request req, Response resp) {
-		Organization organization = PrimitiveConverter.parse(Organization.class, req.getParams());
+		Organization organization = (Organization) PrimitiveConverter.overwrite(new Organization(), req.getParams());
 		orgApi.createOrganization(organization);
 	}
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateOrganization(Request req, Response resp) {
-		Organization organization = PrimitiveConverter.parse(Organization.class, req.getParams());
+		Organization before = orgApi.getOrganization(req.getString("domain"));
+		Organization organization = (Organization) PrimitiveConverter.overwrite(before, req.getParams());
 		orgApi.updateOrganization(organization);
 	}
 

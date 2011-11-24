@@ -54,14 +54,15 @@ public class AreaPlugin {
 
 	@MsgbusMethod
 	public void createArea(Request req, Response resp) {
-		Area area = PrimitiveConverter.parse(Area.class, req.getParams());
+		Area area = (Area) PrimitiveConverter.overwrite(new Area(), req.getParams());
 		areaApi.createArea(req.getOrgDomain(), area);
 		resp.put("guid", area.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateArea(Request req, Response resp) {
-		Area area = PrimitiveConverter.parse(Area.class, req.getParams());
+		Area before = areaApi.getArea(req.getOrgDomain(), req.getString("guid"));
+		Area area = (Area) PrimitiveConverter.overwrite(before, req.getParams());
 		areaApi.updateArea(req.getOrgDomain(), area);
 	}
 

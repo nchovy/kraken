@@ -50,14 +50,15 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createVendor(Request req, Response resp) {
-		Vendor vendor = PrimitiveConverter.parse(Vendor.class, req.getParams());
+		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(new Vendor(), req.getParams());
 		appApi.createVendor(req.getOrgDomain(), vendor);
 		resp.put("guid", vendor.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateVendor(Request req, Response resp) {
-		Vendor vendor = PrimitiveConverter.parse(Vendor.class, req.getParams());
+		Vendor before = appApi.getVendor(req.getOrgDomain(), req.getString("guid"));
+		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(before, req.getParams());
 		appApi.updateVendor(req.getOrgDomain(), vendor);
 	}
 
@@ -82,14 +83,15 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
-		Application application = PrimitiveConverter.parse(Application.class, req.getParams());
+		Application application = (Application) PrimitiveConverter.overwrite(new Application(), req.getParams());
 		appApi.createApplication(req.getOrgDomain(), application);
 		resp.put("guid", application.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateApplication(Request req, Response resp) {
-		Application application = PrimitiveConverter.parse(Application.class, req.getParams());
+		Application before = appApi.getApplication(req.getOrgDomain(), req.getString("guid"));
+		Application application = (Application) PrimitiveConverter.overwrite(before, req.getParams());
 		appApi.updateApplication(req.getOrgDomain(), application);
 	}
 
@@ -114,14 +116,15 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createApplicationGroups(Request req, Response resp) {
-		ApplicationGroup group = PrimitiveConverter.parse(ApplicationGroup.class, req.getParams());
+		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(new ApplicationGroup(), req.getParams());
 		appApi.createApplicationGroup(req.getOrgDomain(), group);
 		resp.put("guid", group.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateApplicationGroups(Request req, Response resp) {
-		ApplicationGroup group = PrimitiveConverter.parse(ApplicationGroup.class, req.getParams());
+		ApplicationGroup before = appApi.getApplicationGroup(req.getOrgDomain(), req.getString("guid"));
+		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(before, req.getParams());
 		appApi.updateApplicationGroup(req.getOrgDomain(), group);
 	}
 

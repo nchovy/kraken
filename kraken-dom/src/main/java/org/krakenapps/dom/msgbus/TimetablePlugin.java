@@ -45,14 +45,15 @@ public class TimetablePlugin {
 
 	@MsgbusMethod
 	public void createTimetable(Request req, Response resp) {
-		Timetable timetable = PrimitiveConverter.parse(Timetable.class, req.getParams());
+		Timetable timetable = (Timetable) PrimitiveConverter.overwrite(new Timetable(), req.getParams());
 		timetableApi.createTimetable(req.getOrgDomain(), timetable);
 		resp.put("guid", timetable.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateTimetable(Request req, Response resp) {
-		Timetable timetable = PrimitiveConverter.parse(Timetable.class, req.getParams());
+		Timetable before = timetableApi.getTimetable(req.getOrgDomain(), req.getString("guid"));
+		Timetable timetable = (Timetable) PrimitiveConverter.overwrite(before, req.getParams());
 		timetableApi.updateTimetable(req.getOrgDomain(), timetable);
 	}
 

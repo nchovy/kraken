@@ -48,14 +48,15 @@ public class HostPlugin {
 
 	@MsgbusMethod
 	public void createHost(Request req, Response resp) {
-		Host host = PrimitiveConverter.parse(Host.class, req.getParams());
+		Host host = (Host) PrimitiveConverter.overwrite(new Host(), req.getParams());
 		hostApi.createHost(req.getOrgDomain(), host);
 		resp.put("guid", host.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateHost(Request req, Response resp) {
-		Host host = PrimitiveConverter.parse(Host.class, req.getParams());
+		Host before = hostApi.getHost(req.getOrgDomain(), req.getString("guid"));
+		Host host = (Host) PrimitiveConverter.overwrite(before, req.getParams());
 		hostApi.updateHost(req.getOrgDomain(), host);
 	}
 

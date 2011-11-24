@@ -60,8 +60,9 @@ public class AdminPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void updateAdmin(Request req, Response resp) {
-		Admin admin = PrimitiveConverter.parse(Admin.class, req.getParams());
 		String loginName = req.getString("login_name");
+		Admin admin = adminApi.getAdmin(req.getOrgDomain(), loginName);
+		PrimitiveConverter.overwrite(admin, req.getParams());
 		adminApi.updateAdmin(req.getOrgDomain(), req.getAdminLoginName(), loginName, admin);
 	}
 

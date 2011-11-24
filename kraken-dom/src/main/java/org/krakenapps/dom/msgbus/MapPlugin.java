@@ -33,14 +33,15 @@ public class MapPlugin {
 
 	@MsgbusMethod
 	public void createMap(Request req, Response resp) {
-		MapInfo map = PrimitiveConverter.parse(MapInfo.class, req.getParams());
+		MapInfo map = (MapInfo) PrimitiveConverter.overwrite(new MapInfo(), req.getParams());
 		mapApi.createMap(req.getOrgDomain(), map);
 		resp.put("guid", map.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateMap(Request req, Response resp) {
-		MapInfo map = PrimitiveConverter.parse(MapInfo.class, req.getParams());
+		MapInfo before = mapApi.getMap(req.getOrgDomain(), req.getString("guid"));
+		MapInfo map = (MapInfo) PrimitiveConverter.overwrite(before, req.getParams());
 		mapApi.updateMap(req.getOrgDomain(), map);
 	}
 

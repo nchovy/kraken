@@ -53,14 +53,15 @@ public class FileUploadPlugin {
 
 	@MsgbusMethod
 	public void createFileSpace(Request req, Response resp) {
-		FileSpace space = PrimitiveConverter.parse(FileSpace.class, req.getParams());
+		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(new FileSpace(), req.getParams());
 		fileUploadApi.createFileSpace(req.getOrgDomain(), space);
 		resp.put("guid", space.getGuid());
 	}
 
 	@MsgbusMethod
 	public void updateFileSpace(Request req, Response resp) {
-		FileSpace space = PrimitiveConverter.parse(FileSpace.class, req.getParams());
+		FileSpace before = fileUploadApi.getFileSpace(req.getOrgDomain(), req.getString("guid"));
+		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(before, req.getParams());
 		fileUploadApi.updateFileSpace(req.getOrgDomain(), req.getAdminLoginName(), space);
 	}
 
