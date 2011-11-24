@@ -18,6 +18,10 @@ public class PrimitiveConverter {
 			Short.class, int.class, Integer.class, long.class, Long.class, float.class, Float.class, double.class, Double.class,
 			boolean.class, Boolean.class, char.class, Character.class, String.class, Date.class));
 
+	public static enum SerializeOption {
+		INCLUDE_SKIP_FIELD
+	}
+
 	public static Object serialize(Object obj) {
 		return serialize(obj, obj, null, null);
 	}
@@ -26,10 +30,21 @@ public class PrimitiveConverter {
 		return serialize(obj, obj, callback, null);
 	}
 
+	public static Object serialize(Object obj, SerializeOption... options) {
+		return serialize(obj, obj, null, null, options);
+	}
+
+	public static Object serialize(Object obj, PrimitiveSerializeCallback callback, SerializeOption... options) {
+		return serialize(obj, obj, callback, null, options);
+	}
+
 	@SuppressWarnings("unchecked")
-	private static Object serialize(Object root, Object obj, PrimitiveSerializeCallback callback, List<String> refkey) {
+	private static Object serialize(Object root, Object obj, PrimitiveSerializeCallback callback, List<String> refkey,
+			SerializeOption... options) {
 		if (obj == null)
 			return null;
+
+		List<SerializeOption> optionList = Arrays.asList(options);
 
 		Class<?> cls = obj.getClass();
 
@@ -41,7 +56,7 @@ public class PrimitiveConverter {
 		if (Collection.class.isAssignableFrom(cls)) {
 			Collection<Object> col = new ArrayList<Object>();
 			for (Object o : (Collection<Object>) obj)
-				col.add(serialize(root, o, callback, refkey));
+				col.add(serialize(root, o, callback, refkey, options));
 			return col;
 		}
 
@@ -50,9 +65,9 @@ public class PrimitiveConverter {
 			Map<Object, Object> m = new HashMap<Object, Object>();
 			Map<Object, Object> o = (Map<Object, Object>) obj;
 			for (Object key : o.keySet()) {
-				Object k = serialize(root, key, callback, refkey);
+				Object k = serialize(root, key, callback, refkey, options);
 				Object value = o.get(key);
-				Object v = serialize(root, value, callback, refkey);
+				Object v = serialize(root, value, callback, refkey, options);
 				m.put(k, v);
 			}
 			return m;
@@ -64,7 +79,7 @@ public class PrimitiveConverter {
 			try {
 				FieldOption option = f.getAnnotation(FieldOption.class);
 
-				if (option != null && option.skip())
+				if (option != null && option.skip() && !optionList.contains(SerializeOption.INCLUDE_SKIP_FIELD))
 					continue;
 
 				if (refkey != null && !refkey.contains(f.getName()))
@@ -94,7 +109,7 @@ public class PrimitiveConverter {
 						List<String> referenceKey = null;
 						if (f.getAnnotation(ReferenceKey.class) != null && callback != null)
 							referenceKey = Arrays.asList(f.getAnnotation(ReferenceKey.class).value());
-						Object serialized = serialize(root, value, callback, referenceKey);
+						Object serialized = serialize(root, value, callback, referenceKey, options);
 						m.put(fieldName, serialized);
 					}
 				}
@@ -139,11 +154,6 @@ public class PrimitiveConverter {
 				if (option != null && !option.name().isEmpty())
 					fieldName = option.name();
 
-				if (option != null && !option.nullable()) {
-					if (!m.containsKey(fieldName) || m.get(fieldName) == null)
-						throw new IllegalArgumentException(fieldName + " cannot be null.");
-				}
-
 				Object value = m.get(fieldName);
 				f.setAccessible(true);
 				if (value == null) {
@@ -160,13 +170,14 @@ public class PrimitiveConverter {
 							f.set(n, callback.onParse(fieldType, keys));
 						else if (option != null && !option.nullable())
 							throw new IllegalArgumentException(fieldName + " requires parse callback");
-						continue;
 					} else if (value instanceof Object[]) {
 						List<Object> coll = new ArrayList<Object>();
 						for (Object v : (Object[]) value) {
 							Map<String, Object> keys = (Map<String, Object>) v;
 							if (callback != null) {
-								coll.add(callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(), keys));
+								Object o = callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(), keys);
+								if (o != null)
+									coll.add(o);
 							} else if (option != null && !option.nullable())
 								throw new IllegalArgumentException(fieldName + " requires parse callback");
 						}
@@ -178,8 +189,8 @@ public class PrimitiveConverter {
 							f.set(n, new HashSet<Object>(coll));
 						else if (fieldType.isArray())
 							f.set(n, coll.toArray());
-						continue;
 					}
+					continue;
 				}
 
 				if (fieldType.isEnum()) {
