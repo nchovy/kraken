@@ -82,15 +82,15 @@ public class PrimitiveConverter {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
-								f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
 						m.put(fieldName, null);
 					else {
-						List<String> referenceKey = (f.getAnnotation(ReferenceKey.class) != null) ? Arrays.asList(f
-								.getAnnotation(ReferenceKey.class).value()) : null;
+						List<String> referenceKey = null;
+						if (f.getAnnotation(ReferenceKey.class) != null && callback != null)
+							referenceKey = Arrays.asList(f.getAnnotation(ReferenceKey.class).value());
 						Object serialized = serialize(root, value, callback, referenceKey);
 						m.put(fieldName, serialized);
 					}
@@ -171,9 +171,9 @@ public class PrimitiveConverter {
 						// TODO
 						if (List.class.isAssignableFrom(fieldType))
 							f.set(n, coll);
-						else if(Set.class.isAssignableFrom(fieldType))
+						else if (Set.class.isAssignableFrom(fieldType))
 							f.set(n, new HashSet<Object>(coll));
-						else if(fieldType.isArray())
+						else if (fieldType.isArray())
 							f.set(n, coll.toArray());
 						continue;
 					}

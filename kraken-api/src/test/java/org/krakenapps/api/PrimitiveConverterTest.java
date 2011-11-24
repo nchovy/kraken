@@ -41,7 +41,6 @@ public class PrimitiveConverterTest {
 	public void testToPrimitive() {
 		Sample s = new Sample("qoo", 123, "ignore field", new Nested("xeraph", "cucumber", "pumpkin"), new Nested("delmitz"));
 		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
-		System.out.println(o);
 		assertEquals("qoo", o.get("foo"));
 		assertEquals(123, o.get("bar"));
 		assertEquals(false, o.containsKey("ignore"));
@@ -50,7 +49,7 @@ public class PrimitiveConverterTest {
 		assertEquals(Arrays.asList("cucumber", "pumpkin"), m.get("vegetable_list"));
 		Map<String, Object> m2 = (Map<String, Object>) o.get("ref");
 		assertEquals("delmitz", m2.get("name"));
-		assertEquals(false, m2.containsKey("vegetable_list"));
+		assertEquals(true, m2.containsKey("vegetable_list"));
 	}
 
 	@Test
