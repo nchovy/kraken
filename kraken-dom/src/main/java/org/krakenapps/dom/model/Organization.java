@@ -38,15 +38,18 @@ public class Organization {
 	@FieldOption(length = 255)
 	private String description;
 
-	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
-
 	private boolean isEnabled;
 	private String domainController;
 	private String backupDomainController;
 
 	@MapTypeHint({ String.class, Object.class })
 	private Map<String, Object> parameters = new HashMap<String, Object>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getDomain() {
 		return domain;
@@ -88,14 +91,6 @@ public class Organization {
 		this.description = description;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
 	public boolean isEnabled() {
 		return isEnabled;
 	}
@@ -126,5 +121,21 @@ public class Organization {
 
 	public void setParameters(Map<String, Object> parameters) {
 		this.parameters = parameters;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

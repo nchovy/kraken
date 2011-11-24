@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -76,6 +77,7 @@ public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization
 		ConfigDatabase db = cfg.getDatabase(organization.getDomain());
 		Config c = db.findOne(cls, null);
 		if (c != null) {
+			organization.setUpdated(new Date());
 			db.update(c, organization);
 			fireEntityUpdated(organization.getDomain(), organization);
 		} else {
@@ -125,6 +127,7 @@ public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization
 			params = new HashMap<String, Object>();
 		params.put(key, value);
 		organization.setParameters(params);
+		organization.setUpdated(new Date());
 		cfg.update(domain, cls, null, organization, NOT_FOUND, this);
 	}
 
@@ -135,6 +138,7 @@ public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization
 		if (params != null)
 			params.remove(key);
 		organization.setParameters(params);
+		organization.setUpdated(new Date());
 		cfg.update(domain, cls, null, organization, NOT_FOUND, this);
 	}
 }

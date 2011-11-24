@@ -1,6 +1,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
+import java.util.Date;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -48,6 +49,7 @@ public class MapApiImpl extends DefaultEntityEventProvider<MapInfo> implements M
 
 	@Override
 	public void updateMap(String domain, MapInfo map) {
+		map.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(map.getGuid()), map, NOT_FOUND, this);
 	}
 

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -100,6 +101,7 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public void updateHost(String domain, Host host) {
+		host.setUpdated(new Date());
 		cfg.update(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_NOT_FOUND, this);
 	}
 

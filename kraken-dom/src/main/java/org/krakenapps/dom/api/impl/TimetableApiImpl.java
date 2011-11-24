@@ -64,7 +64,7 @@ public class TimetableApiImpl extends DefaultEntityEventProvider<Timetable> impl
 
 	@Override
 	public void updateTimetable(String domain, Timetable timetable) {
-		timetable.setUpdateDateTime(new Date());
+		timetable.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(timetable.getGuid()), timetable, NOT_FOUND, this);
 	}
 

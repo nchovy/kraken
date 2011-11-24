@@ -34,7 +34,10 @@ public class FileSpace {
 	private String name;
 
 	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	@FieldOption(skip = true)
 	private List<UploadedFile> uploadedFiles;
@@ -63,12 +66,20 @@ public class FileSpace {
 		this.name = name;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
+	public Date getCreated() {
+		return created;
 	}
 
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 
 	public List<UploadedFile> getUploadedFiles() {

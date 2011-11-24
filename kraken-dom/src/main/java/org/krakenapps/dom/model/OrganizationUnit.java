@@ -33,12 +33,15 @@ public class OrganizationUnit {
 
 	private String domainController;
 
-	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
-
 	@ReferenceKey("guid")
 	@CollectionTypeHint(OrganizationUnit.class)
 	private List<OrganizationUnit> children = new ArrayList<OrganizationUnit>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getGuid() {
 		return guid;
@@ -64,19 +67,27 @@ public class OrganizationUnit {
 		this.domainController = domainController;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
 	public List<OrganizationUnit> getChildren() {
 		return children;
 	}
 
 	public void setChildren(List<OrganizationUnit> children) {
 		this.children = children;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

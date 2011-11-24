@@ -16,6 +16,7 @@
 package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.krakenapps.api.CollectionTypeHint;
@@ -29,6 +30,12 @@ public class Role {
 
 	@CollectionTypeHint(Permission.class)
 	private List<Permission> permissions = new ArrayList<Permission>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getName() {
 		return name;
@@ -52,5 +59,21 @@ public class Role {
 
 	public void setPermissions(List<Permission> permissions) {
 		this.permissions = permissions;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

@@ -34,11 +34,14 @@ public class Area {
 	@FieldOption(length = 255)
 	private String description;
 
-	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
-
 	@ReferenceKey("guid")
 	private Area parent;
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	@ReferenceKey("guid")
 	@CollectionTypeHint(Area.class)
@@ -68,20 +71,28 @@ public class Area {
 		this.description = description;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
 	public Area getParent() {
 		return parent;
 	}
 
 	public void setParent(Area parent) {
 		this.parent = parent;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 
 	public List<Area> getChildren() {

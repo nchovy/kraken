@@ -16,6 +16,7 @@
 package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.krakenapps.api.CollectionTypeHint;
@@ -31,6 +32,12 @@ public class ProgramProfile {
 	@ReferenceKey({ "packName", "name" })
 	@CollectionTypeHint(Program.class)
 	private List<Program> programs = new ArrayList<Program>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getName() {
 		return name;
@@ -54,5 +61,21 @@ public class ProgramProfile {
 
 	public void setPrograms(List<Program> programs) {
 		this.programs = programs;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

@@ -30,14 +30,14 @@ public class Timetable {
 	@FieldOption(nullable = false, length = 60)
 	private String name;
 
-	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
-
-	@FieldOption(nullable = false)
-	private Date updateDateTime = new Date();
-
 	@CollectionTypeHint(Schedule.class)
 	private List<Schedule> schedules = new ArrayList<Schedule>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getGuid() {
 		return guid;
@@ -55,27 +55,27 @@ public class Timetable {
 		this.name = name;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
-	public Date getUpdateDateTime() {
-		return updateDateTime;
-	}
-
-	public void setUpdateDateTime(Date updateDateTime) {
-		this.updateDateTime = updateDateTime;
-	}
-
 	public List<Schedule> getSchedules() {
 		return schedules;
 	}
 
 	public void setSchedules(List<Schedule> schedules) {
 		this.schedules = schedules;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

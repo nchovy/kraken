@@ -59,14 +59,14 @@ public class User {
 	@FieldOption(length = 60)
 	private String domainController;
 
-	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
-
-	@FieldOption(nullable = false)
-	private Date updateDateTime = new Date();
-
 	@MapTypeHint({ String.class, Object.class })
 	private Map<String, Object> ext = new HashMap<String, Object>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getLoginName() {
 		return loginName;
@@ -164,27 +164,27 @@ public class User {
 		this.domainController = domainController;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
-	public Date getUpdateDateTime() {
-		return updateDateTime;
-	}
-
-	public void setUpdateDateTime(Date updateDateTime) {
-		this.updateDateTime = updateDateTime;
-	}
-
 	public Map<String, Object> getExt() {
 		return ext;
 	}
 
 	public void setExt(Map<String, Object> ext) {
 		this.ext = ext;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.model;
 
+import java.util.Date;
 import java.util.List;
 
 import org.krakenapps.api.FieldOption;
@@ -30,6 +31,12 @@ public class ProgramPack {
 	private String description;
 
 	private int seq;
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	@FieldOption(skip = true)
 	private List<Program> programs;
@@ -64,6 +71,22 @@ public class ProgramPack {
 
 	public void setSeq(int seq) {
 		this.seq = seq;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 
 	public List<Program> getPrograms() {

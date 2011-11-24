@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -110,6 +111,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	@Override
 	public void updateFileSpace(String domain, String loginName, FileSpace space) {
 		checkPermissionLevel(domain, loginName, space.getGuid(), "update-file-space-permission-denied");
+		space.setUpdated(new Date());
 		cfg.update(domain, fsp, getPred(space.getGuid()), space, FSP_NOT_FOUND, this);
 	}
 

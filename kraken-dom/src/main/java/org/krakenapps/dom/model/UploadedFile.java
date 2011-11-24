@@ -42,7 +42,10 @@ public class UploadedFile {
 	private String path;
 
 	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getGuid() {
 		return guid;
@@ -92,15 +95,23 @@ public class UploadedFile {
 		this.path = path;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
-	}
-
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
-	}
-
 	public File getFile() {
 		return new File(path);
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

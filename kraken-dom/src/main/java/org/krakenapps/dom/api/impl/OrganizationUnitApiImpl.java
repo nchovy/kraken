@@ -16,6 +16,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
+import java.util.Date;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -63,6 +64,7 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 
 	@Override
 	public void updateOrganizationUnit(String domain, OrganizationUnit orgUnit) {
+		orgUnit.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(orgUnit.getGuid()), orgUnit, NOT_FOUND, this);
 	}
 

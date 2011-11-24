@@ -15,6 +15,8 @@
  */
 package org.krakenapps.dom.model;
 
+import java.util.Date;
+
 import org.krakenapps.api.FieldOption;
 
 public class Program {
@@ -32,6 +34,12 @@ public class Program {
 
 	private boolean visible; // in start menu
 	private int seq;
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getPackName() {
 		return packName;
@@ -79,5 +87,21 @@ public class Program {
 
 	public void setSeq(int seq) {
 		this.seq = seq;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

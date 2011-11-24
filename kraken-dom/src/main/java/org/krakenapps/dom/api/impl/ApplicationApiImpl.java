@@ -82,7 +82,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public void updateVendor(String domain, Vendor vendor) {
-		vendor.setUpdateDateTime(new Date());
+		vendor.setUpdated(new Date());
 		cfg.update(domain, ven, getPred(vendor.getGuid()), vendor, VEN_NOT_FOUND, vendorEventProvider);
 	}
 
@@ -113,7 +113,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public void updateApplication(String domain, Application application) {
-		application.setUpdateDateTime(new Date());
+		application.setUpdated(new Date());
 		cfg.update(domain, app, getPred(application.getGuid()), application, APP_NOT_FOUND, this);
 	}
 
@@ -144,7 +144,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public void updateApplicationVersion(String domain, ApplicationVersion version) {
-		version.setUpdateDateTime(new Date());
+		version.setUpdated(new Date());
 		cfg.update(domain, ver, getPred(version.getGuid()), version, VER_NOT_FOUND, versionEventProvider);
 	}
 
@@ -175,7 +175,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 
 	@Override
 	public void updateApplicationGroup(String domain, ApplicationGroup group) {
-		group.setUpdateDateTime(new Date());
+		group.setUpdated(new Date());
 		cfg.update(domain, grp, getPred(group.getGuid()), group, GRP_NOT_FOUND, groupEventProvider);
 	}
 

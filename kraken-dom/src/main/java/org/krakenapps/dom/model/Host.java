@@ -16,6 +16,7 @@
 package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,6 +47,12 @@ public class Host {
 
 	@CollectionTypeHint(NetworkInterface.class)
 	private List<NetworkInterface> networkInterfaces = new ArrayList<NetworkInterface>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getGuid() {
 		return guid;
@@ -101,5 +108,21 @@ public class Host {
 
 	public void setNetworkInterfaces(List<NetworkInterface> networkInterfaces) {
 		this.networkInterfaces = networkInterfaces;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

@@ -16,6 +16,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
+import java.util.Date;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -68,6 +69,7 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 
 	@Override
 	public void updateArea(String domain, Area area) {
+		area.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(area.getGuid()), area, NOT_FOUND, this);
 	}
 

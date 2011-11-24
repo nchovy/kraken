@@ -17,6 +17,7 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -83,6 +84,7 @@ public class RoleApiImpl extends DefaultEntityEventProvider<Role> implements Rol
 
 	@Override
 	public void updateRole(String domain, Role role) {
+		role.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(role.getName()), role, NOT_FOUND, this);
 	}
 

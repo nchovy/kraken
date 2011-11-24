@@ -35,10 +35,10 @@ public class ApplicationGroup {
 	private String description;
 
 	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
+	private Date created = new Date();
 
 	@FieldOption(nullable = false)
-	private Date updateDateTime = new Date();
+	private Date updated = new Date();
 
 	@ReferenceKey("guid")
 	@CollectionTypeHint(Application.class)
@@ -68,20 +68,20 @@ public class ApplicationGroup {
 		this.description = description;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
+	public Date getCreated() {
+		return created;
 	}
 
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
+	public void setCreated(Date created) {
+		this.created = created;
 	}
 
-	public Date getUpdateDateTime() {
-		return updateDateTime;
+	public Date getUpdated() {
+		return updated;
 	}
 
-	public void setUpdateDateTime(Date updateDateTime) {
-		this.updateDateTime = updateDateTime;
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 
 	public List<Application> getApplications() {

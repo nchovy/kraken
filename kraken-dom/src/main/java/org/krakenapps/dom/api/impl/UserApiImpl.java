@@ -120,7 +120,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void updateUser(String domain, User user) {
-		user.setUpdateDateTime(new Date());
+		user.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(user.getLoginName()), user, NOT_FOUND, this);
 	}
 

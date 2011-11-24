@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.model;
 
+import java.util.Date;
 import java.util.UUID;
 
 import org.krakenapps.api.FieldOption;
@@ -28,6 +29,12 @@ public class Sentry {
 	private Host host;
 
 	private boolean isConnected;
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getGuid() {
 		return guid;
@@ -51,5 +58,21 @@ public class Sentry {
 
 	public void setConnected(boolean isConnected) {
 		this.isConnected = isConnected;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

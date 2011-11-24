@@ -1,6 +1,7 @@
 package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +25,12 @@ public class MapInfo {
 
 	@CollectionTypeHint(MapConnector.class)
 	private List<MapConnector> connectors = new ArrayList<MapConnector>();
+
+	@FieldOption(nullable = false)
+	private Date created = new Date();
+
+	@FieldOption(nullable = false)
+	private Date updated = new Date();
 
 	public String getGuid() {
 		return guid;
@@ -87,5 +94,21 @@ public class MapInfo {
 
 	public void setConnectors(List<MapConnector> connectors) {
 		this.connectors = connectors;
+	}
+
+	public Date getCreated() {
+		return created;
+	}
+
+	public void setCreated(Date created) {
+		this.created = created;
+	}
+
+	public Date getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 }

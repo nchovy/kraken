@@ -40,10 +40,10 @@ public class Application {
 	private String name;
 
 	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
+	private Date created = new Date();
 
 	@FieldOption(nullable = false)
-	private Date updateDateTime = new Date();
+	private Date updated = new Date();
 
 	@MapTypeHint({ String.class, Object.class })
 	private Map<String, Object> metadatas = new HashMap<String, Object>();
@@ -83,20 +83,20 @@ public class Application {
 		this.name = name;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
+	public Date getCreated() {
+		return created;
 	}
 
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
+	public void setCreated(Date created) {
+		this.created = created;
 	}
 
-	public Date getUpdateDateTime() {
-		return updateDateTime;
+	public Date getUpdated() {
+		return updated;
 	}
 
-	public void setUpdateDateTime(Date updateDateTime) {
-		this.updateDateTime = updateDateTime;
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 
 	public Map<String, Object> getMetadatas() {
