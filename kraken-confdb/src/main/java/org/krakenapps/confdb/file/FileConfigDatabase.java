@@ -526,8 +526,13 @@ public class FileConfigDatabase implements ConfigDatabase {
 			Config c = coll.findOne(Predicates.field(referenceKeys));
 			if (c == null)
 				add(obj);
-			else
-				update(c, obj);
+			else {
+				Object serialized = PrimitiveConverter.serialize(obj, this);
+				if (!serialized.equals(c.getDocument())) {
+					c.setDocument(serialized);
+					c.getCollection().update(c);
+				}
+			}
 		}
 	}
 
