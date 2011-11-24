@@ -34,22 +34,16 @@ public class AreaPlugin {
 	private AreaApi areaApi;
 
 	@MsgbusMethod
-	public void getAreas(Request req, Response resp) {
-		Collection<Area> areas = areaApi.getAreas(req.getOrgDomain());
-		resp.put("areas", PrimitiveConverter.serialize(areas));
-	}
-
-	@MsgbusMethod
 	public void getRootAreas(Request req, Response resp) {
 		Collection<Area> roots = areaApi.getRootAreas(req.getOrgDomain());
-		resp.put("areas", PrimitiveConverter.serialize(roots));
+		resp.put("areas", PrimitiveConverter.serialize(roots, PrimitiveConverter.SerializeOption.INCLUDE_SKIP_FIELD));
 	}
 
 	@MsgbusMethod
 	public void getArea(Request req, Response resp) {
 		String guid = req.getString("guid");
 		Area area = areaApi.getArea(req.getOrgDomain(), guid);
-		resp.put("areas", PrimitiveConverter.serialize(area));
+		resp.put("area", PrimitiveConverter.serialize(area, PrimitiveConverter.SerializeOption.INCLUDE_SKIP_FIELD));
 	}
 
 	@MsgbusMethod

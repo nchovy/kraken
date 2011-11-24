@@ -96,9 +96,10 @@ public class InitialSchema {
 
 		List<Program> programs = new ArrayList<Program>();
 		programs.add(createProgram(context, programApi, "Account Manager", "Nchovy.WatchCat.Plugins.Core.AccountManager.AccountPlugin", 1));
-		programs.add(createProgram(context, programApi, "Task Manager", "Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 2));
-		programs.add(createProgram(context, programApi, "Run", "Nchovy.WatchCat.Plugins.Core.Run.Run", 3));
-		programs.add(createProgram(context, programApi, "Developer Console", "Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 4));
+		programs.add(createProgram(context, programApi, "Host Manager", "Nchovy.WatchCat.Plugins.Core.HostConfig.HostConfig", 2));
+		programs.add(createProgram(context, programApi, "Task Manager", "Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 3));
+		programs.add(createProgram(context, programApi, "Run", "Nchovy.WatchCat.Plugins.Core.Run.Run", 4));
+		programs.add(createProgram(context, programApi, "Developer Console", "Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 5));
 
 		if (programApi.findProgramProfile(DEFAULT_DOMAIN, "all") == null) {
 			ProgramProfile profile = new ProgramProfile();

@@ -16,7 +16,7 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
-import java.util.Date;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -43,23 +43,34 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 	}
 
 	@Override
-	public Collection<Area> getAreas(String domain) {
-		return cfg.all(domain, cls);
-	}
-
-	@Override
 	public Collection<Area> getRootAreas(String domain) {
-		return cfg.all(domain, cls, Predicates.field("parent", null));
+		Collection<Area> areas = cfg.all(domain, cls, Predicates.field("parent", null));
+		for (Area area : areas)
+			area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+		return areas;
 	}
 
 	@Override
 	public Area findArea(String domain, String guid) {
-		return cfg.find(domain, cls, getPred(guid));
+		Area area = cfg.find(domain, cls, getPred(guid));
+		if (area == null)
+			return null;
+		area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+		return area;
 	}
 
 	@Override
 	public Area getArea(String domain, String guid) {
-		return cfg.get(domain, cls, getPred(guid), NOT_FOUND);
+		Area area = cfg.get(domain, cls, getPred(guid), NOT_FOUND);
+		area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+		return area;
+	}
+
+	private Collection<Area> getChildrens(String domain, String guid) {
+		Collection<Area> areas = cfg.all(domain, cls, Predicates.field("parent", guid));
+		for (Area area : areas)
+			area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+		return areas;
 	}
 
 	@Override
@@ -69,7 +80,6 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 
 	@Override
 	public void updateArea(String domain, Area area) {
-		area.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(area.getGuid()), area, NOT_FOUND, this);
 	}
 

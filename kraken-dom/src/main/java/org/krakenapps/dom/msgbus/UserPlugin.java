@@ -47,14 +47,14 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	//@MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
 		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams());
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	//@MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateUser(Request req, Response resp) {
 		User before = userApi.getUser(req.getOrgDomain(), req.getString("loginName"));
 		User user = (User) PrimitiveConverter.overwrite(before, req.getParams());
@@ -63,7 +63,7 @@ public class UserPlugin {
 
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	//@MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeUsers(Request req, Response resp) {
 		List<String> loginNames = (List<String>) req.get("login_names");
 		for (String loginName : loginNames)

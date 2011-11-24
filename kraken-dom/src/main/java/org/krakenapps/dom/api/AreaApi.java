@@ -20,10 +20,8 @@ import java.util.Collection;
 import org.krakenapps.dom.model.Area;
 
 public interface AreaApi extends EntityEventProvider<Area> {
-	Collection<Area> getAreas(String domain);
-
 	Collection<Area> getRootAreas(String domain);
-
+	
 	Area findArea(String domain, String guid);
 
 	Area getArea(String domain, String guid);

@@ -30,6 +30,8 @@ public class ProgramPack {
 	@FieldOption(length = 60)
 	private String description;
 
+	private String starter;
+
 	private int seq;
 
 	@FieldOption(nullable = false)
@@ -63,6 +65,14 @@ public class ProgramPack {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public String getStarter() {
+		return starter;
+	}
+
+	public void setStarter(String starter) {
+		this.starter = starter;
 	}
 
 	public int getSeq() {

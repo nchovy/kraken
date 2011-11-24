@@ -34,8 +34,7 @@ public class Area {
 	@FieldOption(length = 255)
 	private String description;
 
-	@ReferenceKey("guid")
-	private Area parent;
+	private String parent;
 
 	@FieldOption(nullable = false)
 	private Date created = new Date();
@@ -71,11 +70,11 @@ public class Area {
 		this.description = description;
 	}
 
-	public Area getParent() {
+	public String getParent() {
 		return parent;
 	}
 
-	public void setParent(Area parent) {
+	public void setParent(String parent) {
 		this.parent = parent;
 	}
 

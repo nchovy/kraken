@@ -100,7 +100,8 @@ public class PrimitiveConverter {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
+								f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
@@ -117,7 +118,7 @@ public class PrimitiveConverter {
 				throw new RuntimeException("kraken api: serialize failed", e);
 			}
 		}
-		if (callback != null && refkey != null)
+		if (callback != null && refkey != null && !(refkey.containsAll(m.keySet()) && m.keySet().containsAll(refkey)))
 			callback.onSerialize(root, cls, obj, m);
 
 		return m;
@@ -251,12 +252,19 @@ public class PrimitiveConverter {
 	}
 
 	public static Object overwrite(Object obj, Map<String, Object> m) {
-		Object newObj = parse(obj.getClass(), m);
+		return overwrite(obj, m, (PrimitiveParseCallback) null);
+	}
+
+	public static Object overwrite(Object obj, Map<String, Object> m, PrimitiveParseCallback callback) {
+		Object newObj = parse(obj.getClass(), m, callback);
 		return overwrite(obj, newObj, m);
 	}
 
 	@SuppressWarnings("unchecked")
 	private static Object overwrite(Object before, Object after, Map<String, Object> m) {
+		if (before == null)
+			return after;
+
 		try {
 			for (Field f : before.getClass().getDeclaredFields()) {
 				String fieldName = toUnderscoreName(f.getName());
@@ -266,7 +274,7 @@ public class PrimitiveConverter {
 					Class<?> cls = f.getType();
 					Object newValue = m.get(fieldName);
 					if (newValue != null && Map.class.isAssignableFrom(newValue.getClass()) && !Map.class.isAssignableFrom(cls))
-						overwrite(f.get(before), f.get(after), (Map<String, Object>) newValue);
+						f.set(before, overwrite(f.get(before), f.get(after), (Map<String, Object>) newValue));
 					else
 						f.set(before, f.get(after));
 				}

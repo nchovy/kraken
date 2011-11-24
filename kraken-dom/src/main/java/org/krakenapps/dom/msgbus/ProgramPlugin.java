@@ -44,8 +44,17 @@ public class ProgramPlugin {
 	}
 
 	@MsgbusMethod
+	public void getProgramPacks(Request req, Response resp) {
+		Collection<ProgramPack> packs = programApi.getProgramPacks(req.getOrgDomain());
+		resp.put("packs", PrimitiveConverter.serialize(packs));
+	}
+
+	@MsgbusMethod
 	public void getAvailablePrograms(Request req, Response resp) {
 		Collection<ProgramPack> packs = programApi.getProgramPacks(req.getOrgDomain());
+		for (ProgramPack pack : packs)
+			System.out.println(pack.getPrograms().size());
+
 		Collection<Program> programs = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName()).getProfile().getPrograms();
 		resp.put("packs", PrimitiveConverter.serialize(packs, PrimitiveConverter.SerializeOption.INCLUDE_SKIP_FIELD));
 		resp.put("programs", PrimitiveConverter.serialize(programs));

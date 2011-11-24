@@ -79,7 +79,7 @@ public class LogQueryPlugin {
 
 	@MsgbusMethod
 	public void startQuery(Request req, Response resp) {
-		Integer orgId = req.getOrgId();
+		String orgDomain = req.getOrgDomain();
 		int id = req.getInteger("id");
 		int offset = req.getInteger("offset");
 		int limit = req.getInteger("limit");
@@ -95,12 +95,12 @@ public class LogQueryPlugin {
 			throw new MsgbusException("logdb", "already running");
 
 		// set query and timeline callback
-		LogQueryCallback qc = new MsgbusLogQueryCallback(orgId, query, offset, limit);
+		LogQueryCallback qc = new MsgbusLogQueryCallback(orgDomain, query, offset, limit);
 		query.registerQueryCallback(qc);
 
 		if (timelineLimit != null) {
 			int size = timelineLimit.intValue();
-			LogTimelineCallback tc = new MsgbusTimelineCallback(orgId, query, size);
+			LogTimelineCallback tc = new MsgbusTimelineCallback(orgDomain, query, size);
 			query.registerTimelineCallback(tc);
 		}
 
@@ -132,13 +132,13 @@ public class LogQueryPlugin {
 	}
 
 	private class MsgbusLogQueryCallback implements LogQueryCallback {
-		private int orgId;
+		private String orgDomain;
 		private LogQuery query;
 		private int offset;
 		private int limit;
 
-		private MsgbusLogQueryCallback(int orgId, LogQuery query, int offset, int limit) {
-			this.orgId = orgId;
+		private MsgbusLogQueryCallback(String orgDomain, LogQuery query, int offset, int limit) {
+			this.orgDomain = orgDomain;
 			this.query = query;
 			this.offset = offset;
 			this.limit = limit;
@@ -159,7 +159,7 @@ public class LogQueryPlugin {
 			Map<String, Object> m = LogQueryHelper.getResultData(service, query.getId(), offset, limit);
 			m.put("id", query.getId());
 			m.put("type", "page_loaded");
-			pushApi.push(orgId, "logstorage-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m);
 		}
 
 		@Override
@@ -168,23 +168,23 @@ public class LogQueryPlugin {
 			m.put("id", query.getId());
 			m.put("type", "eof");
 			m.put("total_count", query.getResult().size());
-			pushApi.push(orgId, "logstorage-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m);
 			query.unregisterQueryCallback(this);
 		}
 	}
 
 	private class MsgbusTimelineCallback extends LogTimelineCallback {
 		private Logger logger = LoggerFactory.getLogger(MsgbusTimelineCallback.class);
-		private int orgId;
+		private String orgDomain;
 		private LogQuery query;
 		private int size;
 
-		private MsgbusTimelineCallback(int orgId, LogQuery query) {
-			this(orgId, query, 10);
+		private MsgbusTimelineCallback(String orgDomain, LogQuery query) {
+			this(orgDomain, query, 10);
 		}
 
-		private MsgbusTimelineCallback(int orgId, LogQuery query, int size) {
-			this.orgId = orgId;
+		private MsgbusTimelineCallback(String orgDomain, LogQuery query, int size) {
+			this.orgDomain = orgDomain;
 			this.query = query;
 			this.size = size;
 		}
@@ -203,7 +203,7 @@ public class LogQueryPlugin {
 			m.put("begin", beginTime);
 			m.put("values", values);
 			m.put("count", query.getResult().size());
-			pushApi.push(orgId, "logstorage-query-timeline-" + query.getId(), m);
+			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m);
 
 			logger.trace(
 					"kraken logstorage: timeline callback => "
