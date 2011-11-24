@@ -250,6 +250,32 @@ public class PrimitiveConverter {
 		return result;
 	}
 
+	public static void overwrite(Object obj, Map<String, Object> m) {
+		Object newObj = parse(obj.getClass(), m);
+		overwrite(obj, newObj, m);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static void overwrite(Object before, Object after, Map<String, Object> m) {
+		try {
+			for (Field f : before.getClass().getDeclaredFields()) {
+				String fieldName = toUnderscoreName(f.getName());
+				if (m.containsKey(fieldName)) {
+					f.setAccessible(true);
+
+					Class<?> cls = f.getType();
+					Object newValue = m.get(fieldName);
+					if (newValue != null && Map.class.isAssignableFrom(newValue.getClass()) && !Map.class.isAssignableFrom(cls))
+						overwrite(f.get(before), f.get(after), (Map<String, Object>) newValue);
+					else
+						f.set(before, f.get(after));
+				}
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Primitive overwrite failed", e);
+		}
+	}
+
 	public static String toUnderscoreName(String s) {
 		final int tolower = 'a' - 'A';
 		StringBuilder sb = new StringBuilder(s.length() * 2);
