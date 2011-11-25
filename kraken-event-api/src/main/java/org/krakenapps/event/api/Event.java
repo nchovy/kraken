@@ -23,7 +23,7 @@ import java.util.Date;
 public class Event {
 	private EventKey key;
 
-	private int organizationId;
+	private String orgDomain;
 
 	private Date firstSeen;
 
@@ -69,12 +69,12 @@ public class Event {
 		this.key = key;
 	}
 
-	public int getOrganizationId() {
-		return organizationId;
+	public String getOrgDomain() {
+		return orgDomain;
 	}
 
-	public void setOrganizationId(int organizationId) {
-		this.organizationId = organizationId;
+	public void setOrgDomain(String orgDomain) {
+		this.orgDomain = orgDomain;
 	}
 
 	public Date getFirstSeen() {
@@ -243,9 +243,8 @@ public class Event {
 
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return String.format("key=%s, first seen=%s, last seen=%s, category=%s, severity=%d, "
-				+ "source=%s, destination=%s, rule=%s, cve=%s, msg=%s, count=%d", key.toString(),
-				dateFormat.format(firstSeen), dateFormat.format(lastSeen), category, severity, source, destination,
-				rule, cve, messageKey, count);
+				+ "source=%s, destination=%s, rule=%s, cve=%s, msg=%s, count=%d", key.toString(), dateFormat.format(firstSeen),
+				dateFormat.format(lastSeen), category, severity, source, destination, rule, cve, messageKey, count);
 	}
 
 }
