@@ -12,6 +12,7 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
 import org.krakenapps.dom.model.Vendor;
 
@@ -73,5 +74,27 @@ public class DomScript implements Script {
 		t.setVersion(args[3]);
 		hostApi.createHostType(args[0], t);
 		context.println("added " + t.getGuid());
+	}
+
+	@ScriptUsage(description = "add host type", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
+			@ScriptArgument(name = "host type guid", type = "string", description = ""),
+			@ScriptArgument(name = "class name", type = "string", description = "host extension class name"),
+			@ScriptArgument(name = "ordinal", type = "string", description = "ordinal") })
+	public void addHostExtension(String[] args) {
+		String domain = args[0];
+		String hostTypeGuid = args[1];
+		String className = args[2];
+		int ordinal = Integer.valueOf(args[3]);
+
+		HostExtension ext = new HostExtension();
+		ext.setClassName(className);
+		ext.setOrd(ordinal);
+
+		HostType t = hostApi.getHostType(domain, hostTypeGuid);
+		t.getExtensions().add(ext);
+
+		hostApi.updateHostType(domain, t);
+		context.println("added");
 	}
 }
