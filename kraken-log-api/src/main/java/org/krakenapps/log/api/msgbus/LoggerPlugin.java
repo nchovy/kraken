@@ -35,7 +35,7 @@ public class LoggerPlugin {
 
 	@Requires
 	private LogNormalizerRegistry normalizerRegistry;
-	
+
 	@Requires
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
@@ -49,12 +49,12 @@ public class LoggerPlugin {
 	public void getParserFactories(Request req, Response resp) {
 		Locale locale = req.getSession().getLocale();
 		List<Object> l = new ArrayList<Object>();
-		
+
 		for (String name : parserFactoryRegistry.getNames()) {
-			LogParserFactory f =  parserFactoryRegistry.get(name);
+			LogParserFactory f = parserFactoryRegistry.get(name);
 			l.add(Marshaler.marshal(f, locale));
 		}
-		
+
 		resp.put("factories", l);
 	}
 
@@ -81,12 +81,34 @@ public class LoggerPlugin {
 		resp.put("options", Marshaler.marshal(loggerFactory.getConfigOptions(), locale));
 	}
 
+	/**
+	 * ensure updated logger configuration, and running state
+	 */
+	@MsgbusMethod
+	public void ensureLoggerOperation(Request req, Response resp) {
+		removeLogger(req, resp);
+		createLogger(req, resp);
+		startLogger(req, resp);
+	}
+
 	@MsgbusMethod
 	public void createLogger(Request req, Response resp) {
 		String loggerFactoryName = req.getString("factory");
 		String loggerNamespace = req.getString("namespace");
 		String loggerName = req.getString("name");
 		String description = req.getString("description");
+
+		if (req.has("logger")) {
+			String loggerFullname = req.getString("logger");
+			int pos = loggerFullname.indexOf('\\');
+			if (pos < 0) {
+				loggerNamespace = "local";
+				loggerName = loggerFullname;
+			} else {
+				loggerNamespace = loggerFullname.substring(0, pos);
+				loggerName = loggerFullname.substring(pos + 1);
+			}
+		}
 
 		LoggerFactory loggerFactory = loggerFactoryRegistry.getLoggerFactory(loggerFactoryName);
 		Properties config = new Properties();
@@ -114,12 +136,28 @@ public class LoggerPlugin {
 
 		for (String fullName : loggers) {
 			Logger logger = loggerRegistry.getLogger(fullName);
+			if (logger == null)
+				continue;
+			
 			logger.stop();
 			String[] tokens = fullName.split("\\\\");
-			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(),
-					logger.getFactoryName());
+			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(), logger.getFactoryName());
 			factory.deleteLogger(tokens[0], tokens[1]);
 		}
+	}
+
+	@MsgbusMethod
+	public void removeLogger(Request req, Response resp) {
+		String fullName = req.getString("logger");
+
+		Logger logger = loggerRegistry.getLogger(fullName);
+		if (logger == null)
+			return;
+
+		logger.stop();
+		String[] tokens = fullName.split("\\\\");
+		LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(), logger.getFactoryName());
+		factory.deleteLogger(tokens[0], tokens[1]);
 	}
 
 	@MsgbusMethod
@@ -127,15 +165,23 @@ public class LoggerPlugin {
 		String fullName = req.getString("logger");
 		int interval = req.getInteger("interval");
 		Logger logger = loggerRegistry.getLogger(fullName);
+		if (logger == null)
+			return;
+
 		logger.start(interval);
 	}
 
 	@MsgbusMethod
 	public void stopLogger(Request req, Response resp) {
 		String fullName = req.getString("logger");
-		int waitTime = req.getInteger("wait_time");
+		int waitTime = 5000;
+		if (req.has("wait_time"))
+			waitTime = req.getInteger("wait_time");
 
 		Logger logger = loggerRegistry.getLogger(fullName);
+		if (logger == null)
+			return;
+
 		logger.stop(waitTime);
 	}
 

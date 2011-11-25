@@ -46,13 +46,22 @@ public class DateUtil {
 	public static List<Date> filt(Collection<Date> dates, Date from, Date to) {
 		List<Date> filtered = new ArrayList<Date>();
 		// canonicalize
-		Date fromDay = getDay(from);
-		Date toDay = getDay(to);
+		Date fromDay = null;
+		Date toDay = null;
+
+		if (from != null)
+			fromDay = getDay(from);
+		if (to != null)
+			toDay = getDay(to);
 
 		for (Date day : dates) {
-			if (!fromDay.after(day) && !day.after(toDay)) {
-				filtered.add(day);
-			}
+			if (fromDay != null && day.before(from))
+				continue;
+
+			if (toDay != null && day.after(toDay))
+				continue;
+
+			filtered.add(day);
 		}
 
 		return filtered;

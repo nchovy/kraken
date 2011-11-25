@@ -63,6 +63,10 @@ public interface LogStorage {
 
 	void write(Collection<Log> logs);
 
+	Collection<Log> getLogs(String tableName, Date from, Date to, int limit);
+
+	Collection<Log> getLogs(String tableName, Date from, Date to, int offset, int limit);
+
 	Log getLog(LogKey logKey);
 
 	Log getLog(String tableName, Date date, int id);

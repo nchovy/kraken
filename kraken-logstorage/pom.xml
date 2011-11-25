@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-logstorage</artifactId>
-	<version>1.7.0</version>
+	<version>1.8.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log Storage</name>
 	<build>

@@ -328,6 +328,36 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
+	public Collection<Log> getLogs(String tableName, Date from, Date to, int limit) {
+		return getLogs(tableName, from, to, 0, limit);
+	}
+
+	@Override
+	public Collection<Log> getLogs(String tableName, Date from, Date to, int offset, int limit) {
+		final List<Log> logs = new ArrayList<Log>(limit);
+		try {
+			search(tableName, from, to, offset, limit, new LogSearchCallback() {
+				@Override
+				public void onLog(Log log) {
+					logs.add(log);
+				}
+
+				@Override
+				public boolean isInterrupted() {
+					return false;
+				}
+
+				@Override
+				public void interrupt() {
+				}
+			});
+		} catch (InterruptedException e) {
+			throw new RuntimeException("interrupted");
+		}
+		return logs;
+	}
+
+	@Override
 	public Log getLog(LogKey logKey) {
 		String tableName = tableRegistry.getTableName(logKey.getTableId());
 		return getLog(tableName, logKey.getDay(), logKey.getLogId());
@@ -517,7 +547,10 @@ public class LogStorageEngine implements LogStorage {
 			logger.debug("log storage: traverse log [{}]", log);
 
 			Date d = log.getDate();
-			if (d.before(from) || d.after(to))
+			if (from != null && d.before(from))
+				return false;
+
+			if (to != null && d.after(to))
 				return false;
 
 			return onMatch(log);

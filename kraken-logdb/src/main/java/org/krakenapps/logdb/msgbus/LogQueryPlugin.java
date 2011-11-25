@@ -17,6 +17,7 @@ package org.krakenapps.logdb.msgbus;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +31,8 @@ import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.impl.LogQueryHelper;
 import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logstorage.Log;
+import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Request;
@@ -48,9 +51,37 @@ public class LogQueryPlugin {
 	private LogQueryService service;
 
 	@Requires
+	private LogStorage storage;
+
+	@Requires
 	private PushApi pushApi;
 
 	private Map<Session, List<LogQuery>> queries = new HashMap<Session, List<LogQuery>>();
+
+	@MsgbusMethod
+	public void logs(Request req, Response resp) {
+		String tableName = req.getString("table");
+		int limit = req.getInteger("limit");
+		int offset = 0;
+		if (req.has("offset"))
+			offset = req.getInteger("offset");
+		
+		Collection<Log> logs = storage.getLogs(tableName, null, null, offset, limit);
+		List<Object> serialized = new ArrayList<Object>(limit);
+		for (Log log : logs)
+			serialized.add(serialize(log));
+
+		resp.put("logs", serialized);
+	}
+
+	private Map<String, Object> serialize(Log log) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("table", log.getTableName());
+		m.put("id", log.getId());
+		m.put("date", log.getDate());
+		m.put("data", log.getData());
+		return m;
+	}
 
 	@MsgbusMethod
 	public void queries(Request req, Response resp) {
