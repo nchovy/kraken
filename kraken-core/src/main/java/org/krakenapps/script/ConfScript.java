@@ -218,6 +218,46 @@ public class ConfScript implements Script {
 		col.remove(config);
 	}
 
+	@ScriptUsage(description = "write new document", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name"),
+			@ScriptArgument(name = "object id", type = "integer", description = "object config id") })
+	public void getbase64(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		ConfigCollection col = db.getCollection(args[1]);
+		if (col == null) {
+			context.println("collection not found");
+			return;
+		}
+
+		int id = Integer.parseInt(args[2]);
+		Config config = null;
+		ConfigIterator it = col.findAll();
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				if (c.getId() == id)
+					config = c;
+			}
+		} finally {
+			it.close();
+		}
+
+		if (config == null) {
+			context.println("config not found");
+			return;
+		}
+
+		byte[] b = new byte[EncodingRule.lengthOf(config.getDocument())];
+		EncodingRule.encode(ByteBuffer.wrap(b), config.getDocument());
+		context.println(new String(Base64.encodeBase64(b)));
+	}
+
 	private Object parse(String encoded) {
 		try {
 			byte[] decode = Base64.decodeBase64(encoded.getBytes("ASCII"));
