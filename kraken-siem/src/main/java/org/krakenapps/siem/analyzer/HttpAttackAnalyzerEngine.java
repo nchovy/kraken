@@ -71,7 +71,7 @@ public class HttpAttackAnalyzerEngine implements NormalizedLogListener, HttpAtta
 		e.setSourceIp(log.getIp("src_ip"));
 		e.setDestinationIp(log.getIp("dst_ip"));
 		e.setDestinationPort(log.getInteger("dst_port"));
-		e.setOrganizationId(log.getOrganizationId());
+		e.setOrgDomain(log.getOrgDomain());
 		e.setRule(rule.getId());
 		e.setSeverity(EventSeverity.Critical); // TODO: severity from rule
 		e.setMessageKey("http-attack");

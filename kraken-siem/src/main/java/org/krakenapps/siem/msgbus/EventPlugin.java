@@ -74,12 +74,12 @@ public class EventPlugin implements EventPipe {
 	@Override
 	public void onEvent(Event event) {
 		Map<String, Object> m = marshalEvent(event);
-		pushApi.push(event.getOrganizationId(), "siem-event", m);
+		pushApi.push(event.getOrgDomain(), "siem-event", m);
 	}
 
 	@Override
 	public void onEventAcked(Event event) {
 		Map<String, Object> m = marshalEvent(event);
-		pushApi.push(event.getOrganizationId(), "siem-event-ack", m);
+		pushApi.push(event.getOrgDomain(), "siem-event-ack", m);
 	}
 }

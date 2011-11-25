@@ -65,13 +65,13 @@ public class LoggerPlugin {
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void createLogger(Request req, Response resp) {
-		int orgId = req.getOrgId();
+		String orgDomain = req.getOrgDomain();
 		String loggerName = req.getString("logger");
 		String parserFactoryName = req.getString("parser");
 		Map<String, Object> parserOptions = (Map<String, Object>) req.get("parser_options");
 
 		ManagedLogger ml = new ManagedLogger();
-		ml.setOrgId(orgId);
+		ml.setOrgDomain(orgDomain);
 		ml.setFullName(loggerName);
 		ml.setParserFactoryName(parserFactoryName);
 		ml.setLogParserOptions(parserOptions);

@@ -113,10 +113,10 @@ public class SiemScript implements Script {
 		context.println("wrote one log");
 	}
 
-	@ScriptUsage(description = "insert dummy event", arguments = { @ScriptArgument(type = "int", name = "org", description = "organization id") })
+	@ScriptUsage(description = "insert dummy event", arguments = { @ScriptArgument(type = "string", name = "org", description = "organization domain") })
 	public void insertDummyEvent(String[] args) throws UnknownHostException {
 		Event e = new Event();
-		e.setOrganizationId(Integer.valueOf(args[0]));
+		e.setOrgDomain(args[0]);
 		e.setCategory("Attack");
 		e.setSourceIp(InetAddress.getByName("202.181.239.52"));
 		e.setDestinationIp(InetAddress.getByName("110.45.142.130"));
@@ -132,14 +132,14 @@ public class SiemScript implements Script {
 	}
 
 	@ScriptUsage(description = "create managed logger", arguments = {
-			@ScriptArgument(name = "org id", type = "int", description = "organization id"),
+			@ScriptArgument(name = "org domain", type = "string", description = "org domain"),
 			@ScriptArgument(name = "logger fullname", type = "string", description = "logger fullname"),
 			@ScriptArgument(name = "parser name", type = "string", description = "log parser name", optional = true) })
 	public void createLogger(String[] args) {
 		try {
 			LogServer logServer = getLogServer();
 			ManagedLogger ml = new ManagedLogger();
-			ml.setOrgId(Integer.valueOf(args[0]));
+			ml.setOrgDomain(args[0]);
 			ml.setFullName(args[1]);
 			if (args.length > 2)
 				ml.setParserFactoryName(args[2]);
@@ -376,7 +376,7 @@ public class SiemScript implements Script {
 	}
 
 	public void configure(String[] args) {
-		final int orgId = 1;
+		final String orgDomain = "localhost";
 
 		ProgramApi programApi = getProgramApi();
 		if (programApi != null) {
@@ -468,13 +468,13 @@ public class SiemScript implements Script {
 
 					if (logServer.getManagedLogger(logger.getFullName()) == null) {
 						ManagedLogger ml = new ManagedLogger();
-						ml.setOrgId(orgId);
+						ml.setOrgDomain(orgDomain);
 						ml.setFullName(logger.getFullName());
 						ml.setParserFactoryName(candidate.getParserFactoryName());
 						ml.setLogParserOptions(toMap(candidate.getParserOptions()));
 
-						context.println("  managed logger [org=" + orgId + ", " + logger.getFullName() + "] created, parser ["
-								+ candidate.getParserFactoryName() + "] mapped");
+						context.println("  managed logger [org=" + orgDomain + ", " + logger.getFullName()
+								+ "] created, parser [" + candidate.getParserFactoryName() + "] mapped");
 					}
 
 					if (!logger.isRunning()) {

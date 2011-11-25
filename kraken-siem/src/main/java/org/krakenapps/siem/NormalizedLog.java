@@ -21,24 +21,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class NormalizedLog {
-	private int organizationId;
+	private String orgDomain;
 	private Map<String, Object> params;
 
 	public NormalizedLog() {
 		params = new HashMap<String, Object>();
 	}
 
-	public NormalizedLog(int organizationId, Map<String, Object> params) {
-		this.organizationId = organizationId;
+	public NormalizedLog(String orgDomain, Map<String, Object> params) {
+		this.orgDomain = orgDomain;
 		this.params = params;
 	}
 
-	public int getOrganizationId() {
-		return organizationId;
+	public String getOrgDomain() {
+		return orgDomain;
 	}
 
-	public void setOrganizationId(int organizationId) {
-		this.organizationId = organizationId;
+	public void setOrgDomain(String orgDomain) {
+		this.orgDomain = orgDomain;
 	}
 
 	public void set(String key, Object value) {

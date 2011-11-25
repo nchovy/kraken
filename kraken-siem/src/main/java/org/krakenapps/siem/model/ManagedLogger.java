@@ -21,7 +21,7 @@ import java.util.Map;
 import org.krakenapps.msgbus.Marshalable;
 
 public class ManagedLogger implements Marshalable {
-	private int orgId;
+	private String orgDomain;
 
 	private String fullName;
 
@@ -34,12 +34,12 @@ public class ManagedLogger implements Marshalable {
 
 	private boolean isEnabled = true;
 
-	public int getOrgId() {
-		return orgId;
+	public String getOrgDomain() {
+		return orgDomain;
 	}
 
-	public void setOrgId(int orgId) {
-		this.orgId = orgId;
+	public void setOrgDomain(String orgDomain) {
+		this.orgDomain = orgDomain;
 	}
 
 	public String getFullName() {

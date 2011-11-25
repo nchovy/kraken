@@ -105,6 +105,9 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 	public ManagedLogger getManagedLogger(String fullName) {
 		ConfigCollection col = getCol();
 		Config c = col.findOne(Predicates.field("full_name", fullName));
+		if (c == null)
+			return null;
+		
 		return PrimitiveConverter.parse(ManagedLogger.class, c.getDocument());
 	}
 
@@ -237,7 +240,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 			return;
 		}
 
-		NormalizedLog normalizedLog = new NormalizedLog(ml.getOrgId(), normalized);
+		NormalizedLog normalizedLog = new NormalizedLog(ml.getOrgDomain(), normalized);
 		String category = (String) normalizedLog.get("category");
 		if (category == null) {
 			slog.debug("kraken siem: normalization category not found");

@@ -99,16 +99,6 @@ public class SnmpLoggerFactory extends AbstractLoggerFactory {
 
 		{
 			Map<Locale, String> displayNames = new HashMap<Locale, String>();
-			displayNames.put(Locale.ENGLISH, "HostID");
-
-			Map<Locale, String> descriptions = new HashMap<Locale, String>();
-			descriptions.put(Locale.ENGLISH, "HostID of target network agents");
-
-			types.add(new IntegerConfigType(ConfigOption.hostId.toString(), displayNames, descriptions, true));
-		}
-
-		{
-			Map<Locale, String> displayNames = new HashMap<Locale, String>();
 			displayNames.put(Locale.ENGLISH, "Community string");
 			displayNames.put(Locale.KOREAN, "Community 문자열");
 
