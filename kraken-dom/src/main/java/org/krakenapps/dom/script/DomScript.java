@@ -50,6 +50,18 @@ public class DomScript implements Script {
 		context.println("install complete");
 	}
 
+	public void hostTypes(String[] args) {
+		context.println("Host Types");
+		context.println("------------");
+
+		for (HostType t : hostApi.getHostTypes("localhost")) {
+			context.println(t);
+			for (HostExtension ext : t.getExtensions()) {
+				context.println("\t" + ext);
+			}
+		}
+	}
+
 	@ScriptUsage(description = "add host type", arguments = {
 			@ScriptArgument(name = "domain", type = "string", description = "domain"),
 			@ScriptArgument(name = "name", type = "string", description = "name") })
@@ -62,7 +74,7 @@ public class DomScript implements Script {
 
 	@ScriptUsage(description = "add host type", arguments = {
 			@ScriptArgument(name = "domain", type = "string", description = ""),
-			@ScriptArgument(name = "vendor name", type = "string", description = ""),
+			@ScriptArgument(name = "vendor guid", type = "string", description = ""),
 			@ScriptArgument(name = "name", type = "string", description = ""),
 			@ScriptArgument(name = "version", type = "string", description = "") })
 	public void addHostType(String[] args) {

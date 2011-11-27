@@ -89,4 +89,9 @@ public class HostType {
 	public void setExtensions(List<HostExtension> extensions) {
 		this.extensions = extensions;
 	}
+
+	@Override
+	public String toString() {
+		return "guid=" + guid + ", vendor=" + vendor.getName() + ", name=" + name + ", version=" + version;
+	}
 }

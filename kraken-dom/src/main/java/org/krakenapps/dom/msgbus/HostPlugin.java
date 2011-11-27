@@ -60,6 +60,8 @@ public class HostPlugin {
 	@MsgbusMethod
 	public void createHost(Request req, Response resp) {
 		Host host = (Host) PrimitiveConverter.overwrite(new Host(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		host.getExtensions().addAll(host.getHostType().getExtensions());
+		
 		hostApi.createHost(req.getOrgDomain(), host);
 		resp.put("guid", host.getGuid());
 	}

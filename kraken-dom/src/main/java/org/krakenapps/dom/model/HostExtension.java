@@ -38,4 +38,10 @@ public class HostExtension {
 	public void setOrd(int ord) {
 		this.ord = ord;
 	}
+
+	@Override
+	public String toString() {
+		return "[" + ord + "] " + className;
+	}
+
 }
