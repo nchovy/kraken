@@ -15,11 +15,16 @@
  */
 package org.krakenapps.script;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+
+import org.apache.commons.codec.binary.Base64;
 import org.krakenapps.api.Primitive;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
@@ -107,12 +112,159 @@ public class ConfScript implements Script {
 		try {
 			while (it.hasNext()) {
 				Config c = it.next();
-				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc="
-						+ Primitive.stringify(c.getDocument());
+				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc=" + Primitive.stringify(c.getDocument());
 				context.println(s);
 			}
 		} finally {
 			it.close();
 		}
+	}
+
+	@ScriptUsage(description = "write new document", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name"),
+			@ScriptArgument(name = "document", type = "string", description = "base-64 encoded serialized value") })
+	public void add(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		ConfigCollection col = db.ensureCollection(args[1]);
+		Object obj = parse(args[2]);
+		if (obj != null)
+			col.add(obj);
+	}
+
+	@ScriptUsage(description = "write new document", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name"),
+			@ScriptArgument(name = "object id", type = "integer", description = "object config id"),
+			@ScriptArgument(name = "document", type = "string", description = "base-64 encoded java.io.ObjectOutputStream serialized value") })
+	public void update(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		ConfigCollection col = db.getCollection(args[1]);
+		if (col == null) {
+			context.println("collection not found");
+			return;
+		}
+
+		int id = Integer.parseInt(args[2]);
+		Config config = null;
+		ConfigIterator it = col.findAll();
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				if (c.getId() == id)
+					config = c;
+			}
+		} finally {
+			it.close();
+		}
+
+		if (config == null) {
+			context.println("config not found");
+			return;
+		}
+
+		Object obj = parse(args[3]);
+		if (obj != null) {
+			config.setDocument(obj);
+			col.update(config);
+		}
+	}
+
+	@ScriptUsage(description = "write new document", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name"),
+			@ScriptArgument(name = "object id", type = "integer", description = "object config id") })
+	public void remove(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		ConfigCollection col = db.getCollection(args[1]);
+		if (col == null) {
+			context.println("collection not found");
+			return;
+		}
+
+		int id = Integer.parseInt(args[2]);
+		Config config = null;
+		ConfigIterator it = col.findAll();
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				if (c.getId() == id)
+					config = c;
+			}
+		} finally {
+			it.close();
+		}
+
+		if (config == null) {
+			context.println("config not found");
+			return;
+		}
+
+		col.remove(config);
+	}
+
+	@ScriptUsage(description = "write new document", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name"),
+			@ScriptArgument(name = "object id", type = "integer", description = "object config id") })
+	public void getbase64(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		ConfigCollection col = db.getCollection(args[1]);
+		if (col == null) {
+			context.println("collection not found");
+			return;
+		}
+
+		int id = Integer.parseInt(args[2]);
+		Config config = null;
+		ConfigIterator it = col.findAll();
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				if (c.getId() == id)
+					config = c;
+			}
+		} finally {
+			it.close();
+		}
+
+		if (config == null) {
+			context.println("config not found");
+			return;
+		}
+
+		byte[] b = new byte[EncodingRule.lengthOf(config.getDocument())];
+		EncodingRule.encode(ByteBuffer.wrap(b), config.getDocument());
+		context.println(new String(Base64.encodeBase64(b)));
+	}
+
+	private Object parse(String encoded) {
+		try {
+			byte[] decode = Base64.decodeBase64(encoded.getBytes("ASCII"));
+			return EncodingRule.decode(ByteBuffer.wrap(decode));
+		} catch (UnsupportedEncodingException e) {
+			context.println("unsupported ascii encoding");
+		}
+		return null;
 	}
 }

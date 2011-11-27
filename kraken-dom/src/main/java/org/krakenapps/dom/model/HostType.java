@@ -38,7 +38,6 @@ public class HostType {
 
 	private boolean isSentrySupported;
 
-	@ReferenceKey("className")
 	@CollectionTypeHint(HostExtension.class)
 	private List<HostExtension> extensions = new ArrayList<HostExtension>();
 

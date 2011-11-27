@@ -15,7 +15,6 @@
  */
 package org.krakenapps.logdb.query;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -25,29 +24,32 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.krakenapps.logdb.query.command.Result;
+import org.krakenapps.log.api.LogParser;
+import org.krakenapps.log.api.LogParserRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.LogTimelineCallback;
-import org.krakenapps.logdb.query.LogQueryImpl;
+import org.krakenapps.logdb.SyntaxProvider;
+import org.krakenapps.logdb.query.command.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class LogQueryImpl implements LogQuery {
 	private Logger logger = LoggerFactory.getLogger(LogQueryImpl.class);
 	private static AtomicInteger nextId = new AtomicInteger(1);
+
 	private final int id = nextId.getAndIncrement();
 	private String queryString;
 	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
+	private LogParser parser;
 	private Date lastStarted;
 	private Result result;
 	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
 
-	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString) {
+	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString, LogParserRegistry parserRegistry) {
 		this.queryString = queryString;
 
 		for (String q : queryString.split("\\|")) {
@@ -60,18 +62,20 @@ public class LogQueryImpl implements LogQuery {
 			}
 		}
 
-		for (int i = 0; i < commands.size() - 1; i++)
-			commands.get(i).setNextCommand(commands.get(i + 1));
+		if (commands.isEmpty())
+			throw new IllegalArgumentException("empty query");
 
-		commands.get(commands.size() - 1).setCallbackTimeline(true);
-		for (int i = 1; i < commands.size(); i++) {
+		boolean setReducer = false;
+		for (int i = 0; i < commands.size() - 1; i++) {
 			LogQueryCommand command = commands.get(i);
-			if (command.isReducer()) {
-				commands.get(commands.size() - 1).setCallbackTimeline(false);
+			command.setNextCommand(commands.get(i + 1));
+			if (command.isReducer() && !setReducer && i > 0) {
+				setReducer = true;
 				commands.get(i - 1).setCallbackTimeline(true);
-				break;
 			}
 		}
+		if (!setReducer)
+			commands.get(commands.size() - 1).setCallbackTimeline(true);
 	}
 
 	@Override
@@ -80,7 +84,7 @@ public class LogQueryImpl implements LogQuery {
 			throw new IllegalStateException("already running");
 
 		lastStarted = new Date();
-		if (commands.size() <= 0)
+		if (commands.isEmpty())
 			return;
 
 		try {
@@ -95,7 +99,7 @@ public class LogQueryImpl implements LogQuery {
 				command.init();
 
 			commands.get(0).start();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			logger.error("kraken logstorage: cannot start query", e);
 		}
 	}
@@ -155,6 +159,16 @@ public class LogQueryImpl implements LogQuery {
 	@Override
 	public List<LogQueryCommand> getCommands() {
 		return commands;
+	}
+
+	@Override
+	public LogParser getLogParser() {
+		return parser;
+	}
+
+	@Override
+	public void setLogParser(LogParser parser) {
+		this.parser = parser;
 	}
 
 	@Override

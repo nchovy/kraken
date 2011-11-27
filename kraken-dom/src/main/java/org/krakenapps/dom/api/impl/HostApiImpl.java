@@ -96,6 +96,7 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public void createHost(String domain, Host host) {
+		host.setExtensions(host.getHostType().getExtensions());
 		cfg.add(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_ALREADY_EXIST, this);
 	}
 
