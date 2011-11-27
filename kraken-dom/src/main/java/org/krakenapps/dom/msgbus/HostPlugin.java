@@ -41,7 +41,7 @@ public class HostPlugin {
 	@MsgbusMethod
 	public void getHostTypes(Request req, Response resp) {
 		Collection<HostType> hostTypes = hostApi.getHostTypes(req.getOrgDomain());
-		resp.put("host_types", PrimitiveConverter.serialize(hostTypes));
+		resp.put("types", PrimitiveConverter.serialize(hostTypes));
 	}
 
 	@MsgbusMethod
