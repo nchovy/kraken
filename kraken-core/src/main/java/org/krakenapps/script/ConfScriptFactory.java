@@ -20,15 +20,14 @@ import java.io.IOException;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.confdb.ConfigService;
-import org.krakenapps.confdb.file.FileConfigService;
 import org.krakenapps.main.Kraken;
 
 public class ConfScriptFactory implements ScriptFactory {
 
 	private ConfigService conf;
 
-	public ConfScriptFactory() throws IOException {
-		conf = new FileConfigService();
+	public ConfScriptFactory(ConfigService conf) {
+		this.conf = conf;
 		Kraken.getContext().registerService(ConfigService.class.getName(), conf, null);
 	}
 

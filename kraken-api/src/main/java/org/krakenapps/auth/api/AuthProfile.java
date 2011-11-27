@@ -56,4 +56,10 @@ public class AuthProfile {
 	public void setStrategy(AuthStrategy strategy) {
 		this.strategy = strategy;
 	}
+
+	@Override
+	public String toString() {
+		return "name=" + name + ", strategy=" + strategy + ", providers=" + providers;
+	}
+
 }

@@ -20,6 +20,8 @@ import java.util.Collection;
 public interface AuthService {
 	Collection<AuthProvider> getProviders();
 
+	AuthProvider getProvider(String name);
+
 	Collection<AuthProfile> getProfiles();
 
 	AuthProfile getProfile(String name);

@@ -16,5 +16,7 @@
 package org.krakenapps.auth.api;
 
 public interface AuthProvider {
+	String getName();
+	
 	void authenticate(UserPrincipal principal, UserCredentials credentials, AuthCallback callback);
 }

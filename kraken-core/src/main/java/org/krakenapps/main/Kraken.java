@@ -52,9 +52,14 @@ import org.krakenapps.api.Environment;
 import org.krakenapps.api.InstrumentationService;
 import org.krakenapps.api.LoggerControlService;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.auth.AuthScriptFactory;
+import org.krakenapps.auth.DefaultAuthService;
+import org.krakenapps.auth.api.AuthService;
 import org.krakenapps.bundle.BundleManagerService;
 import org.krakenapps.bundle.BundleScript;
 import org.krakenapps.bundle.BundleScriptFactory;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.file.FileConfigService;
 import org.krakenapps.console.TelnetCodecFactory;
 import org.krakenapps.console.TelnetHandler;
 import org.krakenapps.instrumentation.InstrumentationServiceImpl;
@@ -107,6 +112,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	private Thread logCleaner = null;
 
 	private PreferencesManager prefsManager;
+	private ConfigService conf;
+	private AuthService auth;
 
 	private static boolean serviceMode = false;
 
@@ -331,6 +338,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 
 		prefsManager = new PreferencesManager();
 		prefsManager.start(context);
+		conf = new FileConfigService();
+		auth = new DefaultAuthService(context, conf);
 
 		registerScripts(context);
 		registerInstrumentation();
@@ -370,9 +379,10 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(context, PerfScriptFactory.class, "perf");
 		registerScriptFactory(context, RegistryScriptFactory.class, "registry");
 		registerScriptFactory(context, KeyStoreScriptFactory.class, "keystore");
-		registerScriptFactory(context, AccountScriptFactory.class, "account");
+		registerScriptFactory(context, new AccountScriptFactory(context, conf), "account");
 		registerScriptFactory(context, SunPerfScriptFactory.class, "sunperf");
-		registerScriptFactory(context, ConfScriptFactory.class, "conf");
+		registerScriptFactory(context, new ConfScriptFactory(conf), "conf");
+		registerScriptFactory(context, new AuthScriptFactory(auth), "auth");
 	}
 
 	/**
@@ -387,15 +397,19 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 *            command)
 	 */
 	private void registerScriptFactory(BundleContext context, Class<? extends ScriptFactory> scriptFactory, String alias) {
-		Dictionary<String, Object> props = new Hashtable<String, Object>();
-		props.put("alias", alias);
 		try {
-			context.registerService(ScriptFactory.class.getName(), scriptFactory.newInstance(), props);
+			registerScriptFactory(context, scriptFactory.newInstance(), alias);
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void registerScriptFactory(BundleContext context, ScriptFactory scriptFactory, String alias) {
+		Dictionary<String, Object> props = new Hashtable<String, Object>();
+		props.put("alias", alias);
+		context.registerService(ScriptFactory.class.getName(), scriptFactory, props);
 	}
 
 	private void registerInstrumentation() {

@@ -18,22 +18,35 @@ package org.krakenapps.auth.api;
 import java.security.Principal;
 
 public class UserPrincipal implements Principal {
-	private String name;
+	private String domain;
+	private String loginName;
+	
+	public UserPrincipal() {
+	}
 
 	public UserPrincipal(String name) {
-		this.name = name;
+		this("localhost", name);
+	}
+
+	public UserPrincipal(String domain, String name) {
+		this.loginName = name;
+	}
+
+	public String getDomain() {
+		return domain;
 	}
 
 	@Override
 	public String getName() {
-		return name;
+		return loginName;
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		result = prime * result + ((domain == null) ? 0 : domain.hashCode());
+		result = prime * result + ((loginName == null) ? 0 : loginName.hashCode());
 		return result;
 	}
 
@@ -46,11 +59,21 @@ public class UserPrincipal implements Principal {
 		if (getClass() != obj.getClass())
 			return false;
 		UserPrincipal other = (UserPrincipal) obj;
-		if (name == null) {
-			if (other.name != null)
+		if (domain == null) {
+			if (other.domain != null)
 				return false;
-		} else if (!name.equals(other.name))
+		} else if (!domain.equals(other.domain))
+			return false;
+		if (loginName == null) {
+			if (other.loginName != null)
+				return false;
+		} else if (!loginName.equals(other.loginName))
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "domain=" + domain + ", name=" + loginName;
 	}
 }

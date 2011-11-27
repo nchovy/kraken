@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserCredentials {
+	public static final String Password = "password";
+
 	private Map<String, Object> m;
 
 	public UserCredentials() {

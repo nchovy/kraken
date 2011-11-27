@@ -20,22 +20,16 @@ import java.util.Properties;
 import org.krakenapps.api.AccountManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.main.Kraken;
+import org.krakenapps.auth.api.AuthProvider;
+import org.krakenapps.confdb.ConfigService;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 
 public class AccountScriptFactory implements ScriptFactory {
 	private AccountManager manager;
 
-	public AccountScriptFactory() {
-		BundleContext bc = Kraken.getContext();
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		Preferences prefs = prefsService.getSystemPreferences();
-
-		manager = new AccountManagerImpl(prefs);
+	public AccountScriptFactory(BundleContext bc, ConfigService conf) {
+		manager = new AccountManagerImpl(conf);
+		bc.registerService(AuthProvider.class.getName(), manager, new Properties());
 		bc.registerService(AccountManager.class.getName(), manager, new Properties());
 	}
 
@@ -43,5 +37,4 @@ public class AccountScriptFactory implements ScriptFactory {
 	public Script createScript() {
 		return new AccountScript(manager);
 	}
-
 }

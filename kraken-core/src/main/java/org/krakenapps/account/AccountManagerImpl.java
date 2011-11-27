@@ -18,42 +18,69 @@ package org.krakenapps.account;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.api.AccountManager;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.auth.api.AuthCallback;
+import org.krakenapps.auth.api.AuthProvider;
+import org.krakenapps.auth.api.UserCredentials;
+import org.krakenapps.auth.api.UserPrincipal;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.Predicates;
 
-public class AccountManagerImpl implements AccountManager {
-	private static final String SALT = "k";
-	private final Logger logger = LoggerFactory.getLogger(AccountManagerImpl.class.getName());
-	private Preferences prefs;
+public class AccountManagerImpl implements AccountManager, AuthProvider {
+	private static final String SALT = "kraken";
+	private ConfigService conf;
 
-	public AccountManagerImpl(Preferences prefs) {
-		this.prefs = prefs;
+	public AccountManagerImpl(ConfigService conf) {
+		this.conf = conf;
 		createDefaultAccount();
+	}
+
+	@Override
+	public String getName() {
+		return "local";
 	}
 
 	private void createDefaultAccount() {
 		try {
-			createAccount("root", "kraken");
+			createAccount("root", SALT);
 		} catch (Exception e) {
+			e.printStackTrace();
 			// ignore if already exists
 		}
 	}
 
 	@Override
+	public void authenticate(UserPrincipal principal, UserCredentials credentials, AuthCallback callback) {
+		System.out.println(principal + ", " + credentials);
+		String password = (String) credentials.get("password");
+		boolean result = verifyPassword(principal.getName(), password);
+		if (result)
+			callback.onSuccess(this, principal, credentials);
+		else
+			callback.onFail(this, principal, credentials);
+	}
+
+	@Override
 	public Collection<String> getAccounts() {
+		ConfigDatabase db = conf.getDatabase("kraken-core");
+		ConfigCollection principals = db.ensureCollection("principal");
+
 		List<String> accounts = new ArrayList<String>();
-		try {
-			Preferences prefs = getAccountPreferences();
-			for (String name : prefs.childrenNames()) {
-				accounts.add(name);
-			}
-		} catch (BackingStoreException e) {
-			logger.warn("core: get accounts failed", e);
+		ConfigIterator it = principals.findAll();
+		while (it.hasNext()) {
+			Config c = it.next();
+			UserPrincipal p = c.getDocument(UserPrincipal.class);
+			accounts.add(p.getName());
 		}
 
 		return accounts;
@@ -61,19 +88,30 @@ public class AccountManagerImpl implements AccountManager {
 
 	@Override
 	public void createAccount(String name, String password) {
-		Preferences prefs = getAccountPreferences();
+		ConfigDatabase db = conf.getDatabase("kraken-core");
+		ConfigCollection principals = db.ensureCollection("principal");
+		ConfigCollection credentials = db.ensureCollection("credential");
+
+		Config c = principals.findOne(Predicates.field("login_name", name));
+		if (c != null)
+			throw new IllegalStateException("duplicated principal name: " + name);
+
+		ConfigTransaction xact = db.beginTransaction(5000);
 		try {
-			if (prefs.nodeExists(name))
-				throw new IllegalStateException("duplicated name");
+			UserPrincipal principal = new UserPrincipal(name);
+			principals.add(xact, PrimitiveConverter.serialize(principal));
 
-			String hash = hashPassword(password);
-			Preferences p = prefs.node(name);
-			p.put("password", hash);
+			String hash = hashPassword(SALT, password);
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("domain", principal.getDomain());
+			m.put("login_name", principal.getName());
+			m.put("salt", SALT);
+			m.put("password", hash);
+			credentials.add(xact, m);
 
-			prefs.flush();
-			prefs.sync();
-		} catch (BackingStoreException e) {
-			logger.warn("core: create account failed", e);
+			xact.commit("kraken-core", "created account: " + name);
+		} catch (Exception e) {
+			xact.rollback();
 		}
 	}
 
@@ -81,74 +119,87 @@ public class AccountManagerImpl implements AccountManager {
 	public void removeAccount(String name) {
 		if (name.equals("root"))
 			throw new IllegalArgumentException("cannot remove root account");
-		
+
+		ConfigDatabase db = conf.getDatabase("kraken-core");
+		ConfigCollection principals = db.ensureCollection("principal");
+		ConfigCollection credentials = db.ensureCollection("credential");
+
+		ConfigTransaction xact = db.beginTransaction(5000);
 		try {
-			Preferences accounts = getAccountPreferences();
-			if (!accounts.nodeExists(name))
+			Config c1 = principals.findOne(Predicates.field("login_name", name));
+			if (c1 == null)
 				return;
 
-			accounts.node(name).removeNode();
-			accounts.flush();
-			accounts.sync();
-		} catch (BackingStoreException e) {
-			logger.warn("core: remove account failed", e);
+			db.remove(c1);
+
+			Config c2 = credentials.findOne(Predicates.field("login_name", name));
+			if (c2 == null)
+				return;
+
+			db.remove(c2);
+			xact.commit("kraken-core", "removed account: " + name);
+		} catch (Exception e) {
+			xact.rollback();
 		}
 	}
 
 	@Override
 	public void changePassword(String name, String currentPassword, String newPassword) {
-		Preferences prefs = getAccountPreferences();
-		try {
-			if (!prefs.nodeExists(name))
-				throw new IllegalStateException("account not found");
+		ConfigDatabase db = conf.getDatabase("kraken-core");
+		ConfigCollection credentials = db.ensureCollection("credential");
+		Config c = credentials.findOne(Predicates.field("login_name", name));
+		if (c == null)
+			throw new IllegalStateException("account not found");
 
-			Preferences p = prefs.node(name);
-			String hash = p.get("password", null);
-			String currentPasswordHash = hashPassword(currentPassword);
-			String newPasswordHash = hashPassword(newPassword);
+		@SuppressWarnings("unchecked")
+		Map<String, Object> m = (Map<String, Object>) c.getDocument();
 
-			if (hash == null || !currentPasswordHash.equals(hash))
-				throw new IllegalStateException("invalid current password");
+		String salt = (String) m.get("salt");
+		String hash = (String) m.get("password");
+		String currentPasswordHash = hashPassword(salt, currentPassword);
+		String newPasswordHash = hashPassword(salt, newPassword);
 
-			p.put("password", newPasswordHash);
-			p.flush();
-			p.sync();
-		} catch (BackingStoreException e) {
-			logger.warn("core: change password failed", e);
-		}
+		if (hash == null || !currentPasswordHash.equals(hash))
+			throw new IllegalStateException("invalid current password");
+
+		m.put("password", newPasswordHash);
+		c.setDocument(m);
+		credentials.update(c, false, "kraken-core", "changed password for " + name);
 	}
 
 	@Override
 	public boolean verifyPassword(String name, String password) {
+
 		if (password == null)
 			return false;
 
-		try {
-			Preferences prefs = getAccountPreferences();
-			if (!prefs.nodeExists(name))
-				return false;
+		ConfigDatabase db = conf.getDatabase("kraken-core");
+		ConfigCollection credentials = db.ensureCollection("credential");
+		Config c = credentials.findOne(Predicates.field("login_name", name));
+		if (c == null)
+			return false;
 
-			Preferences p = prefs.node(name);
-			String hash = p.get("password", null);
-			if (hash == null)
-				return false;
+		@SuppressWarnings("unchecked")
+		Map<String, Object> m = (Map<String, Object>) c.getDocument();
 
-			String computed = hashPassword(password);
-			if (computed == null)
-				return false;
+		String salt = (String) m.get("salt");
+		String hash = (String) m.get("password");
+		if (hash == null)
+			return false;
 
-			if (computed.equals(hash))
-				return true;
+		String computed = hashPassword(salt, password);
+		if (computed == null)
+			return false;
 
-		} catch (BackingStoreException e) {
-			logger.warn("core: verify password failed", e);
-		}
+		if (computed.equals(hash))
+			return true;
+
 		return false;
 	}
 
-	private static String hashPassword(String text) {
+	private static String hashPassword(String salt, String text) {
 		try {
-			text = SALT + text;
+			text = salt + text;
 			MessageDigest md = MessageDigest.getInstance("SHA-1");
 			byte[] sha1hash = new byte[40];
 			md.update(text.getBytes("iso-8859-1"), 0, text.length());
@@ -173,9 +224,5 @@ public class AccountManagerImpl implements AccountManager {
 			} while (two_halfs++ < 1);
 		}
 		return buf.toString();
-	}
-
-	private Preferences getAccountPreferences() {
-		return prefs.node("/account");
 	}
 }
