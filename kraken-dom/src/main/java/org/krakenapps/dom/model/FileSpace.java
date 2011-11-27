@@ -21,7 +21,9 @@ import java.util.UUID;
 
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("file-space")
 public class FileSpace {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();

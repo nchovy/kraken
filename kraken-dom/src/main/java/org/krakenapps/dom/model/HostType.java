@@ -22,7 +22,9 @@ import java.util.UUID;
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("host-type")
 public class HostType {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();
@@ -39,7 +41,7 @@ public class HostType {
 	private boolean isSentrySupported;
 
 	@CollectionTypeHint(HostExtension.class)
-	private List<HostExtension> extensions = new ArrayList<HostExtension>();
+	private List<HostExtension> defaultExtensions = new ArrayList<HostExtension>();
 
 	public String getGuid() {
 		return guid;
@@ -81,12 +83,12 @@ public class HostType {
 		this.isSentrySupported = isSentrySupported;
 	}
 
-	public List<HostExtension> getExtensions() {
-		return extensions;
+	public List<HostExtension> getDefaultExtensions() {
+		return defaultExtensions;
 	}
 
-	public void setExtensions(List<HostExtension> extensions) {
-		this.extensions = extensions;
+	public void setDefaultExtensions(List<HostExtension> defaultExtensions) {
+		this.defaultExtensions = defaultExtensions;
 	}
 
 	@Override

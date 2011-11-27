@@ -53,7 +53,7 @@ public class HostExtension {
 
 	@Override
 	public String toString() {
-		return "[" + ord + "] " + className;
+		return "[" + ord + "] " + type;
 	}
 
 }

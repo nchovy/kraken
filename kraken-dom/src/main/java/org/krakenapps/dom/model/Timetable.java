@@ -22,7 +22,9 @@ import java.util.UUID;
 
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("timetable")
 public class Timetable {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();

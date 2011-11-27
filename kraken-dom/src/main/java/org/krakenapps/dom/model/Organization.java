@@ -21,7 +21,9 @@ import java.util.Map;
 
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.MapTypeHint;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("organization")
 public class Organization {
 	@FieldOption(nullable = false)
 	private String domain;

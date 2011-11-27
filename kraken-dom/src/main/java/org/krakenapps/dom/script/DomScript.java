@@ -28,8 +28,8 @@ public class DomScript implements Script {
 	private HostApi hostApi;
 	private ApplicationApi appApi;
 
-	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
-			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
+	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi, ProgramApi programApi,
+			AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.userApi = userApi;
@@ -56,14 +56,13 @@ public class DomScript implements Script {
 
 		for (HostType t : hostApi.getHostTypes("localhost")) {
 			context.println(t);
-			for (HostExtension ext : t.getExtensions()) {
+			for (HostExtension ext : t.getDefaultExtensions()) {
 				context.println("\t" + ext);
 			}
 		}
 	}
 
-	@ScriptUsage(description = "add host type", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = "domain"),
+	@ScriptUsage(description = "add vendor", arguments = { @ScriptArgument(name = "domain", type = "string", description = "domain"),
 			@ScriptArgument(name = "name", type = "string", description = "name") })
 	public void addVendor(String[] args) {
 		Vendor vendor = new Vendor();
@@ -72,8 +71,7 @@ public class DomScript implements Script {
 		context.println("added " + vendor.getGuid());
 	}
 
-	@ScriptUsage(description = "add host type", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host type", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "vendor guid", type = "string", description = ""),
 			@ScriptArgument(name = "name", type = "string", description = ""),
 			@ScriptArgument(name = "version", type = "string", description = "") })
@@ -88,23 +86,22 @@ public class DomScript implements Script {
 		context.println("added " + t.getGuid());
 	}
 
-	@ScriptUsage(description = "add host type", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host extension", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "host type guid", type = "string", description = ""),
-			@ScriptArgument(name = "class name", type = "string", description = "host extension class name"),
+			@ScriptArgument(name = "type", type = "string", description = "host extension type"),
 			@ScriptArgument(name = "ordinal", type = "string", description = "ordinal") })
 	public void addHostExtension(String[] args) {
 		String domain = args[0];
 		String hostTypeGuid = args[1];
-		String className = args[2];
+		String type = args[2];
 		int ordinal = Integer.valueOf(args[3]);
 
 		HostExtension ext = new HostExtension();
-		ext.setClassName(className);
+		ext.setType(type);
 		ext.setOrd(ordinal);
 
 		HostType t = hostApi.getHostType(domain, hostTypeGuid);
-		t.getExtensions().add(ext);
+		t.getDefaultExtensions().add(ext);
 
 		hostApi.updateHostType(domain, t);
 		context.println("added");

@@ -23,14 +23,16 @@ import java.util.UUID;
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("host")
 public class Host {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();
 
 	@FieldOption(nullable = false)
 	@ReferenceKey("guid")
-	private HostType hostType;
+	private HostType type;
 
 	@FieldOption(nullable = false)
 	@ReferenceKey("guid")
@@ -61,12 +63,12 @@ public class Host {
 		this.guid = guid;
 	}
 
-	public HostType getHostType() {
-		return hostType;
+	public HostType getType() {
+		return type;
 	}
 
-	public void setHostType(HostType hostType) {
-		this.hostType = hostType;
+	public void setType(HostType type) {
+		this.type = type;
 	}
 
 	public Area getArea() {

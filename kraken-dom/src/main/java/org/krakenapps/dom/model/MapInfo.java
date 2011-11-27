@@ -7,7 +7,9 @@ import java.util.UUID;
 
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("map-info")
 public class MapInfo {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();
