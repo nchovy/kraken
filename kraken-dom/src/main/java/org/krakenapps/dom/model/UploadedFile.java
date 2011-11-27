@@ -21,7 +21,9 @@ import java.util.UUID;
 
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("uploaded-file")
 public class UploadedFile {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();

@@ -22,7 +22,9 @@ import java.util.Map;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.MapTypeHint;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("user")
 public class User {
 	@FieldOption(nullable = false, length = 60)
 	private String loginName;

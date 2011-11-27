@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.krakenapps.log.api.LogParser;
+
 public interface LogQuery extends Runnable {
 	int getId();
 
@@ -36,6 +38,10 @@ public interface LogQuery extends Runnable {
 	List<Map<String, Object>> getResult(int offset, int limit);
 
 	List<LogQueryCommand> getCommands();
+
+	LogParser getLogParser();
+	
+	void setLogParser(LogParser parser);
 
 	Set<LogQueryCallback> getLogQueryCallback();
 

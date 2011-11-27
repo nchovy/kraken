@@ -96,6 +96,7 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public void createHost(String domain, Host host) {
+		host.setExtensions(host.getType().getDefaultExtensions());
 		cfg.add(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_ALREADY_EXIST, this);
 	}
 
@@ -164,12 +165,12 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public void createHostExtension(String domain, HostExtension extension) {
-		cfg.add(domain, ext, getExtPred(extension.getClassName()), extension, EXT_ALREADY_EXIST, extEventProvider);
+		cfg.add(domain, ext, getExtPred(extension.getType()), extension, EXT_ALREADY_EXIST, extEventProvider);
 	}
 
 	@Override
 	public void updateHostExtension(String domain, HostExtension extension) {
-		cfg.update(domain, ext, getExtPred(extension.getClassName()), extension, EXT_NOT_FOUND, extEventProvider);
+		cfg.update(domain, ext, getExtPred(extension.getType()), extension, EXT_NOT_FOUND, extEventProvider);
 	}
 
 	@Override

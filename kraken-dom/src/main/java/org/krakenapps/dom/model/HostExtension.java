@@ -15,20 +15,32 @@
  */
 package org.krakenapps.dom.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.krakenapps.api.FieldOption;
 
 public class HostExtension {
 	@FieldOption(nullable = false, length = 255)
-	private String className;
+	private String type;
 
+	private Map<String, Object> configs = new HashMap<String, Object>();
 	private int ord;
 
-	public String getClassName() {
-		return className;
+	public String getType() {
+		return type;
 	}
 
-	public void setClassName(String className) {
-		this.className = className;
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public Map<String, Object> getConfigs() {
+		return configs;
+	}
+
+	public void setConfigs(Map<String, Object> configs) {
+		this.configs = configs;
 	}
 
 	public int getOrd() {
@@ -38,4 +50,10 @@ public class HostExtension {
 	public void setOrd(int ord) {
 		this.ord = ord;
 	}
+
+	@Override
+	public String toString() {
+		return "[" + ord + "] " + type;
+	}
+
 }

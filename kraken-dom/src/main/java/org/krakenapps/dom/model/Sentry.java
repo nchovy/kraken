@@ -20,7 +20,9 @@ import java.util.UUID;
 
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("sentry")
 public class Sentry {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();

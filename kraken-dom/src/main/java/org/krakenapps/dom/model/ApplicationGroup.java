@@ -23,7 +23,9 @@ import java.util.UUID;
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("application-group")
 public class ApplicationGroup {
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();

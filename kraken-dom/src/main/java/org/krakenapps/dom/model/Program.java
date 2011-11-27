@@ -18,7 +18,9 @@ package org.krakenapps.dom.model;
 import java.util.Date;
 
 import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("program")
 public class Program {
 	@FieldOption(nullable = false)
 	private String packName;

@@ -19,7 +19,9 @@ import java.util.Date;
 import java.util.List;
 
 import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("program-pack")
 public class ProgramPack {
 	@FieldOption(nullable = false, length = 60)
 	private String name;

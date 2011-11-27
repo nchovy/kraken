@@ -22,7 +22,9 @@ import java.util.List;
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("program-profile")
 public class ProgramProfile {
 	@FieldOption(nullable = false)
 	private String name;
