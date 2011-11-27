@@ -10,6 +10,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.UploadToken;
+import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.FileSpace;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -27,6 +28,9 @@ public class FileUploadPlugin {
 
 	@Requires
 	private FileUploadApi fileUploadApi;
+
+	@Requires
+	private UserApi userApi;
 
 	// session to download token mapping
 	private ConcurrentMap<Integer, String> tokens = new ConcurrentHashMap<Integer, String>();
@@ -54,6 +58,7 @@ public class FileUploadPlugin {
 	@MsgbusMethod
 	public void createFileSpace(Request req, Response resp) {
 		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(new FileSpace(), req.getParams());
+		space.setOwner(userApi.getUser(req.getOrgDomain(), req.getAdminLoginName()));
 		fileUploadApi.createFileSpace(req.getOrgDomain(), space);
 		resp.put("guid", space.getGuid());
 	}
