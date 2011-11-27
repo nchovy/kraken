@@ -29,6 +29,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.logdb.EmptyLogQueryCallback;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryEventListener;
@@ -76,6 +77,9 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Requires
 	private LogScriptRegistry scriptRegistry;
 
+	@Requires
+	private LogParserFactoryRegistry parserFactoryRegistry;
+
 	private BundleContext bc;
 	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
 
@@ -89,9 +93,8 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Validate
 	public void start() {
 		@SuppressWarnings("unchecked")
-		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, SearchParser.class,
-				FieldsParser.class, FunctionParser.class, OptionParser.class, RenameParser.class, SortParser.class,
-				StatsParser.class, TimechartParser.class);
+		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, SearchParser.class, FieldsParser.class,
+				FunctionParser.class, OptionParser.class, RenameParser.class, SortParser.class, StatsParser.class, TimechartParser.class);
 
 		List<LogQueryParser> parsers = new ArrayList<LogQueryParser>();
 		for (Class<? extends LogQueryParser> clazz : parserClazzes) {
@@ -103,7 +106,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		}
 
 		// add table and lookup (need some constructor injection)
-		TableParser tableParser = new TableParser(logStorage, tableRegistry);
+		TableParser tableParser = new TableParser(logStorage, tableRegistry, parserFactoryRegistry);
 		LookupParser lookupParser = new LookupParser(lookupRegistry);
 		ScriptParser scriptParser = new ScriptParser(bc, scriptRegistry);
 

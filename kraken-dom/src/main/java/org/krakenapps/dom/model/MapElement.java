@@ -1,5 +1,7 @@
 package org.krakenapps.dom.model;
 
+import java.util.UUID;
+
 import org.krakenapps.api.FieldOption;
 
 public class MapElement {
@@ -11,6 +13,8 @@ public class MapElement {
 	private Type type;
 
 	// Common Properties
+	@FieldOption(nullable = false)
+	private String guid = UUID.randomUUID().toString();
 	private double x;
 	private double y;
 	private int z;
@@ -38,6 +42,14 @@ public class MapElement {
 
 	public void setType(Type type) {
 		this.type = type;
+	}
+
+	public String getGuid() {
+		return guid;
+	}
+
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public double getX() {

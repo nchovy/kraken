@@ -15,7 +15,6 @@
  */
 package org.krakenapps.logstorage.engine;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,7 +36,6 @@ import org.krakenapps.confdb.Predicates;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableNotFoundException;
 import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.TableMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,8 +161,9 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		}
 	}
 
+	@Deprecated
 	@Override
-	public TableMetadata getTableMetadata(int tableId) {
+	public org.krakenapps.logstorage.TableMetadata getTableMetadata(int tableId) {
 		String tableName = tableNames.get(tableId);
 		if (tableName == null)
 			return null;
@@ -175,7 +174,7 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 			Object value = t.getMetadata().get(key);
 			m.put(key, value == null ? null : value.toString());
 		}
-		return new TableMetadata(tableId, tableName, m);
+		return new org.krakenapps.logstorage.TableMetadata(tableId, tableName, m);
 	}
 
 	@Override

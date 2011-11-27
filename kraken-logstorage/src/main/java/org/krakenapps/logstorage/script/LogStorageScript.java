@@ -29,22 +29,18 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.swing.text.NumberFormatter;
-
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.TableMetadata;
-import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.ConfigUtil;
+import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.LogTableSchema;
 
 public class LogStorageScript implements Script {
@@ -109,6 +105,8 @@ public class LogStorageScript implements Script {
 		}
 
 		if (args.length == 1) {
+			context.println("Table " + args[0]);
+			context.println();
 			context.println("Table Metadata");
 			context.println("----------");
 			for (String key : tableRegistry.getTableMetadataKeys(tableName)) {
@@ -118,9 +116,12 @@ public class LogStorageScript implements Script {
 
 			long total = 0;
 			File dir = storage.getTableDirectory(tableName);
-			for (File f : dir.listFiles())
-				total += f.length();
+			if (dir.exists()) {
+				for (File f : dir.listFiles())
+					total += f.length();
+			}
 
+			context.println();
 			context.println("Storage Consumption");
 			context.println("---------------------");
 			NumberFormat nf = NumberFormat.getNumberInstance();
@@ -130,7 +131,7 @@ public class LogStorageScript implements Script {
 			context.println(value);
 		} else if (args.length == 3) {
 			tableRegistry.setTableMetadata(tableName, args[1], args[2]);
-			context.println("set " + args[2]);
+			context.printf("set %s to %s", args[1], args[2]);
 		}
 	}
 
@@ -177,8 +178,7 @@ public class LogStorageScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "get logs", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+	@ScriptUsage(description = "get logs", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name"),
 			@ScriptArgument(name = "from", type = "string", description = "yyyyMMddHH format"),
 			@ScriptArgument(name = "to", type = "string", description = "yyyyMMddHH format"),
 			@ScriptArgument(name = "offset", type = "int", description = "offset"),
@@ -297,8 +297,7 @@ public class LogStorageScript implements Script {
 		context.println("set");
 	}
 
-	@ScriptUsage(description = "", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+	@ScriptUsage(description = "", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name"),
 			@ScriptArgument(name = "path", type = "string", description = "iis file path") })
 	public void loadTest(String[] args) {
 		Date begin = new Date();
@@ -324,10 +323,8 @@ public class LogStorageScript implements Script {
 					break;
 
 				if (line.startsWith("#")) {
-					if (line.startsWith("#Fields: ")) {
-						TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(tableName));
-						tm.put("logformat", line.replace("#Fields: ", ""));
-					}
+					if (line.startsWith("#Fields: "))
+						tableRegistry.setTableMetadata(tableName, "logformat", line.replace("#Fields: ", ""));
 					continue;
 				}
 
@@ -424,8 +421,7 @@ public class LogStorageScript implements Script {
 		Map<String, Object> text = new HashMap<String, Object>();
 		text.put("_data", "2011-08-22 17:30:23 Google 111.222.33.44 GET /search q=cache:xgLxoOQBOoIJ:"
 				+ "krakenapps.org/+krakenapps&cd=1&hl=en&ct=clnk&source=www.google.com 80 - 123.234.34.45 "
-				+ "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 "
-				+ "Safari/535.1 404 0 3");
+				+ "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 " + "Safari/535.1 404 0 3");
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("c-ip", "111.222.33.44");

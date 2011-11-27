@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Table;
@@ -36,10 +37,12 @@ import org.krakenapps.logstorage.TableMetadata;
 public class TableParser implements LogQueryParser {
 	private LogStorage logStorage;
 	private LogTableRegistry tableRegistry;
+	private LogParserFactoryRegistry parserFactoryRegistry;
 
-	public TableParser(LogStorage logStorage, LogTableRegistry tableRegistry) {
+	public TableParser(LogStorage logStorage, LogTableRegistry tableRegistry, LogParserFactoryRegistry parserFactoryRegistry) {
 		this.logStorage = logStorage;
 		this.tableRegistry = tableRegistry;
+		this.parserFactoryRegistry = parserFactoryRegistry;
 	}
 
 	@Override
@@ -82,9 +85,9 @@ public class TableParser implements LogQueryParser {
 
 		Table table = new Table(tableName, offset, limit, from, to);
 		table.setStorage(logStorage);
-		TableMetadata tm = tableRegistry.getTableMetadata(tableRegistry.getTableId(table.getTableName()));
-		if (tm.get("logformat") != null)
-			table.setDataHeaders(tm.get("logformat").split(" "));
+		String logformat = tableRegistry.getTableMetadata(table.getTableName(), "logformat");
+		if (logformat != null)
+			table.setDataHeaders(logformat.split(" "));
 
 		return table;
 	}

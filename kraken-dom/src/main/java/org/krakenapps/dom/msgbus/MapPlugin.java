@@ -47,7 +47,7 @@ public class MapPlugin {
 
 	@MsgbusMethod
 	public void removeMap(Request req, Response resp) {
-		String guid = req.getOrgDomain();
+		String guid = req.getString("guid");
 		mapApi.removeMap(req.getOrgDomain(), guid);
 	}
 }

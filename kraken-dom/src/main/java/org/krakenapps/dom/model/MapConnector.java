@@ -2,8 +2,8 @@ package org.krakenapps.dom.model;
 
 public class MapConnector {
 	private String type;
-	private int from;
-	private int to;
+	private String from;
+	private String to;
 	private String color;
 	private int thickness;
 	private boolean useThreshold;
@@ -19,19 +19,19 @@ public class MapConnector {
 		this.type = type;
 	}
 
-	public int getFrom() {
+	public String getFrom() {
 		return from;
 	}
 
-	public void setFrom(int from) {
+	public void setFrom(String from) {
 		this.from = from;
 	}
 
-	public int getTo() {
+	public String getTo() {
 		return to;
 	}
 
-	public void setTo(int to) {
+	public void setTo(String to) {
 		this.to = to;
 	}
 
