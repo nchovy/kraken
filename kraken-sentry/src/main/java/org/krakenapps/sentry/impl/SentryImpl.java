@@ -27,11 +27,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerFactory;
 import org.krakenapps.log.api.LoggerFactoryRegistry;
@@ -41,6 +45,7 @@ import org.krakenapps.log.api.LoggerRegistryEventListener;
 import org.krakenapps.rpc.RpcAgent;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionEventListener;
+import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.sentry.Base;
 import org.krakenapps.sentry.CommandHandler;
@@ -66,6 +71,9 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 
 	@Requires
 	private LoggerRegistry loggerRegistry;
+
+	@Requires
+	private KeyStoreManager keyStoreManager;
 
 	/**
 	 * base name to log session mappings
@@ -163,12 +171,12 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 		RpcSession old = commandSessions.putIfAbsent(name, commandSession);
 		if (old != null)
 			throw new IllegalStateException("duplicated base connection name: " + name);
-		
+
 		commandSession.getConnection().addListener(new RpcConnectionEventListener() {
 			@Override
 			public void connectionOpened(RpcConnection connection) {
 			}
-			
+
 			@Override
 			public void connectionClosed(RpcConnection connection) {
 				commandSessions.remove(name);
@@ -195,35 +203,43 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 		if (logSessions.containsKey(baseName))
 			return logSessions.get(baseName);
 
-		InetSocketAddress address = base.getAddress();
-		RpcConnection dataConnection = agent.connectSsl(address);
-		dataConnection.addListener(new RpcConnectionEventListener() {
-			@Override
-			public void connectionClosed(RpcConnection connection) {
-				RpcSession session = commandSessions.get(baseName);
-				if (session != null && session.getConnection().isOpen())
-					session.getConnection().close();
-				logSessions.remove(baseName);
-			}
-
-			@Override
-			public void connectionOpened(RpcConnection connection) {
-			}
-		});
-
+		RpcConnection dataConnection = null;
 		try {
+			InetSocketAddress address = base.getAddress();
+			KeyManagerFactory kmf = keyStoreManager.getKeyManagerFactory("rpc-agent", "SunX509");
+			TrustManagerFactory tmf = keyStoreManager.getTrustManagerFactory("rpc-ca", "SunX509");
+
+			RpcConnectionProperties props = new RpcConnectionProperties(address, kmf, tmf);
+
+			dataConnection = agent.connectSsl(props);
+			dataConnection.addListener(new RpcConnectionEventListener() {
+				@Override
+				public void connectionClosed(RpcConnection connection) {
+					RpcSession session = commandSessions.get(baseName);
+					if (session != null && session.getConnection().isOpen())
+						session.getConnection().close();
+					logSessions.remove(baseName);
+				}
+
+				@Override
+				public void connectionOpened(RpcConnection connection) {
+				}
+			});
+
 			RpcSession logSession = dataConnection.createSession("kraken-base");
 			logSession.call("setLogChannel", new Object[] { getGuid(), nonce });
 
 			RpcSession old = logSessions.putIfAbsent(baseName, logSession);
 			if (old != null) {
-				dataConnection.close();
+				if (dataConnection != null)
+					dataConnection.close();
 				return null;
 			}
 			return logSession;
 		} catch (Exception e) {
 			getCommandSession(baseName).getConnection().close();
-			dataConnection.close();
+			if (dataConnection != null)
+				dataConnection.close();
 			slog.error("kraken-sentry: failed to open log channel", e);
 			throw new IOException(e.getMessage());
 		}

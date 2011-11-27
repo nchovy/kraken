@@ -20,13 +20,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.rpc.RpcAgent;
 import org.krakenapps.rpc.RpcConnection;
+import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcService;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.sentry.Base;
@@ -52,6 +57,9 @@ public class ConnectionWatchdogImpl implements ConnectionWatchdog, Runnable {
 
 	@Requires
 	private Sentry sentry;
+
+	@Requires
+	private KeyStoreManager keyStoreManager;
 
 	@Validate
 	@Override
@@ -168,14 +176,20 @@ public class ConnectionWatchdogImpl implements ConnectionWatchdog, Runnable {
 	}
 
 	private void connect(Sentry sentry, Base base) {
-		InetSocketAddress endpoint = base.getAddress();
-		RpcConnection connection = rpc.connectSsl(endpoint);
-		if (connection == null) {
-			logger.warn("kraken-sentry: connect failed to [{}]", base.getAddress());
-			return;
-		}
-
+		RpcConnection connection = null;
 		try {
+			InetSocketAddress endpoint = base.getAddress();
+			KeyManagerFactory kmf = keyStoreManager.getKeyManagerFactory("rpc-agent", "SunX509");
+			TrustManagerFactory tmf = keyStoreManager.getTrustManagerFactory("rpc-ca", "SunX509");
+
+			RpcConnectionProperties props = new RpcConnectionProperties(endpoint, kmf, tmf);
+
+			connection = rpc.connectSsl(props);
+			if (connection == null) {
+				logger.warn("kraken-sentry: connect failed to [{}]", base.getAddress());
+				return;
+			}
+
 			// bind sentry service, and connect to base service.
 			connection.bind("kraken-sentry", (RpcService) sentryRpcService);
 			RpcSession commandSession = connection.createSession("kraken-base");
@@ -185,7 +199,8 @@ public class ConnectionWatchdogImpl implements ConnectionWatchdog, Runnable {
 			logger.info("kraken-sentry: new sentry connection [{}] to base [{}]", connection, base.getName());
 		} catch (Exception e) {
 			logger.info("kraken-sentry: failed to connect, closing connection", e);
-			connection.close();
+			if (connection != null)
+				connection.close();
 		}
 	}
 }

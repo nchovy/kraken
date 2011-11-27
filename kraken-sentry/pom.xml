@@ -8,7 +8,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-sentry</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Sentry</name>
 	<build>
@@ -24,8 +24,8 @@
 							org.krakenapps.sentry
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.sentry,
-							org.krakenapps.sentry.process
+							org.krakenapps.sentry;version="1.2.0",
+							org.krakenapps.sentry.process;version="1.2.0"
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.sentry.impl,
@@ -53,7 +53,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
+			<version>1.9.4</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -69,12 +69,12 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-rpc</artifactId>
-			<version>1.0.0</version>
+			<version>1.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-log-api</artifactId>
-			<version>1.1.0</version>
+			<version>1.2.0</version>
 		</dependency>
 	</dependencies>
 </project>
