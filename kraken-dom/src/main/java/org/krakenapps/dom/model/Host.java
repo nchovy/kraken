@@ -41,7 +41,6 @@ public class Host {
 
 	private String description;
 
-	@ReferenceKey("className")
 	@CollectionTypeHint(HostExtension.class)
 	private List<HostExtension> extensions = new ArrayList<HostExtension>();
 
