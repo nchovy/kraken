@@ -15,17 +15,17 @@ public class MapElement {
 	// Common Properties
 	@FieldOption(nullable = false)
 	private String guid = UUID.randomUUID().toString();
-	private double x;
-	private double y;
-	private int z;
-	private double width;
-	private double height;
+	private Double x;
+	private Double y;
+	private Integer z;
+	private Double width;
+	private Double height;
 	private String dataBinding;
 	private String onClick;
 
 	// Map Image Properties
 	private String path;
-	private boolean useThreshold;
+	private Boolean useThreshold;
 	private Long threshold;
 	private String thresholdPath;
 
@@ -33,7 +33,7 @@ public class MapElement {
 	@FieldOption(length = 10)
 	private String fontColor;
 	private String text;
-	private int fontSize;
+	private Integer fontSize;
 	private String align;
 
 	public Type getType() {
@@ -52,43 +52,43 @@ public class MapElement {
 		this.guid = guid;
 	}
 
-	public double getX() {
+	public Double getX() {
 		return x;
 	}
 
-	public void setX(double x) {
+	public void setX(Double x) {
 		this.x = x;
 	}
 
-	public double getY() {
+	public Double getY() {
 		return y;
 	}
 
-	public void setY(double y) {
+	public void setY(Double y) {
 		this.y = y;
 	}
 
-	public int getZ() {
+	public Integer getZ() {
 		return z;
 	}
 
-	public void setZ(int z) {
+	public void setZ(Integer z) {
 		this.z = z;
 	}
 
-	public double getWidth() {
+	public Double getWidth() {
 		return width;
 	}
 
-	public void setWidth(double width) {
+	public void setWidth(Double width) {
 		this.width = width;
 	}
 
-	public double getHeight() {
+	public Double getHeight() {
 		return height;
 	}
 
-	public void setHeight(double height) {
+	public void setHeight(Double height) {
 		this.height = height;
 	}
 
@@ -116,11 +116,11 @@ public class MapElement {
 		this.path = path;
 	}
 
-	public boolean isUseThreshold() {
+	public Boolean getUseThreshold() {
 		return useThreshold;
 	}
 
-	public void setUseThreshold(boolean useThreshold) {
+	public void setUseThreshold(Boolean useThreshold) {
 		this.useThreshold = useThreshold;
 	}
 
@@ -156,11 +156,11 @@ public class MapElement {
 		this.text = text;
 	}
 
-	public int getFontSize() {
+	public Integer getFontSize() {
 		return fontSize;
 	}
 
-	public void setFontSize(int fontSize) {
+	public void setFontSize(Integer fontSize) {
 		this.fontSize = fontSize;
 	}
 
