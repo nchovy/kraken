@@ -54,7 +54,6 @@ public class AccountManagerImpl implements AccountManager, AuthProvider {
 		try {
 			createAccount("root", SALT);
 		} catch (Exception e) {
-			e.printStackTrace();
 			// ignore if already exists
 		}
 	}
