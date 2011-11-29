@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,7 +61,8 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	private static DefaultEntityEventProvider<UploadedFile> fileEventProvider = new DefaultEntityEventProvider<UploadedFile>();
 
 	private ConcurrentMap<String, UploadItem> uploadTokens = new ConcurrentHashMap<String, FileUploadApiImpl.UploadItem>();
-	private ConcurrentMap<Integer, DownloadToken> downloadTokens = new ConcurrentHashMap<Integer, DownloadToken>(); // session-token
+	private ConcurrentMap<Integer, String> sessionDownloadTokens = new ConcurrentHashMap<Integer, String>(); // session-token
+	private ConcurrentMap<String, DownloadToken> downloadTokens = new ConcurrentHashMap<String, DownloadToken>(); // session-token
 
 	@Requires
 	private ConfigManager cfg;
@@ -79,8 +81,10 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	public File getBaseDirectory(String domain) {
 		String dir = orgApi.getOrganizationParameter(domain, FSP_BASE_DIR_KEY, String.class);
 		if (dir == null)
-			dir = new File(System.getProperty("kraken.data.dir"), "kraken-http/upload/" + domain).getAbsolutePath();
-		return new File(dir);
+			dir = new File(System.getProperty("kraken.data.dir"), "kraken-dom/upload/" + domain).getAbsolutePath();
+		File f = new File(dir);
+		f.mkdirs();
+		return f;
 	}
 
 	@Override
@@ -95,12 +99,17 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Override
 	public FileSpace findFileSpace(String domain, String guid) {
-		return cfg.find(domain, fsp, getPred(guid));
+		FileSpace fileSpace = cfg.find(domain, fsp, getPred(guid));
+		if (fileSpace != null)
+			fileSpace.setFiles((List<UploadedFile>) cfg.all(domain, UploadedFile.class, Predicates.field("space/guid", guid)));
+		return fileSpace;
 	}
 
 	@Override
 	public FileSpace getFileSpace(String domain, String guid) {
-		return cfg.get(domain, fsp, getPred(guid), FSP_NOT_FOUND);
+		FileSpace fileSpace = cfg.get(domain, fsp, getPred(guid), FSP_NOT_FOUND);
+		fileSpace.setFiles((List<UploadedFile>) cfg.all(domain, UploadedFile.class, Predicates.field("space/guid", guid)));
+		return fileSpace;
 	}
 
 	@Override
@@ -161,10 +170,23 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 			String guid = null;
 			if (totalSize == item.token.getFileSize()) {
-				File newFile = new File(getBaseDirectory(orgDomain), "");
-
 				UploadedFile uploaded = new UploadedFile();
-				guid = uploaded.getGuid();
+				File newFile = null;
+				if (item.token.getSpaceGuid() != null) {
+					FileSpace space = getFileSpace(orgDomain, item.token.getSpaceGuid());
+					uploaded.setSpace(space);
+					guid = uploaded.getGuid();
+					File spaceDir = new File(getBaseDirectory(orgDomain), space.getGuid());
+					spaceDir.mkdirs();
+					newFile = new File(spaceDir, guid);
+				} else
+					newFile = new File(getBaseDirectory(orgDomain), guid);
+
+				if (newFile.exists())
+					newFile.delete();
+				if (!temp.renameTo(newFile))
+					throw new DOMException("rename-uploaded-file-failed");
+
 				uploaded.setOwner(userApi.findUser(orgDomain, item.token.getLoginName()));
 				uploaded.setFileName(item.token.getFileName());
 				uploaded.setFileSize(item.token.getFileSize());
@@ -195,22 +217,23 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Override
 	public String setDownloadToken(Session session) {
-		if (downloadTokens.containsKey(session.getId()))
-			return downloadTokens.get(session.getId()).guid;
-
 		userApi.getUser(session.getOrgDomain(), session.getAdminLoginName());
 		DownloadToken token = new DownloadToken(session);
-		downloadTokens.putIfAbsent(session.getId(), token);
+		String old = sessionDownloadTokens.putIfAbsent(session.getId(), token.guid);
+		if (old != null)
+			return old;
+
+		downloadTokens.put(token.guid, token);
 		return token.guid;
 	}
 
 	@Override
-	public UploadedFile getFileMetadata(String domain, String tokenGuid) {
+	public UploadedFile getFileMetadata(String tokenGuid, String fileGuid) {
 		DownloadToken token = downloadTokens.get(tokenGuid);
 		if (token == null)
 			throw new DOMException("download-token-not-found");
 
-		UploadedFile uploaded = cfg.get(domain, file, getPred(tokenGuid), FILE_NOT_FOUND);
+		UploadedFile uploaded = cfg.get(token.session.getOrgDomain(), file, getPred(fileGuid), FILE_NOT_FOUND);
 		if (!token.session.getAdminLoginName().equals(uploaded.getOwner().getLoginName())) {
 			Map<String, Object> params = new HashMap<String, Object>();
 			params.put("guid", uploaded.getGuid());
@@ -221,8 +244,11 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	}
 
 	@Override
-	public void removeDownloadToken(String token) {
-		downloadTokens.remove(token);
+	public void removeDownloadToken(Session session) {
+		String token = sessionDownloadTokens.remove(session.getId());
+		if (token != null)
+			downloadTokens.remove(token);
+
 	}
 
 	private class DownloadToken {

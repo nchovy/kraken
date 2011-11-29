@@ -42,7 +42,7 @@ public class FileSpace {
 	private Date updated = new Date();
 
 	@FieldOption(skip = true)
-	private List<UploadedFile> uploadedFiles;
+	private List<UploadedFile> files;
 
 	public String getGuid() {
 		return guid;
@@ -84,11 +84,11 @@ public class FileSpace {
 		this.updated = updated;
 	}
 
-	public List<UploadedFile> getUploadedFiles() {
-		return uploadedFiles;
+	public List<UploadedFile> getFiles() {
+		return files;
 	}
 
-	public void setUploadedFiles(List<UploadedFile> uploadedFiles) {
-		this.uploadedFiles = uploadedFiles;
+	public void setFiles(List<UploadedFile> files) {
+		this.files = files;
 	}
 }
