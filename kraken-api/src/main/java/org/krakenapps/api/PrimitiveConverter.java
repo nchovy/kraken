@@ -55,6 +55,8 @@ public class PrimitiveConverter {
 
 		// Array
 		if (cls.isArray()) {
+			if (cls.getComponentType().isPrimitive())
+				return obj;
 			Object[] ary = new Object[Array.getLength(obj)];
 			for (int i = 0; i < ary.length; i++)
 				ary[i] = serialize(root, Array.get(obj, i), callback, refkey, options);
@@ -109,7 +111,8 @@ public class PrimitiveConverter {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
+								f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
@@ -146,10 +149,7 @@ public class PrimitiveConverter {
 
 			T n = null;
 			try {
-				if (cls.isArray())
-					n = (T) Array.newInstance(cls.getComponentType(), ((Object[]) obj).length);
-				else
-					n = cls.newInstance();
+				n = cls.newInstance();
 			} catch (IllegalAccessException e) {
 				Constructor c = cls.getConstructor();
 				c.setAccessible(true);
@@ -212,11 +212,15 @@ public class PrimitiveConverter {
 							found = o;
 					f.set(n, found);
 				} else if (fieldType.isArray()) {
-					Object[] o = (Object[]) value;
-					Object ary = Array.newInstance(fieldType.getComponentType(), o.length);
-					for (int i = 0; i < o.length; i++)
-						Array.set(ary, i, o[i]);
-					f.set(n, ary);
+					if (fieldType.getComponentType().isPrimitive())
+						f.set(n, value);
+					else {
+						Object[] o = (Object[]) value;
+						Object ary = Array.newInstance(fieldType.getComponentType(), o.length);
+						for (int i = 0; i < o.length; i++)
+							Array.set(ary, i, o[i]);
+						f.set(n, ary);
+					}
 				} else if (Collection.class.isAssignableFrom(fieldType)) {
 					if (value instanceof Object[])
 						value = Arrays.asList((Object[]) value);
