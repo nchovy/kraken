@@ -118,7 +118,7 @@ public class CertificateAuthorityScript implements Script {
 		String ext = cm.getType();
 		if (ext.equals("pkcs12"))
 			ext = "pfx";
-		
+
 		File pfx = new File(dir, parseCN(cm.getSubjectDn()) + "." + ext);
 		RandomAccessFile f = null;
 		try {
@@ -240,12 +240,12 @@ public class CertificateAuthorityScript implements Script {
 			req.setIssuerKey(req.getKeyPair().getPrivate());
 
 			ca.createAuthority(name, req);
-			context.println("Completed");
+			context.println("created");
 		} catch (InterruptedException e) {
 			context.println("");
-			context.println("Interrupted");
+			context.println("interrupted");
 		} catch (Exception e) {
-			context.println("Error: " + e.getMessage());
+			context.println("error: " + e.getMessage());
 			logger.warn("kraken ca: create cert failed", e);
 		}
 	}
@@ -259,6 +259,7 @@ public class CertificateAuthorityScript implements Script {
 		}
 
 		ca.removeAuthority(args[0]);
+		context.println("removed");
 	}
 
 	private CertificateRequest inputRequest() throws Exception {

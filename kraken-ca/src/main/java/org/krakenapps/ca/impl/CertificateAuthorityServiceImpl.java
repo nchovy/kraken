@@ -28,6 +28,7 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.Predicates;
 
 @Component(name = "certificate-authority")
 @Provides
@@ -149,5 +150,11 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 			return;
 
 		conf.dropDatabase("kraken-ca-" + authority.getName());
+
+		ConfigDatabase ca = conf.ensureDatabase("kraken-ca");
+		ConfigCollection col = ca.ensureCollection("authority");
+		Config c = col.findOne(Predicates.field("name", name));
+		if (c != null)
+			col.remove(c, false, "kraken-ca", "removed authority: " + name);
 	}
 }
