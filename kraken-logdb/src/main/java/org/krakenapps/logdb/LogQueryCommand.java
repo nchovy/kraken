@@ -28,11 +28,11 @@ public abstract class LogQueryCommand {
 	private String queryString;
 	private int pushCount;
 	protected LogQuery logQuery;
-	protected String[] header;
 	protected String dateColumnName;
 	protected LogQueryCommand next;
 	private boolean callbackTimeline;
 	protected volatile Status status = Status.Waiting;
+	private Map<String, Object> parsed = null;
 
 	public String getQueryString() {
 		return queryString;
@@ -44,10 +44,6 @@ public abstract class LogQueryCommand {
 
 	public void setLogQuery(LogQuery logQuery) {
 		this.logQuery = logQuery;
-	}
-
-	protected void setDataHeader(String[] header) {
-		this.header = header;
 	}
 
 	protected String getDateColumnName() {
@@ -63,32 +59,10 @@ public abstract class LogQueryCommand {
 	protected Object getData(String key, Map<String, Object> m) {
 		if (m.containsKey(key))
 			return m.get(key);
+		else if (parsed == null)
+			parsed = logQuery.getLogParser().parse(m);
 
-		if (header != null) {
-			for (int i = 0; i < header.length; i++) {
-				if (header[i].equals(key)) {
-					String data = (String) m.get("_data");
-					int l = 0;
-					for (int j = 0; j < i; j++) {
-						l = data.indexOf(' ', l) + 1;
-						if (l == 0)
-							return null;
-					}
-					int r = data.indexOf(' ', l);
-
-					String value = null;
-					if (r == -1)
-						value = data.substring(l);
-					else
-						value = data.substring(l, r);
-
-					m.put(key, value);
-					return value;
-				}
-			}
-		}
-
-		return null;
+		return parsed.get(key);
 	}
 
 	public LogQueryCommand getNextCommand() {
@@ -102,7 +76,6 @@ public abstract class LogQueryCommand {
 
 	private void setNextCommandConfigure() {
 		if (next != null) {
-			next.setDataHeader(header);
 			next.setDateColumnName(getDateColumnName());
 			next.setNextCommandConfigure();
 		}

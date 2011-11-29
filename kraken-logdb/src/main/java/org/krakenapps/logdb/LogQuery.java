@@ -41,7 +41,7 @@ public interface LogQuery extends Runnable {
 
 	LogParser getLogParser();
 	
-	void setLogParser(LogParser parser);
+	void setLogParser(String name);
 
 	Set<LogQueryCallback> getLogQueryCallback();
 

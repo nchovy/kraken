@@ -5,8 +5,8 @@ public class MapConnector {
 	private String from;
 	private String to;
 	private String color;
-	private int thickness;
-	private boolean useThreshold;
+	private Integer thickness;
+	private Boolean useThreshold;
 	private String thresholdPath;
 	private Long threshold;
 	private String onClick;
@@ -43,19 +43,19 @@ public class MapConnector {
 		this.color = color;
 	}
 
-	public int getThickness() {
+	public Integer getThickness() {
 		return thickness;
 	}
 
-	public void setThickness(int thickness) {
+	public void setThickness(Integer thickness) {
 		this.thickness = thickness;
 	}
 
-	public boolean isUseThreshold() {
+	public Boolean getUseThreshold() {
 		return useThreshold;
 	}
 
-	public void setUseThreshold(boolean useThreshold) {
+	public void setUseThreshold(Boolean useThreshold) {
 		this.useThreshold = useThreshold;
 	}
 
