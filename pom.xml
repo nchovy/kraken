@@ -131,7 +131,7 @@
 			<id>krakenapps</id>
 			<name>KrakenApps Maven Repository</name>
 			<layout>default</layout>
-			<url>http://download.krakenapps.org/</url>
+			<url>http://staging.krakenapps.org/</url>
 			<snapshots>
 				<enabled>true</enabled>
 			</snapshots>
@@ -141,7 +141,7 @@
 		<repository>
 			<id>krakenapps</id>
 			<name>Kraken Apps</name>
-			<url>scp://krakenapps.org/home/maven</url>
+			<url>scp://krakenapps.org/home/service/staging</url>
 		</repository>
 	</distributionManagement>
 	<dependencyManagement>
