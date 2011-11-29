@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.log.api.LogParser;
+import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.log.api.LogParserRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
@@ -43,14 +44,16 @@ public class LogQueryImpl implements LogQuery {
 	private final int id = nextId.getAndIncrement();
 	private String queryString;
 	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
+	private LogParserFactoryRegistry parserFactoryRegistry;
 	private LogParser parser;
 	private Date lastStarted;
 	private Result result;
 	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
 
-	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString, LogParserRegistry parserRegistry) {
+	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString, LogParserFactoryRegistry parserFacotryRegistry) {
 		this.queryString = queryString;
+		this.parserFactoryRegistry = parserFacotryRegistry;
 
 		for (String q : queryString.split("\\|")) {
 			q = q.trim();
@@ -167,8 +170,8 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
-	public void setLogParser(LogParser parser) {
-		this.parser = parser;
+	public void setLogParser(String name) {
+		this.parser = parserFactoryRegistry.get(name);
 	}
 
 	@Override
