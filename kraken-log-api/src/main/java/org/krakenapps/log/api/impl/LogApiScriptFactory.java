@@ -22,7 +22,6 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.log.api.LogNormalizerRegistry;
-import org.krakenapps.log.api.LogParserRegistry;
 import org.krakenapps.log.api.LoggerFactoryRegistry;
 import org.krakenapps.log.api.LoggerRegistry;
 
@@ -40,14 +39,10 @@ public class LogApiScriptFactory implements ScriptFactory {
 	private LoggerFactoryRegistry loggerFactoryRegistry;
 
 	@Requires
-	private LogParserRegistry parserRegistry;
-
-	@Requires
 	private LogNormalizerRegistry normalizerRegistry;
 
 	@Override
 	public Script createScript() {
-		return new LogApiScript(loggerFactoryRegistry, loggerRegistry, parserRegistry, normalizerRegistry);
+		return new LogApiScript(loggerFactoryRegistry, loggerRegistry, normalizerRegistry);
 	}
-
 }

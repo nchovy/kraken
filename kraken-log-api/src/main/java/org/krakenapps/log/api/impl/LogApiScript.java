@@ -27,8 +27,6 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.log.api.Log;
 import org.krakenapps.log.api.LogNormalizer;
 import org.krakenapps.log.api.LogNormalizerRegistry;
-import org.krakenapps.log.api.LogParser;
-import org.krakenapps.log.api.LogParserRegistry;
 import org.krakenapps.log.api.LogPipe;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
@@ -41,54 +39,17 @@ public class LogApiScript implements Script {
 	private ScriptContext context;
 	private LoggerFactoryRegistry loggerFactoryRegistry;
 	private LoggerRegistry loggerRegistry;
-	private LogParserRegistry parserRegistry;
 	private LogNormalizerRegistry normalizerRegistry;
 
-	public LogApiScript(LoggerFactoryRegistry loggerFactoryRegistry, LoggerRegistry loggerRegistry,
-			LogParserRegistry parserRegistry, LogNormalizerRegistry normalizerRegistry) {
+	public LogApiScript(LoggerFactoryRegistry loggerFactoryRegistry, LoggerRegistry loggerRegistry, LogNormalizerRegistry normalizerRegistry) {
 		this.loggerFactoryRegistry = loggerFactoryRegistry;
 		this.loggerRegistry = loggerRegistry;
-		this.parserRegistry = parserRegistry;
 		this.normalizerRegistry = normalizerRegistry;
 	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
-	}
-
-	public void parsers(String[] args) {
-		context.println("Log Parsers");
-		context.println("---------------------");
-
-		for (String name : parserRegistry.getNames()) {
-			context.println(name);
-		}
-	}
-
-	@ScriptUsage(description = "parse log with specified parser")
-	public void parse(String[] args) {
-		try {
-			context.print("Parser Name? ");
-			String parserName = context.readLine();
-			LogParser parser = parserRegistry.get(parserName);
-			if (parser == null) {
-				context.println("parser not found");
-				return;
-			}
-
-			Map<String, Object> params = getParams();
-
-			Map<String, Object> m = parser.parse(params);
-			context.println("---------------------");
-
-			for (String key : m.keySet()) {
-				context.println(key + ": " + m.get(key));
-			}
-		} catch (InterruptedException e) {
-			context.println("");
-			context.println("interrupted");
-		}
 	}
 
 	public void normalizers(String[] args) {
@@ -159,7 +120,6 @@ public class LogApiScript implements Script {
 	}
 
 	private class ConsoleLogPipe implements LogPipe {
-
 		@Override
 		public void onLog(Logger logger, Log log) {
 			context.println(logger.getFullName() + ": " + log.toString());
@@ -267,8 +227,7 @@ public class LogApiScript implements Script {
 
 			String[] tokens = fullName.split("\\\\");
 
-			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(),
-					logger.getFactoryName());
+			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(), logger.getFactoryName());
 			factory.deleteLogger(tokens[0], tokens[1]);
 			context.println("logger removed");
 		} catch (Exception e) {

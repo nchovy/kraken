@@ -1,10 +1,8 @@
 <ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
-	<instance component="httpd-log-parser"/>
 	<instance component="httpd-log-parser-factory" />
 	<instance component="httpd-log-normalizer"/>
-	<instance component="openssh-log-parser" />
 	<instance component="openssh-log-parser-factory" />
 	<instance component="openssh-log-normalizer" />
 </ipojo>

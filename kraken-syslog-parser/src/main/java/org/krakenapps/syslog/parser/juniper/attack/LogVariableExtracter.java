@@ -22,46 +22,48 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class LogVariableExtracter {
-	
+	private static Logger logger = LoggerFactory.getLogger(LogVariableExtracter.class);
+
 	public static Set<String> extractFromFile(String filename) {
 		Set<String> propertyKeys = new TreeSet<String>();
-		
+
 		BufferedReader reader = null;
 		try {
 			reader = new BufferedReader(new FileReader(filename));
 			int ch = -1;
 			StringBuilder buf = new StringBuilder();
-			while(true) {
+			while (true) {
 				ch = reader.read();
-//				System.out.print(ch);
-				if (ch==-1) {
-//					System.out.println("Reach EOF");
+				if (ch == -1) {
 					break;
 				}
-				if (ch!='<') continue;
-				
-				while((ch=reader.read())>-1) {
-					if (ch=='<') {
+				if (ch != '<')
+					continue;
+
+				while ((ch = reader.read()) > -1) {
+					if (ch == '<') {
 						buf.delete(0, buf.length());
 						continue;
-					}
-					else if (ch=='>') break;
-					buf.append((char)ch);
+					} else if (ch == '>')
+						break;
+					buf.append((char) ch);
 				}
-				
+
 				propertyKeys.add(buf.toString());
 				buf.delete(0, buf.length());
-				
+
 			}
-			
-			
+
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.error("kraken syslog parser: file not found [{}]", filename);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("kraken syslog parser: io error", e);
 		} finally {
-			if (reader!=null) {
+			if (reader != null) {
 				try {
 					reader.close();
 				} catch (IOException e) {
@@ -72,16 +74,5 @@ public class LogVariableExtracter {
 		}
 
 		return propertyKeys;
-	}
-	
-	public static void main(String[] args) {
-		Set<String> propertyKeys = extractFromFile(
-//				"630_messages.txt"
-				"src/main/resources/org/krakenapps/syslog/parser/juniper/attack/attack_log_format.txt"
-		);
-		
-		for(String key : propertyKeys) {
-			System.out.println(key);
-		}
 	}
 }

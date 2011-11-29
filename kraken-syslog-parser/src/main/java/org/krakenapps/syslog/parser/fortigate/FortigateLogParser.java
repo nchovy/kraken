@@ -17,39 +17,36 @@ package org.krakenapps.syslog.parser.fortigate;
 
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.util.QuotedKeyValueParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Component(name = "fortigate-log-parser")
-@Provides
 public class FortigateLogParser implements LogParser {
-	private org.slf4j.Logger slog = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Override
 	public String getName() {
 		return "fortigate";
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Integer severity = (Integer) params.get("severity");
-		//		Integer facility = (Integer) params.get("facility");
+		// Integer facility = (Integer) params.get("facility");
 
 		String line = (String) params.get("msg");
 		try {
-			@SuppressWarnings("unchecked")
 			Map<String, Object> map = (Map<String, Object>) (Object) QuotedKeyValueParser.parse(line);
-			
+
 			map.put("severity", severity);
 			map.put("facility", (Integer) params.get("facility"));
 
 			return map;
 		} catch (Exception e) {
-			slog.debug("parse error for: " + line);
+			logger.debug("kraken syslog parser: parse error for [{}]", line);
 		}
 		return null;
 	}
-
 }

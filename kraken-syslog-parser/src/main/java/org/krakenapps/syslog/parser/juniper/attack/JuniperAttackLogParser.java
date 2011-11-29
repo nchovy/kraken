@@ -25,18 +25,17 @@ import java.util.Set;
 import org.krakenapps.syslog.parser.internal.PatternFinder;
 
 public class JuniperAttackLogParser {
-	
 	private PatternFinder<JuniperAttackLogPattern> patternMap;
-	
+
 	public JuniperAttackLogParser() throws IOException {
 		patternMap = getPatternMapDataFromStream(new InputStreamReader(
-			JuniperAttackLogParser.class.getResourceAsStream("attack_log_format.txt")
-		));
+				JuniperAttackLogParser.class.getResourceAsStream("attack_log_format.txt")));
 	}
-	
-	private JuniperAttackLogParser (PatternFinder<JuniperAttackLogPattern> patternMap) {
+
+	private JuniperAttackLogParser(PatternFinder<JuniperAttackLogPattern> patternMap) {
 		this.patternMap = patternMap;
 	}
+
 	public static JuniperAttackLogParser newInstance() {
 		try {
 			return new JuniperAttackLogParser();
@@ -45,42 +44,46 @@ public class JuniperAttackLogParser {
 			return null;
 		}
 	}
-			
-	public static JuniperAttackLogParser newInstance(Reader reader) throws IOException {
 
+	public static JuniperAttackLogParser newInstance(Reader reader) throws IOException {
 		return new JuniperAttackLogParser(getPatternMapDataFromStream(reader));
 	}
-	
-	private static PatternFinder<JuniperAttackLogPattern> getPatternMapDataFromStream(Reader reader) throws IOException  {
+
+	private static PatternFinder<JuniperAttackLogPattern> getPatternMapDataFromStream(Reader reader) throws IOException {
 		PatternFinder<JuniperAttackLogPattern> patternMap = PatternFinder.newInstance();
-		
+
 		BufferedReader br = new BufferedReader(reader);
 
-		while(true) {
-			if (br.readLine()==null) break;
+		while (true) {
+			if (br.readLine() == null)
+				break;
 			String category = br.readLine();
-			if (category==null) break;
-			if (br.readLine()==null) break;
+			if (category == null)
+				break;
+			if (br.readLine() == null)
+				break;
 			String patternString = br.readLine();
-			if (patternString==null) break;
+			if (patternString == null)
+				break;
 			JuniperAttackLogPattern pattern = JuniperAttackLogPattern.from(category, patternString);
 			patternMap.register(pattern.getConstElements().get(0), pattern);
-			if (br.readLine()==null) break;
+			if (br.readLine() == null)
+				break;
 		}
 		return patternMap;
 	}
-	
-	public Map<String, Object> parse(String line) {
 
+	public Map<String, Object> parse(String line) {
 		Set<JuniperAttackLogPattern> patterns = patternMap.find(line);
-		for(JuniperAttackLogPattern pattern : patterns) {
+		for (JuniperAttackLogPattern pattern : patterns) {
 			Map<String, Object> result = pattern.parse(line);
-			if (result!=null) return result;
+			if (result != null)
+				return result;
 		}
-		
+
 		return null;
 	}
-	
+
 	public Set<String> getPatternKeySet() {
 		return patternMap.fingetPrints();
 	}

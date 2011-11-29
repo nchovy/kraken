@@ -35,8 +35,8 @@ public class NetScreenLogNormalizer implements LogNormalizer {
 	public String getName() {
 		return "netscreen-isg";
 	}
-	
-	/**
+
+	/** @formatter:off
 	 * 0 Emergency  --> 1 (Fatal)
 	 * 1 Alert     --> 2 (High)
 	 * 2 Critical  --> 2 (High)
@@ -45,19 +45,24 @@ public class NetScreenLogNormalizer implements LogNormalizer {
 	 * 5 Notice --> 4 (Low)
 	 * 6 Info   --> 5 (Info)
 	 * 7 Debug  --> 5 (Info)
-	 */
+	 */ // @formatter:on
 	private int normalizeSeverity(int originalSeverity) {
-		switch(originalSeverity) {
-		case 0: return 1;
-		case 1: 
-		case 2: return 2;
-		case 3: 
-		case 4: return 3;
-		case 5: return 4;
-		case 6: 
-		case 7: return 5;
+		switch (originalSeverity) {
+		case 0:
+			return 1;
+		case 1:
+		case 2:
+			return 2;
+		case 3:
+		case 4:
+			return 3;
+		case 5:
+			return 4;
+		case 6:
+		case 7:
+			return 5;
 		default:
-			throw new IllegalArgumentException("Severity is not in range [0.7] : "+originalSeverity);
+			throw new IllegalArgumentException("Severity is not in range [0.7] : " + originalSeverity);
 		}
 	}
 
@@ -71,7 +76,7 @@ public class NetScreenLogNormalizer implements LogNormalizer {
 				logger.debug("kraken syslog parser: category is null, bug check");
 				return null;
 			}
-			
+
 			m.put("severity", normalizeSeverity((Integer) params.get("severity")));
 
 			if (category.equals("traffic"))
@@ -94,14 +99,13 @@ public class NetScreenLogNormalizer implements LogNormalizer {
 		m.put("rule", params.get("rule"));
 		m.put("count", params.get("count"));
 		m.put("severity", params.get("severity"));
-		
+
 		m.put("type", "intrusion");
 		m.put("category", "unknown");
 		return m;
 	}
-		
-	private Map<String, Object> handleFirewallLog(Map<String, Object> params, Map<String, Object> m)
-			throws UnknownHostException {
+
+	private Map<String, Object> handleFirewallLog(Map<String, Object> params, Map<String, Object> m) throws UnknownHostException {
 		String action = (String) params.get("action");
 
 		m.put("type", "firewall");

@@ -40,8 +40,7 @@ import org.osgi.framework.BundleContext;
 
 @Component(name = "logger-registry")
 @Provides(specifications = { LoggerRegistry.class })
-public class LoggerRegistryImpl implements LoggerRegistry, LoggerFactoryRegistryEventListener,
-		LoggerFactoryEventListener, LogPipe {
+public class LoggerRegistryImpl implements LoggerRegistry, LoggerFactoryRegistryEventListener, LoggerFactoryEventListener, LogPipe {
 	private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LoggerRegistryImpl.class.getName());
 	private BundleContext bc;
 	private LoggerFactoryTracker tracker;
@@ -148,10 +147,10 @@ public class LoggerRegistryImpl implements LoggerRegistry, LoggerFactoryRegistry
 
 	@Override
 	public void removeLogger(Logger logger) {
-		log.debug("kraken log api: removing logger [{}]", logger.getFullName());
-
 		if (logger == null)
 			throw new IllegalArgumentException("logger must not be null");
+
+		log.debug("kraken log api: removing logger [{}]", logger.getFullName());
 
 		if (logger.isRunning())
 			throw new IllegalStateException("logger is still running");

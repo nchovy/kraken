@@ -17,16 +17,14 @@ package org.krakenapps.syslog.parser.juniper;
 
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.syslog.parser.juniper.attack.JuniperAttackLogParser;
 import org.krakenapps.syslog.parser.juniper.session.JuniperSessionLogParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Component(name = "netscreen-log-parser")
-@Provides
 public class NetScreenLogParser implements LogParser {
-	private org.slf4j.Logger slog = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	private JuniperSessionLogParser sessionPattern = JuniperSessionLogParser.newInstance();
 	private JuniperAttackLogParser attackPattern = JuniperAttackLogParser.newInstance();
@@ -39,7 +37,7 @@ public class NetScreenLogParser implements LogParser {
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Integer severity = (Integer) params.get("severity");
-		//		Integer facility = (Integer) params.get("facility");
+		// Integer facility = (Integer) params.get("facility");
 
 		String line = (String) params.get("msg");
 		try {
@@ -52,7 +50,7 @@ public class NetScreenLogParser implements LogParser {
 
 			return map;
 		} catch (Exception e) {
-			slog.debug("parse error for: " + line);
+			logger.debug("parse error for: " + line);
 		}
 		return null;
 	}

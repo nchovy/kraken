@@ -23,14 +23,14 @@ import org.slf4j.LoggerFactory;
 @Component(name = "log-parser-factory-registry")
 @Provides(specifications = { LogParserFactoryRegistry.class })
 public class LogParserFactoryRegistryImpl extends ServiceTracker implements LogParserFactoryRegistry {
-	private final Logger logger = LoggerFactory.getLogger(LogParserRegistryImpl.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(LogParserFactoryRegistryImpl.class);
 	private ConcurrentMap<String, LogParserFactory> factoryMap;
 	private Set<LogParserFactoryRegistryEventListener> callbacks;
 
 	public LogParserFactoryRegistryImpl(BundleContext bc) {
 		super(bc, LogParserFactory.class.getName(), null);
-		factoryMap = new ConcurrentHashMap<String, LogParserFactory>();
-		callbacks = Collections.newSetFromMap(new ConcurrentHashMap<LogParserFactoryRegistryEventListener, Boolean>());
+		this.factoryMap = new ConcurrentHashMap<String, LogParserFactory>();
+		this.callbacks = Collections.newSetFromMap(new ConcurrentHashMap<LogParserFactoryRegistryEventListener, Boolean>());
 	}
 
 	@Validate
@@ -139,5 +139,4 @@ public class LogParserFactoryRegistryImpl extends ServiceTracker implements LogP
 
 		callbacks.remove(callback);
 	}
-
 }

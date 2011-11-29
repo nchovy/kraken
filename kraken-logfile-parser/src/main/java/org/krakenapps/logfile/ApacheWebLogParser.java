@@ -24,12 +24,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogParser;
 
-@Component(name = "httpd-log-parser")
-@Provides
 public class ApacheWebLogParser implements LogParser {
 	private String logFormat;
 	private final static Map<String, FormatInfo> formats = new HashMap<String, FormatInfo>();

@@ -20,16 +20,12 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "snort-log-parser")
-@Provides
 public class SnortLogParser implements LogParser {
-	private Logger logger = LoggerFactory.getLogger(SnortLogParser.class.getName());
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Override
 	public String getName() {
@@ -144,9 +140,9 @@ public class SnortLogParser implements LogParser {
 		return token;
 	}
 
-	class Token {
-		public int begin;
-		public int end;
-		public String value;
+	private class Token {
+		private int begin;
+		private int end;
+		private String value;
 	}
 }

@@ -21,9 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 public class JuniperAttackLogPattern {
-
 	public static final String SEVERITY_KEY = "severity";
 	public static final String ID_KEY = "id";
 	public static final String RULE_KEY = "rule";
@@ -36,8 +34,7 @@ public class JuniperAttackLogPattern {
 	private List<String> constElements;
 	private List<LogVariableType> variables;
 
-	private JuniperAttackLogPattern(String severity, String id, String rule,
-			List<String> constElements, List<LogVariableType> variables) {
+	private JuniperAttackLogPattern(String severity, String id, String rule, List<String> constElements, List<LogVariableType> variables) {
 		this.severity = severity;
 		this.id = id;
 		this.rule = rule;
@@ -45,26 +42,22 @@ public class JuniperAttackLogPattern {
 		this.variables = variables;
 	}
 
-	public static JuniperAttackLogPattern from(String category,
-			String patternString) {
-
+	public static JuniperAttackLogPattern from(String category, String patternString) {
 		int categorySeperaterPosition = category.indexOf(' ');
 		if (categorySeperaterPosition == -1)
 			return null;
 		String severity = category.substring(0, categorySeperaterPosition);
-		String id = category.substring(categorySeperaterPosition + 2,
-				category.length() - 1);
+		String id = category.substring(categorySeperaterPosition + 2, category.length() - 1);
 
-		String rule = patternString.substring(0, patternString.indexOf('!')); 
-		
+		String rule = patternString.substring(0, patternString.indexOf('!'));
+
 		List<String> constElements = new ArrayList<String>();
 		List<LogVariableType> variables = new ArrayList<LogVariableType>();
 		int offset = 0;
 		do {
 			int[] pos = findBraket(patternString, offset);
 			if (pos[1] == -1) {
-				constElements.add(patternString.substring(offset,
-						patternString.length()));
+				constElements.add(patternString.substring(offset, patternString.length()));
 				break;
 			}
 			constElements.add(patternString.substring(offset, pos[0]));
@@ -72,29 +65,28 @@ public class JuniperAttackLogPattern {
 			offset = pos[1];
 		} while (offset > -1 && offset < patternString.length());
 
-		return new JuniperAttackLogPattern(severity, id, rule,
-				Collections.unmodifiableList(constElements),
+		return new JuniperAttackLogPattern(severity, id, rule, Collections.unmodifiableList(constElements),
 				Collections.unmodifiableList(variables));
 	}
 
 	public Map<String, Object> parse(String line) {
-
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put(JuniperAttackLogPattern.SEVERITY_KEY, severity);
 		map.put(JuniperAttackLogPattern.ID_KEY, id);
 		map.put(JuniperAttackLogPattern.RULE_KEY, rule);
 		map.put(CATEGORY_KEY, CATEGORY_VALUE);
-		
+
 		int beginIndex = 0;
 		int endIndex = 0;
 		int variableIndex = 0;
 		int variableIndexIncre = 1;
 		String current = constElements.get(0);
-		for(int i =1; i<constElements.size(); i++){
+		for (int i = 1; i < constElements.size(); i++) {
 			String next = constElements.get(i);
-			while(!line.regionMatches(endIndex, next, 0, next.length()) && endIndex<line.length()) endIndex++;
-			
-			if (endIndex>= line.length()) {
+			while (!line.regionMatches(endIndex, next, 0, next.length()) && endIndex < line.length())
+				endIndex++;
+
+			if (endIndex >= line.length()) {
 				if (":".equals(next)) {
 					endIndex = beginIndex;
 					variableIndexIncre = 2;
@@ -102,18 +94,16 @@ public class JuniperAttackLogPattern {
 				}
 				return null;
 			}
-			
+
 			LogVariableType variable = variables.get(variableIndex);
 			Object value = variable.parse(line.substring(beginIndex + current.length(), endIndex));
-			
-			
+
 			map.put(variable.toString(), value);
 			beginIndex = endIndex;
 			current = next;
-			variableIndex+= variableIndexIncre;
+			variableIndex += variableIndexIncre;
 			variableIndexIncre = 1;
 		}
-		
 
 		return map;
 	}
@@ -125,8 +115,7 @@ public class JuniperAttackLogPattern {
 	public List<LogVariableType> getVariables() {
 		return variables;
 	}
-	
-	
+
 	static int[] findBraket(String patternString, int offset) {
 		int start = -1, end = -1;
 
@@ -158,5 +147,4 @@ public class JuniperAttackLogPattern {
 		int[] result = { start, end };
 		return result;
 	}
-
 }

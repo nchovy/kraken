@@ -19,80 +19,82 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class JuniperSessionLogParser {
-
 	private static final String DEVICE_ID = "device_id";
 	private static final String CategoryHint = "[Root]system-notification";
-	
-	private JuniperSessionLogParser(){}
-	
+
+	private JuniperSessionLogParser() {
+	}
+
 	public static JuniperSessionLogParser newInstance() {
 		return new JuniperSessionLogParser();
 	}
-	
+
 	public Map<String, Object> parse(String line) {
 		Map<String, Object> map = new HashMap<String, Object>();
 		int pos = 0;
 		int limit = 0;
 		pos = parseDeviceId(line, map, pos);
 		limit = parseCategory(line, map, pos);
-		
-		if ( pos ==-1 || limit == -1) return null;
-		
+
+		if (pos == -1 || limit == -1)
+			return null;
+
 		String oldKey = null;
-		
-		while(limit < line.length()) {
-			pos = line.indexOf(' ', limit)+1;
+
+		while (limit < line.length()) {
+			pos = line.indexOf(' ', limit) + 1;
 			limit = line.indexOf('=', pos);
-			if (pos==0 || limit == -1) break;
+			if (pos == 0 || limit == -1)
+				break;
 			String key = line.substring(pos, limit);
-			pos = limit+1;
-			if (line.charAt(pos)=='"') {
+			pos = limit + 1;
+			if (line.charAt(pos) == '"') {
 				pos++;
 				limit = line.indexOf('"', pos);
-			}
-			else {
+			} else {
 				limit = line.indexOf(' ', pos);
 			}
-			if (limit == -1 || "reason".equals(key)) limit = line.length(); 
-			
+			if (limit == -1 || "reason".equals(key))
+				limit = line.length();
+
 			if ("port".equals(key)) {
 				key = oldKey.replace(" ip", " ") + key;
-			} else if("service".equals(key)){
-				limit = line.indexOf("proto", limit)-1;
+			} else if ("service".equals(key)) {
+				limit = line.indexOf("proto", limit) - 1;
 			}
-			
+
 			String value = line.substring(pos, limit);
-//			System.out.println(key+"="+value);
+			// System.out.println(key+"="+value);
 			oldKey = key;
 			map.put(key, value);
 		}
-		
+
 		return map;
 	}
-	
-	private static int parseDeviceId(String line, Map<String, Object> map, int pos) {
 
+	private static int parseDeviceId(String line, Map<String, Object> map, int pos) {
 		int offset = line.indexOf(DEVICE_ID, pos);
-		if (offset==-1) return -1;
+		if (offset == -1)
+			return -1;
 		offset += DEVICE_ID.length() + 1;
 		int limit = line.indexOf(' ', offset);
-		
+
 		map.put(DEVICE_ID, line.substring(offset, limit));
-		
+
 		return limit;
-		
+
 	}
 
 	private static int parseCategory(String line, Map<String, Object> map, int pos) {
-		
 		int offset = line.indexOf(CategoryHint, pos);
-		if (offset==-1) return -1;
+		if (offset == -1)
+			return -1;
 		offset += CategoryHint.length();
 		offset = line.indexOf('(', offset) + 1;
 		int limit = line.indexOf(')', offset);
-		
+
 		map.put("category", line.substring(offset, limit));
-		
+
 		return limit;
 	}
 }

@@ -21,12 +21,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogParser;
 
-@Component(name = "openssh-log-parser")
-@Provides
 public class OpenSshLogParser implements LogParser {
 	@Override
 	public String getName() {

@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LogVariableType {
-
 	private static Map<String, Type> map = new HashMap<String, Type>();
 	static {
 		map.put("<dst-ip>", Type.DST_IP);
@@ -56,7 +55,6 @@ public class LogVariableType {
 	}
 	
 	private enum Type {
-
 		DST_IP("dst-ip", Parser.IP), 
 		DST_PORT("dst-port", Parser.INTEGER), 
 		INTERFACE_NAME("interface-name", Parser.STRING), 
@@ -66,10 +64,10 @@ public class LogVariableType {
 		SRC_PORT("src-port", Parser.INTEGER), 
 		ZONE_NAME("zone-name", Parser.STRING);
 		
-		String name;
-		Parser parser;
+		private String name;
+		private Parser parser;
 		
-		Type(String name, Parser parser) {
+		private Type(String name, Parser parser) {
 			this.name = name; this.parser = parser;
 		}
 		

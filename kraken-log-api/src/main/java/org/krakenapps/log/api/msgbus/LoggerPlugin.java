@@ -10,7 +10,6 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.log.api.LogNormalizerRegistry;
 import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
-import org.krakenapps.log.api.LogParserRegistry;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
 import org.krakenapps.log.api.LoggerFactory;
@@ -29,9 +28,6 @@ public class LoggerPlugin {
 
 	@Requires
 	private LoggerFactoryRegistry loggerFactoryRegistry;
-
-	@Requires
-	private LogParserRegistry parserRegistry;
 
 	@Requires
 	private LogNormalizerRegistry normalizerRegistry;
@@ -66,11 +62,6 @@ public class LoggerPlugin {
 	@MsgbusMethod
 	public void getNormalizers(Request req, Response resp) {
 		resp.put("normalizers", normalizerRegistry.getNames());
-	}
-
-	@MsgbusMethod
-	public void getParsers(Request req, Response resp) {
-		resp.put("parsers", parserRegistry.getNames());
 	}
 
 	@MsgbusMethod

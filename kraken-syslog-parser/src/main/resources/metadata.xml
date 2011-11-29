@@ -2,9 +2,9 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 	<instance component="netscreen-log-normalizer" />
-	<instance component="netscreen-log-parser" />
+	<instance component="netscreen-log-parser-factory" />
 	<instance component="fortigate-log-normalizer" />
-	<instance component="fortigate-log-parser" />
+	<instance component="fortigate-log-parser-factory" />
 	<instance component="snort-log-normalizer" />
-	<instance component="snort-log-parser" />
+	<instance component="snort-log-parser-factory" />
 </ipojo>
