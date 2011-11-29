@@ -21,6 +21,7 @@ public class MapInfo {
 	private String backgroundImage;
 	private double width;
 	private double height;
+	private String screen;
 
 	@CollectionTypeHint(MapElement.class)
 	private List<MapElement> elements = new ArrayList<MapElement>();
@@ -80,6 +81,14 @@ public class MapInfo {
 
 	public void setHeight(double height) {
 		this.height = height;
+	}
+
+	public String getScreen() {
+		return screen;
+	}
+
+	public void setScreen(String screen) {
+		this.screen = screen;
 	}
 
 	public List<MapElement> getElements() {
