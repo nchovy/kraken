@@ -1,5 +1,6 @@
 package org.krakenapps.api;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -52,6 +53,14 @@ public class PrimitiveConverter {
 		if (nonSerializeClasses.contains(cls))
 			return obj;
 
+		// Array
+		if (cls.isArray()) {
+			Object[] ary = new Object[Array.getLength(obj)];
+			for (int i = 0; i < ary.length; i++)
+				ary[i] = serialize(root, Array.get(obj, i), callback, refkey, options);
+			return ary;
+		}
+
 		// Collection
 		if (Collection.class.isAssignableFrom(cls)) {
 			Collection<Object> col = new ArrayList<Object>();
@@ -100,8 +109,7 @@ public class PrimitiveConverter {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
-								f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
@@ -130,7 +138,7 @@ public class PrimitiveConverter {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> T parse(Class<T> cls, Object obj, PrimitiveParseCallback callback) {
-		if (!(obj instanceof Map) || cls.equals(Object.class))
+		if (obj == null || !(obj instanceof Map) || cls.equals(Object.class))
 			return (T) obj;
 
 		try {
@@ -138,7 +146,10 @@ public class PrimitiveConverter {
 
 			T n = null;
 			try {
-				n = cls.newInstance();
+				if (cls.isArray())
+					n = (T) Array.newInstance(cls.getComponentType(), ((Object[]) obj).length);
+				else
+					n = cls.newInstance();
 			} catch (IllegalAccessException e) {
 				Constructor c = cls.getConstructor();
 				c.setAccessible(true);
@@ -200,6 +211,12 @@ public class PrimitiveConverter {
 						if (o.toString().equals(value))
 							found = o;
 					f.set(n, found);
+				} else if (fieldType.isArray()) {
+					Object[] o = (Object[]) value;
+					Object ary = Array.newInstance(fieldType.getComponentType(), o.length);
+					for (int i = 0; i < o.length; i++)
+						Array.set(ary, i, o[i]);
+					f.set(n, ary);
 				} else if (Collection.class.isAssignableFrom(fieldType)) {
 					if (value instanceof Object[])
 						value = Arrays.asList((Object[]) value);
