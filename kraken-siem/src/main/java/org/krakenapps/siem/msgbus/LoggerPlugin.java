@@ -24,6 +24,9 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerRegistry;
 import org.krakenapps.msgbus.Marshaler;
+import org.krakenapps.msgbus.Message;
+import org.krakenapps.msgbus.MessageBus;
+import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -44,6 +47,9 @@ public class LoggerPlugin {
 	@Requires
 	private LogFileScannerRegistry scannerRegistry;
 
+	@Requires
+	private MessageBus msgbus;
+
 	@MsgbusMethod
 	public void getLoggers(Request req, Response resp) {
 		List<Map<String, Object>> loggers = new ArrayList<Map<String, Object>>();
@@ -60,6 +66,31 @@ public class LoggerPlugin {
 	@MsgbusMethod
 	public void getLogFileScanners(Request req, Response resp) {
 		resp.put("scanners", Marshaler.marshal(scannerRegistry.getScanners()));
+	}
+
+	@MsgbusMethod
+	public void ensureLoggerOperation(Request req, Response resp) throws InterruptedException {
+		Message m = new Message();
+		m.setMethod("org.krakenapps.log.api.msgbus.LoggerPlugin.ensureLoggerOperation");
+		m.setParameters(req.getParams());
+
+		String loggerFullname = req.getString("logger");
+		msgbus.dispatch(req.getSession(), m);
+
+		int i = 0;
+		while (true) {
+			if (loggerRegistry.getLogger(loggerFullname) != null)
+				break;
+
+			Thread.sleep(100);
+			i++;
+		}
+
+		if (i > 20)
+			throw new MsgbusException("siem", "ensure-logger-timeout");
+
+		if (logServer.getManagedLogger(loggerFullname) == null)
+			createLogger(req, resp);
 	}
 
 	@SuppressWarnings("unchecked")

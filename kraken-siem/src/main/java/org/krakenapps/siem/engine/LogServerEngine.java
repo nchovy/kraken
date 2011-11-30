@@ -93,6 +93,13 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 
 	@Invalidate
 	public void stop() {
+		if (loggerRegistry == null)
+			return;
+
+		// disconnect all pipes
+		for (Logger logger : loggerRegistry.getLoggers())
+			logger.removeLogPipe(this);
+
 		loggerRegistry.removeListener(this);
 	}
 
@@ -107,7 +114,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		Config c = col.findOne(Predicates.field("full_name", fullName));
 		if (c == null)
 			return null;
-		
+
 		return PrimitiveConverter.parse(ManagedLogger.class, c.getDocument());
 	}
 
