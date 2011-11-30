@@ -46,16 +46,6 @@ public abstract class LogQueryCommand {
 		this.logQuery = logQuery;
 	}
 
-	protected String getDateColumnName() {
-		if (isReducer())
-			return null;
-		return dateColumnName;
-	}
-
-	protected void setDateColumnName(String dateColumnName) {
-		this.dateColumnName = dateColumnName;
-	}
-
 	protected Object getData(String key, Map<String, Object> m) {
 		if (m.containsKey(key))
 			return m.get(key);
@@ -71,14 +61,6 @@ public abstract class LogQueryCommand {
 
 	public void setNextCommand(LogQueryCommand next) {
 		this.next = next;
-		setNextCommandConfigure();
-	}
-
-	private void setNextCommandConfigure() {
-		if (next != null) {
-			next.setDateColumnName(getDateColumnName());
-			next.setNextCommandConfigure();
-		}
 	}
 
 	public Status getStatus() {

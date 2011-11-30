@@ -36,16 +36,6 @@ public class Rename extends LogQueryCommand {
 	}
 
 	@Override
-	public void setDataHeader(String[] header) {
-		for (int i = 0; i < header.length; i++) {
-			if (header[i].equals(from))
-				header[i] = to;
-		}
-
-		super.setDataHeader(header);
-	}
-
-	@Override
 	public void push(Map<String, Object> m) {
 		if (m.containsKey(from)) {
 			m.put(to, m.get(from));

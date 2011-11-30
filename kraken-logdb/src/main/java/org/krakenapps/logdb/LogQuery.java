@@ -18,6 +18,7 @@ package org.krakenapps.logdb;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import org.krakenapps.log.api.LogParser;
@@ -40,8 +41,8 @@ public interface LogQuery extends Runnable {
 	List<LogQueryCommand> getCommands();
 
 	LogParser getLogParser();
-	
-	void setLogParser(String name);
+
+	void setLogParser(String name, Properties config);
 
 	Set<LogQueryCallback> getLogQueryCallback();
 

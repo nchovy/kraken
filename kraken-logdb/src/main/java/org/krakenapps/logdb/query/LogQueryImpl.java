@@ -21,12 +21,12 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
-import org.krakenapps.log.api.LogParserRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
@@ -170,8 +170,8 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
-	public void setLogParser(String name) {
-		this.parser = parserFactoryRegistry.get(name);
+	public void setLogParser(String name, Properties config) {
+		this.parser = parserFactoryRegistry.get(name).createParser(config);
 	}
 
 	@Override
