@@ -43,6 +43,9 @@ public class KrakenMessageDecoder {
 	}
 
 	public static Message decode(Session session, String text) {
+		// remove potential control characters
+		text = text.trim();
+		
 		Logger logger = LoggerFactory.getLogger(KrakenMessageDecoder.class.getName());
 		Charset utf8 = Charset.forName("utf-8");
 		
