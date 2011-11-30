@@ -124,6 +124,8 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void cancel() {
+		if (result == null)
+			return;
 		if (result.getStatus() != Status.End)
 			result.eof();
 		for (int i = commands.size() - 1; i >= 0; i--) {

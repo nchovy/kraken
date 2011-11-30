@@ -53,7 +53,7 @@ public class LogQueryPlugin {
 
 	@Requires
 	private LogTableRegistry tableRegistry;
-	
+
 	@Requires
 	private LogStorage storage;
 
@@ -69,10 +69,10 @@ public class LogQueryPlugin {
 		int offset = 0;
 		if (req.has("offset"))
 			offset = req.getInteger("offset");
-		
+
 		if (!tableRegistry.exists(tableName))
 			throw new MsgbusException("logdb", "table-not-exists");
-		
+
 		Collection<Log> logs = storage.getLogs(tableName, null, null, offset, limit);
 		List<Object> serialized = new ArrayList<Object>(limit);
 		for (Log log : logs)
