@@ -15,7 +15,6 @@
  */
 package org.krakenapps.logdb.query.command;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,7 +51,7 @@ public class Stats extends LogQueryCommand {
 	public void push(Map<String, Object> m) {
 		List<Object> key = new ArrayList<Object>();
 		for (String clause : clauses)
-			key.add(getData(clause, m));
+			key.add(m.get(clause));
 
 		if (!result.containsKey(key)) {
 			List<Function> fs = new ArrayList<Function>();

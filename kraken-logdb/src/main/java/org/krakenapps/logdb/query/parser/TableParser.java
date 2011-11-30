@@ -15,24 +15,29 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.option;
+import static org.krakenapps.bnf.Syntax.ref;
+import static org.krakenapps.bnf.Syntax.uint;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
+import java.util.Properties;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.log.api.LogParser;
+import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
+import org.krakenapps.log.api.LoggerConfigOption;
 import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Table;
-import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.TableMetadata;
 
 public class TableParser implements LogQueryParser {
 	private LogStorage logStorage;
@@ -83,11 +88,22 @@ public class TableParser implements LogQueryParser {
 		if (options.containsKey("limit"))
 			limit = Integer.parseInt(options.get("limit"));
 
-		Table table = new Table(tableName, offset, limit, from, to);
+		String parserName = tableRegistry.getTableMetadata(tableName, "logparser");
+		LogParserFactory parserFactory = parserFactoryRegistry.get(parserName);
+		LogParser parser = null;
+		if (parserFactory != null) {
+			Properties prop = new Properties();
+			for (LoggerConfigOption configOption : parserFactory.getConfigOptions()) {
+				String optionName = configOption.getName();
+				String optionValue = tableRegistry.getTableMetadata(tableName, optionName);
+				if (optionValue == null)
+					throw new IllegalArgumentException();
+				prop.put(optionName, optionValue);
+			}
+			parser = parserFactory.createParser(prop);
+		}
+		Table table = new Table(tableName, offset, limit, from, to, parser);
 		table.setStorage(logStorage);
-		String logformat = tableRegistry.getTableMetadata(table.getTableName(), "logformat");
-		if (logformat != null)
-			table.setDataHeaders(logformat.split(" "));
 
 		return table;
 	}

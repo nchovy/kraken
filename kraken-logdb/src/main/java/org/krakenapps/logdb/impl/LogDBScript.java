@@ -51,8 +51,7 @@ public class LogDBScript implements Script {
 	private LogScriptRegistry scriptRegistry;
 	private ScriptContext context;
 
-	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter,
-			LogScriptRegistry scriptRegistry) {
+	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter, LogScriptRegistry scriptRegistry) {
 		this.qs = qs;
 		this.dsr = dsr;
 		this.mapreduce = arbiter;
@@ -116,14 +115,15 @@ public class LogDBScript implements Script {
 
 			if (query.getCommands() != null) {
 				for (LogQueryCommand cmd : query.getCommands()) {
-					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
-							cmd.getQueryString(), cmd.getPushCount()));
+					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(), cmd.getQueryString(),
+							cmd.getPushCount()));
 				}
 			} else
 				context.println("    null");
 		}
 	}
 
+	@ScriptUsage(description = "run query", arguments = { @ScriptArgument(name = "query", type = "string", description = "query string") })
 	public void query(String[] args) {
 		long begin = System.currentTimeMillis();
 		LogQuery lq = qs.createQuery(args[0]);

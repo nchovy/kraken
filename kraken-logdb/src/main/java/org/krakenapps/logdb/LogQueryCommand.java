@@ -16,6 +16,7 @@
 package org.krakenapps.logdb;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.krakenapps.logdb.query.FileBufferList;
@@ -28,11 +29,10 @@ public abstract class LogQueryCommand {
 	private String queryString;
 	private int pushCount;
 	protected LogQuery logQuery;
-	protected String dateColumnName;
 	protected LogQueryCommand next;
 	private boolean callbackTimeline;
 	protected volatile Status status = Status.Waiting;
-	private Map<String, Object> parsed = null;
+	protected Map<String, String> headerColumn = new HashMap<String, String>();
 
 	public String getQueryString() {
 		return queryString;
@@ -44,15 +44,6 @@ public abstract class LogQueryCommand {
 
 	public void setLogQuery(LogQuery logQuery) {
 		this.logQuery = logQuery;
-	}
-
-	protected Object getData(String key, Map<String, Object> m) {
-		if (m.containsKey(key))
-			return m.get(key);
-		else if (parsed == null)
-			parsed = logQuery.getLogParser().parse(m);
-
-		return parsed.get(key);
 	}
 
 	public LogQueryCommand getNextCommand() {
@@ -69,6 +60,8 @@ public abstract class LogQueryCommand {
 
 	public void init() {
 		this.status = Status.Waiting;
+		if (next != null)
+			next.headerColumn = this.headerColumn;
 	}
 
 	public void start() {
@@ -94,7 +87,7 @@ public abstract class LogQueryCommand {
 		if (next != null && next.status != Status.End) {
 			if (callbackTimeline) {
 				for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
-					callback.put((Date) m.get(dateColumnName));
+					callback.put((Date) m.get(headerColumn.get("date")));
 			}
 			next.status = Status.Running;
 			next.push(m);

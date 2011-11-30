@@ -103,8 +103,8 @@ public class Sort extends LogQueryCommand {
 		@Override
 		public int compare(Map<String, Object> m1, Map<String, Object> m2) {
 			for (SortField field : fields) {
-				Object o1 = getData(field.name, m1);
-				Object o2 = getData(field.name, m2);
+				Object o1 = m1.get(field.name);
+				Object o2 = m2.get(field.name);
 
 				if (o1 == null && o2 == null)
 					continue;

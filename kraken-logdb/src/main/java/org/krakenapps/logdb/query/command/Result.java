@@ -106,14 +106,6 @@ public class Result extends LogQueryCommand {
 				l = r + 1;
 			}
 			data.add(str.substring(l));
-
-			if (header != null && data.size() == header.length) {
-				m.remove("_data");
-				for (int i = 0; i < header.length; i++) {
-					if (!m.containsKey(header[i]))
-						m.put(header[i], data.get(i));
-				}
-			}
 		}
 
 		result.add(m);

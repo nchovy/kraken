@@ -33,8 +33,8 @@ import org.krakenapps.logdb.query.command.FunctionCodec;
 public class Timechart extends LogQueryCommand {
 	public static enum Span {
 		Second(Calendar.SECOND, 1000L), Minute(Calendar.MINUTE, 60 * 1000L), Hour(Calendar.HOUR_OF_DAY, 60 * 60 * 1000L), Day(
-				Calendar.DAY_OF_MONTH, 24 * 60 * 60 * 1000L), Week(Calendar.WEEK_OF_YEAR, 7 * 24 * 60 * 60 * 1000L), Month(
-				Calendar.MONTH, 0L), Year(Calendar.YEAR, 0L);
+				Calendar.DAY_OF_MONTH, 24 * 60 * 60 * 1000L), Week(Calendar.WEEK_OF_YEAR, 7 * 24 * 60 * 60 * 1000L), Month(Calendar.MONTH,
+				0L), Year(Calendar.YEAR, 0L);
 
 		private int calendarField;
 		private long millis;
@@ -92,9 +92,9 @@ public class Timechart extends LogQueryCommand {
 		String key = "";
 
 		if (clause != null) {
-			if (getData(clause, m) == null)
+			if (m.get(clause) == null)
 				return;
-			key = getData(clause, m).toString();
+			key = m.get(clause).toString();
 		}
 
 		Object[] blocks = data.get(row);
@@ -109,7 +109,7 @@ public class Timechart extends LogQueryCommand {
 			}
 
 			Function func = block.get(key);
-			getData(func.getTarget(), m);
+			m.get(func.getTarget());
 			func.put(m);
 		}
 	}

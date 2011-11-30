@@ -72,8 +72,7 @@ public abstract class Function {
 		return getFunction(name, target, null, extClass);
 	}
 
-	public static Function getFunction(String name, String target, String keyName,
-			Map<String, Class<? extends Function>> extClass) {
+	public static Function getFunction(String name, String target, String keyName, Map<String, Class<? extends Function>> extClass) {
 		if (name == null)
 			return null;
 
@@ -223,7 +222,7 @@ public abstract class Function {
 				else if (operator.equals("%"))
 					return NumberUtil.mod(l, r);
 			} else if (type == EvalType.Boolean) {
-				Object r = rh;
+				// TODO
 			}
 
 			return null;

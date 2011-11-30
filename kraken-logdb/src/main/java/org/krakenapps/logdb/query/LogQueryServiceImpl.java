@@ -121,7 +121,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 	@Override
 	public LogQuery createQuery(String query) {
-		LogQuery lq = new LogQueryImpl(syntaxProvider, query, parserFactoryRegistry);
+		LogQuery lq = new LogQueryImpl(syntaxProvider, query);
 		queries.put(lq.getId(), lq);
 		lq.registerQueryCallback(new EofReceiver(lq));
 		invokeCallbacks(lq, LogQueryStatus.Created);

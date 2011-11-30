@@ -29,13 +29,6 @@ public class Rename extends LogQueryCommand {
 	}
 
 	@Override
-	protected String getDateColumnName() {
-		if (from.equals(dateColumnName))
-			return to;
-		return super.getDateColumnName();
-	}
-
-	@Override
 	public void push(Map<String, Object> m) {
 		if (m.containsKey(from)) {
 			m.put(to, m.get(from));

@@ -48,7 +48,7 @@ public class Search extends LogQueryCommand {
 	@Override
 	public void push(Map<String, Object> m) {
 		for (Term term : terms) {
-			if (!term.eval(this, m))
+			if (!term.eval(m))
 				return;
 		}
 
@@ -77,9 +77,9 @@ public class Search extends LogQueryCommand {
 		private Object rh;
 		private boolean isRhString = true;
 
-		public boolean eval(Search eval, Map<String, Object> m) {
-			Object l = isLhString ? lh : eval.getData(lh.toString(), m);
-			Object r = isRhString ? rh : eval.getData(rh.toString(), m);
+		public boolean eval(Map<String, Object> m) {
+			Object l = isLhString ? lh : m.get(lh.toString());
+			Object r = isRhString ? rh : m.get(rh.toString());
 
 			try {
 				int cmp = comp.compare(l, r);

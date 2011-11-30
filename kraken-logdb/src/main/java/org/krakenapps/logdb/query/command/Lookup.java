@@ -47,7 +47,7 @@ public class Lookup extends LogQueryCommand {
 
 	@Override
 	public void push(Map<String, Object> m) {
-		Object value = getData(localSrcField, m);
+		Object value = m.get(localSrcField);
 		LookupHandler handler = registry.getLookupHandler(handlerName);
 		if (handler != null)
 			m.put(localDstField, handler.lookup(srcField, dstField, value));

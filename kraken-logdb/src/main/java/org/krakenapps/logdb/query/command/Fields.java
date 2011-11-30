@@ -42,7 +42,7 @@ public class Fields extends LogQueryCommand {
 		} else {
 			Map<String, Object> newMap = new HashMap<String, Object>();
 			for (String field : fields) {
-				Object data = getData(field, m);
+				Object data = m.get(field);
 				newMap.put(field, data);
 			}
 			m = newMap;
@@ -52,7 +52,7 @@ public class Fields extends LogQueryCommand {
 
 	@Override
 	public boolean isReducer() {
-		return (remove == fields.contains(dateColumnName));
+		return (remove == fields.contains(headerColumn.get("date")));
 	}
 
 	public boolean isRemove() {

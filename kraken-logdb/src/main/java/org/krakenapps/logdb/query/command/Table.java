@@ -22,6 +22,7 @@ import java.util.Map;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.log.api.LogParser;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.query.command.Table;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ public class Table extends LogQueryCommand {
 	private int limit;
 	private Date from;
 	private Date to;
+	private LogParser parser;
 
 	public Table(String tableName) {
 		this(tableName, 0);
@@ -53,12 +55,19 @@ public class Table extends LogQueryCommand {
 	}
 
 	public Table(String tableName, int offset, int limit, Date from, Date to) {
+		this(tableName, offset, limit, from, to, null);
+	}
+
+	public Table(String tableName, int offset, int limit, Date from, Date to, LogParser parser) {
 		this.tableName = tableName;
 		this.offset = offset;
 		this.limit = limit;
 		this.from = from;
 		this.to = to;
-		dateColumnName = "_time";
+		this.parser = parser;
+		headerColumn.put("table", "_table");
+		headerColumn.put("id", "_id");
+		headerColumn.put("date", "_time");
 	}
 
 	public String getTableName() {
@@ -130,9 +139,10 @@ public class Table extends LogQueryCommand {
 			m.put("_table", log.getTableName());
 			m.put("_id", log.getId());
 			m.put("_time", log.getDate());
-			m.put("_data", log.getData().get("log"));
-			log.getData().remove("log");
-			m.putAll(log.getData());
+			if (parser != null)
+				m.putAll(parser.parse(log.getData()));
+			else
+				m.putAll(log.getData());
 			write(m);
 		}
 

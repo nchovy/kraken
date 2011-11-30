@@ -16,7 +16,7 @@ public class PcapCommand extends LogQueryCommand {
 	private PcapFileRunner runner;
 
 	public PcapCommand(File f) {
-		dateColumnName = "_time";
+		headerColumn.put("date", "_time");
 		runner = new PcapFileRunner(f);
 		runner.getEthernetDecoder().register(new EthernetProcessor() {
 
