@@ -349,7 +349,7 @@ public class JLdapService implements LdapService {
 
 	@Override
 	public KeyStore x509ToJKS(String base64Encoded) {
-		if (base64Encoded == null)
+		if (base64Encoded == null || base64Encoded.isEmpty())
 			return null;
 		byte[] b = Base64.decode(base64Encoded);
 		return x509ToJKS(new ByteArrayInputStream(b));
