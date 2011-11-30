@@ -10,4 +10,5 @@
 	<instance component="logger-loader" />
 	<instance component="text-file-logger-factory" />
 	<instance component="logapi-logger-plugin" />
+	<instance component="delimiter-parser-factory" />
 </ipojo>
