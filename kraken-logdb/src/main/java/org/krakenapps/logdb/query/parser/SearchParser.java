@@ -15,27 +15,23 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.ref;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.logdb.LogQueryParser;
-import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Search;
-import org.krakenapps.logdb.query.command.Search.Term;
-import org.krakenapps.logdb.query.command.Search.Term.Operator;
+import org.krakenapps.logdb.query.command.Term;
 
 public class SearchParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
-		syntax.add("search", this, k("search"), ref("option"), rule(new StringPlaceholder(), 
-				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
-				new StringPlaceholder(new char[] {})));
+		syntax.add("search", this, k("search"), ref("option"), ref("term"));
 		// @formatter:on
 		syntax.addRoot("search");
 	}
@@ -49,48 +45,8 @@ public class SearchParser implements LogQueryParser {
 		if (option.containsKey("limit"))
 			limit = Integer.parseInt(option.get("limit"));
 
-		List<Term> terms = new ArrayList<Search.Term>();
-		Binding[] c = b.getChildren();
-		for (int i = 2; i < c.length; i++) {
-			Binding[] v = c[i].getChildren();
-			Term term = new Term();
-
-			String lh = v[0].getValue().toString();
-			term.setLh(lh);
-			if (lh.startsWith("\"") && lh.endsWith("\"")) {
-				term.setLhString(true);
-				term.setLh(lh.substring(1, lh.length() - 1));
-			}
-
-			if (v[1].getValue().equals("=="))
-				term.setOperator(Operator.Eq);
-			else if (v[1].getValue().equals("!="))
-				term.setOperator(Operator.Neq);
-			else if (v[1].getValue().equals(">"))
-				term.setOperator(Operator.Gt);
-			else if (v[1].getValue().equals("<"))
-				term.setOperator(Operator.Lt);
-			else if (v[1].getValue().equals(">="))
-				term.setOperator(Operator.Ge);
-			else if (v[1].getValue().equals("<="))
-				term.setOperator(Operator.Le);
-			else if (v[1].getValue().equals("contain"))
-				term.setOperator(Operator.Contain);
-			else if (v[1].getValue().equals("regexp"))
-				term.setOperator(Operator.Regexp);
-			else if (v[1].getValue().equals("in"))
-				term.setOperator(Operator.In);
-
-			String rh = v[2].getValue().toString();
-			term.setRh(rh);
-			if (rh.startsWith("\"") && rh.endsWith("\"")) {
-				term.setRhString(true);
-				term.setRh(rh.substring(1, rh.length() - 1));
-			}
-
-			terms.add(term);
-		}
-
-		return new Search(limit, terms);
+		// List<Term> terms = (List<Term>) b.getChildren()[2].getValue();
+		Term term = (Term) b.getChildren()[2].getValue();
+		return new Search(limit, Arrays.asList(term));
 	}
 }

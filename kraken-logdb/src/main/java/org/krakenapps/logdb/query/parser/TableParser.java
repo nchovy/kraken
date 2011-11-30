@@ -97,7 +97,7 @@ public class TableParser implements LogQueryParser {
 				String optionName = configOption.getName();
 				String optionValue = tableRegistry.getTableMetadata(tableName, optionName);
 				if (optionValue == null)
-					throw new IllegalArgumentException();
+					throw new IllegalArgumentException("require table metadata " + optionName);
 				prop.put(optionName, optionValue);
 			}
 			parser = parserFactory.createParser(prop);
