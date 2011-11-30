@@ -17,7 +17,6 @@ import org.krakenapps.log.api.StringConfigType;
 @Component(name = "httpd-log-parser-factory")
 @Provides
 public class ApacheWebLogParserFactory implements LogParserFactory {
-
 	@Override
 	public String getName() {
 		return "httpd";
@@ -26,7 +25,9 @@ public class ApacheWebLogParserFactory implements LogParserFactory {
 	@Override
 	public LogParser createParser(Properties config) {
 		String t = config.getProperty("log_format");
-		return new ApacheWebLogParser(t);
+		if (t != null)
+			return new ApacheWebLogParser(t);
+		return new ApacheWebLogParser();
 	}
 
 	@Override
