@@ -208,6 +208,18 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 	}
 
 	@Override
+	public void unsetTableMetadata(String tableName, String key) {
+		LogTableSchema t = tableSchemas.get(tableName);
+		if (t == null)
+			throw new IllegalArgumentException("table not exists: " + tableName);
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogTableSchema.class, Predicates.field("name", tableName));
+		t.getMetadata().remove(key);
+		db.update(c, t, false, "kraken-logstorage", "unset table [" + tableName + "] metadata " + key);
+	}
+
+	@Override
 	public void addListener(LogTableEventListener listener) {
 		callbacks.add(listener);
 	}

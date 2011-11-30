@@ -38,6 +38,8 @@ public interface LogTableRegistry {
 
 	void setTableMetadata(String tableName, String key, String value);
 
+	void unsetTableMetadata(String tableName, String key);
+
 	@Deprecated
 	TableMetadata getTableMetadata(int tableId);
 

@@ -128,10 +128,11 @@ public class LogStorageScript implements Script {
 			context.println(nf.format(total) + " bytes");
 		} else if (args.length == 2) {
 			String value = tableRegistry.getTableMetadata(tableName, args[1]);
-			context.println(value);
+			context.println("unset" + value);
+			tableRegistry.unsetTableMetadata(tableName, args[1]);
 		} else if (args.length == 3) {
 			tableRegistry.setTableMetadata(tableName, args[1], args[2]);
-			context.printf("set %s to %s", args[1], args[2]);
+			context.printf("set %s to %s\n", args[1], args[2]);
 		}
 	}
 
