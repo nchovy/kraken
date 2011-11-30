@@ -33,6 +33,7 @@ import org.krakenapps.logdb.impl.LogQueryHelper;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Request;
@@ -51,6 +52,9 @@ public class LogQueryPlugin {
 	private LogQueryService service;
 
 	@Requires
+	private LogTableRegistry tableRegistry;
+	
+	@Requires
 	private LogStorage storage;
 
 	@Requires
@@ -65,6 +69,9 @@ public class LogQueryPlugin {
 		int offset = 0;
 		if (req.has("offset"))
 			offset = req.getInteger("offset");
+		
+		if (!tableRegistry.exists(tableName))
+			throw new MsgbusException("logdb", "table-not-exists");
 		
 		Collection<Log> logs = storage.getLogs(tableName, null, null, offset, limit);
 		List<Object> serialized = new ArrayList<Object>(limit);
