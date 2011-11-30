@@ -27,6 +27,7 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.log.api.Log;
 import org.krakenapps.log.api.LogNormalizer;
 import org.krakenapps.log.api.LogNormalizerRegistry;
+import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.log.api.LogPipe;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
@@ -39,11 +40,14 @@ public class LogApiScript implements Script {
 	private ScriptContext context;
 	private LoggerFactoryRegistry loggerFactoryRegistry;
 	private LoggerRegistry loggerRegistry;
+	private LogParserFactoryRegistry parserFactoryRegistry;
 	private LogNormalizerRegistry normalizerRegistry;
 
-	public LogApiScript(LoggerFactoryRegistry loggerFactoryRegistry, LoggerRegistry loggerRegistry, LogNormalizerRegistry normalizerRegistry) {
+	public LogApiScript(LoggerFactoryRegistry loggerFactoryRegistry, LoggerRegistry loggerRegistry,
+			LogParserFactoryRegistry parserFactoryRegistry, LogNormalizerRegistry normalizerRegistry) {
 		this.loggerFactoryRegistry = loggerFactoryRegistry;
 		this.loggerRegistry = loggerRegistry;
+		this.parserFactoryRegistry = parserFactoryRegistry;
 		this.normalizerRegistry = normalizerRegistry;
 	}
 
@@ -98,6 +102,15 @@ public class LogApiScript implements Script {
 
 		for (Logger logger : loggerRegistry.getLoggers()) {
 			context.println(logger.toString());
+		}
+	}
+
+	public void parserFactories(String[] args) {
+		context.println("Log Parser Factories");
+		context.println("----------------------");
+
+		for (String name : parserFactoryRegistry.getNames()) {
+			context.println(name);
 		}
 	}
 
