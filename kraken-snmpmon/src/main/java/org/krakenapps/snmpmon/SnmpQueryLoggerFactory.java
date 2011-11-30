@@ -35,9 +35,9 @@ import org.krakenapps.log.api.StringConfigType;
 /**
  * @author stania
  */
-@Component(name = "snmpmon-logger-factory")
+@Component(name = "snmpmon-query-logger-factory")
 @Provides
-public class SnmpLoggerFactory extends AbstractLoggerFactory {
+public class SnmpQueryLoggerFactory extends AbstractLoggerFactory {
 	@Override
 	public String getName() {
 		return "snmpmon";
@@ -68,7 +68,7 @@ public class SnmpLoggerFactory extends AbstractLoggerFactory {
 	}
 
 	public enum ConfigOption {
-		target("target"), community("community"), version("version"), agents("agents"), hostId("hostId"), port("port");
+		AgentIP("agent_ip"), AgentPort("agent_port"), SnmpCommunity("snmp_community"), SnmpVersion("snmp_version");
 
 		String configKey;
 
@@ -87,16 +87,26 @@ public class SnmpLoggerFactory extends AbstractLoggerFactory {
 
 		{
 			Map<Locale, String> displayNames = new HashMap<Locale, String>();
-			displayNames.put(Locale.ENGLISH, "Targets(IP:PORT format)");
-			displayNames.put(Locale.KOREAN, "대상 에이전트 주소(IP:PORT 형식)");
+			displayNames.put(Locale.ENGLISH, "Agent IP");
+			displayNames.put(Locale.KOREAN, "대상 에이전트 IP 주소");
 
 			Map<Locale, String> descriptions = new HashMap<Locale, String>();
-			descriptions.put(Locale.ENGLISH, "Addresses of target network agents");
-			descriptions.put(Locale.KOREAN, "대상 네트워크 장비의 주소들");
+			descriptions.put(Locale.ENGLISH, "Address of target network agent");
+			descriptions.put(Locale.KOREAN, "대상 네트워크 장비의 주소");
 
-			types.add(new StringConfigType(ConfigOption.target.toString(), displayNames, descriptions, true));
+			types.add(new StringConfigType(ConfigOption.AgentIP.configKey, displayNames, descriptions, true));
 		}
+		{
+			Map<Locale, String> displayNames = new HashMap<Locale, String>();
+			displayNames.put(Locale.ENGLISH, "Agent SNMP Port");
+			displayNames.put(Locale.KOREAN, "대상 에이전트 SNMP 포트");
 
+			Map<Locale, String> descriptions = new HashMap<Locale, String>();
+			descriptions.put(Locale.ENGLISH, "Port of target snmp agent");
+			descriptions.put(Locale.KOREAN, "대상 네트워크 장비의 포트");
+
+			types.add(new StringConfigType(ConfigOption.AgentPort.configKey, displayNames, descriptions, false));
+		}
 		{
 			Map<Locale, String> displayNames = new HashMap<Locale, String>();
 			displayNames.put(Locale.ENGLISH, "Community string");
@@ -106,9 +116,8 @@ public class SnmpLoggerFactory extends AbstractLoggerFactory {
 			descriptions.put(Locale.ENGLISH, "Community string of target device(ex: public). ");
 			descriptions.put(Locale.KOREAN, "대상 네트워크 장비의 Community 문자열(예: public). ");
 
-			types.add(new StringConfigType(ConfigOption.community.toString(), displayNames, descriptions, true));
+			types.add(new StringConfigType(ConfigOption.SnmpCommunity.configKey, displayNames, descriptions, true));
 		}
-
 		{
 			Map<Locale, String> displayNames = new HashMap<Locale, String>();
 			displayNames.put(Locale.ENGLISH, "SNMP version");
@@ -118,18 +127,18 @@ public class SnmpLoggerFactory extends AbstractLoggerFactory {
 			descriptions.put(Locale.ENGLISH, "SNMP version accepted by target agent. ");
 			descriptions.put(Locale.KOREAN, "대상 장비가 인식하는 SNMP 버전. " + "기본값 v2c");
 
-			types.add(new IntegerConfigType(ConfigOption.version.toString(), displayNames, descriptions, false));
+			types.add(new IntegerConfigType(ConfigOption.SnmpVersion.configKey, displayNames, descriptions, false));
 		}
 
 		return types;
 	}
 
 	public Logger createLogger(String name, String description, Properties config) {
-		return new SnmpLogger("local", name, description, this, config);
+		return new SnmpQueryLogger("local", name, description, this, config);
 	}
 
 	@Override
 	protected Logger createLogger(LoggerSpecification spec) {
-		return new SnmpLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this, spec.getConfig());
+		return new SnmpQueryLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this, spec.getConfig());
 	}
 }

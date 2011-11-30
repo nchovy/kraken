@@ -5,9 +5,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -30,9 +32,9 @@ import org.krakenapps.syslog.SyslogServerRegistry;
 public class SyslogLoggerFactory extends AbstractLoggerFactory implements SyslogListener {
 
 	/**
-	 * syslog facility to logger mappings
+	 * remote ip to logger mappings
 	 */
-	private ConcurrentMap<SyslogFacility, SyslogLogger> loggerMappings;
+	private ConcurrentMap<InetAddress, SyslogLogger> loggerMappings;
 	private List<LoggerConfigOption> configs;
 
 	@Requires
@@ -40,7 +42,7 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 
 	@Validate
 	public void start() {
-		loggerMappings = new ConcurrentHashMap<SyslogFacility, SyslogLogger>();
+		loggerMappings = new ConcurrentHashMap<InetAddress, SyslogLogger>();
 
 		prepareConfigOptions();
 		syslogRegistry.addSyslogListener(this);
@@ -94,11 +96,10 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 	protected Logger createLogger(LoggerSpecification spec) {
 		try {
 			InetAddress remote = InetAddress.getByName(spec.getConfig().getProperty("remote_ip"));
-			int facility = Integer.valueOf(spec.getConfig().getProperty("facility"));
-			SyslogFacility sf = new SyslogFacility(remote, facility);
 			SyslogLogger logger = new SyslogLogger(spec, this);
+			logger.setFacilities(parseFacilities(spec.getConfig().getProperty("facility")));
 
-			Logger old = loggerMappings.putIfAbsent(sf, logger);
+			Logger old = loggerMappings.putIfAbsent(remote, logger);
 			if (old != null)
 				throw new IllegalStateException("same syslog mapping already exists for " + old);
 
@@ -108,14 +109,22 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 		}
 	}
 
+	private Set<Integer> parseFacilities(String facility) {
+		Set<Integer> facilities = new HashSet<Integer>();
+		String[] tokens = facility.split(",");
+		for (String token : tokens)
+			facilities.add(Integer.valueOf(token.trim()));
+		return facilities;
+	}
+
 	@Override
 	public void deleteLogger(String namespace, String name) {
-		SyslogFacility target = null;
+		InetAddress target = null;
 		String targetName = namespace + "\\" + name;
-		for (SyslogFacility sf : loggerMappings.keySet()) {
-			Logger logger = loggerMappings.get(sf);
+		for (InetAddress remote : loggerMappings.keySet()) {
+			Logger logger = loggerMappings.get(remote);
 			if (logger.getFullName().equals(targetName))
-				target = sf;
+				target = remote;
 		}
 
 		if (target != null)
@@ -127,50 +136,10 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 
 	@Override
 	public void onReceive(Syslog syslog) {
-		SyslogFacility sf = new SyslogFacility(syslog.getRemoteAddress().getAddress(), syslog.getFacility());
-
-		SyslogLogger logger = loggerMappings.get(sf);
+		SyslogLogger logger = loggerMappings.get(syslog.getRemoteAddress().getAddress());
 		if (logger == null)
 			return;
 
 		logger.push(syslog);
-	}
-
-	private static class SyslogFacility {
-		private InetAddress remote;
-		private int facility;
-
-		public SyslogFacility(InetAddress remote, int facility) {
-			this.remote = remote;
-			this.facility = facility;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + facility;
-			result = prime * result + ((remote == null) ? 0 : remote.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			SyslogFacility other = (SyslogFacility) obj;
-			if (facility != other.facility)
-				return false;
-			if (remote == null) {
-				if (other.remote != null)
-					return false;
-			} else if (!remote.equals(other.remote))
-				return false;
-			return true;
-		}
 	}
 }
