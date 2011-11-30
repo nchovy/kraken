@@ -121,7 +121,7 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @throws IOException
 	 *             when file open failed
 	 */
-	UploadedFile getFileMetadata(String domain, String tokenGuid);
+	UploadedFile getFileMetadata(String tokenGuid, String fileGuid);
 
 	/**
 	 * Remove download token.
@@ -129,7 +129,7 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @param token
 	 *            the download token
 	 */
-	void removeDownloadToken(String token);
+	void removeDownloadToken(Session session);
 
 	/**
 	 * Delete uploaded file from space.

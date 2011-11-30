@@ -76,17 +76,17 @@ public class FileUploadServlet extends HttpServlet {
 		UploadedFile f = null;
 		FileInputStream is = null;
 		ServletOutputStream os = null;
-		String token = null;
-		String resource = null;
+		String downloadToken = null;
+		String fileGuid = null;
 
 		try {
-			token = getDownloadToken(req);
-			resource = req.getParameter("resource");
+			downloadToken = getDownloadToken(req);
+			fileGuid = req.getParameter("resource");
 
-			if (token == null)
+			if (downloadToken == null)
 				throw new IllegalStateException("download token not found");
 
-			f = upload.getFileMetadata(resource, token);
+			f = upload.getFileMetadata(downloadToken, fileGuid);
 			is = new FileInputStream(f.getFile());
 			os = resp.getOutputStream();
 			logger.trace("kraken webconsole: open downstream for {}", f.getFile().getAbsolutePath());
@@ -116,7 +116,7 @@ public class FileUploadServlet extends HttpServlet {
 			}
 		} catch (Exception e) {
 			resp.setStatus(500);
-			logger.warn("kraken webconsole: cannot download id " + resource, e);
+			logger.warn("kraken webconsole: cannot download id " + fileGuid, e);
 		} finally {
 			if (is != null)
 				try {

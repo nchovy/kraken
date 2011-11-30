@@ -106,4 +106,10 @@ public class Program {
 	public void setUpdated(Date updated) {
 		this.updated = updated;
 	}
+
+	@Override
+	public String toString() {
+		return "pack=" + packName + ", name=" + name + ", description=" + description + ", type=" + typeName + ", visible="
+				+ visible + ", seq=" + seq + ", created=" + created + ", updated=" + updated;
+	}
 }

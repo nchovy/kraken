@@ -113,17 +113,27 @@ public class SiemScript implements Script {
 		context.println("wrote one log");
 	}
 
-	@ScriptUsage(description = "insert dummy event", arguments = { @ScriptArgument(type = "string", name = "org", description = "organization domain") })
+	@ScriptUsage(description = "insert dummy event", arguments = {
+			@ScriptArgument(type = "string", name = "org", description = "organization domain"),
+			@ScriptArgument(type = "string", name = "severity", description = "severity"),
+			@ScriptArgument(type = "string", name = "src ip", description = "src ip"),
+			@ScriptArgument(type = "string", name = "dst ip", description = "dst ip"),
+			@ScriptArgument(type = "string", name = "cve", description = "cve") })
 	public void insertDummyEvent(String[] args) throws UnknownHostException {
+		String domain = args[0];
+		EventSeverity severity = EventSeverity.valueOf(args[1]);
+		InetAddress src = InetAddress.getByName(args[2]);
+		InetAddress dst = InetAddress.getByName(args[3]);
+
 		Event e = new Event();
-		e.setOrgDomain(args[0]);
+		e.setOrgDomain(domain);
 		e.setCategory("Attack");
-		e.setSourceIp(InetAddress.getByName("202.181.239.52"));
-		e.setDestinationIp(InetAddress.getByName("110.45.142.130"));
+		e.setSourceIp(src);
+		e.setDestinationIp(dst);
 		e.setDestinationPort(80);
 		e.setFirstSeen(new Date());
 		e.setLastSeen(new Date());
-		e.setSeverity(EventSeverity.Critical);
+		e.setSeverity(severity);
 		e.setMessageKey("http-request-attack");
 		e.setCount(1);
 

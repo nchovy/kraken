@@ -1,13 +1,11 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.api.PrimitiveConverter.SerializeOption;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.UploadToken;
 import org.krakenapps.dom.api.UserApi;
@@ -32,16 +30,6 @@ public class FileUploadPlugin {
 	@Requires
 	private UserApi userApi;
 
-	// session to download token mapping
-	private ConcurrentMap<Integer, String> tokens = new ConcurrentHashMap<Integer, String>();
-
-	@Invalidate
-	public void invalidate() {
-		for (String token : tokens.values())
-			fileUploadApi.removeDownloadToken(token);
-		tokens.clear();
-	}
-
 	@MsgbusMethod
 	public void getFileSpaces(Request req, Response resp) {
 		Collection<FileSpace> spaces = fileUploadApi.getFileSpaces(req.getOrgDomain());
@@ -52,7 +40,7 @@ public class FileUploadPlugin {
 	public void getFileSpace(Request req, Response resp) {
 		String guid = req.getString("guid");
 		FileSpace space = fileUploadApi.getFileSpace(req.getOrgDomain(), guid);
-		resp.put("space", PrimitiveConverter.serialize(space));
+		resp.put("space", PrimitiveConverter.serialize(space, SerializeOption.INCLUDE_SKIP_FIELD));
 	}
 
 	@MsgbusMethod
@@ -88,12 +76,12 @@ public class FileUploadPlugin {
 		logger.info(template, new Object[] { req.getSession().getId(), token, spaceGuid, fileName, fileSize });
 
 		resp.put("token", token);
+		resp.put("file_name", fileName);
 	}
 
 	@MsgbusMethod
 	public void issueDownloadToken(Request req, Response resp) {
 		String token = fileUploadApi.setDownloadToken(req.getSession());
-		tokens.putIfAbsent(req.getSession().getId(), token);
 		resp.put("token", token);
 	}
 
@@ -105,10 +93,11 @@ public class FileUploadPlugin {
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)
 	public void removeDownloadTokens(Session session) {
-		int sessionId = session.getId();
-		logger.trace("kraken dom: clearing download token for session {}", sessionId);
-		String token = tokens.remove(sessionId);
-		if (token != null)
-			fileUploadApi.removeDownloadToken(token);
+		if (session == null)
+			return;
+
+		logger.trace("kraken dom: clearing download token for session {}", session.getId());
+		if (fileUploadApi != null)
+			fileUploadApi.removeDownloadToken(session);
 	}
 }

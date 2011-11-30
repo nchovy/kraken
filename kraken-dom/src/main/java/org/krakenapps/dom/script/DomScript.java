@@ -14,6 +14,8 @@ import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
+import org.krakenapps.dom.model.Program;
+import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.Vendor;
 
 public class DomScript implements Script {
@@ -28,8 +30,8 @@ public class DomScript implements Script {
 	private HostApi hostApi;
 	private ApplicationApi appApi;
 
-	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi, ProgramApi programApi,
-			AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
+	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
+			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.userApi = userApi;
@@ -62,7 +64,8 @@ public class DomScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "add vendor", arguments = { @ScriptArgument(name = "domain", type = "string", description = "domain"),
+	@ScriptUsage(description = "add vendor", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "domain"),
 			@ScriptArgument(name = "name", type = "string", description = "name") })
 	public void addVendor(String[] args) {
 		Vendor vendor = new Vendor();
@@ -71,7 +74,8 @@ public class DomScript implements Script {
 		context.println("added " + vendor.getGuid());
 	}
 
-	@ScriptUsage(description = "add host type", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host type", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "vendor guid", type = "string", description = ""),
 			@ScriptArgument(name = "name", type = "string", description = ""),
 			@ScriptArgument(name = "version", type = "string", description = "") })
@@ -86,7 +90,8 @@ public class DomScript implements Script {
 		context.println("added " + t.getGuid());
 	}
 
-	@ScriptUsage(description = "add host extension", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host extension", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "host type guid", type = "string", description = ""),
 			@ScriptArgument(name = "type", type = "string", description = "host extension type"),
 			@ScriptArgument(name = "ordinal", type = "string", description = "ordinal") })
@@ -105,5 +110,61 @@ public class DomScript implements Script {
 
 		hostApi.updateHostType(domain, t);
 		context.println("added");
+	}
+
+	@ScriptUsage(description = "list all programs", arguments = { @ScriptArgument(name = "domain", type = "string", description = "") })
+	public void programs(String[] args) {
+		context.println("Programs");
+		context.println("----------");
+		for (Program p : programApi.getPrograms(args[0])) {
+			context.println(p);
+		}
+	}
+
+	@ScriptUsage(description = "add new program", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
+			@ScriptArgument(name = "package name", type = "string", description = "package name"),
+			@ScriptArgument(name = "name", type = "string", description = "program name"),
+			@ScriptArgument(name = "type", type = "string", description = "program type") })
+	public void addProgram(String[] args) {
+		String domain = args[0];
+		String packName = args[1];
+		String name = args[2];
+		String type = args[3];
+
+		Program p = new Program();
+		p.setPackName(packName);
+		p.setName(name);
+		p.setTypeName(type);
+		p.setVisible(true);
+		programApi.createProgram(domain, p);
+
+		ProgramProfile pp = programApi.getProgramProfile(domain, "all");
+		pp.getPrograms().add(p);
+		programApi.updateProgramProfile(domain, pp);
+
+		context.println("added");
+	}
+
+	@ScriptUsage(description = "remove program", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
+			@ScriptArgument(name = "package name", type = "string", description = "package name"),
+			@ScriptArgument(name = "program name", type = "string", description = "program name") })
+	public void removeProgram(String[] args) {
+		String domain = args[0];
+		String packName = args[1];
+		String programName = args[2];
+
+		ProgramProfile pp = programApi.getProgramProfile(domain, "all");
+		Program target = null;
+		for (Program p : pp.getPrograms())
+			if (p.getPackName().equals(packName) && p.getName().equals(programName))
+				target = p;
+
+		pp.getPrograms().remove(target);
+		programApi.updateProgramProfile(domain, pp);
+
+		programApi.removeProgram(domain, packName, programName);
+		context.println("removed");
 	}
 }
