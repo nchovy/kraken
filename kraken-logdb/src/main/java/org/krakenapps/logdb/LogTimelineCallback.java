@@ -27,9 +27,8 @@ public abstract class LogTimelineCallback {
 	private long callbackInterval = 2000;
 	private Map<Long, Integer> timeline = new HashMap<Long, Integer>();
 	private long lastCallbackTime;
-	private SpanValue[] spans = new SpanValue[] { new SpanValue(Calendar.MINUTE, 1),
-			new SpanValue(Calendar.MINUTE, 10), new SpanValue(Calendar.HOUR_OF_DAY, 1),
-			new SpanValue(Calendar.DAY_OF_YEAR, 1), new SpanValue(Calendar.WEEK_OF_YEAR, 1),
+	private SpanValue[] spans = new SpanValue[] { new SpanValue(Calendar.MINUTE, 1), new SpanValue(Calendar.MINUTE, 10),
+			new SpanValue(Calendar.HOUR_OF_DAY, 1), new SpanValue(Calendar.DAY_OF_YEAR, 1), new SpanValue(Calendar.WEEK_OF_YEAR, 1),
 			new SpanValue(Calendar.MONTH, 1) };
 	private int spansIndex = 0;
 
@@ -44,6 +43,9 @@ public abstract class LogTimelineCallback {
 	public abstract int getSize();
 
 	public void put(Date date) {
+		if (date == null)
+			return;
+
 		long time = date.getTime();
 		time = time - time % 86400;
 		if (timeline.containsKey(time))
