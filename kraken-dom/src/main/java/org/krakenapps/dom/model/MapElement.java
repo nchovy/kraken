@@ -33,8 +33,10 @@ public class MapElement {
 	@FieldOption(length = 10)
 	private String fontColor;
 	private String text;
-	private Integer fontSize;
+	private Double fontSize;
 	private String align;
+	private String borderColor;
+	private String backgroundColor;
 
 	public Type getType() {
 		return type;
@@ -156,11 +158,11 @@ public class MapElement {
 		this.text = text;
 	}
 
-	public Integer getFontSize() {
+	public Double getFontSize() {
 		return fontSize;
 	}
 
-	public void setFontSize(Integer fontSize) {
+	public void setFontSize(Double fontSize) {
 		this.fontSize = fontSize;
 	}
 
@@ -170,5 +172,21 @@ public class MapElement {
 
 	public void setAlign(String align) {
 		this.align = align;
+	}
+
+	public String getBorderColor() {
+		return borderColor;
+	}
+
+	public void setBorderColor(String borderColor) {
+		this.borderColor = borderColor;
+	}
+
+	public String getBackgroundColor() {
+		return backgroundColor;
+	}
+
+	public void setBackgroundColor(String backgroundColor) {
+		this.backgroundColor = backgroundColor;
 	}
 }

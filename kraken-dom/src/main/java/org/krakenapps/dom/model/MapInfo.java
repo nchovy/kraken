@@ -19,8 +19,8 @@ public class MapInfo {
 
 	private String backgroundColor;
 	private String backgroundImage;
-	private double width;
-	private double height;
+	private Double width;
+	private Double height;
 	private String screen;
 
 	@CollectionTypeHint(MapElement.class)
@@ -67,19 +67,19 @@ public class MapInfo {
 		this.backgroundImage = backgroundImage;
 	}
 
-	public double getWidth() {
+	public Double getWidth() {
 		return width;
 	}
 
-	public void setWidth(double width) {
+	public void setWidth(Double width) {
 		this.width = width;
 	}
 
-	public double getHeight() {
+	public Double getHeight() {
 		return height;
 	}
 
-	public void setHeight(double height) {
+	public void setHeight(Double height) {
 		this.height = height;
 	}
 
