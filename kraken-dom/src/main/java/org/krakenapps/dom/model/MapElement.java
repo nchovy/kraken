@@ -22,6 +22,7 @@ public class MapElement {
 	private Double height;
 	private String dataBinding;
 	private String onClick;
+	private Integer interval;
 
 	// Map Image Properties
 	private String path;
@@ -108,6 +109,14 @@ public class MapElement {
 
 	public void setOnClick(String onClick) {
 		this.onClick = onClick;
+	}
+
+	public Integer getInterval() {
+		return interval;
+	}
+
+	public void setInterval(Integer interval) {
+		this.interval = interval;
 	}
 
 	public String getPath() {
