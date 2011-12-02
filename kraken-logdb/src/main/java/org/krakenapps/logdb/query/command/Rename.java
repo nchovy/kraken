@@ -15,8 +15,6 @@
  */
 package org.krakenapps.logdb.query.command;
 
-import java.util.Map;
-
 import org.krakenapps.logdb.LogQueryCommand;
 
 public class Rename extends LogQueryCommand {
@@ -29,7 +27,7 @@ public class Rename extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		if (m.containsKey(from)) {
 			m.put(to, m.get(from));
 			m.remove(from);

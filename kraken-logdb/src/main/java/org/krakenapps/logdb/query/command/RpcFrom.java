@@ -1,6 +1,5 @@
 package org.krakenapps.logdb.query.command;
 
-import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,11 +21,11 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 	private volatile boolean end;
 	private AtomicInteger counter;
 
-	private LinkedBlockingQueue<Map<String, Object>> queue;
+	private LinkedBlockingQueue<LogMap> queue;
 
 	public RpcFrom(String guid) {
 		this.guid = guid;
-		this.queue = new LinkedBlockingQueue<Map<String, Object>>();
+		this.queue = new LinkedBlockingQueue<LogMap>();
 		this.counter = new AtomicInteger();
 	}
 
@@ -34,7 +33,7 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 	public void run() {
 		while (!end) {
 			try {
-				Map<String, Object> data = queue.poll(100, TimeUnit.MILLISECONDS);
+				LogMap data = queue.poll(100, TimeUnit.MILLISECONDS);
 				if (data != null) {
 					write(data);
 					counter.incrementAndGet();
@@ -45,7 +44,7 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 
 		// process all remainings
 		while (true) {
-			Map<String, Object> data = queue.poll();
+			LogMap data = queue.poll();
 			if (data == null)
 				break;
 
@@ -59,7 +58,7 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		if (end) {
 			logger.info("kraken logdb: loss (will be fixed) - {}", Primitive.stringify(m));
 			return;

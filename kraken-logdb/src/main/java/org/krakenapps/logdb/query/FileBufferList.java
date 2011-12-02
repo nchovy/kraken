@@ -433,8 +433,7 @@ public class FileBufferList<E> implements List<E> {
 				E element = (cache != null) ? cache.get() : null;
 				if (element == null) {
 					synchronized (readLock) {
-						if (readBufferIndex == null || readBufferIndex > fp
-								|| readBufferIndex + readBuffer.limit() <= fp)
+						if (readBufferIndex == null || readBufferIndex > fp || readBufferIndex + readBuffer.limit() <= fp)
 							read(fp);
 
 						try {

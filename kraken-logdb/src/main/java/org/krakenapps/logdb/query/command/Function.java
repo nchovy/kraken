@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.query.ObjectComparator;
 import org.krakenapps.logdb.query.command.Function.EvaledField.EvalType;
 import org.krakenapps.logdb.query.command.Function;
@@ -160,7 +161,7 @@ public abstract class Function {
 		return getFunction(name, target, keyName, extClass);
 	}
 
-	public void put(Map<String, Object> row) {
+	public void put(LogMap row) {
 		Object value = null;
 
 		if (evaled != null)
@@ -203,7 +204,7 @@ public abstract class Function {
 			this.rh = rh;
 		}
 
-		public Object eval(Map<String, Object> row) {
+		public Object eval(LogMap row) {
 			Object l = row.get(lh);
 			if (type == EvalType.Arithmetic) {
 				Object r = row.get(rh);

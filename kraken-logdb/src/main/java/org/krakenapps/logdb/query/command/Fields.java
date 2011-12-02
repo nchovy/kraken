@@ -15,9 +15,7 @@
  */
 package org.krakenapps.logdb.query.command;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
 
@@ -35,12 +33,12 @@ public class Fields extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		if (remove) {
 			for (String field : fields)
 				m.remove(field);
 		} else {
-			Map<String, Object> newMap = new HashMap<String, Object>();
+			LogMap newMap = new LogMap();
 			for (String field : fields) {
 				Object data = m.get(field);
 				newMap.put(field, data);

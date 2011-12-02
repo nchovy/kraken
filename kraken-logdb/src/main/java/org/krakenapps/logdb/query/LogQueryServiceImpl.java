@@ -27,25 +27,24 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
+import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.EmptyLogQueryCallback;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryEventListener;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
 import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
-import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.SyntaxProvider;
-import org.krakenapps.logdb.query.FileBufferList;
-import org.krakenapps.logdb.query.LogQueryImpl;
+import org.krakenapps.logdb.query.parser.DatasourceParser;
 import org.krakenapps.logdb.query.parser.DropParser;
 import org.krakenapps.logdb.query.parser.EvalParser;
 import org.krakenapps.logdb.query.parser.FieldsParser;
 import org.krakenapps.logdb.query.parser.FunctionParser;
 import org.krakenapps.logdb.query.parser.LookupParser;
+import org.krakenapps.logdb.query.parser.OptionCheckerParser;
 import org.krakenapps.logdb.query.parser.OptionParser;
 import org.krakenapps.logdb.query.parser.RenameParser;
 import org.krakenapps.logdb.query.parser.ScriptParser;
@@ -55,6 +54,8 @@ import org.krakenapps.logdb.query.parser.StatsParser;
 import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logdb.query.parser.TermParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
+import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogTableRegistry;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +64,9 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class LogQueryServiceImpl implements LogQueryService {
 	private final Logger logger = LoggerFactory.getLogger(LogQueryServiceImpl.class);
+
+	@Requires
+	private DataSourceRegistry dataSourceRegistry;
 
 	@Requires
 	private LogStorage logStorage;
@@ -96,8 +100,8 @@ public class LogQueryServiceImpl implements LogQueryService {
 	public void start() {
 		@SuppressWarnings("unchecked")
 		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, EvalParser.class, SearchParser.class,
-				FieldsParser.class, FunctionParser.class, OptionParser.class, RenameParser.class, SortParser.class, StatsParser.class,
-				TermParser.class, TimechartParser.class);
+				FieldsParser.class, FunctionParser.class, OptionCheckerParser.class, OptionParser.class, RenameParser.class,
+				SortParser.class, StatsParser.class, TermParser.class, TimechartParser.class);
 
 		List<LogQueryParser> parsers = new ArrayList<LogQueryParser>();
 		for (Class<? extends LogQueryParser> clazz : parserClazzes) {
@@ -109,13 +113,10 @@ public class LogQueryServiceImpl implements LogQueryService {
 		}
 
 		// add table and lookup (need some constructor injection)
-		TableParser tableParser = new TableParser(logStorage, tableRegistry, parserFactoryRegistry);
-		LookupParser lookupParser = new LookupParser(lookupRegistry);
-		ScriptParser scriptParser = new ScriptParser(bc, scriptRegistry);
-
-		parsers.add(tableParser);
-		parsers.add(lookupParser);
-		parsers.add(scriptParser);
+		parsers.add(new DatasourceParser(dataSourceRegistry, logStorage, tableRegistry, parserFactoryRegistry));
+		parsers.add(new TableParser(logStorage, tableRegistry, parserFactoryRegistry));
+		parsers.add(new LookupParser(lookupRegistry));
+		parsers.add(new ScriptParser(bc, scriptRegistry));
 
 		syntaxProvider.addParsers(parsers);
 

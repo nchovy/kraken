@@ -15,8 +15,6 @@
  */
 package org.krakenapps.logdb.query.command;
 
-import java.util.Map;
-
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LookupHandler;
 import org.krakenapps.logdb.LookupHandlerRegistry;
@@ -46,7 +44,7 @@ public class Lookup extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		Object value = m.get(localSrcField);
 		LookupHandler handler = registry.getLookupHandler(handlerName);
 		if (handler != null)

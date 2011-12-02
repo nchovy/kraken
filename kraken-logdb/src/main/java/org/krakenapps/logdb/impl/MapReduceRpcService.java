@@ -26,6 +26,7 @@ import org.krakenapps.logdb.DataSourceEventListener;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
@@ -216,7 +217,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		RpcSession session = RpcContext.getSession();
 		String queryGuid = (String) session.getProperty("guid");
 		RpcFrom rpc = rpcFromMap.get(queryGuid);
-		rpc.push(data);
+		rpc.push(new LogMap(data));
 
 		if (logger.isDebugEnabled()) {
 			String s = Primitive.stringify(data);

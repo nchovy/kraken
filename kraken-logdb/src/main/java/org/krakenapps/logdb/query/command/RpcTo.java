@@ -1,6 +1,5 @@
 package org.krakenapps.logdb.query.command;
 
-import java.util.Map;
 import org.krakenapps.api.Primitive;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.rpc.RpcClient;
@@ -33,7 +32,7 @@ public class RpcTo extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 
 		if (datastream == null) {
 			client = new RpcClient(agentGuid);

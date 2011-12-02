@@ -16,7 +16,6 @@
 package org.krakenapps.logdb.query.command;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -26,9 +25,8 @@ import java.util.Queue;
 import java.util.Set;
 
 import org.krakenapps.logdb.LogQueryCallback;
-import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.command.Result;
+import org.krakenapps.logdb.query.FileBufferList;
 
 public class Result extends LogQueryCommand {
 	private FileBufferList<Map<String, Object>> result;
@@ -95,20 +93,8 @@ public class Result extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
-		String str = (String) m.get("_data");
-		if (str != null) {
-			List<String> data = new ArrayList<String>();
-			int l = 0;
-			int r;
-			while ((r = str.indexOf(' ', l)) != -1) {
-				data.add(str.substring(l, r));
-				l = r + 1;
-			}
-			data.add(str.substring(l));
-		}
-
-		result.add(m);
+	public void push(LogMap m) {
+		result.add(m.map());
 
 		while (nextCallback != null && result.size() >= nextCallback) {
 			LogQueryCallback callback = callbackQueue.poll().callback;

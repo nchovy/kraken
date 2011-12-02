@@ -2,9 +2,9 @@ package org.krakenapps.logdb.query.command;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.query.ObjectComparator;
 
 public class Term {
@@ -30,7 +30,7 @@ public class Term {
 	private Object rh;
 	private boolean isRhString = true;
 
-	public boolean eval(Map<String, Object> m) {
+	public boolean eval(LogMap m) {
 		Object l = isLhString ? lh : m.get(lh.toString());
 		Object r = isRhString ? rh : m.get(rh.toString());
 

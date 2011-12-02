@@ -70,6 +70,8 @@ public class OptionParser implements LogQueryParser {
 			String option = text.substring(begin, end);
 			if (!option.contains("="))
 				throw new ParseException("not option", begin);
+			if (option.startsWith("("))
+				throw new ParseException("not option", begin);
 
 			return new Result(new Binding(this, option), StringUtil.skipSpaces(text, end));
 		}

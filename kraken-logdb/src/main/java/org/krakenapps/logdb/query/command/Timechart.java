@@ -75,7 +75,7 @@ public class Timechart extends LogQueryCommand {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		Date row = getKey((Date) m.get("_time"));
 		if (!data.containsKey(row)) {
 			Object[] v = new Object[values.length];
@@ -142,7 +142,7 @@ public class Timechart extends LogQueryCommand {
 					}
 				}
 			}
-			write(m);
+			write(new LogMap(m));
 		}
 		data.close();
 		data = null;

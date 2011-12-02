@@ -48,7 +48,7 @@ public class Stats extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		List<Object> key = new ArrayList<Object>();
 		for (String clause : clauses)
 			key.add(m.get(clause));
@@ -82,7 +82,7 @@ public class Stats extends LogQueryCommand {
 			for (int i = 0; i < values.length; i++)
 				m.put(values[i].toString(), fs.get(i).getResult());
 
-			write(m);
+			write(new LogMap(m));
 		}
 		super.eof();
 		result.close();

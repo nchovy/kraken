@@ -69,8 +69,8 @@ public class Sort extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
-		buf.add(m);
+	public void push(LogMap m) {
+		buf.add(m.map());
 	}
 
 	@Override
@@ -88,7 +88,7 @@ public class Sort extends LogQueryCommand {
 				for (Map<String, Object> m : buf) {
 					if (--count < 0)
 						break;
-					write(m);
+					write(new LogMap(m));
 				}
 				buf.close();
 			}

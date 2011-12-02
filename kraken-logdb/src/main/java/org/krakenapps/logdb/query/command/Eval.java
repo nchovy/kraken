@@ -1,7 +1,5 @@
 package org.krakenapps.logdb.query.command;
 
-import java.util.Map;
-
 import org.krakenapps.logdb.LogQueryCommand;
 
 public class Eval extends LogQueryCommand {
@@ -18,7 +16,7 @@ public class Eval extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		m.put(column, term.eval(m));
 		write(m);
 	}

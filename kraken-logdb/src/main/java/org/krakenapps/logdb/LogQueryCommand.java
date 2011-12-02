@@ -72,17 +72,17 @@ public abstract class LogQueryCommand {
 		return pushCount;
 	}
 
-	public abstract void push(Map<String, Object> m);
+	public abstract void push(LogMap m);
 
 	public void push(FileBufferList<Map<String, Object>> buf) {
 		if (buf != null) {
 			for (Map<String, Object> m : buf)
-				push(m);
+				push(new LogMap(m));
 			buf.close();
 		}
 	}
 
-	protected final void write(Map<String, Object> m) {
+	protected final void write(LogMap m) {
 		pushCount++;
 		if (next != null && next.status != Status.End) {
 			if (callbackTimeline) {
@@ -128,6 +128,52 @@ public abstract class LogQueryCommand {
 			}
 			if (logQuery.getCommands().get(0).status != Status.End)
 				logQuery.getCommands().get(0).eof();
+		}
+	}
+
+	public static class LogMap {
+		private Map<String, Object> map;
+
+		public LogMap() {
+			this(new HashMap<String, Object>());
+		}
+
+		public LogMap(Map<String, Object> map) {
+			this.map = map;
+		}
+
+		public Object get(String key) {
+			return get(map, key);
+		}
+
+		@SuppressWarnings("unchecked")
+		private Object get(Map<String, Object> m, String key) {
+			if (!key.endsWith("]") || !key.contains("["))
+				return m.get(key);
+
+			int begin = key.indexOf("[");
+			String thisKey = key.substring(0, begin);
+			if (map.containsKey(thisKey) && (map.get(thisKey) instanceof Map)) {
+				int end = key.lastIndexOf("]");
+				return get((Map<String, Object>) map.get(thisKey), key.substring(begin + 1, end));
+			} else
+				return m.get(key);
+		}
+
+		public void put(String key, Object value) {
+			map.put(key, value);
+		}
+
+		public void remove(String key) {
+			map.remove(key);
+		}
+
+		public boolean containsKey(String key) {
+			return map.containsKey(key);
+		}
+
+		public Map<String, Object> map() {
+			return map;
 		}
 	}
 }

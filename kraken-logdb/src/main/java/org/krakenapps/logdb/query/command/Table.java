@@ -123,7 +123,7 @@ public class Table extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		throw new UnsupportedOperationException();
 	}
 
@@ -143,7 +143,7 @@ public class Table extends LogQueryCommand {
 				m.putAll(parser.parse(log.getData()));
 			else
 				m.putAll(log.getData());
-			write(m);
+			write(new LogMap(m));
 		}
 
 		@Override

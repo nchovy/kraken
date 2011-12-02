@@ -31,6 +31,7 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceRegistry;
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
@@ -280,7 +281,7 @@ public class LogDBScript implements Script {
 
 		Map<String, Object> data = new HashMap<String, Object>();
 		data.put("data", args[1]);
-		rpc.push(data);
+		rpc.push(new LogMap(data));
 	}
 
 	@ScriptUsage(description = "eof to rpcfrom", arguments = { @ScriptArgument(name = "guid", type = "string", description = "dist query guid") })

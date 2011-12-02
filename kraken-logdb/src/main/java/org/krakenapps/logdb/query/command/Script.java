@@ -22,7 +22,7 @@ public class Script extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 		input.data = m;
 		script.handle(input, output);
 	}
@@ -32,12 +32,12 @@ public class Script extends LogQueryCommand {
 		return true;
 	}
 
-	private void out(Map<String, Object> data) {
+	private void out(LogMap data) {
 		write(data);
 	}
 
 	private class DefaultScriptInput implements LogScriptInput {
-		private Map<String, Object> data;
+		private LogMap data;
 
 		@Override
 		public BundleContext getBundleContext() {
@@ -46,14 +46,13 @@ public class Script extends LogQueryCommand {
 
 		@Override
 		public Map<String, Object> getData() {
-			return data;
+			return data.map();
 		}
 	}
 
 	private class DefaultScriptOutput implements LogScriptOutput {
-
 		@Override
-		public void write(Map<String, Object> data) {
+		public void write(LogMap data) {
 			out(data);
 		}
 	}
