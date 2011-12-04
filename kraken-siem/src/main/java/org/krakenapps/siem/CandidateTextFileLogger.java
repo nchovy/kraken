@@ -22,10 +22,7 @@ public class CandidateTextFileLogger {
 	private String name;
 	private File file;
 	private String fileEncoding;
-	private String dateLocale;
-	private String datePattern;
-	private String parserFactoryName;
-	private Properties parserOptions = new Properties();
+	private Properties metadata = new Properties();
 
 	public String getName() {
 		return name;
@@ -51,42 +48,17 @@ public class CandidateTextFileLogger {
 		this.fileEncoding = fileEncoding;
 	}
 
-	public String getDateLocale() {
-		return dateLocale;
+	public Properties getMetadata() {
+		return metadata;
 	}
 
-	public void setDateLocale(String dateLocale) {
-		this.dateLocale = dateLocale;
-	}
-
-	public String getDatePattern() {
-		return datePattern;
-	}
-
-	public void setDatePattern(String datePattern) {
-		this.datePattern = datePattern;
-	}
-
-	public String getParserFactoryName() {
-		return parserFactoryName;
-	}
-
-	public void setParserFactoryName(String parserName) {
-		this.parserFactoryName = parserName;
-	}
-
-	public Properties getParserOptions() {
-		return parserOptions;
-	}
-
-	public void setParserOptions(Properties parserOptions) {
-		this.parserOptions = parserOptions;
+	public void setMetadata(Properties metadata) {
+		this.metadata = metadata;
 	}
 
 	@Override
 	public String toString() {
-		return String.format("name=%s, file=%s (%s), parser=%s, date pattern=\"%s\" (%s)", name,
-				file.getAbsolutePath(), fileEncoding, parserFactoryName, datePattern, dateLocale);
+		return String.format("name=%s, file=%s (%s)", name, file.getAbsolutePath(), fileEncoding);
 	}
 
 }

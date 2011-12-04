@@ -189,7 +189,12 @@ public class LogStorageEngine implements LogStorage {
 
 	@Override
 	public void createTable(String tableName) {
-		tableRegistry.createTable(tableName, null);
+		createTable(tableName, null);
+	}
+
+	@Override
+	public void createTable(String tableName, Map<String, String> tableMetadata) {
+		tableRegistry.createTable(tableName, tableMetadata);
 	}
 
 	@Override

@@ -36,10 +36,10 @@ public class RedhatLogFileScanner implements LogFileScanner {
 			CandidateTextFileLogger logger = new CandidateTextFileLogger();
 			logger.setName("openssh");
 			logger.setFile(file);
-			logger.setDatePattern("MMM dd HH:mm:ss");
-			logger.setDateLocale("en");
 			logger.setFileEncoding("utf-8");
-			logger.setParserFactoryName("openssh");
+			logger.getMetadata().put("date.pattern", "MMM dd HH:mm:ss");
+			logger.getMetadata().put("date.locale", "en");
+			logger.getMetadata().put("logparser", "openssh");
 
 			loggers.add(logger);
 		}
@@ -59,5 +59,4 @@ public class RedhatLogFileScanner implements LogFileScanner {
 		m.put("description", toString());
 		return m;
 	}
-
 }

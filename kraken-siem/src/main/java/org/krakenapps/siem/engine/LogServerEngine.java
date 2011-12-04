@@ -145,7 +145,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		col.add(PrimitiveConverter.serialize(ml));
 
 		// create log table
-		logStorage.createTable(ml.getFullName());
+		logStorage.createTable(ml.getFullName(), ml.getMetadata());
 
 		// connect pipe
 		logger.addLogPipe(this);
@@ -215,7 +215,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 			return;
 		}
 
-		Properties config = convert(ml.getLogParserOptions());
+		Properties config = convert(ml.getMetadata());
 		LogParser parser = factory.createParser(config);
 
 		if (parser == null) {
@@ -267,7 +267,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		}
 	}
 
-	private Properties convert(Map<String, Object> options) {
+	private Properties convert(Map<String, String> options) {
 		Properties p = new Properties();
 		for (String key : options.keySet())
 			p.put(key, options.get(key));

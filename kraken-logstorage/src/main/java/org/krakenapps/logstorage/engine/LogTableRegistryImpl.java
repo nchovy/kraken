@@ -119,6 +119,8 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 
 		int newId = nextTableId.incrementAndGet();
 		LogTableSchema table = new LogTableSchema(newId, tableName);
+		if (tableMetadata != null)
+			table.getMetadata().putAll(tableMetadata);
 
 		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
 		db.add(table, "kraken-logstorage", "created " + tableName + " table");

@@ -98,14 +98,12 @@ public class LoggerPlugin {
 	public void createLogger(Request req, Response resp) {
 		String orgDomain = req.getOrgDomain();
 		String loggerName = req.getString("logger");
-		String parserFactoryName = req.getString("parser");
-		Map<String, Object> parserOptions = (Map<String, Object>) req.get("parser_options");
+		Map<String, String> metadata = (Map<String, String>) req.get("metadata");
 
 		ManagedLogger ml = new ManagedLogger();
 		ml.setOrgDomain(orgDomain);
 		ml.setFullName(loggerName);
-		ml.setParserFactoryName(parserFactoryName);
-		ml.setLogParserOptions(parserOptions);
+		ml.setMetadata(metadata);
 
 		logServer.createManagedLogger(ml);
 	}

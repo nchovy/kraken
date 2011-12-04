@@ -25,14 +25,13 @@ public class ManagedLogger implements Marshalable {
 
 	private String fullName;
 
-	private String parserFactoryName;
-
-	/**
-	 * string to string map
-	 */
-	private Map<String, Object> logParserOptions = new HashMap<String, Object>();
+	private Map<String, String> metadata;
 
 	private boolean isEnabled = true;
+
+	public ManagedLogger() {
+		metadata = new HashMap<String, String>();
+	}
 
 	public String getOrgDomain() {
 		return orgDomain;
@@ -50,20 +49,23 @@ public class ManagedLogger implements Marshalable {
 		this.fullName = fullName;
 	}
 
+	public Map<String, String> getMetadata() {
+		return metadata;
+	}
+
+	public void setMetadata(Map<String, String> metadata) {
+		this.metadata = metadata;
+	}
+
 	public String getParserFactoryName() {
-		return parserFactoryName;
+		if (metadata == null)
+			return null;
+
+		return metadata.get("logparser");
 	}
 
 	public void setParserFactoryName(String parserFactoryName) {
-		this.parserFactoryName = parserFactoryName;
-	}
-
-	public Map<String, Object> getLogParserOptions() {
-		return logParserOptions;
-	}
-
-	public void setLogParserOptions(Map<String, Object> logParserOptions) {
-		this.logParserOptions = logParserOptions;
+		metadata.put("logparser", parserFactoryName);
 	}
 
 	public boolean isEnabled() {
@@ -78,13 +80,13 @@ public class ManagedLogger implements Marshalable {
 	public Map<String, Object> marshal() {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("fullname", fullName);
-		m.put("parser_factory_name", parserFactoryName);
+		m.put("metadata", metadata);
 		m.put("is_enabled", isEnabled);
 		return m;
 	}
 
 	@Override
 	public String toString() {
-		return "fullname=" + fullName + ", parsername=" + parserFactoryName + ", enabled=" + isEnabled;
+		return "fullname=" + fullName + ", enabled=" + isEnabled;
 	}
 }

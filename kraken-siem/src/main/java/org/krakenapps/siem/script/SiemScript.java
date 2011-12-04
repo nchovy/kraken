@@ -467,10 +467,8 @@ public class SiemScript implements Script {
 						context.println("  " + candidate.getName() + " logger already exists");
 
 					} else {
-						Properties config = new Properties();
+						Properties config = new Properties(candidate.getMetadata());
 						config.put("file.path", candidate.getFile().getAbsolutePath());
-						config.put("date.pattern", candidate.getDatePattern());
-						config.put("date.locale", candidate.getDateLocale());
 
 						logger = factory.newLogger(candidate.getName(), "", config);
 						context.println("  logger [" + logger.getFullName() + "] created");
@@ -480,11 +478,9 @@ public class SiemScript implements Script {
 						ManagedLogger ml = new ManagedLogger();
 						ml.setOrgDomain(orgDomain);
 						ml.setFullName(logger.getFullName());
-						ml.setParserFactoryName(candidate.getParserFactoryName());
-						ml.setLogParserOptions(toMap(candidate.getParserOptions()));
+						ml.setMetadata(toMap(candidate.getMetadata()));
 
-						context.println("  managed logger [org=" + orgDomain + ", " + logger.getFullName()
-								+ "] created, parser [" + candidate.getParserFactoryName() + "] mapped");
+						context.println("  managed logger [org=" + orgDomain + ", " + logger.getFullName() + "] created");
 					}
 
 					if (!logger.isRunning()) {
@@ -548,8 +544,8 @@ public class SiemScript implements Script {
 		programApi.updateProgramProfile("localhost", pp);
 	}
 
-	private Map<String, Object> toMap(Properties p) {
-		Map<String, Object> m = new HashMap<String, Object>();
+	private Map<String, String> toMap(Properties p) {
+		Map<String, String> m = new HashMap<String, String>();
 		for (Object key : p.keySet())
 			m.put(key.toString(), p.getProperty(key.toString()));
 		return m;
