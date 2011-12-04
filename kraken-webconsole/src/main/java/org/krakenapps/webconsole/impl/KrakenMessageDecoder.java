@@ -43,12 +43,17 @@ public class KrakenMessageDecoder {
 	}
 
 	public static Message decode(Session session, String text) {
-		// remove potential control characters
-		text = text.trim();
-		
 		Logger logger = LoggerFactory.getLogger(KrakenMessageDecoder.class.getName());
 		Charset utf8 = Charset.forName("utf-8");
+
+		// remove potential control characters
+		text = text.trim();
+		if (text.length() == 0)
+			return null;
 		
+		if (logger.isDebugEnabled())
+			logger.debug("kraken webconsole: debug websocket frame length {}, json [{}]", text.length(), text);
+
 		if (text.equals("ping"))
 			return null;
 
@@ -59,10 +64,10 @@ public class KrakenMessageDecoder {
 				JSONArray container = (JSONArray) tokenizer.nextValue();
 				JSONObject header = container.getJSONObject(0);
 				JSONObject body = container.getJSONObject(1);
-				
+
 				if (header.has("iv") && body.has("data")) {
 					String data = body.getString("data");
-					
+
 					byte[] iv = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(header.getString("iv").getBytes())));
 					byte[] buf = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(data.getBytes())));
 					byte[] key = ByteUtil.asByteArray(UUID.fromString(session.getString("enc_key")));
@@ -103,7 +108,6 @@ public class KrakenMessageDecoder {
 		}
 		return null;
 	}
-
 
 	private static Map<String, Object> parse(JSONObject obj) {
 		Map<String, Object> m = new HashMap<String, Object>();
