@@ -60,6 +60,16 @@ public class LoggerPlugin {
 	}
 
 	@MsgbusMethod
+	public void getLogger(Request req, Response resp) {
+		// logger fullname
+		Logger logger = loggerRegistry.getLogger(req.getString("logger"));
+		if (logger != null)
+			resp.put("logger", Marshaler.marshal(logger));
+		else
+			resp.put("logger", null);
+	}
+
+	@MsgbusMethod
 	public void getNormalizers(Request req, Response resp) {
 		resp.put("normalizers", normalizerRegistry.getNames());
 	}
@@ -129,7 +139,7 @@ public class LoggerPlugin {
 			Logger logger = loggerRegistry.getLogger(fullName);
 			if (logger == null)
 				continue;
-			
+
 			logger.stop();
 			String[] tokens = fullName.split("\\\\");
 			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(), logger.getFactoryName());
