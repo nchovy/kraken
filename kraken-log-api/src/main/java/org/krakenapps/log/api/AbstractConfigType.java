@@ -16,6 +16,7 @@
 package org.krakenapps.log.api;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -28,7 +29,7 @@ public abstract class AbstractConfigType implements LoggerConfigOption {
 
 	public AbstractConfigType(String name, Map<Locale, String> displayNames, Map<Locale, String> descriptions,
 			boolean isRequired) {
-		this(name, displayNames, descriptions, isRequired, null);
+		this(name, displayNames, descriptions, isRequired, new HashMap<Locale, String>());
 	}
 
 	public AbstractConfigType(String name, Map<Locale, String> displayNames, Map<Locale, String> descriptions,
