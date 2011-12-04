@@ -33,6 +33,13 @@ public abstract class LogQueryCommand {
 	private boolean callbackTimeline;
 	protected volatile Status status = Status.Waiting;
 	protected Map<String, String> headerColumn = new HashMap<String, String>();
+	
+	public LogQueryCommand() {
+		// default metadata column mappings
+		headerColumn.put("table", "_table");
+		headerColumn.put("id", "_id");
+		headerColumn.put("date", "_time");
+	}
 
 	public String getQueryString() {
 		return queryString;

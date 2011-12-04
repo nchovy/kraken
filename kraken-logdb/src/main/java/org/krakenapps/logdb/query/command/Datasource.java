@@ -35,6 +35,7 @@ public class Datasource extends LogQueryCommand {
 	public Datasource(Collection<DataSource> sources) {
 		this.sources = sources;
 		this.q = new PriorityQueue<DataWrapper>(SIZE * sources.size() + 1, new DataWrapperComparator());
+		
 	}
 
 	public Collection<DataSource> getSources() {

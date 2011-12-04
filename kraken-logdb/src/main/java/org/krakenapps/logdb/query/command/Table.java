@@ -65,9 +65,6 @@ public class Table extends LogQueryCommand {
 		this.from = from;
 		this.to = to;
 		this.parser = parser;
-		headerColumn.put("table", "_table");
-		headerColumn.put("id", "_id");
-		headerColumn.put("date", "_time");
 	}
 
 	public String getTableName() {
