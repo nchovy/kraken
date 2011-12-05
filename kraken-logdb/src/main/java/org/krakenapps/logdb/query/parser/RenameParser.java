@@ -26,7 +26,7 @@ import org.krakenapps.logdb.query.command.Rename;
 public class RenameParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("rename", this, k("rename"), new StringPlaceholder(), k("as"), new StringPlaceholder());
+		syntax.add("rename", this, k("rename "), new StringPlaceholder(), k("as "), new StringPlaceholder());
 		syntax.addRoot("rename");
 	}
 

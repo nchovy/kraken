@@ -33,7 +33,7 @@ public abstract class LogQueryCommand {
 	private boolean callbackTimeline;
 	protected volatile Status status = Status.Waiting;
 	protected Map<String, String> headerColumn = new HashMap<String, String>();
-	
+
 	public LogQueryCommand() {
 		// default metadata column mappings
 		headerColumn.put("table", "_table");
@@ -155,6 +155,9 @@ public abstract class LogQueryCommand {
 
 		@SuppressWarnings("unchecked")
 		private Object get(Map<String, Object> m, String key) {
+			if (key == null)
+				return null;
+
 			if (!key.endsWith("]") || !key.contains("["))
 				return m.get(key);
 

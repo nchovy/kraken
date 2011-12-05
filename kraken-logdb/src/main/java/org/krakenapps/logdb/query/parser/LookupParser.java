@@ -34,10 +34,10 @@ public class LookupParser implements LogQueryParser {
 
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("lookup", this, k("lookup"), ref("option"), new StringPlaceholder(), ref("lookup_field"),
+		syntax.add("lookup", this, k("lookup "), ref("option"), new StringPlaceholder(), ref("lookup_field"),
 				k("OUTPUT"), ref("lookup_field"));
 		syntax.add("lookup_field", new LookupFieldParser(), new StringPlaceholder(),
-				option(k("as"), new StringPlaceholder()));
+				option(k("as "), new StringPlaceholder()));
 		syntax.addRoot("lookup");
 	}
 

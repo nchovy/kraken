@@ -31,8 +31,8 @@ import org.krakenapps.logdb.query.command.Function;
 public class FunctionParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("function", this, new FunctionPlaceholder(),
-				option(k("as"), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("function")));
+		syntax.add("function", this, new FunctionPlaceholder(), option(k("as "), new StringPlaceholder(new char[] { ' ', ',' })),
+				option(ref("function")));
 	}
 
 	@Override
@@ -47,23 +47,21 @@ public class FunctionParser implements LogQueryParser {
 		if (b.getValue() != null)
 			fs.add((Function) b.getValue());
 		else {
-			boolean as = false;
-			for (Binding c : b.getChildren()) {
+			for (int i = 0; i < b.getChildren().length; i++) {
+				Binding c = b.getChildren()[i];
+
 				if (c.getValue() != null) {
 					if (c.getValue() instanceof Collection)
 						fs.addAll((List<? extends Function>) c.getValue());
 					else if (c.getValue() instanceof Function) {
 						fs.add((Function) c.getValue());
 					} else if (c.getValue() instanceof String) {
-						if (c.getValue().equals("as"))
-							as = true;
-						else if (as) {
-							fs.get(fs.size() - 1).setKeyName((String) c.getValue());
-							as = false;
-						}
+						fs.get(fs.size() - 1).setKeyName((String) b.getChildren()[i + 1].getValue());
+						i++;
 					}
-				} else
+				} else {
 					parse(c, fs);
+				}
 			}
 		}
 	}

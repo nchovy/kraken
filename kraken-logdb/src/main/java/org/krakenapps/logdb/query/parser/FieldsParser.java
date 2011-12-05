@@ -29,7 +29,7 @@ import org.krakenapps.logdb.query.command.Fields;
 public class FieldsParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("fields", this, k("fields"), repeat(new StringPlaceholder(new char[] { ' ', ',' })));
+		syntax.add("fields", this, k("fields "), repeat(new StringPlaceholder(new char[] { ' ', ',' })));
 		syntax.addRoot("fields");
 	}
 

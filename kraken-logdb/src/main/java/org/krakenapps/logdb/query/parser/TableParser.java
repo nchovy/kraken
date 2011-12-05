@@ -50,7 +50,7 @@ public class TableParser implements LogQueryParser {
 
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("table", this, k("table"), ref("option"), new StringPlaceholder());
+		syntax.add("table", this, k("table "), ref("option"), new StringPlaceholder());
 		syntax.addRoot("table");
 	}
 

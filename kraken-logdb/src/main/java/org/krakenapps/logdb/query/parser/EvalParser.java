@@ -14,7 +14,7 @@ import org.krakenapps.logdb.query.command.Term;
 public class EvalParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("eval", this, k("eval"), ref("term"), option(k("as"), new StringPlaceholder()));
+		syntax.add("eval", this, k("eval "), ref("term"), option(k("as "), new StringPlaceholder()));
 		syntax.addRoot("eval");
 	}
 

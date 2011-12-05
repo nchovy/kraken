@@ -37,7 +37,7 @@ public class DatasourceParser implements LogQueryParser {
 
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("datasource", this, k("datasource"), ref("option"), ref("option_checker"));
+		syntax.add("datasource", this, k("datasource "), ref("option"), ref("option_checker"));
 		syntax.addRoot("datasource");
 	}
 

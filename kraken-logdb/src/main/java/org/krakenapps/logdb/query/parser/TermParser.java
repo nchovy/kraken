@@ -1,7 +1,6 @@
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.choice;
-import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.*;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
@@ -15,8 +14,8 @@ public class TermParser implements LogQueryParser {
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
 		syntax.add("term", this, new StringPlaceholder(), 
-				choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
-				new StringPlaceholder());
+				choice(rule(choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
+				new StringPlaceholder()), rule(choice(k("is null"), k("not null")))));
 		// @formatter:on
 	}
 
@@ -31,31 +30,20 @@ public class TermParser implements LogQueryParser {
 			term.setLh(lh.substring(1, lh.length() - 1));
 		}
 
-		if (v[1].getValue().equals("=="))
-			term.setOperator(Operator.Eq);
-		else if (v[1].getValue().equals("!="))
-			term.setOperator(Operator.Neq);
-		else if (v[1].getValue().equals(">"))
-			term.setOperator(Operator.Gt);
-		else if (v[1].getValue().equals("<"))
-			term.setOperator(Operator.Lt);
-		else if (v[1].getValue().equals(">="))
-			term.setOperator(Operator.Ge);
-		else if (v[1].getValue().equals("<="))
-			term.setOperator(Operator.Le);
-		else if (v[1].getValue().equals("contain"))
-			term.setOperator(Operator.Contain);
-		else if (v[1].getValue().equals("regexp"))
-			term.setOperator(Operator.Regexp);
-		else if (v[1].getValue().equals("in"))
-			term.setOperator(Operator.In);
+		Object oper = v[1].getValue();
+		if(oper == null)
+			oper = v[1].getChildren()[0].getValue();
+		term.setOperator(Operator.find(oper.toString()));
 
-		String rh = v[2].getValue().toString();
-		term.setRh(rh);
-		if (rh.startsWith("\"") && rh.endsWith("\"")) {
-			term.setRhString(true);
-			term.setRh(rh.substring(1, rh.length() - 1));
+		if (term.getOperator() != Operator.IsNull && term.getOperator() != Operator.NotNull) {
+			String rh = v[1].getChildren()[1].getValue().toString();
+			term.setRh(rh);
+			if (rh.startsWith("\"") && rh.endsWith("\"")) {
+				term.setRhString(true);
+				term.setRh(rh.substring(1, rh.length() - 1));
+			}
 		}
+
 		return term;
 	}
 }

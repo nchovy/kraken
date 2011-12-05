@@ -91,7 +91,7 @@ public abstract class Function {
 			if (!functionName.equals(name))
 				f.suffix = Integer.parseInt(name.substring(functionName.length()));
 			f.keyName = keyName;
-			if (target.startsWith("eval(") && target.endsWith(")")) {
+			if (target != null && target.startsWith("eval(") && target.endsWith(")")) {
 				String evalString = target.substring(5, target.length() - 1);
 				EvalType type = null;
 				String lh = null;
@@ -169,7 +169,7 @@ public abstract class Function {
 		else
 			value = row.get(target);
 
-		if (value != null)
+		if (value != null || target == null)
 			put(value);
 	}
 
@@ -182,7 +182,7 @@ public abstract class Function {
 	@Override
 	public String toString() {
 		if (keyName == null)
-			return String.format("%s(%s)", name, target);
+			return String.format("%s%s", name, (target != null) ? ("(" + target + ")") : "");
 		else
 			return keyName;
 	}
@@ -338,7 +338,7 @@ public abstract class Function {
 
 		@Override
 		protected void put(Object obj) {
-			if (first == null)
+			if (first == null && obj != null)
 				first = obj;
 		}
 
@@ -366,7 +366,8 @@ public abstract class Function {
 
 		@Override
 		protected void put(Object obj) {
-			last = obj;
+			if (obj != null)
+				last = obj;
 		}
 
 		public Object getLast() {
@@ -393,7 +394,8 @@ public abstract class Function {
 
 		@Override
 		protected void put(Object obj) {
-			objs.add(obj);
+			if (obj != null)
+				objs.add(obj);
 		}
 
 		public java.util.List<Object> getObjs() {

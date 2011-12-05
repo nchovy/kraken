@@ -22,7 +22,7 @@ public class ScriptParser implements LogQueryParser {
 
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("script", this, k("script"), new StringPlaceholder());
+		syntax.add("script", this, k("script "), new StringPlaceholder());
 		syntax.addRoot("script");
 	}
 

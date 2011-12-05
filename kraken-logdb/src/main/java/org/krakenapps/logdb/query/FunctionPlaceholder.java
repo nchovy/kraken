@@ -45,38 +45,79 @@ public class FunctionPlaceholder implements Placeholder {
 		if (text.length() <= begin)
 			throw new BufferUnderflowException();
 
-		while (true) {
-			char c = text.charAt(i);
-			if (c == ' ')
-				throw new ParseException("invalid function type", i);
-			else if (c == '(')
-				break;
-
-			if (++i >= text.length())
-				throw new ParseException("invalid function type", i);
-		}
-		String name = text.substring(begin, i++);
+		// while (true) {
+		// char c = text.charAt(i);
+		// if (c == ' ')
+		// throw new ParseException("invalid function type", i);
+		// else if (c == '(')
+		// break;
+		//
+		// if (++i >= text.length())
+		// throw new ParseException("invalid function type", i);
+		// }
+		// String name = text.substring(begin, i++);
+		//
+		// StringBuilder sb = new StringBuilder();
+		// int quote = 0;
+		// while (true) {
+		// char c = text.charAt(i);
+		// if (c == '(')
+		// quote++;
+		// else if (c == ')') {
+		// quote--;
+		// if (quote < 0)
+		// break;
+		// }
+		//
+		// sb.append(c);
+		//
+		// if (++i >= text.length())
+		// throw new ParseException("invalid function type", i);
+		// }
+		// String target = sb.toString();
 
 		StringBuilder sb = new StringBuilder();
-		int quote = 0;
-		while (true) {
-			char c = text.charAt(i);
-			if (c == '(')
-				quote++;
-			else if (c == ')') {
-				quote--;
-				if (quote < 0)
-					break;
+		boolean bracket = false;
+		boolean space = false;
+		StringBuild: while (i < text.length()) {
+			char c = text.charAt(i++);
+			if (c == ',')
+				break;
+			if (space && !bracket && c != ' ' && c != '(') {
+				i--;
+				break;
 			}
 
 			sb.append(c);
 
-			if (++i >= text.length())
+			if (c == ' ')
+				space = true;
+			else if (c == '(')
+				bracket = true;
+			else if (c == ')') {
+				if (!bracket)
+					throw new ParseException("invalid function type", i);
+				for (int j = i + 1; j < text.length(); j++) {
+					if (text.charAt(j) == ' ' || text.charAt(j) == ',')
+						break StringBuild;
+				}
 				throw new ParseException("invalid function type", i);
+			}
 		}
-		String target = sb.toString();
+		String funcstr = sb.toString();
 
-		i = StringUtil.skipSpaces(text, ++i);
+		String name = null;
+		String target = null;
+		int lb = funcstr.indexOf("(");
+		int rb = funcstr.indexOf(")");
+		if (lb > 0) {
+			name = funcstr.substring(0, lb).trim();
+			target = funcstr.substring(lb + 1, rb).trim();
+		} else {
+			name = funcstr.trim();
+		}
+
+		i = StringUtil.skipSpaces(text, i);
 		if (i < text.length() && text.charAt(i) == ',')
 			i++;
 

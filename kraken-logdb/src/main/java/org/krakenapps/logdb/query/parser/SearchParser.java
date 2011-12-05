@@ -30,9 +30,7 @@ import org.krakenapps.logdb.query.command.Term;
 public class SearchParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		// @formatter:off
-		syntax.add("search", this, k("search"), ref("option"), ref("term"));
-		// @formatter:on
+		syntax.add("search", this, k("search "), ref("option"), ref("term"));
 		syntax.addRoot("search");
 	}
 

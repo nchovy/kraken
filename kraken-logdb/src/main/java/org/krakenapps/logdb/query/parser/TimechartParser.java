@@ -34,8 +34,8 @@ import org.krakenapps.logdb.query.parser.TimechartParser;
 public class TimechartParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("timechart", new TimechartParser(), k("timechart"), ref("option"), ref("timechart_function"),
-				k("by"), new StringPlaceholder());
+		syntax.add("timechart", new TimechartParser(), k("timechart "), ref("option"), ref("timechart_function"),
+				k("by "), new StringPlaceholder());
 		syntax.add("timechart_function", new FunctionParser(), new FunctionPlaceholder(Timechart.func),
 				option(k("as"), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function")));
 		syntax.addRoot("timechart");
