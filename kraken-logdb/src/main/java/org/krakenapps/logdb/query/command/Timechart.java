@@ -50,17 +50,17 @@ public class Timechart extends LogQueryCommand {
 	private Span spanField;
 	private int spanAmount;
 	private Function[] values;
-	private String clause;
+	private String keyField;
 
-	public Timechart(Function[] values, String clause) {
-		this(Span.Day, 1, values, clause);
+	public Timechart(Function[] values, String keyField) {
+		this(Span.Day, 1, values, keyField);
 	}
 
-	public Timechart(Span spanField, int spanAmount, Function[] values, String clause) {
+	public Timechart(Span spanField, int spanAmount, Function[] values, String keyField) {
 		this.spanField = spanField;
 		this.spanAmount = spanAmount;
 		this.values = values;
-		this.clause = clause;
+		this.keyField = keyField;
 	}
 
 	@Override
@@ -89,26 +89,26 @@ public class Timechart extends LogQueryCommand {
 			amount.put(row, c.getTimeInMillis() - row.getTime());
 		}
 
-		String key = "";
-
-		if (clause != null) {
-			if (m.get(clause) == null)
+		String key = null;
+		if (keyField != null) {
+			if (m.get(keyField) == null)
 				return;
-			key = m.get(clause).toString();
+			key = m.get(keyField).toString();
 		}
 
 		Object[] blocks = data.get(row);
 		for (int i = 0; i < blocks.length; i++) {
 			Map<String, Function> block = (Map<String, Function>) blocks[i];
 
-			if (!block.containsKey(key)) {
+			String k = (key != null) ? key : values[i].toString();
+			if (!block.containsKey(k)) {
 				Function f = values[i].clone();
 				if (f instanceof PerTime)
 					((PerTime) f).amount = amount.get(row);
-				block.put(key, f);
+				block.put(k, f);
 			}
 
-			Function func = block.get(key);
+			Function func = block.get(k);
 			m.get(func.getTarget());
 			func.put(m);
 		}

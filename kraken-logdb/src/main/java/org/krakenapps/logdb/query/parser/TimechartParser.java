@@ -15,7 +15,10 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.option;
+import static org.krakenapps.bnf.Syntax.ref;
+import static org.krakenapps.bnf.Syntax.rule;
 
 import java.util.List;
 import java.util.Map;
@@ -28,27 +31,30 @@ import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Function;
 import org.krakenapps.logdb.query.command.Timechart;
 import org.krakenapps.logdb.query.command.Timechart.Span;
-import org.krakenapps.logdb.query.parser.FunctionParser;
-import org.krakenapps.logdb.query.parser.TimechartParser;
 
 public class TimechartParser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
+		// @formatter:off
 		syntax.add("timechart", new TimechartParser(), k("timechart "), ref("option"), ref("timechart_function"),
-				k("by "), new StringPlaceholder());
+				option(rule(k("by "), new StringPlaceholder())));
 		syntax.add("timechart_function", new FunctionParser(), new FunctionPlaceholder(Timechart.func),
-				option(k("as"), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function")));
+				option(k("as "), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function")));
 		syntax.addRoot("timechart");
+		// @formatter:on
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object parse(Binding b) {
 		Function[] func = ((List<Function>) b.getChildren()[2].getValue()).toArray(new Function[0]);
-		String clause = (String) b.getChildren()[4].getValue();
 		Map<String, String> option = (Map<String, String>) b.getChildren()[1].getValue();
 		Span field = null;
 		Integer amount = null;
+		String keyField = null;
+
+		if (b.getChildren().length >= 4)
+			keyField = (String) b.getChildren()[3].getChildren()[1].getValue();
 
 		if (option.containsKey("span")) {
 			String value = option.get("span");
@@ -77,8 +83,8 @@ public class TimechartParser implements LogQueryParser {
 		}
 
 		if (field == null)
-			return new Timechart(func, clause);
+			return new Timechart(func, keyField);
 		else
-			return new Timechart(field, amount, func, clause);
+			return new Timechart(field, amount, func, keyField);
 	}
 }
