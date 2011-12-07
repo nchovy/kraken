@@ -45,6 +45,8 @@ import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.FileSpace;
 import org.krakenapps.dom.model.UploadedFile;
 import org.krakenapps.msgbus.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-file-upload-api")
 @Provides
@@ -60,6 +62,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	private static final String FILE_ALREADY_EXIST = "uploaded-file-already-exist";
 	private static DefaultEntityEventProvider<UploadedFile> fileEventProvider = new DefaultEntityEventProvider<UploadedFile>();
 
+	private Logger logger = LoggerFactory.getLogger(FileUploadApiImpl.class);
 	private ConcurrentMap<String, UploadItem> uploadTokens = new ConcurrentHashMap<String, FileUploadApiImpl.UploadItem>();
 	private ConcurrentMap<Integer, String> sessionDownloadTokens = new ConcurrentHashMap<Integer, String>(); // session-token
 	private ConcurrentMap<String, DownloadToken> downloadTokens = new ConcurrentHashMap<String, DownloadToken>(); // session-token
@@ -150,16 +153,17 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		if (item == null)
 			throw new DOMException("upload-token-not-found");
 
+		String orgDomain = item.token.getOrgDomain();
+		File temp = File.createTempFile("tmp-", null, getBaseDirectory(orgDomain));
+		if (temp.exists())
+			temp.delete();
+
 		OutputStream os = null;
+		long totalSize = 0;
 		try {
-			String orgDomain = item.token.getOrgDomain();
-			File temp = File.createTempFile("tmp-", null, getBaseDirectory(orgDomain));
-			if (temp.exists())
-				temp.delete();
 			os = new FileOutputStream(temp);
 
 			byte[] buf = new byte[8096];
-			long totalSize = 0;
 			while (true) {
 				int l = is.read(buf);
 				if (l < 0)
@@ -167,41 +171,47 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 				totalSize += l;
 				os.write(buf, 0, l);
 			}
-
-			String guid = null;
-			if (totalSize == item.token.getFileSize()) {
-				UploadedFile uploaded = new UploadedFile();
-				File newFile = null;
-				if (item.token.getSpaceGuid() != null) {
-					FileSpace space = getFileSpace(orgDomain, item.token.getSpaceGuid());
-					uploaded.setSpace(space);
-					guid = uploaded.getGuid();
-					File spaceDir = new File(getBaseDirectory(orgDomain), space.getGuid());
-					spaceDir.mkdirs();
-					newFile = new File(spaceDir, guid);
-				} else
-					newFile = new File(getBaseDirectory(orgDomain), guid);
-
-				if (newFile.exists())
-					newFile.delete();
-				if (!temp.renameTo(newFile))
-					throw new DOMException("rename-uploaded-file-failed");
-
-				uploaded.setOwner(userApi.findUser(orgDomain, item.token.getLoginName()));
-				uploaded.setFileName(item.token.getFileName());
-				uploaded.setFileSize(item.token.getFileSize());
-				uploaded.setPath(newFile.getAbsolutePath());
-				cfg.add(orgDomain, UploadedFile.class, getPred(guid), uploaded, FILE_ALREADY_EXIST, fileEventProvider);
-			} else {
-				temp.delete();
-			}
-
-			if (item.callback != null)
-				item.callback.onUploadFile(item.token, guid);
+		} catch (IOException e) {
+			throw new DOMException("upload-failed");
 		} finally {
-			if (os != null)
-				os.close();
+			try {
+				if (os != null)
+					os.close();
+			} catch (IOException e) {
+			}
 		}
+
+		String guid = null;
+		if (totalSize == item.token.getFileSize()) {
+			UploadedFile uploaded = new UploadedFile();
+			File newFile = null;
+			guid = uploaded.getGuid();
+			if (item.token.getSpaceGuid() != null) {
+				FileSpace space = getFileSpace(orgDomain, item.token.getSpaceGuid());
+				uploaded.setSpace(space);
+				File spaceDir = new File(getBaseDirectory(orgDomain), space.getGuid());
+				spaceDir.mkdirs();
+				newFile = new File(spaceDir, guid);
+			} else
+				newFile = new File(getBaseDirectory(orgDomain), guid);
+
+			if (newFile.exists())
+				newFile.delete();
+			logger.trace("kraken dom: rename from [{}] to [{}]", temp.getAbsolutePath(), newFile.getAbsolutePath());
+			if (!temp.renameTo(newFile))
+				throw new DOMException("rename-uploaded-file-failed");
+
+			uploaded.setOwner(userApi.findUser(orgDomain, item.token.getLoginName()));
+			uploaded.setFileName(item.token.getFileName());
+			uploaded.setFileSize(item.token.getFileSize());
+			uploaded.setPath(newFile.getAbsolutePath());
+			cfg.add(orgDomain, UploadedFile.class, getPred(guid), uploaded, FILE_ALREADY_EXIST, fileEventProvider);
+		} else {
+			temp.delete();
+		}
+
+		if (item.callback != null)
+			item.callback.onUploadFile(item.token, guid);
 	}
 
 	private static class UploadItem {
