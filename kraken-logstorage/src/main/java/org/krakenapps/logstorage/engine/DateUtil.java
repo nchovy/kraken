@@ -55,7 +55,7 @@ public class DateUtil {
 			toDay = getDay(to);
 
 		for (Date day : dates) {
-			if (fromDay != null && day.before(from))
+			if (fromDay != null && day.before(fromDay))
 				continue;
 
 			if (toDay != null && day.after(toDay))

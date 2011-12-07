@@ -23,17 +23,11 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logstorage</Bundle-SymbolicName>
-						<Export-Package>
-							org.krakenapps.logstorage,
-							org.krakenapps.logstorage.msgbus,
-							org.krakenapps.logstorage.criterion</Export-Package>
+						<Export-Package>org.krakenapps.logstorage</Export-Package>
 						<Private-Package>
 							org.krakenapps.logstorage.engine,
 							org.krakenapps.logstorage.engine.v1,
 							org.krakenapps.logstorage.engine.v2,
-							org.krakenapps.logstorage.query,
-							org.krakenapps.logstorage.query.command,
-							org.krakenapps.logstorage.query.parser,
 							org.krakenapps.logstorage.script
 						</Private-Package>
 						<Import-Package>*</Import-Package>
