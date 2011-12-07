@@ -114,6 +114,12 @@ public class Datasource extends LogQueryCommand {
 	@Override
 	public void start() {
 		status = Status.Running;
+
+		if (from == null)
+			from = new Date(0);
+		if (to == null)
+			to = new Date();
+
 		for (DataSource source : sources)
 			wrappers.add(new SourceWrapper(source));
 

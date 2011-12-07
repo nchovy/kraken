@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FileBufferMap<K, V> implements Map<K, V> {
-	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/query/");
+	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
 	private static int BYTEBUFFER_CAPACITY = 655360; // 640KB
 	private Logger logger = LoggerFactory.getLogger(FileBufferMap.class);
 	private ByteBuffer bb;
