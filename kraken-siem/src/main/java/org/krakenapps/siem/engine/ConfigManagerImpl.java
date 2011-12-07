@@ -21,7 +21,7 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	@Validate
 	public void start() throws IOException {
-		db = conf.ensureDatabase("siem");
+		db = conf.ensureDatabase("kraken-siem");
 	}
 
 	@Override
