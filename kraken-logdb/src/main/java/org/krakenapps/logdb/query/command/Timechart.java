@@ -138,7 +138,10 @@ public class Timechart extends LogQueryCommand {
 				for (Object value : values) {
 					for (String k : ((Map<String, Function>) value).keySet()) {
 						Function v = ((Map<String, Function>) value).get(k);
-						m.put(v.toString() + ":" + k, v.getResult());
+						if (keyField != null)
+							m.put(v.toString() + ":" + k, v.getResult());
+						else
+							m.put(k, v.getResult());
 					}
 				}
 			}

@@ -4,9 +4,14 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserFactory;
@@ -20,9 +25,8 @@ import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 
 public class Datasource extends LogQueryCommand {
-	private static final int SIZE = 100;
-
 	private Collection<DataSource> sources;
+	private int cacheSize;
 	private LogStorage logStorage;
 	private LogTableRegistry tableRegistry;
 	private LogParserFactoryRegistry parserFactoryRegistry;
@@ -30,12 +34,17 @@ public class Datasource extends LogQueryCommand {
 	private int limit;
 	private Date from;
 	private Date to;
+	private Set<SourceWrapper> wrappers = new HashSet<SourceWrapper>();
 	private PriorityQueue<DataWrapper> q;
 
 	public Datasource(Collection<DataSource> sources) {
+		this(sources, 5000);
+	}
+
+	public Datasource(Collection<DataSource> sources, int cacheSize) {
 		this.sources = sources;
-		this.q = new PriorityQueue<DataWrapper>(SIZE * sources.size() + 1, new DataWrapperComparator());
-		
+		this.cacheSize = cacheSize;
+		this.q = new PriorityQueue<DataWrapper>(cacheSize * sources.size(), new DataWrapperComparator());
 	}
 
 	public Collection<DataSource> getSources() {
@@ -106,20 +115,52 @@ public class Datasource extends LogQueryCommand {
 	public void start() {
 		status = Status.Running;
 		for (DataSource source : sources)
-			new SourceWrapper(source);
+			wrappers.add(new SourceWrapper(source));
 
 		int write = 0;
-		while (!q.isEmpty()) {
-			DataWrapper data = q.poll();
-			data.source.remain--;
-			if (data.source.remain == 0)
-				data.source.load();
+		while (!q.isEmpty() || !isEnd()) {
+			if (status.equals(Status.End))
+				break;
+
+			DataWrapper data = poll();
+			if (data == null) {
+				for (SourceWrapper wrapper : wrappers) {
+					if (wrapper.cache.size() > 0) {
+						int s = wrapper.cache.drainTo(q);
+						wrapper.remain.addAndGet(s);
+					}
+				}
+				continue;
+			}
 
 			write(new LogMap(data.get()));
-			if (++write == limit)
+			if (limit > 0 && ++write >= limit)
 				break;
 		}
+		for (SourceWrapper wrapper : wrappers)
+			wrapper.interrupt();
 		eof();
+	}
+
+	private boolean isEnd() {
+		for (SourceWrapper wrapper : wrappers) {
+			if (!wrapper.isEnd())
+				return false;
+		}
+		return true;
+	}
+
+	private DataWrapper poll() {
+		DataWrapper data = q.poll();
+		if (data == null)
+			return null;
+
+		SourceWrapper source = data.source;
+		if (source.remain.decrementAndGet() <= 0) {
+			int s = source.cache.drainTo(q);
+			source.remain.addAndGet(s);
+		}
+		return data;
 	}
 
 	@Override
@@ -132,11 +173,13 @@ public class Datasource extends LogQueryCommand {
 		return false;
 	}
 
-	private class SourceWrapper {
+	private class SourceWrapper implements Runnable {
 		private DataSource source;
 		private LogParser parser;
-		private int remain;
-		private int loaded;
+		private Thread thread;
+		private AtomicInteger remain = new AtomicInteger();
+		private BlockingQueue<DataWrapper> cache = new ArrayBlockingQueue<DataWrapper>(cacheSize);
+		private volatile boolean end = false;
 
 		public SourceWrapper(DataSource source) {
 			this.source = source;
@@ -155,46 +198,61 @@ public class Datasource extends LogQueryCommand {
 					this.parser = parserFactory.createParser(prop);
 				}
 			}
-			load();
+
+			String threadName = String.format("Log Query %d: Datasource %s", logQuery.getId(), source.getName());
+			this.thread = new Thread(this, threadName);
+			thread.start();
 		}
 
-		public void load() {
-			if (remain > 0)
-				return;
+		public boolean isEnd() {
+			return end;
+		}
 
-			if (source.getType().equals("table")) {
-				try {
-					remain = logStorage.search(source.getName(), from, to, loaded, SIZE, new LogSearchCallbackImpl(this));
-					loaded += remain;
-				} catch (InterruptedException e) {
+		public void interrupt() {
+			if (thread != null)
+				thread.interrupt();
+		}
+
+		@Override
+		public void run() {
+			try {
+				if (source.getType().equals("table")) {
+					try {
+						logStorage.search(source.getName(), from, to, 0, limit, new LogSearchCallbackImpl());
+					} catch (InterruptedException e) {
+					}
+				} else if (source.getType().equals("rpc")) {
+					// TODO
 				}
-			} else if (source.getType().equals("rpc")) {
-				// TODO
+			} finally {
+				end = true;
 			}
 		}
-	}
 
-	private class LogSearchCallbackImpl implements LogSearchCallback {
-		private SourceWrapper source;
-		private boolean interrupt = false;
+		private class LogSearchCallbackImpl implements LogSearchCallback {
+			private boolean interrupt = false;
 
-		public LogSearchCallbackImpl(SourceWrapper source) {
-			this.source = source;
-		}
+			@Override
+			public void onLog(Log log) {
+				try {
+					cache.put(new DataWrapper(SourceWrapper.this, log));
+					if (SourceWrapper.this.remain.get() == 0) {
+						int s = cache.drainTo(q);
+						remain.addAndGet(s);
+					}
+				} catch (InterruptedException e) {
+				}
+			}
 
-		@Override
-		public void onLog(Log log) {
-			q.add(new DataWrapper(source, log));
-		}
+			@Override
+			public void interrupt() {
+				this.interrupt = true;
+			}
 
-		@Override
-		public void interrupt() {
-			this.interrupt = true;
-		}
-
-		@Override
-		public boolean isInterrupted() {
-			return interrupt;
+			@Override
+			public boolean isInterrupted() {
+				return interrupt | status.equals(Status.End);
+			}
 		}
 	}
 
@@ -228,6 +286,11 @@ public class Datasource extends LogQueryCommand {
 	private class DataWrapperComparator implements Comparator<DataWrapper> {
 		@Override
 		public int compare(DataWrapper o1, DataWrapper o2) {
+			if (o1 == null)
+				return -1;
+			if (o2 == null)
+				return 1;
+
 			Date d1 = null;
 			Date d2 = null;
 			if (o1.data instanceof Log)

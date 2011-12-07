@@ -40,50 +40,17 @@ public class FunctionPlaceholder implements Placeholder {
 	public Result eval(String text, int position, ParserContext ctx) throws ParseException {
 		int i = StringUtil.skipSpaces(text, position);
 
-		int begin = i;
-
-		if (text.length() <= begin)
+		if (text.length() <= i)
 			throw new BufferUnderflowException();
 
-		// while (true) {
-		// char c = text.charAt(i);
-		// if (c == ' ')
-		// throw new ParseException("invalid function type", i);
-		// else if (c == '(')
-		// break;
-		//
-		// if (++i >= text.length())
-		// throw new ParseException("invalid function type", i);
-		// }
-		// String name = text.substring(begin, i++);
-		//
-		// StringBuilder sb = new StringBuilder();
-		// int quote = 0;
-		// while (true) {
-		// char c = text.charAt(i);
-		// if (c == '(')
-		// quote++;
-		// else if (c == ')') {
-		// quote--;
-		// if (quote < 0)
-		// break;
-		// }
-		//
-		// sb.append(c);
-		//
-		// if (++i >= text.length())
-		// throw new ParseException("invalid function type", i);
-		// }
-		// String target = sb.toString();
-
 		StringBuilder sb = new StringBuilder();
-		boolean bracket = false;
+		int bracket = 0;
 		boolean space = false;
-		StringBuild: while (i < text.length()) {
+		while (i < text.length()) {
 			char c = text.charAt(i++);
 			if (c == ',')
 				break;
-			if (space && !bracket && c != ' ' && c != '(') {
+			if (space && bracket == 0 && c != ' ' && c != '(') {
 				i--;
 				break;
 			}
@@ -93,15 +60,13 @@ public class FunctionPlaceholder implements Placeholder {
 			if (c == ' ')
 				space = true;
 			else if (c == '(')
-				bracket = true;
+				bracket++;
 			else if (c == ')') {
-				if (!bracket)
+				bracket--;
+				if (bracket == 0)
+					break;
+				else if (bracket < 0)
 					throw new ParseException("invalid function type", i);
-				for (int j = i + 1; j < text.length(); j++) {
-					if (text.charAt(j) == ' ' || text.charAt(j) == ',')
-						break StringBuild;
-				}
-				throw new ParseException("invalid function type", i);
 			}
 		}
 		String funcstr = sb.toString();
@@ -109,7 +74,7 @@ public class FunctionPlaceholder implements Placeholder {
 		String name = null;
 		String target = null;
 		int lb = funcstr.indexOf("(");
-		int rb = funcstr.indexOf(")");
+		int rb = funcstr.lastIndexOf(")");
 		if (lb > 0) {
 			name = funcstr.substring(0, lb).trim();
 			target = funcstr.substring(lb + 1, rb).trim();
@@ -123,7 +88,7 @@ public class FunctionPlaceholder implements Placeholder {
 
 		Function f = Function.getFunction(name, target, func);
 		if (f == null)
-			throw new ParseException("unknown function", begin);
+			throw new ParseException("unknown function", i);
 
 		return new Result(new Binding(this, f), i);
 	}

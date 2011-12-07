@@ -51,7 +51,16 @@ public class DatasourceParser implements LogQueryParser {
 			if (checker.eval(source.getMetadata()))
 				sources.add(source);
 		}
-		Datasource datasource = new Datasource(sources);
+		Datasource datasource = null;
+		if (options.containsKey("cache"))
+			datasource = new Datasource(sources);
+		else {
+			try {
+				datasource = new Datasource(sources, Integer.parseInt(options.get("cache")));
+			} catch (NumberFormatException e) {
+				datasource = new Datasource(sources);
+			}
+		}
 		datasource.setLogStorage(logStorage);
 		datasource.setTableRegistry(tableRegistry);
 		datasource.setParserFactoryRegistry(parserFactoryRegistry);
