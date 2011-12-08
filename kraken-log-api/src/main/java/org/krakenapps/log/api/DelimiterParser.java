@@ -19,7 +19,12 @@ public class DelimiterParser implements LogParser {
 
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
-		String line = (String) params.get("line");
+		String line = null;
+		if (params.containsKey("line"))
+			line = (String) params.get("line");
+		else
+			line = (String) params.get("log");
+
 		if (line == null)
 			return params;
 
