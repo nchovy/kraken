@@ -18,6 +18,7 @@ package org.krakenapps.logdb.query;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Array;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -29,7 +30,6 @@ import java.util.Set;
 
 import org.krakenapps.codec.CustomCodec;
 import org.krakenapps.codec.EncodingRule;
-import org.krakenapps.logdb.query.FileBufferMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +47,7 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 	private int cacheSize;
 	private Map<K, Block> fp = new HashMap<K, Block>();
 	private PriorityQueue<Block> freeBlock = new PriorityQueue<Block>(11, new BlockComparator()); // unused
+	private V classinfo = null;
 
 	public FileBufferMap() throws IOException {
 		this(10000);
@@ -103,7 +104,16 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 				raf.read(bb.array(), 0, b.size);
 				Object obj = EncodingRule.decode(bb, cc);
 				bb.clear();
-				return (V) obj;
+				if (!classinfo.getClass().isArray())
+					return (V) obj;
+				else {
+					Class<?> component = classinfo.getClass().getComponentType();
+					int length = Array.getLength(obj);
+					Object r = Array.newInstance(component, length);
+					for (int i = 0; i < length; i++)
+						Array.set(r, i, component.cast(Array.get(obj, i)));
+					return (V) r;
+				}
 			} catch (IOException e) {
 				logger.error("kraken logstorage: get error", e);
 			}
@@ -114,6 +124,9 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 
 	@Override
 	public V put(K key, V value) {
+		if (classinfo == null && value != null)
+			classinfo = value;
+
 		V prev = cache.get(key);
 		cache.put(key, value);
 		if (fp.containsKey(key) && fp.get(key) != null)
@@ -134,18 +147,15 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 			V value = cache.get(key);
 			try {
 				EncodingRule.encode(bb, value, cc);
-				fp.put(key, new Block(offset + pos, bb.position() - pos));
-				pos = bb.position();
 			} catch (BufferOverflowException e) {
 				write(offset, pos);
 				offset += pos;
 				pos = 0;
-
-				EncodingRule.encode(bb, value, cc);
-				fp.put(key, new Block(offset + pos, bb.position() - pos));
-				pos = bb.position();
 				bb.clear();
+				EncodingRule.encode(bb, value, cc);
 			}
+			fp.put(key, new Block(offset + pos, bb.position() - pos));
+			pos = bb.position();
 		}
 		write(offset, pos);
 
@@ -153,10 +163,11 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 		cache.clear();
 	}
 
-	private void write(long offset, int pos) {
+	private void write(long offset, int length) {
 		try {
 			raf.seek(offset);
-			raf.write(bb.array(), 0, pos);
+			raf.write(bb.array(), 0, length);
+			rafLength += length;
 		} catch (IOException e) {
 			logger.error("kraken logstorage: flush error", e);
 		}

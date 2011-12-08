@@ -30,6 +30,8 @@ import org.krakenapps.logdb.query.command.Function;
 import org.krakenapps.logdb.query.command.Timechart;
 
 public class FunctionCodec implements CustomCodec {
+	public final static FunctionCodec instance = new FunctionCodec();
+
 	private static Map<Class<?>, Byte> typeCode;
 	static {
 		typeCode = new HashMap<Class<?>, Byte>();
@@ -157,37 +159,37 @@ public class FunctionCodec implements CustomCodec {
 		if (typeCode.get(func.getClass()) != code)
 			throw new TypeMismatchException(typeCode.get(func.getClass()), code, beginPosition);
 
-		if (code == 128) {
+		if (code == (byte) 128) {
 			((Function.Average) func).setD((Double) EncodingRule.decode(bb));
 			((Function.Average) func).setCount((Integer) EncodingRule.decode(bb));
-		} else if (code == 129) {
-			((Function.Count) func).setResult((Integer) EncodingRule.decode(bb));
-		} else if (code == 130) {
+		} else if (code == (byte) 129) {
+			((Function.Count) func).setResult((Long) EncodingRule.decode(bb));
+		} else if (code == (byte) 130) {
 			((Function.DistinctCount) func).setObjs((List<Object>) EncodingRule.decode(bb));
-		} else if (code == 131) {
+		} else if (code == (byte) 131) {
 			((Function.First) func).setFirst(EncodingRule.decode(bb));
-		} else if (code == 132) {
+		} else if (code == (byte) 132) {
 			((Function.Last) func).setLast(EncodingRule.decode(bb));
-		} else if (code == 133) {
+		} else if (code == (byte) 133) {
 			((Function.List) func).setObjs((List<Object>) EncodingRule.decode(bb));
-		} else if (code == 134) {
+		} else if (code == (byte) 134) {
 			((Function.Max) func).setMax(EncodingRule.decode(bb));
-		} else if (code == 135) {
+		} else if (code == (byte) 135) {
 			((Function.Min) func).setMin(EncodingRule.decode(bb));
-		} else if (code == 136) {
+		} else if (code == (byte) 136) {
 			((Function.Mode) func).setResult(EncodingRule.decode(bb));
 			((Function.Mode) func).setMaxCount((Integer) EncodingRule.decode(bb));
 			((Function.Mode) func).setNowCount((Integer) EncodingRule.decode(bb));
-		} else if (code == 137) {
+		} else if (code == (byte) 137) {
 			((Function.Range) func).setMax((Number) EncodingRule.decode(bb));
 			((Function.Range) func).setMin((Number) EncodingRule.decode(bb));
-		} else if (code == 138) {
+		} else if (code == (byte) 138) {
 			((Function.Sum) func).setSum((Double) EncodingRule.decode(bb));
-		} else if (code == 139) {
+		} else if (code == (byte) 139) {
 			((Function.SumSquare) func).setSum((Double) EncodingRule.decode(bb));
-		} else if (code == 140) {
+		} else if (code == (byte) 140) {
 			((Function.Values) func).setObjs((List<Object>) EncodingRule.decode(bb));
-		} else if (code == 141 || code == 142 || code == 143 || code == 144) {
+		} else if (code == (byte) 141 || code == (byte) 142 || code == (byte) 143 || code == (byte) 144) {
 			((Timechart.PerTime) func).setAmount((Long) EncodingRule.decode(bb));
 		}
 

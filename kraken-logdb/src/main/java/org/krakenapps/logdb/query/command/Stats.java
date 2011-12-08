@@ -21,14 +21,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.krakenapps.logdb.query.FileBufferMap;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.command.Function;
+import org.krakenapps.logdb.query.FileBufferMap;
 
 public class Stats extends LogQueryCommand {
 	private List<String> clauses;
 	private Function[] values;
-	private FileBufferMap<List<Object>, List<Function>> result;
+	private FileBufferMap<List<Object>, Function[]> result;
 
 	public Stats(List<String> clause, Function[] values) {
 		this.clauses = clause;
@@ -39,7 +38,7 @@ public class Stats extends LogQueryCommand {
 	public void init() {
 		super.init();
 		try {
-			result = new FileBufferMap<List<Object>, List<Function>>();
+			result = new FileBufferMap<List<Object>, Function[]>(FunctionCodec.instance);
 		} catch (IOException e) {
 		}
 
@@ -54,13 +53,13 @@ public class Stats extends LogQueryCommand {
 			key.add(m.get(clause));
 
 		if (!result.containsKey(key)) {
-			List<Function> fs = new ArrayList<Function>();
-			for (Function value : values)
-				fs.add(value.clone());
+			Function[] fs = new Function[values.length];
+			for (int i = 0; i < fs.length; i++)
+				fs[i] = values[i].clone();
 			result.put(key, fs);
 		}
 
-		List<Function> fs = result.get(key);
+		Function[] fs = result.get(key);
 		for (Function f : fs)
 			f.put(m);
 	}
@@ -78,9 +77,9 @@ public class Stats extends LogQueryCommand {
 			for (int i = 0; i < clauses.size(); i++)
 				m.put(clauses.get(i), key.get(i));
 
-			List<Function> fs = result.get(key);
+			Function[] fs = result.get(key);
 			for (int i = 0; i < values.length; i++)
-				m.put(values[i].toString(), fs.get(i).getResult());
+				m.put(values[i].toString(), fs[i].getResult());
 
 			write(new LogMap(m));
 		}

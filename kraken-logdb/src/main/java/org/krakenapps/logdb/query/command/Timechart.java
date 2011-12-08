@@ -67,7 +67,7 @@ public class Timechart extends LogQueryCommand {
 	public void init() {
 		super.init();
 		try {
-			this.data = new FileBufferMap<Date, Object[]>(new FunctionCodec());
+			this.data = new FileBufferMap<Date, Object[]>(FunctionCodec.instance);
 		} catch (IOException e) {
 		}
 		this.amount = new HashMap<Date, Long>();

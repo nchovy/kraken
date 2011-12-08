@@ -277,7 +277,7 @@ public abstract class Function {
 			result++;
 		}
 
-		public void setResult(int result) {
+		public void setResult(long result) {
 			this.result = result;
 		}
 
