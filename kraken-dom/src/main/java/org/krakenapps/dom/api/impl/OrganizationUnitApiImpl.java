@@ -23,8 +23,8 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.model.OrganizationUnit;
 
@@ -70,6 +70,9 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 
 	@Override
 	public void removeOrganizationUnit(String domain, String guid) {
+		OrganizationUnit orgUnit = getOrganizationUnit(domain, guid);
+		for (OrganizationUnit child : orgUnit.getChildren())
+			removeOrganizationUnit(domain, child.getGuid());
 		cfg.remove(domain, cls, getPred(guid), NOT_FOUND, this);
 	}
 }

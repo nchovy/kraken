@@ -48,22 +48,22 @@ public class OrganizationUnitPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void createOrganizationUnit(Request req, Response resp) {
-		OrganizationUnit orgUnit = PrimitiveConverter.parse(OrganizationUnit.class, req.getParams());
+		OrganizationUnit orgUnit = (OrganizationUnit) PrimitiveConverter.overwrite(new OrganizationUnit(), req.getParams());
 		orgUnitApi.createOrganizationUnit(req.getOrgDomain(), orgUnit);
 		resp.put("guid", orgUnit.getGuid());
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void updateOrganizationUnit(Request req, Response resp) {
-		OrganizationUnit orgUnit = PrimitiveConverter.parse(OrganizationUnit.class, req.getParams());
+		OrganizationUnit orgUnit = (OrganizationUnit) PrimitiveConverter.overwrite(new OrganizationUnit(), req.getParams());
 		orgUnitApi.updateOrganizationUnit(req.getOrgDomain(), orgUnit);
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void removeOrganizationUnit(Request req, Response resp) {
 		String guid = req.getString("guid");
 		orgUnitApi.removeOrganizationUnit(req.getOrgDomain(), guid);

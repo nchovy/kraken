@@ -29,6 +29,7 @@ import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.EntityEventListener;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
@@ -41,7 +42,7 @@ import org.osgi.util.tracker.ServiceTracker;
 
 @Component(name = "dom-user-api")
 @Provides
-public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi {
+public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi, EntityEventListener<OrganizationUnit> {
 	private static final Class<User> cls = User.class;
 	private static final String NOT_FOUND = "user-not-found";
 	private static final String ALREADY_EXIST = "user-already-exist";
@@ -189,5 +190,23 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			userExtensionProviders.remove(p.getExtensionName());
 			super.removedService(reference, service);
 		}
+	}
+
+	@Override
+	public void entityAdded(String domain, OrganizationUnit orgUnit) {
+	}
+
+	@Override
+	public void entityUpdated(String domain, OrganizationUnit orgUnit) {
+	}
+
+	@Override
+	public void entityRemoving(String domain, OrganizationUnit orgUnit) {
+	}
+
+	@Override
+	public void entityRemoved(String domain, OrganizationUnit orgUnit) {
+		for (User user : getUsers(domain, orgUnit.getGuid(), false))
+			removeUser(domain, user.getLoginName());
 	}
 }

@@ -23,13 +23,16 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.EntityEventListener;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.model.Area;
 import org.krakenapps.dom.model.Host;
@@ -38,7 +41,7 @@ import org.krakenapps.dom.model.HostType;
 
 @Component(name = "dom-host-api")
 @Provides
-public class HostApiImpl extends DefaultEntityEventProvider<Host> implements HostApi {
+public class HostApiImpl extends DefaultEntityEventProvider<Host> implements HostApi, EntityEventListener<Area> {
 	private static final Class<Host> host = Host.class;
 	private static final String HOST_NOT_FOUND = "host-not-found";
 	private static final String HOST_ALREADY_EXIST = "host-already-exist";
@@ -58,6 +61,17 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Requires
 	private AreaApi areaApi;
+
+	@Validate
+	public void validate() {
+		areaApi.addEntityEventListener(this);
+	}
+
+	@Invalidate
+	public void invalidate() {
+		if (areaApi != null)
+			areaApi.removeEntityEventListener(this);
+	}
 
 	private Predicate getPred(String guid) {
 		return Predicates.field("guid", guid);
@@ -176,5 +190,23 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	@Override
 	public void removeHostExtension(String domain, String className) {
 		cfg.remove(domain, ext, getExtPred(className), EXT_NOT_FOUND, extEventProvider);
+	}
+
+	@Override
+	public void entityAdded(String domain, Area area) {
+	}
+
+	@Override
+	public void entityUpdated(String domain, Area area) {
+	}
+
+	@Override
+	public void entityRemoving(String domain, Area area) {
+	}
+
+	@Override
+	public void entityRemoved(String domain, Area area) {
+		for (Host host : getHosts(domain, area.getGuid(), false))
+			removeHost(domain, host.getGuid());
 	}
 }

@@ -87,7 +87,7 @@ public class ConfigManagerImpl implements ConfigManager {
 	public <T> void update(String domain, Class<T> cls, Predicate pred, T doc, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider) {
 		ConfigDatabase db = getDatabase(domain);
-		Config c = findOne(db, cls, pred, notFoundMessage);
+		Config c = get(db, cls, pred, notFoundMessage);
 		db.update(c, doc);
 		if (provider != null)
 			provider.fireEntityUpdated(domain, doc);
@@ -96,14 +96,16 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
 		ConfigDatabase db = getDatabase(domain);
-		Config c = findOne(db, cls, pred, notFoundMessage);
-		db.remove(c);
+		Config c = get(db, cls, pred, notFoundMessage);
 		T doc = c.getDocument(cls, getCallback(domain));
+		if (provider != null)
+			provider.fireEntityRemoving(domain, doc);
+		db.remove(c);
 		if (provider != null)
 			provider.fireEntityRemoved(domain, doc);
 	}
 
-	private Config findOne(ConfigDatabase db, Class<?> cls, Predicate pred, String notFoundMessage) {
+	private Config get(ConfigDatabase db, Class<?> cls, Predicate pred, String notFoundMessage) {
 		Config c = db.findOne(cls, pred);
 		if (c == null)
 			throw new DOMException(notFoundMessage);

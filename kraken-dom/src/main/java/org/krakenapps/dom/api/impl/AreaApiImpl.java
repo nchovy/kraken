@@ -23,9 +23,9 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
-import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.model.Area;
 
 @Component(name = "dom-area-api")
@@ -85,6 +85,8 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 
 	@Override
 	public void removeArea(String domain, String guid) {
+		for (Area area : cfg.all(domain, Area.class, Predicates.field("parent", guid)))
+			removeArea(domain, area.getGuid());
 		cfg.remove(domain, cls, getPred(guid), NOT_FOUND, this);
 	}
 }
