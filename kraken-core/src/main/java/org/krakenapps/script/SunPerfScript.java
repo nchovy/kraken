@@ -28,7 +28,9 @@ import java.util.Map;
 import javax.management.MBeanServer;
 
 import org.krakenapps.api.Script;
+import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
+import org.krakenapps.api.ScriptUsage;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.management.UnixOperatingSystemMXBean;
@@ -42,6 +44,9 @@ public class SunPerfScript implements Script {
 		this.context = arg0;
 	}
 
+	@ScriptUsage(description = "dump .hprof file", arguments = {
+			@ScriptArgument(name = "path", type = "string", description = "dump file path"),
+			@ScriptArgument(name = "live only", type = "string", description = "if true dump only live objects") })
 	public void dumpHeap(String[] args) throws IOException {
 		MBeanServer platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
 		HotSpotDiagnosticMXBean bean = ManagementFactory.newPlatformMXBeanProxy(platformMBeanServer,
@@ -63,8 +68,7 @@ public class SunPerfScript implements Script {
 		}
 		if (os instanceof UnixOperatingSystemMXBean) {
 			UnixOperatingSystemMXBean unixbean = (UnixOperatingSystemMXBean) os;
-			context.printf("open fd: %s/%s\n", unixbean.getOpenFileDescriptorCount(),
-					unixbean.getMaxFileDescriptorCount());
+			context.printf("open fd: %s/%s\n", unixbean.getOpenFileDescriptorCount(), unixbean.getMaxFileDescriptorCount());
 		}
 	}
 
