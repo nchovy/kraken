@@ -22,6 +22,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -65,7 +67,7 @@ public class LogQueryPlugin {
 	@Requires
 	private PushApi pushApi;
 
-	private Map<Session, List<LogQuery>> queries = new HashMap<Session, List<LogQuery>>();
+	private ConcurrentMap<Session, List<LogQuery>> queries = new ConcurrentHashMap<Session, List<LogQuery>>();
 
 	@MsgbusMethod
 	public void logs(Request req, Response resp) {
@@ -122,15 +124,32 @@ public class LogQueryPlugin {
 
 		// for query cancellation at session close
 		Session session = req.getSession();
-		if (!queries.containsKey(session))
-			queries.put(session, new ArrayList<LogQuery>());
+		queries.putIfAbsent(session, new ArrayList<LogQuery>());
 
-		queries.get(session).add(query);
+		List<LogQuery> l = queries.get(session);
+		synchronized (l) {
+			l.add(query);
+		}
 	}
 
 	@MsgbusMethod
 	public void removeQuery(Request req, Response resp) {
 		int id = req.getInteger("id");
+
+		LogQuery target = null;
+		List<LogQuery> l = queries.get(req.getSession());
+		if (l == null)
+			return;
+
+		synchronized (l) {
+			for (LogQuery q : l)
+				if (q.getId() == id)
+					target = q;
+
+			if (target != null)
+				l.remove(target);
+		}
+
 		service.removeQuery(id);
 	}
 
