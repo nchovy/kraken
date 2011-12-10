@@ -113,6 +113,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	public void lock(int timeout) {
+		// thread lock
+		threadLock.lock();
+
 		// process lock first
 		Date begin = new Date();
 		RandomAccessFile raf = null;
@@ -145,17 +148,12 @@ public class FileConfigDatabase implements ConfigDatabase {
 			}
 		}
 
-		// thread lock
-		threadLock.lock();
 	}
 
 	/**
 	 * release write lock
 	 */
 	public void unlock() {
-		// release thread lock
-		threadLock.unlock();
-
 		// release process lock
 		try {
 			if (processLock != null) {
@@ -167,6 +165,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 			e.printStackTrace();
 			throw new IllegalStateException("cannot release write lock", e);
 		}
+
+		// release thread lock
+		threadLock.unlock();
 	}
 
 	@Override
