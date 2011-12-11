@@ -18,9 +18,9 @@ import org.krakenapps.siem.NormalizedLogListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "siem-ips-log-analyzer")
-public class IpsLogAnalyzer implements NormalizedLogListener {
-	private final Logger logger = LoggerFactory.getLogger(IpsLogAnalyzer.class.getName());
+@Component(name = "siem-fw-log-analyzer")
+public class FirewallLogAnalyzer implements NormalizedLogListener {
+	private final Logger logger = LoggerFactory.getLogger(FirewallLogAnalyzer.class.getName());
 
 	@Requires
 	private LogServer logServer;
@@ -33,20 +33,24 @@ public class IpsLogAnalyzer implements NormalizedLogListener {
 	@Validate
 	public void start() {
 		attacks = new ConcurrentHashMap<AttackKey, AttackEvent>();
-		logServer.addNormalizedLogListener("ips", this);
+		logServer.addNormalizedLogListener("firewall", this);
 	}
 
 	@Invalidate
 	public void stop() {
 		if (logServer != null)
-			logServer.removeNormalizedLogListener("ips", this);
+			logServer.removeNormalizedLogListener("firewall", this);
 	}
 
 	@Override
 	public void onLog(NormalizedLog log) {
-		logger.trace("kraken log api: received ips log [{}]", log);
+		logger.trace("kraken log api: received fw log [{}]", log);
 
 		try {
+			String subtype = log.getString("subtype");
+			if (subtype == null || !subtype.equals("attack"))
+				return;
+
 			AttackKey key = new AttackKey(log.getString("src"), log.getString("dst"), log.getString("rule"));
 
 			Event event = new Event();
@@ -74,5 +78,4 @@ public class IpsLogAnalyzer implements NormalizedLogListener {
 		} catch (UnknownHostException e) {
 		}
 	}
-
 }
