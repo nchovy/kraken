@@ -15,18 +15,8 @@
  */
 package org.krakenapps.log.api;
 
-import java.util.Collection;
+public interface LogNormalizerFactoryRegistryEventListener {
+	void normalizerAdded(LogNormalizerFactory normalizer);
 
-public interface LogNormalizerRegistry {
-	void register(LogNormalizer normalizer);
-
-	void unregister(LogNormalizer normalizer);
-
-	Collection<String> getNames();
-
-	LogNormalizer get(String loggerFactoryName);
-
-	void addEventListener(LogNormalizerRegistryEventListener callback);
-
-	void removeEventListener(LogNormalizerRegistryEventListener callback);
+	void normalizerRemoved(LogNormalizerFactory normalizer);
 }

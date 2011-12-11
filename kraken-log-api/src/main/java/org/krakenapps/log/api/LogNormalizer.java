@@ -18,7 +18,5 @@ package org.krakenapps.log.api;
 import java.util.Map;
 
 public interface LogNormalizer {
-	String getName();
-	
 	Map<String, Object> normalize(Map<String, Object> params);
 }

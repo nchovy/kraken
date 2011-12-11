@@ -30,11 +30,6 @@ public class NetScreenLogParser implements LogParser {
 	private JuniperAttackLogParser attackPattern = JuniperAttackLogParser.newInstance();
 
 	@Override
-	public String getName() {
-		return "netscreen-isg";
-	}
-
-	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Integer severity = (Integer) params.get("severity");
 		// Integer facility = (Integer) params.get("facility");

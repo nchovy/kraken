@@ -26,7 +26,8 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.log.api.Log;
 import org.krakenapps.log.api.LogNormalizer;
-import org.krakenapps.log.api.LogNormalizerRegistry;
+import org.krakenapps.log.api.LogNormalizerFactory;
+import org.krakenapps.log.api.LogNormalizerFactoryRegistry;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.log.api.LogPipe;
 import org.krakenapps.log.api.Logger;
@@ -41,10 +42,10 @@ public class LogApiScript implements Script {
 	private LoggerFactoryRegistry loggerFactoryRegistry;
 	private LoggerRegistry loggerRegistry;
 	private LogParserFactoryRegistry parserFactoryRegistry;
-	private LogNormalizerRegistry normalizerRegistry;
+	private LogNormalizerFactoryRegistry normalizerRegistry;
 
 	public LogApiScript(LoggerFactoryRegistry loggerFactoryRegistry, LoggerRegistry loggerRegistry,
-			LogParserFactoryRegistry parserFactoryRegistry, LogNormalizerRegistry normalizerRegistry) {
+			LogParserFactoryRegistry parserFactoryRegistry, LogNormalizerFactoryRegistry normalizerRegistry) {
 		this.loggerFactoryRegistry = loggerFactoryRegistry;
 		this.loggerRegistry = loggerRegistry;
 		this.parserFactoryRegistry = parserFactoryRegistry;
@@ -69,11 +70,13 @@ public class LogApiScript implements Script {
 		try {
 			context.print("Normalizer Name? ");
 			String normalizerName = context.readLine();
-			LogNormalizer normalizer = normalizerRegistry.get(normalizerName);
-			if (normalizer == null) {
+			LogNormalizerFactory factory = normalizerRegistry.get(normalizerName);
+			if (factory == null) {
 				context.println("normalizer not found");
 				return;
 			}
+
+			LogNormalizer normalizer = factory.createNormalizer(new Properties());
 
 			Map<String, Object> params = getParams();
 			Map<String, Object> m = normalizer.normalize(params);

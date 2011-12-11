@@ -18,7 +18,5 @@ package org.krakenapps.log.api;
 import java.util.Map;
 
 public interface LogParser {
-	String getName();
-	
 	Map<String, Object> parse(Map<String, Object> params);
 }

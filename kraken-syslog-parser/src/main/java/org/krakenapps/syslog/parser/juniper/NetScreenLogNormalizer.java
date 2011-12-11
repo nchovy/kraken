@@ -20,21 +20,12 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "netscreen-log-normalizer")
-@Provides
 public class NetScreenLogNormalizer implements LogNormalizer {
 	private final Logger logger = LoggerFactory.getLogger(NetScreenLogNormalizer.class.getName());
-
-	@Override
-	public String getName() {
-		return "netscreen-isg";
-	}
 
 	/** @formatter:off
 	 * 0 Emergency  --> 1 (Fatal)

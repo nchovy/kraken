@@ -30,11 +30,6 @@ public class FortigateLogNormalizer implements LogNormalizer {
 	private org.slf4j.Logger slog = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
 
 	@Override
-	public String getName() {
-		return "fortigate";
-	}
-
-	@Override
 	public Map<String, Object> normalize(Map<String, Object> params) {
 		try {
 			Map<String, Object> result = new HashMap<String, Object>();
@@ -44,7 +39,8 @@ public class FortigateLogNormalizer implements LogNormalizer {
 
 			result.put("severity", normalizeSeverity((String) params.get("pri")));
 
-			// types and subtypes reference: http://docs.fortinet.com/fgt/handbook/html/logging_bestpractices.43.3.html
+			// types and subtypes reference:
+			// http://docs.fortinet.com/fgt/handbook/html/logging_bestpractices.43.3.html
 			if ("00".equals(type)) {
 				return handleFirewallLog(params, result);
 			} else if ("04".equals(type)) {
@@ -126,8 +122,7 @@ public class FortigateLogNormalizer implements LogNormalizer {
 		return m;
 	}
 
-	private Map<String, Object> handleFirewallLog(Map<String, Object> params, Map<String, Object> m)
-			throws UnknownHostException {
+	private Map<String, Object> handleFirewallLog(Map<String, Object> params, Map<String, Object> m) throws UnknownHostException {
 		String action = (String) params.get("status");
 
 		m.put("type", "firewall");

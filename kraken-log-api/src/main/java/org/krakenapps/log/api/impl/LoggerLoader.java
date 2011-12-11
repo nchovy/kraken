@@ -9,6 +9,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.Config;
@@ -122,6 +123,7 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 		// find related logger configs and load all loggers
 		ConfigDatabase db = conf.ensureDatabase("kraken-log-api");
 		for (LoggerModel model : db.findAll(LoggerModel.class).getDocuments(LoggerModel.class)) {
+			slog.info("kraken log api: factory added > model [{}]", model);
 			String factoryName = model.factoryName;
 			String factoryNamespace = model.factoryNamespace;
 			if (loggerFactory.getName().equals(factoryName) && loggerFactory.getNamespace().equals(factoryNamespace))
@@ -199,10 +201,15 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 		private String fullname;
 		private String name;
 		private String description;
-		private Boolean isRunning;
-		private Integer interval;
-		private Long count;
+		private boolean isRunning;
+		private int interval;
+
+		@FieldOption(skip = true)
+		private long count;
+
+		@FieldOption(skip = true)
 		private Date lastLogDate;
+
 		private Map<String, Object> configs = new HashMap<String, Object>();
 
 		@SuppressWarnings("unused")

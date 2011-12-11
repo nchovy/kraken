@@ -28,11 +28,6 @@ public class SnortLogParser implements LogParser {
 	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Override
-	public String getName() {
-		return "snort";
-	}
-
-	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Map<String, Object> m = new HashMap<String, Object>();
 		String msg = (String) params.get("message");

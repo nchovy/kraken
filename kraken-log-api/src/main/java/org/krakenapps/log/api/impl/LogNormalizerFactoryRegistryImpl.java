@@ -26,9 +26,9 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.log.api.LogNormalizer;
-import org.krakenapps.log.api.LogNormalizerRegistry;
-import org.krakenapps.log.api.LogNormalizerRegistryEventListener;
+import org.krakenapps.log.api.LogNormalizerFactory;
+import org.krakenapps.log.api.LogNormalizerFactoryRegistry;
+import org.krakenapps.log.api.LogNormalizerFactoryRegistryEventListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
@@ -36,17 +36,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "log-normalizer-registry")
-@Provides(specifications = { LogNormalizerRegistry.class })
-public class LogNormalizerRegistryImpl extends ServiceTracker implements LogNormalizerRegistry {
-	private final Logger logger = LoggerFactory.getLogger(LogNormalizerRegistryImpl.class.getName());
+@Provides(specifications = { LogNormalizerFactoryRegistry.class })
+public class LogNormalizerFactoryRegistryImpl extends ServiceTracker implements LogNormalizerFactoryRegistry {
+	private final Logger logger = LoggerFactory.getLogger(LogNormalizerFactoryRegistryImpl.class.getName());
 
-	private ConcurrentMap<String, LogNormalizer> normalizerMap;
-	private Set<LogNormalizerRegistryEventListener> callbacks;
+	private ConcurrentMap<String, LogNormalizerFactory> factoryMap;
+	private Set<LogNormalizerFactoryRegistryEventListener> callbacks;
 
-	public LogNormalizerRegistryImpl(BundleContext bc) {
-		super(bc, LogNormalizer.class.getName(), null);
-		normalizerMap = new ConcurrentHashMap<String, LogNormalizer>();
-		callbacks = Collections.newSetFromMap(new ConcurrentHashMap<LogNormalizerRegistryEventListener, Boolean>());
+	public LogNormalizerFactoryRegistryImpl(BundleContext bc) {
+		super(bc, LogNormalizerFactory.class.getName(), null);
+		factoryMap = new ConcurrentHashMap<String, LogNormalizerFactory>();
+		callbacks = Collections.newSetFromMap(new ConcurrentHashMap<LogNormalizerFactoryRegistryEventListener, Boolean>());
 	}
 
 	@Validate
@@ -63,46 +63,46 @@ public class LogNormalizerRegistryImpl extends ServiceTracker implements LogNorm
 
 	private void reset() {
 		callbacks.clear();
-		normalizerMap.clear();
+		factoryMap.clear();
 	}
 
 	@Override
 	public Object addingService(ServiceReference reference) {
-		LogNormalizer normalizer = (LogNormalizer) super.addingService(reference);
+		LogNormalizerFactory normalizer = (LogNormalizerFactory) super.addingService(reference);
 		register(normalizer);
 		return normalizer;
 	}
 
 	@Override
 	public void removedService(ServiceReference reference, Object service) {
-		LogNormalizer normalizer = (LogNormalizer) service;
+		LogNormalizerFactory normalizer = (LogNormalizerFactory) service;
 		unregister(normalizer);
 		super.removedService(reference, service);
 	}
 
 	@Override
 	public Collection<String> getNames() {
-		return new ArrayList<String>(normalizerMap.keySet());
+		return new ArrayList<String>(factoryMap.keySet());
 	}
 
 	@Override
-	public LogNormalizer get(String loggerFactoryName) {
+	public LogNormalizerFactory get(String loggerFactoryName) {
 		if (loggerFactoryName == null)
 			return null;
-		
-		return normalizerMap.get(loggerFactoryName);
+
+		return factoryMap.get(loggerFactoryName);
 	}
 
 	@Override
-	public void register(LogNormalizer normalizer) {
+	public void register(LogNormalizerFactory normalizer) {
 		verifyArgs(normalizer);
 
-		LogNormalizer old = normalizerMap.putIfAbsent(normalizer.getName(), normalizer);
+		LogNormalizerFactory old = factoryMap.putIfAbsent(normalizer.getName(), normalizer);
 		if (old != null)
 			throw new IllegalStateException("duplicated log normalizer mapping: " + normalizer.getName());
 
 		// invoke callbacks
-		for (LogNormalizerRegistryEventListener callback : callbacks) {
+		for (LogNormalizerFactoryRegistryEventListener callback : callbacks) {
 			try {
 				callback.normalizerAdded(normalizer);
 			} catch (Exception e) {
@@ -112,17 +112,17 @@ public class LogNormalizerRegistryImpl extends ServiceTracker implements LogNorm
 	}
 
 	@Override
-	public void unregister(LogNormalizer normalizer) {
+	public void unregister(LogNormalizerFactory normalizer) {
 		verifyArgs(normalizer);
 
-		LogNormalizer old = normalizerMap.get(normalizer.getName());
+		LogNormalizerFactory old = factoryMap.get(normalizer.getName());
 		if (old != normalizer)
 			return;
 
-		normalizerMap.remove(normalizer.getName());
+		factoryMap.remove(normalizer.getName());
 
 		// invoke callbacks
-		for (LogNormalizerRegistryEventListener callback : callbacks) {
+		for (LogNormalizerFactoryRegistryEventListener callback : callbacks) {
 			try {
 				callback.normalizerRemoved(normalizer);
 			} catch (Exception e) {
@@ -131,13 +131,13 @@ public class LogNormalizerRegistryImpl extends ServiceTracker implements LogNorm
 		}
 	}
 
-	private void verifyArgs(LogNormalizer normalizer) {
+	private void verifyArgs(LogNormalizerFactory normalizer) {
 		if (normalizer == null)
 			throw new IllegalArgumentException("log normalizer must be not null");
 	}
 
 	@Override
-	public void addEventListener(LogNormalizerRegistryEventListener callback) {
+	public void addEventListener(LogNormalizerFactoryRegistryEventListener callback) {
 		if (callback == null)
 			throw new IllegalArgumentException("normalizer callback must be not null");
 
@@ -145,11 +145,10 @@ public class LogNormalizerRegistryImpl extends ServiceTracker implements LogNorm
 	}
 
 	@Override
-	public void removeEventListener(LogNormalizerRegistryEventListener callback) {
+	public void removeEventListener(LogNormalizerFactoryRegistryEventListener callback) {
 		if (callback == null)
 			throw new IllegalArgumentException("normalizer callback must be not null");
 
 		callbacks.remove(callback);
 	}
-
 }

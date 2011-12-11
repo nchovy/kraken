@@ -18,19 +18,10 @@ package org.krakenapps.syslog.parser.snort;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogNormalizer;
 import org.krakenapps.util.ProtocolNumbers;
 
-@Component(name = "snort-log-normalizer")
-@Provides
 public class SnortLogNormalizer implements LogNormalizer {
-
-	@Override
-	public String getName() {
-		return "snort";
-	}
 
 	@Override
 	public Map<String, Object> normalize(Map<String, Object> params) {
@@ -51,5 +42,4 @@ public class SnortLogNormalizer implements LogNormalizer {
 			return null;
 		}
 	}
-
 }

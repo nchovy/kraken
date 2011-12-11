@@ -66,6 +66,10 @@ public class DelimiterParserFactory implements LogParserFactory {
 	public LogParser createParser(Properties config) {
 		String delimiter = config.getProperty("delimiter");
 		String columnHeaders = config.getProperty("column_headers");
-		return new DelimiterParser(delimiter, columnHeaders.split(","));
+		String delimiterTarget = config.getProperty("delimiter_target");
+		if (delimiterTarget == null)
+			return new DelimiterParser(delimiter, columnHeaders.split(","));
+		else
+			return new DelimiterParser(delimiter, columnHeaders.split(","), delimiterTarget);
 	}
 }

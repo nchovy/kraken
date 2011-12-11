@@ -7,7 +7,7 @@ import java.util.Properties;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.log.api.LogNormalizerRegistry;
+import org.krakenapps.log.api.LogNormalizerFactoryRegistry;
 import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.log.api.Logger;
@@ -30,7 +30,7 @@ public class LoggerPlugin {
 	private LoggerFactoryRegistry loggerFactoryRegistry;
 
 	@Requires
-	private LogNormalizerRegistry normalizerRegistry;
+	private LogNormalizerFactoryRegistry normalizerRegistry;
 
 	@Requires
 	private LogParserFactoryRegistry parserFactoryRegistry;

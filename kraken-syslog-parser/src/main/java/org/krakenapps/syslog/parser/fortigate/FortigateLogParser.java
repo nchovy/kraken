@@ -25,11 +25,6 @@ import org.slf4j.LoggerFactory;
 public class FortigateLogParser implements LogParser {
 	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	@Override
-	public String getName() {
-		return "fortigate";
-	}
-
 	@SuppressWarnings("unchecked")
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
