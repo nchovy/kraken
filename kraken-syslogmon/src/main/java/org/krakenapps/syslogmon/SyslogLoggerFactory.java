@@ -97,7 +97,11 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 		try {
 			InetAddress remote = InetAddress.getByName(spec.getConfig().getProperty("remote_ip"));
 			SyslogLogger logger = new SyslogLogger(spec, this);
-			logger.setFacilities(parseFacilities(spec.getConfig().getProperty("facility")));
+			String facility = spec.getConfig().getProperty("facility");
+			if (facility == null)
+				throw new IllegalArgumentException("syslog facility is required");
+
+			logger.setFacilities(parseFacilities(facility));
 
 			Logger old = loggerMappings.putIfAbsent(remote, logger);
 			if (old != null)

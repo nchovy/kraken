@@ -20,7 +20,7 @@ public class SyslogLogger extends AbstractLogger {
 	private Set<Integer> facilities = new HashSet<Integer>();
 
 	public SyslogLogger(LoggerSpecification spec, LoggerFactory loggerFactory) {
-		super(spec.getNamespace(), spec.getName(), spec.getDescription(), loggerFactory);
+		super(spec.getNamespace(), spec.getName(), spec.getDescription(), loggerFactory, spec.getConfig());
 	}
 
 	public Set<Integer> getFacilities() {
