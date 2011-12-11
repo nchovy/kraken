@@ -68,7 +68,7 @@ public class SnmpQueryLogger extends AbstractLogger {
 	private SnmpAgent target;
 
 	public SnmpQueryLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, Properties config) {
-		super(hostGuid, name, description, loggerFactory);
+		super(hostGuid, name, description, loggerFactory, config);
 		parseConfig(config);
 		loggerCreated = new Date().getTime();
 	}
