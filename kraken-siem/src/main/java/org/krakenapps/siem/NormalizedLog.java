@@ -64,4 +64,9 @@ public class NormalizedLog {
 	public InetAddress getIp(String key) {
 		return (InetAddress) params.get(key);
 	}
+
+	@Override
+	public String toString() {
+		return "org=" + orgDomain + ", params=" + params;
+	}
 }

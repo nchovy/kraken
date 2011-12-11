@@ -63,6 +63,7 @@ public class EventPlugin implements EventPipe {
 		m.put("src_port", event.getSourcePort());
 		m.put("dst_ip", event.getDestinationIp() != null ? event.getDestinationIp().getHostAddress() : null);
 		m.put("dst_port", event.getDestinationPort());
+		m.put("detail", event.getDetail());
 		m.put("msg_key", event.getMessageKey());
 		m.put("msg_values", event.getMessageValues());
 		m.put("rule", event.getRule());

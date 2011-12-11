@@ -57,17 +57,6 @@ public class ManagedLogger implements Marshalable {
 		this.metadata = metadata;
 	}
 
-	public String getParserFactoryName() {
-		if (metadata == null)
-			return null;
-
-		return metadata.get("logparser");
-	}
-
-	public void setParserFactoryName(String parserFactoryName) {
-		metadata.put("logparser", parserFactoryName);
-	}
-
 	public boolean isEnabled() {
 		return isEnabled;
 	}

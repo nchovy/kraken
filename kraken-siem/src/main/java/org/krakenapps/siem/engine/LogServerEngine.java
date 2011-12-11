@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,7 +38,8 @@ import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.log.api.Log;
 import org.krakenapps.log.api.LogNormalizer;
-import org.krakenapps.log.api.LogNormalizerRegistry;
+import org.krakenapps.log.api.LogNormalizerFactory;
+import org.krakenapps.log.api.LogNormalizerFactoryRegistry;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
@@ -46,6 +48,7 @@ import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerRegistry;
 import org.krakenapps.log.api.LoggerRegistryEventListener;
 import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.siem.ConfigManager;
 import org.krakenapps.siem.LogServer;
 import org.krakenapps.siem.NormalizedLog;
@@ -67,16 +70,39 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
 	@Requires
-	private LogNormalizerRegistry normalizerRegistry;
+	private LogNormalizerFactoryRegistry normalizerFactoryRegistry;
+
+	@Requires
+	private LogTableRegistry logTableRegistry;
 
 	@Requires
 	private LogStorage logStorage;
 
 	private ConcurrentMap<String, CopyOnWriteArrayList<NormalizedLogListener>> normalizedLogCallbacks;
 
+	/**
+	 * logger fullname to managed logger mappings. you should RELOAD server
+	 * after logger metadata update
+	 */
+	private ConcurrentMap<String, ManagedLogger> managedLoggers;
+
+	/**
+	 * logger fullname to log parser mappings
+	 */
+	private ConcurrentMap<String, LogParser> parsers;
+
+	/**
+	 * logger fullname to log normalizer mappings
+	 */
+	private ConcurrentMap<String, LogNormalizer> normalizers;
+
 	@Validate
 	public void start() {
 		normalizedLogCallbacks = new ConcurrentHashMap<String, CopyOnWriteArrayList<NormalizedLogListener>>();
+
+		managedLoggers = new ConcurrentHashMap<String, ManagedLogger>();
+		parsers = new ConcurrentHashMap<String, LogParser>();
+		normalizers = new ConcurrentHashMap<String, LogNormalizer>();
 
 		// add logger registration monitor
 		loggerRegistry.addListener(this);
@@ -87,7 +113,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 			if (logger == null)
 				continue;
 
-			logger.addLogPipe(this);
+			connectManagedLogger(logger);
 		}
 	}
 
@@ -98,7 +124,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 
 		// disconnect all pipes
 		for (Logger logger : loggerRegistry.getLoggers())
-			logger.removeLogPipe(this);
+			disconnectManagedLogger(logger);
 
 		loggerRegistry.removeListener(this);
 	}
@@ -148,7 +174,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		logStorage.createTable(ml.getFullName(), ml.getMetadata());
 
 		// connect pipe
-		logger.addLogPipe(this);
+		connectManagedLogger(logger);
 	}
 
 	@Override
@@ -162,7 +188,7 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		// disconnect pipe
 		Logger logger = loggerRegistry.getLogger(ml.getFullName());
 		if (logger != null)
-			logger.removeLogPipe(this);
+			disconnectManagedLogger(logger);
 
 		// remove configuration
 		col.remove(c);
@@ -197,29 +223,15 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		String fullName = logger.getFullName();
 		logStorage.write(convert(fullName, log));
 
-		ManagedLogger ml = getManagedLogger(fullName);
+		ManagedLogger ml = managedLoggers.get(fullName);
 		if (ml == null) {
 			slog.trace("kraken siem: managed logger not found, {}", fullName);
 			return;
 		}
 
-		String parserFactoryName = ml.getParserFactoryName();
-		if (parserFactoryName == null) {
-			slog.debug("kraken siem: parser name not found, {}", parserFactoryName);
-			return;
-		}
-
-		LogParserFactory factory = parserFactoryRegistry.get(parserFactoryName);
-		if (factory == null) {
-			slog.trace("kraken siem: parser factory not found, {}", parserFactoryName);
-			return;
-		}
-
-		Properties config = convert(ml.getMetadata());
-		LogParser parser = factory.createParser(config);
-
+		LogParser parser = parsers.get(fullName);
 		if (parser == null) {
-			slog.trace("kraken siem: parser not created, {}", parserFactoryName);
+			slog.trace("kraken siem: parser not found for logger [{}]", fullName);
 			return;
 		}
 
@@ -229,15 +241,9 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 			return;
 		}
 
-		String type = (String) parsed.get("logtype");
-		if (type == null) {
-			slog.debug("kraken siem: logtype not found");
-			return;
-		}
-
-		LogNormalizer normalizer = normalizerRegistry.get(type);
+		LogNormalizer normalizer = normalizers.get(fullName);
 		if (normalizer == null) {
-			slog.trace("kraken siem: normalizer [{}] not found", type);
+			slog.trace("kraken siem: normalizer not found for logger [{}]", fullName);
 			return;
 		}
 
@@ -260,6 +266,9 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 
 		for (NormalizedLogListener callback : callbacks) {
 			try {
+				if (slog.isTraceEnabled())
+					slog.trace("kraken siem: normalized log [{}]", normalizedLog);
+
 				callback.onLog(normalizedLog);
 			} catch (Exception e) {
 				slog.warn("kraken siem: normalized log listener callback should not throw any exception", e);
@@ -267,10 +276,12 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 		}
 	}
 
-	private Properties convert(Map<String, String> options) {
+	private Properties getTableMetadata(String tableName) {
+		Set<String> keys = logTableRegistry.getTableMetadataKeys(tableName);
+
 		Properties p = new Properties();
-		for (String key : options.keySet())
-			p.put(key, options.get(key));
+		for (String key : keys)
+			p.put(key, logTableRegistry.getTableMetadata(tableName, key));
 
 		return p;
 	}
@@ -285,16 +296,65 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 
 	@Override
 	public void loggerAdded(Logger logger) {
-		// check if it is managed loggers
-		ManagedLogger m = getManagedLogger(logger.getFullName());
-		if (m != null) {
-			logger.addLogPipe(this);
-		}
+		connectManagedLogger(logger);
 	}
 
 	@Override
 	public void loggerRemoved(Logger logger) {
+		disconnectManagedLogger(logger);
+	}
+
+	private void connectManagedLogger(Logger logger) {
+		// check if it is managed loggers
+		String fullName = logger.getFullName();
+		ManagedLogger ml = getManagedLogger(fullName);
+		if (ml == null)
+			return;
+
+		// connect log pipe
+		managedLoggers.put(fullName, ml);
+		logger.addLogPipe(this);
+
+		// create log parser
+		Properties config = getTableMetadata(fullName);
+		String parserFactoryName = config.getProperty("logparser");
+		if (parserFactoryName == null) {
+			slog.debug("kraken siem: parser name [{}] not found for logger [{}]", parserFactoryName, fullName);
+			return;
+		}
+
+		LogParserFactory parserFactory = parserFactoryRegistry.get(parserFactoryName);
+		if (parserFactory == null) {
+			slog.trace("kraken siem: parser factory [{}] not found for logger [{}]", parserFactoryName, fullName);
+			return;
+		}
+
+		LogParser parser = parserFactory.createParser(config);
+		parsers.put(fullName, parser);
+
+		// create log normalizer
+		String normalizerName = config.getProperty("normalizer");
+		if (normalizerName == null) {
+			slog.debug("kraken siem: normalizer name [{}] not found for logger [{}]", normalizerName, fullName);
+			return;
+		}
+
+		LogNormalizerFactory normalizerFactory = normalizerFactoryRegistry.get(normalizerName);
+		if (normalizerFactory == null) {
+			slog.trace("kraken siem: normalizer factory [{}] not found for logger [{}]", normalizerName, fullName);
+			return;
+		}
+
+		LogNormalizer normalizer = normalizerFactory.createNormalizer(config);
+		normalizers.put(fullName, normalizer);
+	}
+
+	private void disconnectManagedLogger(Logger logger) {
+		String fullName = logger.getFullName();
+		managedLoggers.remove(fullName);
 		logger.removeLogPipe(this);
+		normalizers.remove(fullName);
+		parsers.remove(fullName);
 	}
 
 	private ConfigCollection getCol() {

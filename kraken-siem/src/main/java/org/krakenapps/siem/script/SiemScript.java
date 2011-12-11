@@ -143,16 +143,13 @@ public class SiemScript implements Script {
 
 	@ScriptUsage(description = "create managed logger", arguments = {
 			@ScriptArgument(name = "org domain", type = "string", description = "org domain"),
-			@ScriptArgument(name = "logger fullname", type = "string", description = "logger fullname"),
-			@ScriptArgument(name = "parser name", type = "string", description = "log parser name", optional = true) })
+			@ScriptArgument(name = "logger fullname", type = "string", description = "logger fullname") })
 	public void createLogger(String[] args) {
 		try {
 			LogServer logServer = getLogServer();
 			ManagedLogger ml = new ManagedLogger();
 			ml.setOrgDomain(args[0]);
 			ml.setFullName(args[1]);
-			if (args.length > 2)
-				ml.setParserFactoryName(args[2]);
 
 			logServer.createManagedLogger(ml);
 			context.println("created");
