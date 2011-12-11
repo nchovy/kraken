@@ -226,16 +226,19 @@ public class FileConfigCollection implements ConfigCollection {
 			it = getIterator(null);
 
 			// find any conflict (if common parent exists)
-			if (!ignoreConflict) {
-				while (it.hasNext()) {
-					Config o = it.next();
-					if (o.getId() == c.getId() && o.getPrevRevision() == c.getRevision())
+			long lastRev = c.getRevision();
+			while (it.hasNext()) {
+				Config o = it.next();
+				if (o.getId() == c.getId() && o.getPrevRevision() == lastRev) {
+					if (!ignoreConflict)
 						throw new IllegalStateException("conflict with " + o.getRevision());
+
+					lastRev = o.getRevision();
 				}
 			}
 
 			ByteBuffer bb = encodeDocument(c.getDocument());
-			RevLog revlog = newLog(c.getId(), c.getRevision(), CommitOp.UpdateDoc, bb.array());
+			RevLog revlog = newLog(c.getId(), lastRev, CommitOp.UpdateDoc, bb.array());
 
 			// write collection log
 			int id = writer.write(revlog);
