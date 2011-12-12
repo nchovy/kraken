@@ -56,6 +56,7 @@ public class WeguardiaLogNormalizer implements LogNormalizer {
 	}
 
 	private Map<String, Object> parseFirewall(Map<String, Object> params) {
+		int logtype = Integer.valueOf((String) params.get("logtype"));
 		String rule = (String) params.get("rule");
 		String act = (String) params.get("act");
 		long actNo = Long.valueOf(act);
@@ -65,7 +66,10 @@ public class WeguardiaLogNormalizer implements LogNormalizer {
 		log.setSubtype("session");
 		log.setAction("accept");
 
-		if (((actNo & 0x21000000) > 0) // dos
+		if (logtype == 9) {
+			log.setSubtype("attack");
+			log.setAction("drop");
+		} else if (((actNo & 0x21000000) > 0) // dos
 				|| ((actNo & 0x22000000) > 0) // ddos
 				|| ((actNo & 0x23000000) > 0) // portscan
 				|| ((actNo & 0x24000000) > 0)) // ip spoof
@@ -92,7 +96,7 @@ public class WeguardiaLogNormalizer implements LogNormalizer {
 		log.setDetail((String) params.get("note"));
 		log.setCount((Integer) params.get("count"));
 
-		if (actNo == 0x20040003L)
+		if (actNo == 0x20040003L) // packet filter drop
 			log.setAction("drop");
 
 		return log;
