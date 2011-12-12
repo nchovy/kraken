@@ -99,8 +99,8 @@ public class SnmpQueryLogger extends AbstractLogger {
 		target.setCommunity((String) config.get(SnmpQueryLoggerFactory.ConfigOption.SnmpCommunity.getConfigKey()));
 
 		// parse versions
-		Integer version = (Integer) config.get(SnmpQueryLoggerFactory.ConfigOption.SnmpVersion.getConfigKey());
-		target.setSnmpVersion(getSnmpVersion(version));
+		String version = config.getProperty(SnmpQueryLoggerFactory.ConfigOption.SnmpVersion.getConfigKey());
+		target.setSnmpVersion(getSnmpVersion(Integer.valueOf(version)));
 	}
 
 	private int getSnmpVersion(Integer version) {
