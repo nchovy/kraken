@@ -11,33 +11,33 @@ import org.krakenapps.log.api.LogNormalizer;
 
 public class WeguardiaLogNormalizer implements LogNormalizer {
 
-	private final Set<Integer> contentBlocks = new HashSet<Integer>();
-	private final Set<Integer> contentDetects = new HashSet<Integer>();
-	private final Set<Integer> contentAllows = new HashSet<Integer>();
+	private final Set<Long> contentBlocks = new HashSet<Long>();
+	private final Set<Long> contentDetects = new HashSet<Long>();
+	private final Set<Long> contentAllows = new HashSet<Long>();
 
 	public WeguardiaLogNormalizer() {
-		contentBlocks.add(0x26030001); // smtp match filter
-		contentBlocks.add(0x27030001); // smtp transform filter
-		contentBlocks.add(0x28030001); // smtp advanced filter
-		contentBlocks.add(0x29040001); // http cf block
-		contentBlocks.add(0x29040002); // http kiscom block
-		contentBlocks.add(0x29040003); // url block game
-		contentBlocks.add(0x29040004); // url block stock
-		contentBlocks.add(0x29040005); // url block news
-		contentBlocks.add(0x29040006); // url block iptv
-		contentBlocks.add(0x29040007); // url block email
-		contentBlocks.add(0x29040008); // url block webhard
-		contentBlocks.add(0x29040009); // url block p2p
-		contentBlocks.add(0x2904000a); // url block user
+		contentBlocks.add(0x26030001L); // smtp match filter
+		contentBlocks.add(0x27030001L); // smtp transform filter
+		contentBlocks.add(0x28030001L); // smtp advanced filter
+		contentBlocks.add(0x29040001L); // http cf block
+		contentBlocks.add(0x29040002L); // http kiscom block
+		contentBlocks.add(0x29040003L); // url block game
+		contentBlocks.add(0x29040004L); // url block stock
+		contentBlocks.add(0x29040005L); // url block news
+		contentBlocks.add(0x29040006L); // url block iptv
+		contentBlocks.add(0x29040007L); // url block email
+		contentBlocks.add(0x29040008L); // url block webhard
+		contentBlocks.add(0x29040009L); // url block p2p
+		contentBlocks.add(0x2904000aL); // url block user
 
-		contentDetects.add(0x26030002); // smtp match detect
-		contentDetects.add(0x27030002); // smtp transform detect
-		contentDetects.add(0x28030002); // smtp advanced detect
-		contentDetects.add(0x2902000b); // http cf detect
+		contentDetects.add(0x26030002L); // smtp match detect
+		contentDetects.add(0x27030002L); // smtp transform detect
+		contentDetects.add(0x28030002L); // smtp advanced detect
+		contentDetects.add(0x2902000bL); // http cf detect
 
-		contentAllows.add(0x26020003); // smtp match allows
-		contentAllows.add(0x27020003); // smtp transform allows
-		contentAllows.add(0x28020003); // smtp advanced allows
+		contentAllows.add(0x26020003L); // smtp match allows
+		contentAllows.add(0x27020003L); // smtp transform allows
+		contentAllows.add(0x28020003L); // smtp advanced allows
 	}
 
 	@Override
@@ -58,7 +58,7 @@ public class WeguardiaLogNormalizer implements LogNormalizer {
 	private Map<String, Object> parseFirewall(Map<String, Object> params) {
 		String rule = (String) params.get("rule");
 		String act = (String) params.get("act");
-		int actNo = Integer.valueOf(act);
+		long actNo = Long.valueOf(act);
 
 		FirewallLog log = new FirewallLog();
 		log.setDate((Date) params.get("date"));
@@ -92,7 +92,7 @@ public class WeguardiaLogNormalizer implements LogNormalizer {
 		log.setDetail((String) params.get("note"));
 		log.setCount((Integer) params.get("count"));
 
-		if (actNo == 0x20040003)
+		if (actNo == 0x20040003L)
 			log.setAction("drop");
 
 		return log;
