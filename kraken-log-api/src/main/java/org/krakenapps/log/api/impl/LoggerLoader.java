@@ -236,8 +236,11 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 
 		public Properties getConfigs() {
 			Properties configs = new Properties();
-			for (String key : this.configs.keySet())
-				configs.put(key, this.configs.get(key));
+			for (String key : this.configs.keySet()) {
+				Object value = this.configs.get(key);
+				if (value != null)
+					configs.put(key, value);
+			}
 			return configs;
 		}
 	}

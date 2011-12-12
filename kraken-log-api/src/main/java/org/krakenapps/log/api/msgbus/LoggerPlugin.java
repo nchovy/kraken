@@ -115,12 +115,11 @@ public class LoggerPlugin {
 		Properties config = new Properties();
 
 		for (LoggerConfigOption opt : loggerFactory.getConfigOptions()) {
-			String optName = opt.getName().replace('.', '_');
 			String value = null;
 
 			try {
-				value = req.getString(optName);
-				config.put(opt.getName(), opt.parse(value));
+				value = req.getString(opt.getName());
+				config.put(opt.getName(), value);
 			} catch (NullPointerException e) {
 				if (opt.isRequired())
 					throw e;
