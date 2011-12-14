@@ -26,7 +26,7 @@ public class OpenSshLogParserTest {
 		assertEquals("login", m.get("type"));
 		assertEquals("success", m.get("result"));
 		assertEquals("xeraph", m.get("account"));
-		assertEquals(parseAddress("112.153.155.76"), m.get("src_ip"));
+		assertEquals("112.153.155.76", m.get("src_ip"));
 		assertEquals("20766", m.get("src_port"));
 		assertEquals("ssh2", m.get("protocol"));
 	}
@@ -47,7 +47,7 @@ public class OpenSshLogParserTest {
 		assertEquals("login", m.get("type"));
 		assertEquals("failure", m.get("result"));
 		assertEquals("root", m.get("account"));
-		assertEquals(parseAddress("122.227.22.52"), m.get("src_ip"));
+		assertEquals("122.227.22.52", m.get("src_ip"));
 		assertEquals("52627", m.get("src_port"));
 		assertEquals("ssh2", m.get("protocol"));
 
@@ -108,17 +108,8 @@ public class OpenSshLogParserTest {
 		OpenSshLogParser o = new OpenSshLogParser();
 
 		Map<String, Object> args = new HashMap<String, Object>();
-		args.put("line", "Jan  2 07:01:16 navi sshd[26322]"
-				+ ": Received disconnect from 122.227.22.52: 11: Bye Bye");
+		args.put("line", "Jan  2 07:01:16 navi sshd[26322]" + ": Received disconnect from 122.227.22.52: 11: Bye Bye");
 
 		o.parse(args); // return null
-	}
-
-	private InetAddress parseAddress(String token) {
-		try {
-			return InetAddress.getByName(token);
-		} catch (UnknownHostException e) {
-			return null;
-		}
 	}
 }
