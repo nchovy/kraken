@@ -17,6 +17,7 @@ package org.krakenapps.logstorage.engine;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -102,7 +103,9 @@ public class OnlineWriter {
 	}
 
 	public List<LogRecord> getBuffer() {
-		return writer.getBuffer();
+		synchronized (this) {
+			return new ArrayList<LogRecord>(writer.getBuffer());
+		}
 	}
 
 	public void flush() throws IOException {

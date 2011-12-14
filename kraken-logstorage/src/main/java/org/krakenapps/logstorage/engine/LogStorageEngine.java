@@ -407,9 +407,10 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	private Log convert(String tableName, LogRecord logdata) {
-		int pos = logdata.getData().position();
-		Map<String, Object> m = EncodingRule.decodeMap(logdata.getData());
-		logdata.getData().position(pos);
+		ByteBuffer bb = ByteBuffer.wrap(logdata.getData().array());
+		bb.position(logdata.getData().position());
+		bb.limit(logdata.getData().limit());
+		Map<String, Object> m = EncodingRule.decodeMap(bb);
 		return new Log(tableName, logdata.getDate(), logdata.getId(), m);
 	}
 
