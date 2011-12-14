@@ -33,7 +33,8 @@ public class OrganizationUnit {
 	@FieldOption(length = 60, nullable = false)
 	private String name;
 
-	private String domainController;
+	private String dc;
+	private String parent;
 
 	@ReferenceKey("guid")
 	@CollectionTypeHint(OrganizationUnit.class)
@@ -61,12 +62,20 @@ public class OrganizationUnit {
 		this.name = name;
 	}
 
-	public String getDomainController() {
-		return domainController;
+	public String getDc() {
+		return dc;
 	}
 
-	public void setDomainController(String domainController) {
-		this.domainController = domainController;
+	public void setDc(String dc) {
+		this.dc = dc;
+	}
+
+	public String getParent() {
+		return parent;
+	}
+
+	public void setParent(String parent) {
+		this.parent = parent;
 	}
 
 	public List<OrganizationUnit> getChildren() {

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -36,7 +37,14 @@ public class UserPlugin {
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
-		resp.put("users", PrimitiveConverter.serialize(userApi.getUsers(req.getOrgDomain())));
+		if (!req.has("ou_guid"))
+			resp.put("users", PrimitiveConverter.serialize(userApi.getUsers(req.getOrgDomain())));
+		else {
+			String orgUnitGuid = req.getString("ou_guid");
+			boolean includeChildren = req.has("inc_children") ? req.getBoolean("inc_children") : false;
+			Collection<User> users = userApi.getUsers(req.getOrgDomain(), orgUnitGuid, includeChildren);
+			resp.put("users", PrimitiveConverter.serialize(users));
+		}
 	}
 
 	@MsgbusMethod
@@ -47,14 +55,14 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	//@MsgbusPermission(group = "dom.org", code = "manage")
+	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
 		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams());
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
 	@MsgbusMethod
-	//@MsgbusPermission(group = "dom.org", code = "manage")
+	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateUser(Request req, Response resp) {
 		User before = userApi.getUser(req.getOrgDomain(), req.getString("loginName"));
 		User user = (User) PrimitiveConverter.overwrite(before, req.getParams());
@@ -63,7 +71,7 @@ public class UserPlugin {
 
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
-	//@MsgbusPermission(group = "dom.org", code = "manage")
+	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeUsers(Request req, Response resp) {
 		List<String> loginNames = (List<String>) req.get("login_names");
 		for (String loginName : loginNames)
