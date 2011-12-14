@@ -65,11 +65,18 @@ public class DelimiterParserFactory implements LogParserFactory {
 	@Override
 	public LogParser createParser(Properties config) {
 		String delimiter = config.getProperty("delimiter");
-		String columnHeaders = config.getProperty("column_headers");
+		if (delimiter == null)
+			delimiter = " ";
+
+		String[] columnHeaders = null;
+		String h = config.getProperty("column_headers");
+		if (h != null)
+			columnHeaders = h.split(",");
+
 		String delimiterTarget = config.getProperty("delimiter_target");
 		if (delimiterTarget == null)
-			return new DelimiterParser(delimiter, columnHeaders.split(","));
+			return new DelimiterParser(delimiter, columnHeaders);
 		else
-			return new DelimiterParser(delimiter, columnHeaders.split(","), delimiterTarget);
+			return new DelimiterParser(delimiter, columnHeaders, delimiterTarget);
 	}
 }
