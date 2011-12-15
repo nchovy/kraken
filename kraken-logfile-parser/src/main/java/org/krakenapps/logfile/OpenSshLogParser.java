@@ -15,8 +15,6 @@
  */
 package org.krakenapps.logfile;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,11 +22,6 @@ import java.util.Map;
 import org.krakenapps.log.api.LogParser;
 
 public class OpenSshLogParser implements LogParser {
-	@Override
-	public String getName() {
-		return "openssh";
-	}
-
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Map<String, Object> m = new HashMap<String, Object>();
@@ -54,7 +47,7 @@ public class OpenSshLogParser implements LogParser {
 			m.put("type", "login");
 			m.put("result", "success");
 			m.put("account", bodyTokens[3]);
-			m.put("src_ip", parseAddress(bodyTokens[5]));
+			m.put("src_ip", bodyTokens[5]);
 			m.put("src_port", bodyTokens[7]);
 			m.put("protocol", bodyTokens[8]);
 		}
@@ -71,7 +64,7 @@ public class OpenSshLogParser implements LogParser {
 			m.put("type", "login");
 			m.put("result", "failure");
 			m.put("account", bodyTokens[3 + offset]);
-			m.put("src_ip", parseAddress(bodyTokens[5 + offset]));
+			m.put("src_ip", bodyTokens[5 + offset]);
 			m.put("src_port", bodyTokens[7 + offset]);
 			m.put("protocol", bodyTokens[8 + offset]);
 		}
@@ -143,14 +136,5 @@ public class OpenSshLogParser implements LogParser {
 				nonEmptyTokens[index++] = tokens[i];
 
 		return nonEmptyTokens;
-	}
-
-	private InetAddress parseAddress(String token) {
-
-		try {
-			return InetAddress.getByName(token);
-		} catch (UnknownHostException e) {
-			return null;
-		}
 	}
 }

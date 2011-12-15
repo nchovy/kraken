@@ -3,18 +3,9 @@ package org.krakenapps.logfile;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.LogNormalizer;
 
-@Component(name = "httpd-log-normalizer")
-@Provides
 public class ApacheWebLogNormalizer implements LogNormalizer {
-	@Override
-	public String getName() {
-		return "httpd";
-	}
-
 	@Override
 	public Map<String, Object> normalize(Map<String, Object> params) {
 		if (!params.containsKey("logtype"))

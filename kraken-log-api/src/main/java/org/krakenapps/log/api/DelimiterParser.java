@@ -7,11 +7,11 @@ public class DelimiterParser implements LogParser {
 	private final String delimiter;
 	private final String[] columnHeaders;
 	private final String targetField;
-	
+
 	public DelimiterParser(String delimiter, String[] columnHeaders) {
 		this(delimiter, columnHeaders, "line");
 	}
-	
+
 	public DelimiterParser(String delimiter, String[] columnHeaders, String targetField) {
 		this.delimiter = delimiter;
 		this.columnHeaders = columnHeaders;
@@ -33,7 +33,7 @@ public class DelimiterParser implements LogParser {
 		m.putAll(params);
 		m.remove("line");
 		for (int i = 0; i < tokens.length; i++) {
-			if (i < columnHeaders.length)
+			if (columnHeaders != null && i < columnHeaders.length)
 				m.put(columnHeaders[i], tokens[i].trim());
 			else
 				m.put("column" + Integer.toString(i), tokens[i]);

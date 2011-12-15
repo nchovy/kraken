@@ -30,11 +30,6 @@ public class ApacheWebLogParser implements LogParser {
 	private String logFormat;
 	private final static Map<String, FormatInfo> formats = new HashMap<String, FormatInfo>();
 
-	@Override
-	public String getName() {
-		return "httpd";
-	}
-
 	static class FormatInfo {
 		Class<?> clazz;
 		String name;

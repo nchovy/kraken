@@ -11,12 +11,6 @@
 	<version>1.9.6</version>
 	<name>Kraken Core</name>
 	<packaging>jar</packaging>
-	<repositories>
-		<repository>
-			<id>krakenapps</id>
-			<url>http://download.krakenapps.org/</url>
-		</repository>
-	</repositories>
 	<dependencies>
 		<dependency>
 			<groupId>jsch</groupId>
