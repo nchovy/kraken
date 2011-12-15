@@ -2,35 +2,30 @@ package org.krakenapps.mail.impl;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
-import javax.mail.Address;
 import javax.mail.BodyPart;
 import javax.mail.Flags;
-import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.Store;
 import javax.mail.internet.MimeMultipart;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.mail.PostboxApi;
+import org.krakenapps.mail.Postbox;
+import org.krakenapps.mail.PostboxConfig;
+import org.krakenapps.mail.PostboxRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class PostboxScript implements Script {
-	private final Logger logger = LoggerFactory.getLogger(PostboxScript.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(PostboxScript.class);
 	private ScriptContext context;
-	private PostboxApi postbox;
-	private static Store store;
+	private PostboxRegistry postbox;
+	private static Postbox pb;
 
-	public PostboxScript(PostboxApi postbox) {
+	public PostboxScript(PostboxRegistry postbox) {
 		this.postbox = postbox;
 	}
 
@@ -43,45 +38,32 @@ public class PostboxScript implements Script {
 		context.println("Configurations");
 		context.println("------------------");
 
-		Map<String, Properties> m = postbox.getConfigs();
-		for (String name : m.keySet()) {
-			Properties props = m.get(name);
-
-			Object host = props.get("mail.imap.host");
-			Object port = props.get("mail.imap.port");
-			Object user = props.get("mail.imap.user");
-
-			context.printf("name=%s, host=%s, port=%s, user=%s", name, host, port, user);
-			context.println("");
-		}
+		for (PostboxConfig config : postbox.getConfigs())
+			context.printf("name=%s, host=%s, port=%s, user=%s\n", config.getName(), config.getHost(), config.getPort(), config.getUser());
 	}
 
 	public void register(String[] args) {
 		try {
-			Properties props = new Properties();
+			PostboxConfig config = new PostboxConfig();
+
 			context.print("Name? ");
-			String name = context.readLine();
+			config.setName(context.readLine());
 
 			context.print("IMAP Server? ");
-			String host = context.readLine();
+			config.setHost(context.readLine());
 
 			context.print("IMAP Port? ");
-			int port = Integer.parseInt(context.readLine());
-			if (port < 1 || port > 65535)
+			config.setPort(Integer.parseInt(context.readLine()));
+			if (config.getPort() < 1 || config.getPort() > 65535)
 				throw new NumberFormatException();
 
 			context.print("IMAP User? ");
-			String user = context.readLine();
+			config.setUser(context.readLine());
 
 			context.print("IMAP Password? ");
-			String password = context.readPassword();
+			config.setPassword(context.readPassword());
 
-			props.setProperty("mail.imap.host", host);
-			props.setProperty("mail.imap.port", Integer.toString(port));
-			props.setProperty("mail.imap.user", user);
-			props.setProperty("mail.imap.password", password);
-
-			postbox.register(name, props);
+			postbox.register(config);
 			context.println("new configuration added");
 		} catch (InterruptedException e) {
 			context.println("");
@@ -93,6 +75,7 @@ public class PostboxScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "unregister config", arguments = { @ScriptArgument(name = "name", type = "string", description = "postbox config name") })
 	public void unregister(String[] args) {
 		try {
 			postbox.unregister(args[0]);
@@ -105,47 +88,37 @@ public class PostboxScript implements Script {
 
 	@ScriptUsage(description = "open imap connection", arguments = { @ScriptArgument(name = "name", type = "string", description = "imap configuration name") })
 	public void connect(String[] args) {
-		if (store != null && store.isConnected()) {
+		if (pb != null && pb.isConnected()) {
 			context.println("already connected.");
 			return;
 		}
-		store = postbox.connect(args[0]);
-		if (store == null)
+
+		PostboxConfig config = postbox.getConfig(args[0]);
+		pb = postbox.connect(config);
+		if (pb == null)
 			context.println("connect failed.");
-		context.println("connect");
+		else
+			context.println("connected");
 	}
 
 	@ScriptUsage(description = "listing messages", arguments = {
 			@ScriptArgument(name = "folder", type = "string", description = "folder name"),
 			@ScriptArgument(name = "page", type = "integer", description = "page number") })
 	public void messages(String[] args) {
-		if (store == null || !store.isConnected()) {
+		if (pb == null || !pb.isConnected()) {
 			context.println("not connected.");
 			return;
 		}
 
 		try {
-			Folder folder = store.getFolder(args[0]);
-			folder.open(Folder.READ_ONLY);
-			List<Message> msgs = Arrays.asList(folder.getMessages());
-			Collections.reverse(msgs);
-
+			pb.openFolder(args[0]);
 			int page = Integer.parseInt(args[1]);
-			if (page < 1)
-				return;
-
-			int from = 10 * (page - 1);
-			int to = Math.min(from + 10, msgs.size());
-			for (int i = from; i < to; i++) {
-				Message msg = msgs.get(i);
+			for (Message msg : pb.getMessages((page - 1) * 10, page * 10)) {
 				boolean isUnread = !msg.getFlags().contains(Flags.Flag.SEEN);
-				context.println(String.format("%s[%d] %s", isUnread ? "*" : " ", msg.getMessageNumber(),
-						msg.getSubject()));
+				context.println(String.format("%s[%d] %s", isUnread ? "*" : " ", msg.getMessageNumber(), msg.getSubject()));
 			}
-
-			folder.close(false);
 		} catch (MessagingException e) {
-			e.printStackTrace();
+			context.println(e.getMessage());
 		}
 	}
 
@@ -153,21 +126,17 @@ public class PostboxScript implements Script {
 			@ScriptArgument(name = "folder", type = "string", description = "folder name"),
 			@ScriptArgument(name = "mail", type = "integer", description = "mail number") })
 	public void message(String[] args) {
-		if (store == null || !store.isConnected()) {
+		if (pb == null || !pb.isConnected()) {
 			context.println("not connected.");
 			return;
 		}
 
 		try {
-			Folder folder = store.getFolder(args[0]);
-			folder.open(Folder.READ_ONLY);
-			int msgnum = Integer.parseInt(args[1]);
-			if (msgnum < 1 || msgnum > folder.getMessageCount())
-				return;
-			Message msg = folder.getMessage(msgnum);
+			pb.openFolder(args[0]);
+			Message msg = pb.getMessage(Integer.parseInt(args[1]));
 
-			context.println("from: " + addressToString(msg.getFrom()));
-			context.println("reply to: " + addressToString(msg.getReplyTo()));
+			context.println("from: " + Arrays.toString(msg.getFrom()));
+			context.println("reply to: " + Arrays.toString(msg.getReplyTo()));
 			context.println("received: " + msg.getReceivedDate());
 			context.println("subject: " + msg.getSubject());
 			context.println("");
@@ -179,24 +148,11 @@ public class PostboxScript implements Script {
 				} else
 					context.println(toSimpleString(msg.getContent().toString()));
 			} catch (IOException e) {
-				e.printStackTrace();
+				context.println(e.getMessage());
 			}
-
-			folder.close(false);
 		} catch (MessagingException e) {
-			e.printStackTrace();
+			context.println(e.getMessage());
 		}
-	}
-
-	private String addressToString(Address[] addrs) {
-		String str = null;
-		for (Address addr : addrs) {
-			if (str == null)
-				str = addr.toString();
-			else
-				str += ", " + addr.toString();
-		}
-		return str;
 	}
 
 	private String toSimpleString(String str) {
@@ -205,16 +161,17 @@ public class PostboxScript implements Script {
 	}
 
 	public void disconnect(String[] args) {
-		if (store == null || !store.isConnected()) {
+		if (pb == null || !pb.isConnected()) {
 			context.println("already disconnected.");
 			return;
 		}
+
 		try {
-			store.close();
+			pb.disconnect();
+			context.println("disconnected");
 		} catch (MessagingException e) {
 			context.println("disconnect failed: " + e.getMessage());
 			logger.error("kraken-mail: cannot close imap", e);
 		}
-		context.println("disconnect");
 	}
 }

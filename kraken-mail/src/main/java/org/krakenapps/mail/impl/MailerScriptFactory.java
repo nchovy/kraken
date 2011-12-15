@@ -17,10 +17,9 @@ public class MailerScriptFactory implements ScriptFactory {
 
 	@Requires
 	private MailerRegistry registry;
-	
+
 	@Override
 	public Script createScript() {
 		return new MailerScript(registry);
 	}
-
 }

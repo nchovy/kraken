@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.mail.MessagingException;
 import javax.mail.NoSuchProviderException;
@@ -16,6 +15,7 @@ import javax.mail.internet.MimeMessage.RecipientType;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.mail.MailerConfig;
 import org.krakenapps.mail.MailerRegistry;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 @Component(name = "mailer-plugin")
 @MsgbusPlugin
 public class MailerPlugin {
-	private final Logger logger = LoggerFactory.getLogger(MailerPlugin.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(MailerPlugin.class);
 
 	@Requires
 	private MailerRegistry registry;
@@ -35,14 +35,12 @@ public class MailerPlugin {
 	@MsgbusMethod
 	public void getConfigs(Request req, Response resp) {
 		List<Object> objs = new ArrayList<Object>();
-		Map<String, Properties> configs = registry.getConfigs();
-		for (String name : configs.keySet()) {
+		for (MailerConfig config : registry.getConfigs()) {
 			Map<String, Object> m = new HashMap<String, Object>();
-			Properties props = configs.get(name);
-			m.put("name", name);
-			m.put("host", props.get("mail.smtp.host"));
-			m.put("port", Integer.valueOf((String) props.get("mail.smtp.port")));
-			m.put("user", props.get("mail.smtp.user"));
+			m.put("name", config.getName());
+			m.put("host", config.getHost());
+			m.put("port", config.getPort());
+			m.put("user", config.getUser());
 			objs.add(m);
 		}
 
@@ -51,26 +49,22 @@ public class MailerPlugin {
 
 	@MsgbusMethod
 	public void register(Request req, Response resp) {
-		String name = req.getString("name");
-		String host = req.getString("host");
-		Integer port = req.getInteger("port");
-		String user = req.getString("user");
-		String password = req.getString("password");
+		MailerConfig config = new MailerConfig();
+		config.setName(req.getString("name"));
+		config.setProtocol("smtp");
+		config.setHost(req.getString("host"));
+		config.setPort(req.getInteger("port"));
+		config.setUser(req.getString("user"));
+		config.setPassword(req.getString("password"));
+		config.setAuth(true);
 
-		if (port < 1 || port > 65535)
+		if (config.getPort() < 1 || config.getPort() > 65535)
 			throw new NumberFormatException("invalid port");
 
-		Properties props = new Properties();
-		props.put("mail.transport.protocol", "smtp");
-		props.put("mail.smtp.host", host);
-		props.put("mail.smtp.port", String.valueOf(port));
-		props.put("mail.smtp.user", user);
-		props.put("mail.smtp.password", password);
-		props.put("mail.smtp.auth", "true");
-		if (port == 587 || port == 465)
-			props.put("mail.smtp.starttls.enable", "true");
+		if (config.getPort() == 587 || config.getPort() == 465)
+			config.setTls(true);
 
-		registry.register(name, props);
+		registry.register(config);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -95,7 +89,8 @@ public class MailerPlugin {
 		String subject = req.getString("subject");
 		String message = req.getString("message");
 
-		Session session = registry.getSession(confName);
+		MailerConfig config = registry.getConfig(confName);
+		Session session = registry.getSession(config);
 		MimeMessage msg = new MimeMessage(session);
 
 		try {

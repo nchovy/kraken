@@ -3,7 +3,7 @@
 	xmlns="org.apache.felix.ipojo">
 	<instance component="mailer-registry" />
 	<instance component="mailer-script-factory" />
-	<instance component="postbox-api" />
+	<instance component="postbox-registry" />
 	<instance component="postbox-script-factory" />
 
 	<instance component="mailer-plugin" />
