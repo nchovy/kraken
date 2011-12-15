@@ -9,21 +9,27 @@ import org.krakenapps.logdb.LogScriptOutput;
 import org.osgi.framework.BundleContext;
 
 public class Script extends LogQueryCommand {
-
 	private BundleContext bc;
 	private LogScript script;
+	private String[] args;
 	private DefaultScriptInput input;
 	private DefaultScriptOutput output;
 
-	public Script(BundleContext bc, LogScript script) {
+	public Script(BundleContext bc, LogScript script, String[] args) {
+		this.bc = bc;
 		this.script = script;
+		this.args = args;
 		this.input = new DefaultScriptInput();
 		this.output = new DefaultScriptOutput();
 	}
 
 	@Override
 	public void push(LogMap m) {
-		input.data = m;
+		input.data = m.map();
+		for (int i = 0; i < args.length; i++) {
+			String k = "args" + (i + 1);
+			input.data.put(k, args[i]);
+		}
 		script.handle(input, output);
 	}
 
@@ -32,12 +38,18 @@ public class Script extends LogQueryCommand {
 		return true;
 	}
 
+	@Override
+	public void eof() {
+		script.eof();
+		super.eof();
+	}
+
 	private void out(LogMap data) {
 		write(data);
 	}
 
 	private class DefaultScriptInput implements LogScriptInput {
-		private LogMap data;
+		private Map<String, Object> data;
 
 		@Override
 		public BundleContext getBundleContext() {
@@ -46,7 +58,7 @@ public class Script extends LogQueryCommand {
 
 		@Override
 		public Map<String, Object> getData() {
-			return data.map();
+			return data;
 		}
 	}
 

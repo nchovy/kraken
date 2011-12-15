@@ -1,6 +1,9 @@
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
@@ -22,7 +25,7 @@ public class ScriptParser implements LogQueryParser {
 
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("script", this, k("script "), new StringPlaceholder());
+		syntax.add("script", this, k("script "), new StringPlaceholder(), repeat(rule(new StringPlaceholder())));
 		syntax.addRoot("script");
 	}
 
@@ -33,6 +36,21 @@ public class ScriptParser implements LogQueryParser {
 		if (script == null)
 			throw new IllegalArgumentException("log script not found: " + name);
 
-		return new Script(bc, script);
+		List<String> args = new ArrayList<String>();
+		if (b.getChildren().length >= 3)
+			parseArgs(args, b.getChildren()[2]);
+
+		return new Script(bc, script, args.toArray(new String[0]));
+	}
+
+	private void parseArgs(List<String> args, Binding b) {
+		if (b.getValue() != null)
+			args.add((String) b.getValue());
+		else {
+			if (b.getChildren() != null) {
+				for (Binding c : b.getChildren())
+					parseArgs(args, c);
+			}
+		}
 	}
 }
