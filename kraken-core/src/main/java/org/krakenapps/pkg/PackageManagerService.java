@@ -18,6 +18,7 @@ package org.krakenapps.pkg;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -220,7 +221,7 @@ public class PackageManagerService implements PackageManager {
 	private void installMavenArtifacts(PackageMetadata metadata, PackageDescriptor newPkg, ProgressMonitor monitor)
 			throws MavenResolveException, BundleException {
 		// prepare repository set
-		Set<URL> urls = metadata.getMavenRepositories();
+		Set<String> urls = metadata.getMavenRepositories();
 		Collection<BundleRepository> configs = bundleManager.getRemoteRepositories();
 
 		List<BundleRepository> remotes = new ArrayList<BundleRepository>();
@@ -232,8 +233,11 @@ public class PackageManagerService implements PackageManager {
 			remotes.add(c);
 		}
 
-		for (URL url : urls) {
-			remotes.add(new BundleRepository("", url));
+		for (String url : urls) {
+			try {
+				remotes.add(new BundleRepository("", new URL(url)));
+			} catch (MalformedURLException e) {
+			}
 		}
 
 		File localRepository = new File(getDownloadRoot());

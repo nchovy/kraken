@@ -62,8 +62,9 @@ public class PackageMetadataParser {
 				}
 			} else if (subject.equals("[maven repository]")) {
 				try {
+					// normalize url (and do not use URL. see URL.equals() javadoc)
 					URL uri = new URL(line);
-					metadata.getMavenRepositories().add(uri);
+					metadata.getMavenRepositories().add(uri.toString());
 				} catch (MalformedURLException e) {
 					e.printStackTrace();
 				}

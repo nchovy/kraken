@@ -15,6 +15,8 @@
  */
 package org.krakenapps.logger;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 
 import org.apache.log4j.Priority;
@@ -34,30 +36,28 @@ public class KrakenLogMonitor implements Runnable {
 
 	@Override
 	public void run() {
-		context.println("======= Tailing ========");
+		context.println("------- Tailing -------");
 		int monitorId = loggerFactory.createMonitor();
 		while (true) {
 			KrakenLog log;
 			try {
 				log = loggerFactory.getLog(monitorId);
+				String[] source = log.getSource().split("\\.");
 				context.print("[");
 				context.print(dateFormat.format(log.getDate()));
-				context.print(" ");
-				context.print(toLevelString(log.getLevel()));
 				context.print("] ");
+				context.print(toLevelString(log.getLevel()));
+				context.print(" (");
+				context.print(source[source.length - 1]);
+				context.print(") - ");
 				context.println(log.getMessage());
 				Throwable t = log.getThrowable();
 				if (t != null) {
-					context.println(t.toString());
-					for (StackTraceElement el : t.getStackTrace()) {
-						String line = "\tat " + el.getClassName() + "." + el.getMethodName();
-						if (el.getFileName() != null && el.getLineNumber() > 0)
-							line += "(" + el.getFileName() + ":" + el.getLineNumber() + ")";
-						else if (el.getFileName() != null)
-							line += "(" + el.getFileName() + ")";
-						
-						context.println(line);	
-					}
+					StringWriter sw = new StringWriter();
+					PrintWriter pw = new PrintWriter(sw);
+					t.printStackTrace(pw);
+					context.println(sw.toString());
+					pw.close();
 				}
 			} catch (IllegalStateException e) {
 				break;

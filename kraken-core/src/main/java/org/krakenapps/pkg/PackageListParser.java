@@ -18,7 +18,6 @@ package org.krakenapps.pkg;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -49,7 +48,7 @@ public class PackageListParser {
 			pm.setRepository(repo);
 			pm.setName((String) obj.get("name"));
 			pm.setDescription((String) obj.get("description"));
-			pm.setMavenRepositories((Set<URL>) obj.get("maven_repositories"));
+			pm.setMavenRepositories((Set<String>) obj.get("maven_repositories"));
 			List<PackageVersionHistory> versions = new ArrayList<PackageVersionHistory>();
 			List<Map<String, Object>> v = (List<Map<String, Object>>) obj.get("versions");
 			for (Map<String, Object> m : v) {
