@@ -116,8 +116,8 @@ public class LogDBScript implements Script {
 
 			if (query.getCommands() != null) {
 				for (LogQueryCommand cmd : query.getCommands()) {
-					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(), cmd.getQueryString(),
-							cmd.getPushCount()));
+					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
+							cmd.getQueryString(), cmd.getPushCount()));
 				}
 			} else
 				context.println("    null");
@@ -172,9 +172,33 @@ public class LogDBScript implements Script {
 		context.println("}");
 	}
 
+	@ScriptUsage(description = "stop query. you can still view search result", arguments = { @ScriptArgument(name = "id", type = "int", description = "log query id") })
+	public void stopQuery(String[] args) {
+		int id = Integer.parseInt(args[0]);
+		LogQuery q = qs.getQuery(id);
+		if (q != null) {
+			q.cancel();
+			context.println("stopped");
+		} else {
+			context.println("query not found: " + id);
+		}
+	}
+
+	@ScriptUsage(description = "remove query. search result will be removed", arguments = { @ScriptArgument(name = "id", type = "int", description = "log query id") })
 	public void removeQuery(String[] args) {
-		qs.removeQuery(Integer.parseInt(args[0]));
+		int id = Integer.parseInt(args[0]);
+		qs.removeQuery(id);
 		context.println("removed");
+	}
+
+	@ScriptUsage(description = "remove all queries (not recommended)")
+	public void removeAllQueries(String[] args) {
+		for (LogQuery q : qs.getQueries()) {
+			int id = q.getId();
+			qs.removeQuery(id);
+			context.println("removed query " + id);
+		}
+		context.println("cleared all queries");
 	}
 
 	/**

@@ -58,6 +58,13 @@ public class DelimiterParserFactory implements LogParserFactory {
 			descriptions.put(Locale.ENGLISH, "separated by comma");
 			options.add(new StringConfigType("column_headers", displayNames, descriptions, false));
 		}
+		{
+			Map<Locale, String> displayNames = new HashMap<Locale, String>();
+			Map<Locale, String> descriptions = new HashMap<Locale, String>();
+			displayNames.put(Locale.ENGLISH, "delimiter target field");
+			descriptions.put(Locale.ENGLISH, "delimiter target field name");
+			options.add(new StringConfigType("delimiter_target", displayNames, descriptions, false));
+		}
 
 		return options;
 	}
