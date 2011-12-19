@@ -209,8 +209,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		configMap.put(Constants.FRAMEWORK_SYSTEMPACKAGES, getSystemPackages());
 		configMap.put(Constants.FRAMEWORK_STORAGE, new File(System.getProperty("kraken.cache.dir")).getAbsolutePath());
 
-		configMap.put(Constants.FRAMEWORK_BOOTDELEGATION,
-				"org.eclipse.tptp.martini,com.jprofiler.*,com.jprofiler.agent.*");
+		configMap.put(Constants.FRAMEWORK_BOOTDELEGATION, "org.eclipse.tptp.martini,com.jprofiler.*,com.jprofiler.agent.*");
 
 		felix = new Felix(configMap);
 		if (startOptions.isDeveloperMode()) {
@@ -259,8 +258,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	private String getSystemPackages() throws FileNotFoundException {
 		StringBuffer buffer = new StringBuffer(4096);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(
-				ClassLoader.getSystemResourceAsStream("system.packages")));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
 		String s = null;
 		try {
 			while ((s = reader.readLine()) != null) {
@@ -313,7 +311,13 @@ public class Kraken implements BundleActivator, SignalHandler {
 	private int getConsolePortNumber() {
 		int consolePort = 7004;
 		try {
+			// @deprecated
 			consolePort = Integer.parseInt((String) System.getProperty("kraken.port"));
+		} catch (Exception e) {
+			// ignore
+		}
+		try {
+			consolePort = Integer.parseInt((String) System.getProperty("kraken.telnet.port"));
 		} catch (Exception e) {
 			// ignore
 		}
@@ -435,11 +439,10 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * connected log monitor.
 	 */
 	private void startLogging() {
-		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() },
-				new KrakenLogService(), null);
+		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() }, new KrakenLogService(),
+				null);
 
-		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton()
-				.getLoggerFactory();
+		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton().getLoggerFactory();
 		krakenLoggerFactory.start();
 
 		enforceLogLevel("httpclient.wire");
@@ -455,8 +458,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * Stop the logging thread.
 	 */
 	private void stopLogging() {
-		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton()
-				.getLoggerFactory();
+		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton().getLoggerFactory();
 		krakenLoggerFactory.stop();
 	}
 
@@ -479,8 +481,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	}
 
 	private void startSshServer() throws IOException {
-		org.apache.log4j.Logger sshLogger = org.apache.log4j.Logger
-				.getLogger("org.apache.sshd.server.session.ServerSession");
+		org.apache.log4j.Logger sshLogger = org.apache.log4j.Logger.getLogger("org.apache.sshd.server.session.ServerSession");
 		sshLogger.setLevel(Level.WARN);
 
 		int port = 7022;

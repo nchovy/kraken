@@ -18,73 +18,104 @@ package org.krakenapps.script.batch;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.krakenapps.api.ScriptContext;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.console.ScriptRunner;
 import org.krakenapps.main.Kraken;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 
 public class BatchScriptManager {
-	private BatchScriptConfig config;
+	private ConfigService conf;
 
 	public BatchScriptManager() {
-		config = new BatchScriptConfig(getSystemPreferences());
+		BundleContext bc = Kraken.getContext();
+		ServiceReference ref = bc.getServiceReference(ConfigService.class.getName());
+		this.conf = (ConfigService) bc.getService(ref);
+	}
+
+	private ConfigDatabase getDatabase() {
+		return conf.getDatabase("kraken-core");
 	}
 
 	public void register(String alias, File scriptFile) {
-		config.addBatchMapping(alias, scriptFile);
+		getDatabase().add(new BatchMapping(alias, scriptFile));
 	}
 
 	public void unregister(String alias) {
-		config.removeBatchMapping(alias);
+		ConfigDatabase db = getDatabase();
+		Config c = db.findOne(BatchMapping.class, Predicates.field("alias", alias));
+		if (c != null)
+			db.remove(c);
 	}
 
 	public File getPath(String alias) {
-		return config.getScriptPath(alias);
+		ConfigDatabase db = getDatabase();
+		Config c = db.findOne(BatchMapping.class, Predicates.field("alias", alias));
+		if (c == null)
+			return null;
+		return new File(c.getDocument(BatchMapping.class).getFilepath());
 	}
 
 	public List<BatchMapping> getBatchMappings() {
-		return config.getBatchMappings();
+		List<BatchMapping> mappings = new ArrayList<BatchMapping>();
+		ConfigDatabase db = getDatabase();
+		for (BatchMapping mapping : db.findAll(BatchMapping.class).getDocuments(BatchMapping.class)) {
+			mapping.setScriptFileFromFilepath();
+			mappings.add(mapping);
+		}
+		return mappings;
 	}
 
-	public void execute(ScriptContext context, String alias) throws Exception {
+	public void execute(ScriptContext context, String alias) throws IOException {
 		execute(context, alias, true);
 	}
 
-	public void execute(ScriptContext context, String alias, boolean stopOnFail) throws Exception {
-		File scriptFile = config.getScriptPath(alias);
+	public void execute(ScriptContext context, String alias, boolean stopOnFail) throws IOException {
+		File scriptFile = getPath(alias);
 		if (scriptFile == null)
-			throw new Exception("script not found");
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(scriptFile)));
-		while (true) {
-			String line = br.readLine();
-			if (line == null)
-				break;
-
-			try {
-				context.printf("executing \"%s\"\n", line);
-				ScriptRunner runner = new ScriptRunner(context, line);
-				runner.setPrompt(false);
-				runner.run();
-			} catch (Exception e) {
-				context.println(e.getMessage());
-				if (stopOnFail)
-					break;
-			}
-
-		}
+			throw new IOException("script not found");
+		executeFile(context, scriptFile, stopOnFail);
 	}
 
-	private Preferences getSystemPreferences() {
-		BundleContext bc = Kraken.getContext();
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		return prefsService.getSystemPreferences();
+	public void executeFile(ScriptContext context, File file) throws IOException {
+		executeFile(context, file, true);
+	}
+
+	public void executeFile(ScriptContext context, File file, boolean stopOnFail) throws IOException {
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				try {
+					context.printf("executing \"%s\"\n", line);
+					ScriptRunner runner = new ScriptRunner(context, line);
+					runner.setPrompt(false);
+					runner.run();
+				} catch (Exception e) {
+					context.println(e.getMessage());
+					if (stopOnFail)
+						break;
+				}
+			}
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+			} catch (IOException e) {
+			}
+		}
 	}
 }
