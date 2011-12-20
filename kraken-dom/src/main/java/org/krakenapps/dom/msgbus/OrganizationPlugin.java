@@ -42,29 +42,32 @@ public class OrganizationPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "manage")
 	public void createOrganization(Request req, Response resp) {
 		Organization organization = (Organization) PrimitiveConverter.overwrite(new Organization(), req.getParams());
 		orgApi.createOrganization(organization);
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
-	public void updateOrganization(Request req, Response resp) {
-		Organization before = orgApi.getOrganization(req.getString("domain"));
-		Organization organization = (Organization) PrimitiveConverter.overwrite(before, req.getParams());
-		orgApi.updateOrganization(organization);
-	}
-
-	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "manage")
 	public void removeOrganization(Request req, Response resp) {
 		String domain = req.getString("domain");
 		orgApi.removeOrganization(domain);
 	}
 
+	/**
+	 * update own organization domain information
+	 */
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "config_edit")
+	public void updateOrganization(Request req, Response resp) {
+		Organization before = orgApi.getOrganization(req.getOrgDomain());
+		Organization organization = (Organization) PrimitiveConverter.overwrite(before, req.getParams());
+		orgApi.updateOrganization(organization);
+	}
+
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "config_view")
 	public void getOrganizationParameters(Request req, Response resp) {
 		String domain = req.getString("domain");
 		Map<String, Object> params = orgApi.getOrganizationParameters(domain);
@@ -72,7 +75,7 @@ public class OrganizationPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "config_view")
 	public void getOrganizationParameter(Request req, Response resp) {
 		String domain = req.getString("domain");
 		String key = req.getString("key");
@@ -81,7 +84,7 @@ public class OrganizationPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void setOrganizationParameter(Request req, Response resp) {
 		String domain = req.getString("domain");
 		String key = req.getString("key");
@@ -90,7 +93,7 @@ public class OrganizationPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
+	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void unsetOrganizationParameter(Request req, Response resp) {
 		String domain = req.getString("domain");
 		String key = req.getString("key");

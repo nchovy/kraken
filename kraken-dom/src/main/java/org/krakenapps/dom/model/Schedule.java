@@ -1,8 +1,15 @@
 package org.krakenapps.dom.model;
 
+import org.krakenapps.api.FieldOption;
+
 public class Schedule {
+	@FieldOption(name = "day", nullable = false)
 	private int dayOfWeek;
+
+	@FieldOption(name = "begin", nullable = false)
 	private int beginSecond;
+
+	@FieldOption(name = "end", nullable = false)
 	private int endSecond;
 
 	public int getDayOfWeek() {
@@ -31,5 +38,10 @@ public class Schedule {
 		if (endSecond < 0 || endSecond > 86400)
 			throw new IllegalArgumentException("end second should be 0 <= value <= 86400");
 		this.endSecond = endSecond;
+	}
+
+	@Override
+	public String toString() {
+		return "day=" + dayOfWeek + ", begin=" + beginSecond + ", end=" + endSecond;
 	}
 }

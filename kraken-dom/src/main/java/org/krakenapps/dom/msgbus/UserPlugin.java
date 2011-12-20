@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Request;
@@ -34,6 +35,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 public class UserPlugin {
 	@Requires
 	private UserApi userApi;
+
+	@Requires
+	private ConfigManager conf;
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
@@ -57,15 +61,15 @@ public class UserPlugin {
 	@MsgbusMethod
 	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
-		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams());
+		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
 	@MsgbusMethod
 	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateUser(Request req, Response resp) {
-		User before = userApi.getUser(req.getOrgDomain(), req.getString("loginName"));
-		User user = (User) PrimitiveConverter.overwrite(before, req.getParams());
+		User before = userApi.getUser(req.getOrgDomain(), req.getString("login_name"));
+		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		userApi.updateUser(req.getOrgDomain(), user);
 	}
 
