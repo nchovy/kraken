@@ -132,7 +132,7 @@ public class AdminApiImpl implements AdminApi {
 		prepare(admin);
 		User target = userApi.getUser(domain, targetUserLoginName);
 		target.getExt().put(getExtensionName(), admin);
-		userApi.updateUser(domain, target);
+		userApi.updateUser(domain, target, false);
 	}
 
 	@Override
@@ -142,7 +142,7 @@ public class AdminApiImpl implements AdminApi {
 		prepare(admin);
 		User target = getAdmin(domain, targetUserLoginName).getUser();
 		target.getExt().put(getExtensionName(), admin);
-		userApi.updateUser(domain, target);
+		userApi.updateUser(domain, target, false);
 	}
 
 	@Override
@@ -185,7 +185,7 @@ public class AdminApiImpl implements AdminApi {
 
 		User user = target.getUser();
 		user.getExt().remove(getExtensionName());
-		userApi.updateUser(domain, user);
+		userApi.updateUser(domain, user, false);
 	}
 
 	private void checkPermissionLevel(String domain, String requestAdminLoginName, Admin admin, String exceptionMessage) {

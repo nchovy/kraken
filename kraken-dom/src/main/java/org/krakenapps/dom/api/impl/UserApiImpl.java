@@ -17,6 +17,7 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -116,12 +117,16 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void createUser(String domain, User user) {
+		user.setSalt(createSalt(domain));
+		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		cfg.add(domain, cls, getPred(user.getLoginName()), user, ALREADY_EXIST, this);
 	}
 
 	@Override
-	public void updateUser(String domain, User user) {
+	public void updateUser(String domain, User user, boolean updatePassword) {
 		user.setUpdated(new Date());
+		if (updatePassword)
+			user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		cfg.update(domain, cls, getPred(user.getLoginName()), user, NOT_FOUND, this);
 	}
 
@@ -153,6 +158,16 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		if (length == null || !(length instanceof Integer))
 			return DEFAULT_SALT_LENGTH;
 		return (Integer) length;
+	}
+
+	@Override
+	public String createSalt(String domain) {
+		StringBuilder salt = new StringBuilder();
+		Random rand = new Random();
+		char[] c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+		for (int i = 0; i < getSaltLength(domain); i++)
+			salt.append(c[rand.nextInt(c.length)]);
+		return salt.toString();
 	}
 
 	@Override

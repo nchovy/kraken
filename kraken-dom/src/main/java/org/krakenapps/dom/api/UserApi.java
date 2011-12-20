@@ -34,7 +34,7 @@ public interface UserApi extends EntityEventProvider<User> {
 
 	void createUser(String domain, User user);
 
-	void updateUser(String domain, User user);
+	void updateUser(String domain, User user, boolean updatePassword);
 
 	void removeUser(String domain, String loginName);
 
@@ -45,6 +45,8 @@ public interface UserApi extends EntityEventProvider<User> {
 	void setSaltLength(String domain, int length);
 
 	int getSaltLength(String domain);
+
+	String createSalt(String domain);
 
 	boolean verifyPassword(String domain, String loginName, String password);
 

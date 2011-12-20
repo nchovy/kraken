@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -23,11 +24,11 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
-import org.krakenapps.msgbus.handler.MsgbusPermission;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 
 @Component(name = "dom-user-plugin")
@@ -59,23 +60,20 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void createUser(Request req, Response resp) {
 		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
 	@MsgbusMethod
-	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void updateUser(Request req, Response resp) {
 		User before = userApi.getUser(req.getOrgDomain(), req.getString("login_name"));
 		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
-		userApi.updateUser(req.getOrgDomain(), user);
+		userApi.updateUser(req.getOrgDomain(), user, req.has("password"));
 	}
 
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
-	// @MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeUsers(Request req, Response resp) {
 		List<String> loginNames = (List<String>) req.get("login_names");
 		for (String loginName : loginNames)
@@ -83,9 +81,16 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom.org", code = "manage")
 	public void removeUser(Request req, Response resp) {
 		String loginName = req.getString("login_name");
 		userApi.removeUser(req.getOrgDomain(), loginName);
+	}
+
+	@MsgbusMethod
+	public void getExtensionSchemas(Request req, Response resp) {
+		List<String> schemas = new ArrayList<String>();
+		for (UserExtensionProvider provider : userApi.getExtensionProviders())
+			schemas.add(provider.getExtensionName());
+		resp.put("schemas", schemas);
 	}
 }
