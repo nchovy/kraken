@@ -166,6 +166,9 @@ public class PrimitiveConverter {
 				if (option != null && !option.name().isEmpty())
 					fieldName = option.name();
 
+				if (!m.containsKey(fieldName))
+					continue;
+
 				Object value = m.get(fieldName);
 				f.setAccessible(true);
 				if (value == null) {
