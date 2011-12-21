@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.DiskLackAction;
@@ -21,6 +23,8 @@ import org.krakenapps.logstorage.LogTableRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Component(name = "logstorage-monitor")
+@Provides
 public class LogStorageMonitorEngine implements LogStorageMonitor {
 	private static final String DEFAULT_MIN_FREE_SPACE_TYPE = DiskSpaceType.Percentage.toString();
 	private static final int DEFAULT_MIN_FREE_SPACE_VALUE = 10;
