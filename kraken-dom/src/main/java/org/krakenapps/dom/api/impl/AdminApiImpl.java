@@ -101,7 +101,10 @@ public class AdminApiImpl implements AdminApi {
 
 	@Override
 	public Admin getAdmin(String domain, String loginName) {
-		return parseAdmin(domain, cfg.get(domain, cls, getPred(loginName), NOT_FOUND));
+		Admin admin = findAdmin(domain, loginName);
+		if (admin == null)
+			throw new DOMException(NOT_FOUND);
+		return admin;
 	}
 
 	@Override
@@ -119,6 +122,8 @@ public class AdminApiImpl implements AdminApi {
 	}
 
 	private Admin parseAdmin(String domain, User user) {
+		if (user == null)
+			return null;
 		Admin admin = PrimitiveConverter.parse(Admin.class, user.getExt().get(getExtensionName()), cfg.getParseCallback(domain));
 		admin.setUser(user);
 		return admin;

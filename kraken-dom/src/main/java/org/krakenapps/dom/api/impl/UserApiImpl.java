@@ -93,6 +93,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	public Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren) {
 		Collection<User> users = cfg.all(domain, cls, Predicates.field("orgUnit/guid", orgUnitGuid));
 		if (includeChildren) {
+			if (orgUnitGuid == null)
+				return getUsers(domain);
+
 			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
 			for (OrganizationUnit ou : parent.getChildren())
 				users.addAll(getUsers(domain, ou.getGuid(), includeChildren));
