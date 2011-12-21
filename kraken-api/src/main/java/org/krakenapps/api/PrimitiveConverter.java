@@ -3,6 +3,7 @@ package org.krakenapps.api;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -87,6 +88,10 @@ public class PrimitiveConverter {
 		// Others
 		Map<String, Object> m = new HashMap<String, Object>();
 		for (Field f : cls.getDeclaredFields()) {
+			// skip static field
+			if (Modifier.isStatic(f.getModifiers()))
+				continue;
+
 			try {
 				FieldOption option = f.getAnnotation(FieldOption.class);
 
@@ -111,8 +116,7 @@ public class PrimitiveConverter {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(),
-								f.getName()));
+						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
