@@ -24,8 +24,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.dom</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.dom.api,
-							org.krakenapps.dom.model
+							org.krakenapps.dom.api;version="2.2.0",
+							org.krakenapps.dom.model;version="2.2.0"
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.dom.api.impl,
@@ -59,7 +59,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.9.5</version>
+			<version>1.9.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>

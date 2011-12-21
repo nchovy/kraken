@@ -33,8 +33,8 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.AdminApi;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.LoginCallback;
 import org.krakenapps.dom.api.OrganizationApi;
@@ -44,14 +44,16 @@ import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-admin-api")
 @Provides
 public class AdminApiImpl implements AdminApi {
 	private static final Class<User> cls = User.class;
 	private static final String NOT_FOUND = "admin-not-found";
-	private static final String ALREADY_EXIST = "admin-already-setted";
 	private static final String LOCKED_ADMIN = "locked-admin";
+	private final Logger logger = LoggerFactory.getLogger(AdminApiImpl.class.getName());
 
 	@Requires
 	private ConfigManager cfg;
@@ -126,21 +128,8 @@ public class AdminApiImpl implements AdminApi {
 	public void setAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin) {
 		checkPermissionLevel(domain, requestAdminLoginName, admin, "set-admin-permission-denied");
 
-		if (findAdmin(domain, targetUserLoginName) != null)
-			throw new DOMException(ALREADY_EXIST);
-
 		prepare(admin);
 		User target = userApi.getUser(domain, targetUserLoginName);
-		target.getExt().put(getExtensionName(), admin);
-		userApi.updateUser(domain, target, false);
-	}
-
-	@Override
-	public void updateAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin) {
-		checkPermissionLevel(domain, requestAdminLoginName, admin, "update-admin-permission-denied");
-
-		prepare(admin);
-		User target = getAdmin(domain, targetUserLoginName).getUser();
 		target.getExt().put(getExtensionName(), admin);
 		userApi.updateUser(domain, target, false);
 	}
@@ -150,28 +139,23 @@ public class AdminApiImpl implements AdminApi {
 		Admin admin = getAdmin(domain, targetUserLoginName);
 		String newSeed = createOtpSeed();
 		admin.setOtpSeed(newSeed);
-		updateAdmin(domain, requestAdminLoginName, targetUserLoginName, admin);
+		setAdmin(domain, requestAdminLoginName, targetUserLoginName, admin);
 		return newSeed;
 	}
 
 	private void prepare(Admin admin) {
 		if (admin.getLang() == null)
 			admin.setLang("en");
-		if (admin.isUseOtp() && admin.getOtpSeed() == null)
+		if (admin.getOtpSeed() == null)
 			admin.setOtpSeed(createOtpSeed());
-		else if (!admin.isUseOtp())
-			admin.setOtpSeed(null);
 	}
-
-	private static final char[] chars = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-			'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-			's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
 
 	private String createOtpSeed() {
 		Random random = new Random();
 		StringBuilder sb = new StringBuilder();
+		char[] c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 		for (int i = 0; i < 10; i++)
-			sb.append(chars[random.nextInt(chars.length)]);
+			sb.append(c[random.nextInt(c.length)]);
 		return sb.toString();
 	}
 
@@ -192,6 +176,7 @@ public class AdminApiImpl implements AdminApi {
 		Admin request = findAdmin(domain, requestAdminLoginName);
 		if (requestAdminLoginName == null || request == null)
 			throw new DOMException("request-admin-not-found");
+
 		if (request.getRole().getLevel() < admin.getRole().getLevel())
 			throw new DOMException(exceptionMessage);
 	}
@@ -217,7 +202,7 @@ public class AdminApiImpl implements AdminApi {
 				c.add(Calendar.SECOND, -lockTime);
 
 				Date failed = admin.getLastLoginFailedDateTime();
-				if (failed != null && failed.after(c.getTime()))
+				if (failed == null || failed.after(c.getTime()))
 					throw new DOMException(LOCKED_ADMIN);
 			}
 
@@ -302,21 +287,24 @@ public class AdminApiImpl implements AdminApi {
 	private void updateLoginFailures(String domain, Admin admin, boolean success) {
 		if (success) {
 			admin.setLastLoginDateTime(new Date());
+			admin.setLastLoginFailedDateTime(null);
 			admin.setLoginFailures(0);
 			admin.setEnabled(true);
 		} else {
-			admin.setLastLoginFailedDateTime(new Date());
+			if (admin.isEnabled())
+				admin.setLastLoginFailedDateTime(new Date());
 			admin.setLoginFailures(admin.getLoginFailures() + 1);
 			if (admin.isUseLoginLock() && admin.getLoginFailures() >= admin.getLoginLockCount())
 				admin.setEnabled(false);
 		}
 		String loginName = admin.getUser().getLoginName();
-		updateAdmin(domain, loginName, loginName, admin);
+		setAdmin(domain, loginName, loginName, admin);
 	}
 
 	@Override
 	public void logout(Session session) {
-		if (session.getOrgDomain() != null) {
+		if (session.getOrgDomain() != null && session.getAdminLoginName() != null) {
+			logger.trace("kraken dom: logout [domain: {}, login: {}]", session.getOrgDomain(), session.getAdminLoginName());
 			Admin admin = getAdmin(session.getOrgDomain(), session.getAdminLoginName());
 			loggedIn.remove(new LoggedInAdmin(session));
 			for (LoginCallback callback : callbacks)

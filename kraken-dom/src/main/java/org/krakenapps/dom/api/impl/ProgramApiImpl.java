@@ -55,7 +55,7 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	}
 
 	private Predicate getPred(String packName, String name) {
-		return Predicates.and(Predicates.field("packName", packName), Predicates.field("name", name));
+		return Predicates.and(Predicates.field("pack", packName), Predicates.field("name", name));
 	}
 
 	@Override
@@ -135,28 +135,28 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	}
 
 	@Override
-	public Collection<Program> getPrograms(String domain, String packName) {
-		return cfg.all(domain, prog, Predicates.field("packName", packName));
+	public Collection<Program> getPrograms(String domain, String pack) {
+		return cfg.all(domain, prog, Predicates.field("pack", pack));
 	}
 
 	@Override
-	public Program findProgram(String domain, String packName, String name) {
-		return cfg.find(domain, prog, getPred(packName, name));
+	public Program findProgram(String domain, String pack, String name) {
+		return cfg.find(domain, prog, getPred(pack, name));
 	}
 
 	@Override
-	public Program getProgram(String domain, String packName, String name) {
-		return cfg.get(domain, prog, getPred(packName, name), PROG_NOT_FOUND);
+	public Program getProgram(String domain, String pack, String name) {
+		return cfg.get(domain, prog, getPred(pack, name), PROG_NOT_FOUND);
 	}
 
 	@Override
 	public void createProgram(String domain, Program program) {
-		cfg.add(domain, prog, getPred(program.getPackName(), program.getName()), program, PROG_ALREADY_EXIST, this);
+		cfg.add(domain, prog, getPred(program.getPack(), program.getName()), program, PROG_ALREADY_EXIST, this);
 	}
 
 	@Override
 	public void updateProgram(String domain, Program program) {
-		cfg.update(domain, prog, getPred(program.getPackName(), program.getName()), program, PROG_NOT_FOUND, this);
+		cfg.update(domain, prog, getPred(program.getPack(), program.getName()), program, PROG_NOT_FOUND, this);
 	}
 
 	@Override

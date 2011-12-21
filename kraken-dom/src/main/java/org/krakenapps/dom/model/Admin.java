@@ -41,7 +41,7 @@ public class Admin {
 	private String lang;
 
 	@FieldOption(nullable = false)
-	private Date createDateTime = new Date();
+	private Date created = new Date();
 
 	private boolean useLoginLock;
 	private int loginLockCount;
@@ -91,12 +91,12 @@ public class Admin {
 		this.lang = lang;
 	}
 
-	public Date getCreateDateTime() {
-		return createDateTime;
+	public Date getCreated() {
+		return created;
 	}
 
-	public void setCreateDateTime(Date createDateTime) {
-		this.createDateTime = createDateTime;
+	public void setCreated(Date created) {
+		this.created = created;
 	}
 
 	public boolean isUseLoginLock() {

@@ -120,9 +120,9 @@ public class InitialSchema {
 			return programApi.findProgram(DEFAULT_DOMAIN, "System", name);
 
 		Program program = new Program();
-		program.setPackName("System");
+		program.setPack("System");
 		program.setName(name);
-		program.setTypeName(type);
+		program.setPath(type);
 		program.setSeq(seq);
 		program.setVisible(true);
 		try {

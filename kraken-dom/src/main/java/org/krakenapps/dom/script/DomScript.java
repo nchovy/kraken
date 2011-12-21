@@ -131,9 +131,9 @@ public class DomScript implements Script {
 		String type = args[3];
 
 		Program p = new Program();
-		p.setPackName(packName);
+		p.setPack(packName);
 		p.setName(name);
-		p.setTypeName(type);
+		p.setPath(type);
 		p.setVisible(true);
 		programApi.createProgram(domain, p);
 
@@ -164,10 +164,10 @@ public class DomScript implements Script {
 			if (!description.isEmpty())
 				program.setDescription(description);
 
-			context.print("type name: " + program.getDescription() + " -> ");
-			String typeName = context.readLine();
-			if (!typeName.isEmpty())
-				program.setTypeName(typeName);
+			context.print("path: " + program.getDescription() + " -> ");
+			String path = context.readLine();
+			if (!path.isEmpty())
+				program.setPath(path);
 
 			context.print("visible: " + program.getDescription() + " -> ");
 			String visible = context.readLine();
@@ -197,7 +197,7 @@ public class DomScript implements Script {
 		ProgramProfile pp = programApi.getProgramProfile(domain, "all");
 		Program target = null;
 		for (Program p : pp.getPrograms())
-			if (p.getPackName().equals(packName) && p.getName().equals(programName))
+			if (p.getPack().equals(packName) && p.getName().equals(programName))
 				target = p;
 
 		pp.getPrograms().remove(target);
