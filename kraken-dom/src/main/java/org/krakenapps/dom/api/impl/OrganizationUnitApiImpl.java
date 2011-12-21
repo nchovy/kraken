@@ -17,6 +17,8 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -55,6 +57,24 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 	@Override
 	public OrganizationUnit getOrganizationUnit(String domain, String guid) {
 		return cfg.get(domain, cls, getPred(guid), NOT_FOUND);
+	}
+
+	@Override
+	public OrganizationUnit findOrganizationUnitByName(String domain, String... names) {
+		OrganizationUnit orgUnit = null;
+		String parentGuid = null;
+
+		for (String name : names) {
+			Map<String, Object> terms = new HashMap<String, Object>();
+			terms.put("name", name);
+			terms.put("parent", parentGuid);
+			orgUnit = cfg.find(domain, OrganizationUnit.class, Predicates.field(terms));
+			if (orgUnit == null)
+				break;
+			parentGuid = orgUnit.getGuid();
+		}
+
+		return orgUnit;
 	}
 
 	@Override

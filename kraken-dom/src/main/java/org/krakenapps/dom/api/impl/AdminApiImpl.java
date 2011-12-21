@@ -212,6 +212,9 @@ public class AdminApiImpl implements AdminApi {
 			else
 				password = admin.getUser().getPassword();
 
+			if (password == null)
+				throw new DOMException("invalid-password");
+
 			if (!hash.equals(Sha1.hash(password + session.getString("nonce")))) {
 				if (admin.isUseOtp())
 					throw new DOMException("invalid-otp-password");
