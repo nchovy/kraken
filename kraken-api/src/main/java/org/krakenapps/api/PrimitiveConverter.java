@@ -286,7 +286,7 @@ public class PrimitiveConverter {
 
 	@SuppressWarnings("unchecked")
 	private static Object overwrite(Object before, Object after, Map<String, Object> m) {
-		if (before == null)
+		if (before == null || after == null)
 			return after;
 
 		try {

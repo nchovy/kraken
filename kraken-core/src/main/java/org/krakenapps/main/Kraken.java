@@ -377,7 +377,6 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(context, LoggerScriptFactory.class, "logger");
 		registerScriptFactory(context, OsgiScriptFactory.class, "osgi");
 		registerScriptFactory(context, PackageScriptFactory.class, "pkg");
-		registerScriptFactory(context, BatchScriptFactory.class, "batch");
 		registerScriptFactory(context, HistoryScriptFactory.class, "history");
 		registerScriptFactory(context, ThreadScriptFactory.class, "thread");
 		registerScriptFactory(context, PerfScriptFactory.class, "perf");
@@ -387,6 +386,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(context, SunPerfScriptFactory.class, "sunperf");
 		registerScriptFactory(context, new ConfScriptFactory(conf), "conf");
 		registerScriptFactory(context, new AuthScriptFactory(auth), "auth");
+		registerScriptFactory(context, BatchScriptFactory.class, "batch");
 	}
 
 	/**
