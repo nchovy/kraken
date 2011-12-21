@@ -1,51 +1,47 @@
 package org.krakenapps.ldap.impl;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.dom.api.AdminApi;
-import org.krakenapps.dom.api.DefaultEntityEventListener;
-import org.krakenapps.dom.api.LdapOrganizationalUnitApi;
-import org.krakenapps.dom.api.OrganizationParameterApi;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.OrganizationUnitApi;
-import org.krakenapps.dom.api.ProgramApi;
-import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.LdapOrganizationalUnit;
 import org.krakenapps.dom.model.OrganizationUnit;
-import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.ldap.DomainOrganizationalUnit;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(name = "ldap-sync-service")
 @Provides
 public class DomSyncService implements LdapSyncService, Runnable {
-	private final Logger logger = LoggerFactory.getLogger(DomSyncService.class.getName());
-
-	private BundleContext bc;
+	private final Logger logger = LoggerFactory.getLogger(DomSyncService.class);
 
 	private boolean syncState;
-
 	private Thread syncThread;
+
+	@Requires
+	private ConfigService conf;
 
 	@Requires
 	private LdapService ldap;
@@ -54,35 +50,20 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	private UserApi userApi;
 
 	@Requires
-	private LdapOrganizationalUnitApi ldapOrgUnitApi;
-
-	@Requires
 	private OrganizationUnitApi orgUnitApi;
 
-	@Requires
-	private PreferencesService prefsvc;
+	@Override
+	public String getExtensionName() {
+		return "ldap";
+	}
 
-	private OrganizationUnitEntityEventListener orgUnitEntityEventListener = new OrganizationUnitEntityEventListener();
-
-	public DomSyncService(BundleContext bc) {
-		this.bc = bc;
+	private ConfigDatabase getDatabase() {
+		return conf.ensureDatabase("kraken-ldap");
 	}
 
 	@Validate
 	public void start() {
-		orgUnitApi.addEntityEventListener(orgUnitEntityEventListener);
-
-		// load sync state
-		Preferences p = prefsvc.getSystemPreferences();
-		syncState = p.getBoolean("sync_state", true);
-
-		startSyncThread();
-	}
-
-	@Invalidate
-	public void stop() {
-		if (orgUnitApi != null)
-			orgUnitApi.removeEntityEventListener(orgUnitEntityEventListener);
+		setPeriodicSync(true);
 	}
 
 	private void startSyncThread() {
@@ -115,28 +96,27 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		if (ldap == null)
 			return;
 
-		for (LdapProfile p : ldap.getProfiles()) {
+		for (LdapProfile profile : ldap.getProfiles()) {
 			try {
-				Date d = p.getLastSync();
+				Date d = profile.getLastSync();
 				Date now = new Date();
-				long span = 0;
+				long span = -1;
 				if (d != null)
 					span = now.getTime() - d.getTime();
 
-				if (span == 0 || span > p.getSyncInterval()) {
-					logger.debug("kraken dom: try to sync using profile [{}]", p.getName());
+				if (span == -1 || span > profile.getSyncInterval()) {
 					try {
-						sync(p);
+						logger.debug("kraken dom: try to sync using profile [{}]", profile.getName());
+						sync(profile);
 					} catch (Exception e) {
 						logger.error("kraken dom: periodic sync failed", e);
 					}
 
-					LdapProfile newProfile = new LdapProfile(p.getName(), p.getDc(), p.getPort(), p.getAccount(),
-							p.getPassword(), p.getTrustStore(), p.getSyncInterval(), now);
-					ldap.updateProfile(newProfile);
+					profile.setLastSync(now);
+					ldap.updateProfile(profile);
 				}
 			} catch (Exception e) {
-				logger.error("kraken dom: sync profile " + p.getName() + " failed", e);
+				logger.error("kraken dom: sync profile " + profile.getName() + " failed", e);
 			}
 		}
 	}
@@ -148,160 +128,160 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 	@Override
 	public void setPeriodicSync(boolean activate) {
-		try {
-			Preferences p = prefsvc.getSystemPreferences();
-			p.putBoolean("sync_state", activate);
-			p.flush();
-			p.sync();
+		ConfigCollection col = getDatabase().ensureCollection("config");
+		Config c = col.findOne(Predicates.field("name", "sync"));
 
-			if (syncState == false && activate)
-				startSyncThread();
-
-			syncState = activate;
-		} catch (BackingStoreException e) {
-			throw new RuntimeException("cannot change sync state", e);
+		Map<String, Object> m = null;
+		if (c == null) {
+			m = new HashMap<String, Object>();
+			m.put("name", "sync");
+			m.put("value", activate);
+			col.add(m);
 		}
+
+		if (syncState == false && activate)
+			startSyncThread();
+
+		syncState = activate;
 	}
 
 	@Override
 	public void sync(LdapProfile profile) {
-		try {
-			Map<String, LdapOrganizationalUnit> ldapOrgUnits = syncLdapOrgUnit(profile);
-			syncUser(bc, profile, ldapOrgUnits);
-		} catch (NullPointerException e) {
-			throw new IllegalStateException("check database character set");
+		importLdap(profile);
+		exportDom(profile);
+	}
+
+	@Override
+	public void importLdap(LdapProfile profile) {
+		ConfigCollection col = getDatabase().ensureCollection(profile.getName());
+
+		Map<String, Object> orgMap = new HashMap<String, Object>();
+		orgMap.put("value", ldap.getOrganizationUnits(profile));
+		updateConfig(col, "org_unit", orgMap);
+
+		Map<String, Object> userMap = new HashMap<String, Object>();
+		userMap.put("value", ldap.getDomainUserAccounts(profile));
+		updateConfig(col, "user", userMap);
+
+		Map<String, Object> meta = new HashMap<String, Object>();
+		meta.put("updated", new Date());
+		updateConfig(col, "metadata", meta);
+	}
+
+	private void updateConfig(ConfigCollection col, String name, Map<String, Object> values) {
+		values.put("name", name);
+		Object doc = PrimitiveConverter.serialize(values);
+
+		Config c = col.findOne(Predicates.field("name", name));
+		if (c == null)
+			col.add(doc);
+		else {
+			c.setDocument(doc);
+			col.update(c);
 		}
 	}
 
-	private Map<String, LdapOrganizationalUnit> syncLdapOrgUnit(LdapProfile profile) {
-		Map<String, LdapOrganizationalUnit> before = new HashMap<String, LdapOrganizationalUnit>();
+	@Override
+	public void exportDom(LdapProfile profile) {
+		Map<String, OrganizationUnit> orgUnits = exportOrgUnits(profile);
+		exportUsers(profile, orgUnits);
+	}
 
-		for (LdapOrganizationalUnit ldapOrgUnit : ldapOrgUnitApi.getLdapOrganizationalUnits())
-			before.put(ldapOrgUnit.getDistinguishedName(), ldapOrgUnit);
+	@SuppressWarnings("unchecked")
+	private Map<String, OrganizationUnit> exportOrgUnits(LdapProfile profile) {
+		Map<String, OrganizationUnit> result = new HashMap<String, OrganizationUnit>();
 
-		Collection<DomainOrganizationalUnit> domainOrgUnits = ldap.getOrganizationUnits(profile);
-		for (DomainOrganizationalUnit domainOrgUnit : domainOrgUnits) {
-			String dn = domainOrgUnit.getDistinguishedName();
+		ConfigCollection col = getDatabase().ensureCollection(profile.getName());
+		String domain = profile.getTargetDomain();
+		Collection<DomainOrganizationalUnit> orgUnits = loadLdapConfig(col, "org_unit", DomainOrganizationalUnit.class);
 
-			if (before.containsKey(dn))
-				before.remove(dn);
-			else {
-				LdapOrganizationalUnit ldapOrgUnit = new LdapOrganizationalUnit();
-				ldapOrgUnit.setDistinguishedName(domainOrgUnit.getDistinguishedName());
-				ldapOrgUnit.setProfile(profile.getDc());
-				ldapOrgUnitApi.createLdapOrganizationalUnit(ldapOrgUnit);
+		Pattern p = Pattern.compile("OU=(.*?),");
+		for (DomainOrganizationalUnit orgUnit : orgUnits) {
+			Matcher m = p.matcher(orgUnit.getDistinguishedName());
+			List<String> names = new ArrayList<String>();
+			while (m.find())
+				names.add(m.group(1));
+
+			OrganizationUnit domOrgUnit = createOrgUnits(domain, names);
+			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(orgUnit);
+
+			Map<String, Object> domOrgUnitExt = domOrgUnit.getExt();
+			if (domOrgUnitExt == null)
+				domOrgUnitExt = new HashMap<String, Object>();
+			domOrgUnitExt.put(getExtensionName(), ext);
+			domOrgUnit.setExt(domOrgUnitExt);
+			orgUnitApi.updateOrganizationUnit(domain, domOrgUnit);
+			result.put(domOrgUnit.getName(), domOrgUnit);
+		}
+
+		return result;
+	}
+
+	private OrganizationUnit createOrgUnits(String domain, List<String> names) {
+		String parentGuid = null;
+		OrganizationUnit orgUnit = null;
+
+		Map<String, Object> ext = new HashMap<String, Object>();
+		ext.put(getExtensionName(), new HashMap<String, Object>());
+
+		for (int i = 0; i < names.size(); i++) {
+			String name = names.get(i);
+			orgUnit = orgUnitApi.findOrganizationUnitByName(domain, names.subList(0, i).toArray(new String[0]));
+			if (orgUnit == null) {
+				orgUnit = new OrganizationUnit();
+				orgUnit.setName(name);
+				orgUnit.setParent(parentGuid);
+				orgUnit.setExt(ext);
+				orgUnitApi.createOrganizationUnit(domain, orgUnit);
+				System.out.println("create org unit " + name + " guid " + orgUnit.getGuid());
 			}
+			parentGuid = orgUnit.getGuid();
 		}
 
-		for (LdapOrganizationalUnit dn : before.values())
-			ldapOrgUnitApi.removeLdapOrganizationalUnit(dn.getId());
-
-		ldapOrgUnitApi.sync();
-
-		Map<String, LdapOrganizationalUnit> after = new HashMap<String, LdapOrganizationalUnit>();
-		for (LdapOrganizationalUnit ldapOrgUnit : ldapOrgUnitApi.getLdapOrganizationalUnits())
-			after.put(ldapOrgUnit.getOrganizationUnit().getName(), ldapOrgUnit);
-
-		return after;
+		return orgUnit;
 	}
 
-	private void syncUser(BundleContext bc, LdapProfile profile, Map<String, LdapOrganizationalUnit> ldapOrgUnits) {
-		Collection<User> users = userApi.getUsers(profile.getDc());
-		Map<String, User> before = new HashMap<String, User>();
-		for (User user : users)
-			before.put(user.getLoginName(), user);
+	@SuppressWarnings("unchecked")
+	private void exportUsers(LdapProfile profile, Map<String, OrganizationUnit> orgUnits) {
+		ConfigCollection col = getDatabase().ensureCollection(profile.getName());
+		String domain = profile.getTargetDomain();
+		Collection<DomainUserAccount> users = loadLdapConfig(col, "user", DomainUserAccount.class);
 
-		Collection<DomainUserAccount> domainUsers = ldap.getDomainUserAccounts(profile);
-		for (DomainUserAccount domainUser : domainUsers) {
-			User user = null;
-			boolean isUpdate = false;
+		for (DomainUserAccount user : users) {
+			User domUser = userApi.findUser(domain, user.getAccountName());
 
-			if (before.containsKey(domainUser.getAccountName())) {
-				user = before.get(domainUser.getAccountName());
-				before.remove(domainUser.getAccountName());
-				isUpdate = true;
-			} else {
-				user = new User();
-				user.setLoginName(domainUser.getAccountName());
-				user.setDomainController(profile.getDc());
-				user.setCreateDateTime(new Date());
+			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(user);
+			ext.remove("account_name");
+			ext.remove("logon_count");
+			ext.remove("last_logon");
+
+			if (domUser == null) {
+				domUser = new User();
+				domUser.setLoginName(user.getAccountName());
+				domUser.setOrgUnit(orgUnits.get(user.getOrganizationUnitName()));
+				domUser.setName(user.getDisplayName());
+				domUser.setTitle(user.getTitle());
+				domUser.setEmail(user.getMail());
+				domUser.setPhone(user.getMobile());
+				userApi.createUser(domain, domUser);
 			}
 
-			user.setName(domainUser.getDisplayName());
-			user.setOrganizationUnit(ldapOrgUnits.get(domainUser.getOrganizationUnitName()).getOrganizationUnit());
-			user.setOrganization(user.getOrganizationUnit().getOrganization());
-			user.setTitle(domainUser.getTitle());
-			user.setDepartment(domainUser.getDepartment());
-			user.setEmail(domainUser.getMail());
-			user.setPhone(domainUser.getMobile());
-			user.setUpdateDateTime(new Date());
-			user.setExternal(true);
-
-			if (isUpdate)
-				userApi.updateUser(user);
-			else {
-				if (userApi.getUserByLoginName(user.getLoginName()) != null)
-					continue;
-				userApi.createUser(user);
-			}
-
-			if (domainUser.isDomainAdmin())
-				syncAdmin(bc, user, domainUser);
+			Map<String, Object> domUserExt = domUser.getExt();
+			if (domUserExt == null)
+				domUserExt = new HashMap<String, Object>();
+			domUserExt.put(getExtensionName(), ext);
+			domUser.setExt(domUserExt);
+			userApi.updateUser(domain, domUser, false);
 		}
-
-		for (User user : before.values())
-			userApi.removeUser(user.getId());
 	}
 
-	private void syncAdmin(BundleContext bc, User user, DomainUserAccount domainUser) {
-		ServiceReference adminApiRef = bc.getServiceReference(AdminApi.class.getName());
-		ServiceReference roleApiRef = bc.getServiceReference(RoleApi.class.getName());
-		AdminApi adminApi = (AdminApi) bc.getService(adminApiRef);
-		RoleApi roleApi = (RoleApi) bc.getService(roleApiRef);
+	@SuppressWarnings("unchecked")
+	private <T> Collection<T> loadLdapConfig(ConfigCollection col, String name, Class<T> cls) {
+		Config c = col.findOne(Predicates.field("name", name));
+		if (c == null)
+			return new ArrayList<T>();
 
-		Admin admin = null;
-		boolean isUpdate = false;
-
-		if (user.getAdmin() == null) {
-			admin = new Admin();
-			admin.setRole(roleApi.getRole("admin"));
-			admin.setUser(user);
-		} else {
-			admin = user.getAdmin();
-			isUpdate = true;
-		}
-		admin.setEnabled(true);
-
-		ProgramProfile programProfile = getProgramProfile(bc, admin);
-		if (programProfile == null)
-			return;
-
-		admin.setProgramProfile(programProfile);
-
-		if (isUpdate)
-			adminApi.updateAdmin(admin.getUser().getOrganization().getId(), null, admin);
-		else
-			adminApi.createAdmin(admin.getUser().getOrganization().getId(), null, admin);
-	}
-
-	private ProgramProfile getProgramProfile(BundleContext bc, Admin admin) {
-		ServiceReference orgParameterApiRef = bc.getServiceReference(OrganizationParameterApi.class.getName());
-		OrganizationParameterApi orgParameterApi = (OrganizationParameterApi) bc.getService(orgParameterApiRef);
-		ServiceReference programApiRef = bc.getServiceReference(ProgramApi.class.getName());
-		ProgramApi programApi = (ProgramApi) bc.getService(programApiRef);
-
-		String defaultProgramProfileId = orgParameterApi.getOrganizationParameter(admin.getUser().getOrganization()
-				.getId(), "default_program_profile_id");
-		ProgramProfile profile = programApi.getProgramProfile(admin.getUser().getOrganization().getId(),
-				Integer.parseInt(defaultProgramProfileId));
-
-		return profile;
-	}
-
-	private class OrganizationUnitEntityEventListener extends DefaultEntityEventListener<OrganizationUnit> {
-		@Override
-		public void entityRemoved(OrganizationUnit orgUnit) {
-			ldapOrgUnitApi.removeLdapOrganizationalUnit(orgUnit);
-		}
+		Object value = ((Map<String, Object>) c.getDocument()).get("value");
+		return PrimitiveConverter.parseCollection(cls, Arrays.asList((Object[]) value));
 	}
 }

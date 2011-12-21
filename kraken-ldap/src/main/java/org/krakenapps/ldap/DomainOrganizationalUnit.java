@@ -15,62 +15,62 @@
  */
 package org.krakenapps.ldap;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Set;
-import java.util.TreeSet;
+
+import org.krakenapps.api.DateFormat;
+
+import com.novell.ldap.LDAPAttribute;
+import com.novell.ldap.LDAPAttributeSet;
+import com.novell.ldap.LDAPEntry;
 
 public class DomainOrganizationalUnit {
-	private Set<String> memberOf = new TreeSet<String>();
 	private String distinguishedName;
 	private String name;
 	private Date whenCreated;
 	private Date whenChanged;
 
-	public Set<String> getMemberOf() {
-		return memberOf;
+	@SuppressWarnings("unused")
+	private DomainOrganizationalUnit() {
+		// for primitive parse
 	}
 
-	public void setMemberOf(Set<String> memberOf) {
-		this.memberOf = memberOf;
+	public DomainOrganizationalUnit(LDAPEntry entry) {
+		LDAPAttributeSet attrs = entry.getAttributeSet();
+		this.distinguishedName = getString(attrs, "distinguishedName");
+		this.name = getString(attrs, "name");
+		this.whenCreated = getDate(attrs, "whenCreated");
+		this.whenChanged = getDate(attrs, "whenChanged");
+	}
+
+	private String getString(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? null : attr.getStringValue();
+	}
+
+	private Date getDate(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? null : DateFormat.parse("yyyyMMddHHmmss", attr.getStringValue());
 	}
 
 	public String getDistinguishedName() {
 		return distinguishedName;
 	}
 
-	public void setDistinguishedName(String distinguishedName) {
-		this.distinguishedName = distinguishedName;
-	}
-
 	public String getName() {
 		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public Date getWhenCreated() {
 		return whenCreated;
 	}
 
-	public void setWhenCreated(Date whenCreated) {
-		this.whenCreated = whenCreated;
-	}
-
 	public Date getWhenChanged() {
 		return whenChanged;
 	}
 
-	public void setWhenChanged(Date whenChanged) {
-		this.whenChanged = whenChanged;
-	}
-
 	@Override
 	public String toString() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		return String.format("name=%s, whenCreated=%s, whenChanged=%s", name, dateFormat.format(whenCreated),
-				dateFormat.format(whenChanged));
+		return String.format("name=%s, whenCreated=%s, whenChanged=%s", name, DateFormat.format("yyyy-MM-dd HH:mm:ss", whenCreated),
+				DateFormat.format("yyyy-MM-dd HH:mm:ss", whenChanged));
 	}
 }

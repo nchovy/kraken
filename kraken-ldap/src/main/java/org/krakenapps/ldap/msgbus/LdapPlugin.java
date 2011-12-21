@@ -44,6 +44,8 @@ import com.novell.ldap.LDAPException;
 @MsgbusPlugin
 public class LdapPlugin {
 	private BundleContext bc;
+	
+	// TODO
 
 	@Requires
 	private LdapService ldap;
@@ -91,8 +93,8 @@ public class LdapPlugin {
 			throw new MsgbusException("ldap", e.getMessage());
 		}
 
-		LdapProfile profile = new LdapProfile(name, dc, port, account, password, trustStore, syncInterval);
-		ldap.createProfile(profile);
+//		LdapProfile profile = new LdapProfile(name, dc, port, account, password, trustStore, syncInterval);
+//		ldap.createProfile(profile);
 	}
 
 	@MsgbusMethod
@@ -110,10 +112,10 @@ public class LdapPlugin {
 		if (p == null)
 			throw new MsgbusException("ldap", "profile-not-found");
 
-		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
-				p.getTrustStore(), syncInterval, p.getLastSync());
-
-		ldap.updateProfile(newProfile);
+//		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
+//				p.getTrustStore(), syncInterval, p.getLastSync());
+//
+//		ldap.updateProfile(newProfile);
 	}
 
 	@MsgbusMethod
@@ -198,8 +200,8 @@ public class LdapPlugin {
 		m.put("distinguished_name", account.getDistinguishedName());
 		m.put("given_name", account.getGivenName());
 		m.put("last_logon", account.getLastLogon());
-		m.put("last_password_change", account.getLastPasswordChange());
-		m.put("login_count", account.getLoginCount());
+		m.put("last_password_change", account.getPwdLastSet());
+		m.put("login_count", account.getLogonCount());
 		m.put("mail", account.getMail());
 		m.put("mobile", account.getMobile());
 		m.put("surname", account.getSurname());

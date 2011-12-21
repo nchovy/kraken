@@ -16,101 +16,107 @@
 package org.krakenapps.ldap;
 
 import java.security.KeyStore;
-import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import org.krakenapps.api.DateFormat;
+import org.krakenapps.confdb.CollectionName;
 
 import com.novell.ldap.LDAPConnection;
 
+@CollectionName("profile")
 public class LdapProfile {
-	public static final int DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000; // 10 minute
+	public static final long DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000; // 10minute
 	public static final int DEFAULT_PORT = LDAPConnection.DEFAULT_PORT; // 389
 	public static final int DEFAULT_SSL_PORT = LDAPConnection.DEFAULT_SSL_PORT; // 636
 	public static final char[] DEFAULT_TRUSTSTORE_PASSWORD = "kraken".toCharArray();
 
 	private String name;
+	private String targetDomain = "localhost";
 	private String dc;
-	private int port;
+	private Integer port;
 	private String account;
 	private String password;
 	private KeyStore trustStore;
-	private int syncInterval = DEFAULT_SYNC_INTERVAL;
+	private long syncInterval = DEFAULT_SYNC_INTERVAL;
 	private Date lastSync = null;
-
-	public LdapProfile(String name, String dc, String account, String password) {
-		this(name, dc, DEFAULT_PORT, account, password, null, DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, String account, String password, KeyStore trustStore) {
-		this(name, dc, (trustStore != null) ? DEFAULT_SSL_PORT : DEFAULT_PORT, account, password, trustStore,
-				DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password) {
-		this(name, dc, port, account, password, null, DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, KeyStore trustStore) {
-		this(name, dc, port, account, password, trustStore, DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, int syncInterval) {
-		this(name, dc, port, account, password, null, syncInterval);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, KeyStore trustStore,
-			int syncInterval) {
-		this(name, dc, port, account, password, trustStore, syncInterval, null);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, KeyStore trustStore,
-			int syncInterval, Date lastSync) {
-		this.name = name;
-		this.dc = dc;
-		this.port = port;
-		this.account = account;
-		this.password = password;
-		this.trustStore = trustStore;
-		this.syncInterval = syncInterval;
-		this.lastSync = lastSync;
-	}
 
 	public String getName() {
 		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getTargetDomain() {
+		return targetDomain;
+	}
+
+	public void setTargetDomain(String targetDomain) {
+		this.targetDomain = targetDomain;
 	}
 
 	public String getDc() {
 		return dc;
 	}
 
-	public int getPort() {
-		return port;
+	public void setDc(String dc) {
+		this.dc = dc;
+	}
+
+	public Integer getPort() {
+		if (port != null)
+			return port;
+		return (trustStore == null) ? DEFAULT_PORT : DEFAULT_SSL_PORT;
+	}
+
+	public void setPort(Integer port) {
+		this.port = port;
 	}
 
 	public String getAccount() {
 		return account;
 	}
 
+	public void setAccount(String account) {
+		this.account = account;
+	}
+
 	public String getPassword() {
 		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
 	public KeyStore getTrustStore() {
 		return trustStore;
 	}
 
-	public int getSyncInterval() {
+	public void setTrustStore(KeyStore trustStore) {
+		this.trustStore = trustStore;
+	}
+
+	public long getSyncInterval() {
 		return syncInterval;
+	}
+
+	public void setSyncInterval(long syncInterval) {
+		this.syncInterval = syncInterval;
 	}
 
 	public Date getLastSync() {
 		return lastSync;
 	}
 
+	public void setLastSync(Date lastSync) {
+		this.lastSync = lastSync;
+	}
+
 	@Override
 	public String toString() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		return String.format("name=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s", name,
-				dc, port, account, syncInterval, (lastSync == null) ? "none" : dateFormat.format(lastSync),
-				(trustStore != null));
+		return String.format("name=%s, target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s", name,
+				targetDomain, dc, port, account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), (trustStore != null));
 	}
 }
