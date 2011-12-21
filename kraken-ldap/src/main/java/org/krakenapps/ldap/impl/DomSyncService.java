@@ -233,7 +233,6 @@ public class DomSyncService implements LdapSyncService, Runnable {
 				orgUnit.setParent(parentGuid);
 				orgUnit.setExt(ext);
 				orgUnitApi.createOrganizationUnit(domain, orgUnit);
-				System.out.println("create org unit " + name + " guid " + orgUnit.getGuid());
 			}
 			parentGuid = orgUnit.getGuid();
 		}
