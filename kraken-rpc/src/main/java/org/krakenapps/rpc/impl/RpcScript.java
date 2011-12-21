@@ -415,7 +415,7 @@ public class RpcScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "print all connection properties", arguments = { @ScriptArgument(name = "cid", type = "int", description = "connectino id") })
+	@ScriptUsage(description = "print all connection properties", arguments = { @ScriptArgument(name = "cid", type = "int", description = "connection id") })
 	public void props(String[] args) {
 		try {
 			int cid = Integer.valueOf(args[0]);

@@ -17,11 +17,14 @@ package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
+import org.krakenapps.api.MapTypeHint;
 import org.krakenapps.api.ReferenceKey;
 import org.krakenapps.confdb.CollectionName;
 
@@ -33,8 +36,10 @@ public class OrganizationUnit {
 	@FieldOption(length = 60, nullable = false)
 	private String name;
 
-	private String dc;
 	private String parent;
+
+	@MapTypeHint({ String.class, Object.class })
+	private Map<String, Object> ext = new HashMap<String, Object>();
 
 	@ReferenceKey("guid")
 	@CollectionTypeHint(OrganizationUnit.class)
@@ -62,20 +67,20 @@ public class OrganizationUnit {
 		this.name = name;
 	}
 
-	public String getDc() {
-		return dc;
-	}
-
-	public void setDc(String dc) {
-		this.dc = dc;
-	}
-
 	public String getParent() {
 		return parent;
 	}
 
 	public void setParent(String parent) {
 		this.parent = parent;
+	}
+
+	public Map<String, Object> getExt() {
+		return ext;
+	}
+
+	public void setExt(Map<String, Object> ext) {
+		this.ext = ext;
 	}
 
 	public List<OrganizationUnit> getChildren() {

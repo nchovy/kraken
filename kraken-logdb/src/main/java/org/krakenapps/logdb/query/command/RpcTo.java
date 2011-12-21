@@ -63,11 +63,6 @@ public class RpcTo extends LogQueryCommand {
 	}
 
 	@Override
-	public void start() {
-		status = Status.Running;
-	}
-
-	@Override
 	public void eof() {
 		if (datasession != null) {
 			try {

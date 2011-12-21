@@ -151,7 +151,7 @@ public class PrimitiveConverter {
 			try {
 				n = cls.newInstance();
 			} catch (IllegalAccessException e) {
-				Constructor c = cls.getConstructor();
+				Constructor c = cls.getDeclaredConstructor();
 				c.setAccessible(true);
 				n = (T) c.newInstance();
 			}
