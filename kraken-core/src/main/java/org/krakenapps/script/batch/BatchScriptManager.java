@@ -43,7 +43,7 @@ public class BatchScriptManager {
 	}
 
 	private ConfigDatabase getDatabase() {
-		return conf.getDatabase("kraken-core");
+		return conf.ensureDatabase("kraken-core");
 	}
 
 	public void register(String alias, File scriptFile) {

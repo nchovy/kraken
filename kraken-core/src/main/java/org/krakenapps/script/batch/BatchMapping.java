@@ -28,6 +28,11 @@ public class BatchMapping {
 	@FieldOption(skip = true)
 	private File scriptFile;
 
+	@SuppressWarnings("unused")
+	private BatchMapping() {
+		// for primitive parse
+	}
+
 	public BatchMapping(String alias, File scriptFile) {
 		this.alias = alias;
 		this.filepath = scriptFile.getAbsolutePath();
