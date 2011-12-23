@@ -3,10 +3,13 @@ package org.krakenapps.ldap.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,8 +23,12 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
+import org.krakenapps.dom.api.ProgramApi;
+import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.ldap.DomainOrganizationalUnit;
@@ -35,6 +42,9 @@ import org.slf4j.LoggerFactory;
 @Component(name = "ldap-sync-service")
 @Provides
 public class DomSyncService implements LdapSyncService, Runnable {
+	private static final String DEFAULT_ROLE_NAME = "admin";
+	private static final String DEFAULT_PROFILE_NAME = "all";
+
 	private final Logger logger = LoggerFactory.getLogger(DomSyncService.class);
 
 	private boolean syncState;
@@ -50,7 +60,16 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	private UserApi userApi;
 
 	@Requires
+	private AdminApi adminApi;
+
+	@Requires
 	private OrganizationUnitApi orgUnitApi;
+
+	@Requires
+	private RoleApi roleApi;
+
+	@Requires
+	private ProgramApi programApi;
 
 	@Override
 	public String getExtensionName() {
@@ -149,6 +168,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	public void sync(LdapProfile profile) {
 		importLdap(profile);
 		exportDom(profile);
+		profile.setLastSync(new Date());
 	}
 
 	@Override
@@ -195,46 +215,90 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		String domain = profile.getTargetDomain();
 		Collection<DomainOrganizationalUnit> orgUnits = loadLdapConfig(col, "org_unit", DomainOrganizationalUnit.class);
 
+		// names-object map
+		Map<List<String>, DomainOrganizationalUnit> orgUnitsMap = new HashMap<List<String>, DomainOrganizationalUnit>();
 		Pattern p = Pattern.compile("OU=(.*?),");
 		for (DomainOrganizationalUnit orgUnit : orgUnits) {
 			Matcher m = p.matcher(orgUnit.getDistinguishedName());
 			List<String> names = new ArrayList<String>();
 			while (m.find())
 				names.add(m.group(1));
+			Collections.reverse(names);
+			orgUnitsMap.put(names, orgUnit);
+		}
 
-			OrganizationUnit domOrgUnit = createOrgUnits(domain, names);
+		// sync
+		List<OrganizationUnit> create = new ArrayList<OrganizationUnit>();
+		Map<String, OrganizationUnit> createdRoot = new HashMap<String, OrganizationUnit>();
+		List<OrganizationUnit> update = new ArrayList<OrganizationUnit>();
+		for (List<String> names : orgUnitsMap.keySet()) {
+			DomainOrganizationalUnit orgUnit = orgUnitsMap.get(names);
+			OrganizationUnit domOrgUnit = createOrgUnits(domain, create, createdRoot, names);
 			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(orgUnit);
 
 			Map<String, Object> domOrgUnitExt = domOrgUnit.getExt();
 			if (domOrgUnitExt == null)
 				domOrgUnitExt = new HashMap<String, Object>();
 			domOrgUnitExt.put(getExtensionName(), ext);
+
+			Object before = domOrgUnit.getExt().get(getExtensionName());
+			Object after = domOrgUnitExt.get(getExtensionName());
+			boolean equals = after.equals(before);
+
 			domOrgUnit.setExt(domOrgUnitExt);
-			orgUnitApi.updateOrganizationUnit(domain, domOrgUnit);
+			if (!create.contains(domOrgUnit)) {
+				if (!equals)
+					update.add(domOrgUnit);
+			}
 			result.put(domOrgUnit.getName(), domOrgUnit);
 		}
+
+		orgUnitApi.createOrganizationUnits(domain, create);
+		orgUnitApi.updateOrganizationUnits(domain, update);
 
 		return result;
 	}
 
-	private OrganizationUnit createOrgUnits(String domain, List<String> names) {
-		String parentGuid = null;
-		OrganizationUnit orgUnit = null;
+	private OrganizationUnit createOrgUnits(String domain, List<OrganizationUnit> create, Map<String, OrganizationUnit> createdRoot,
+			List<String> names) {
+		if (names.isEmpty())
+			return null;
 
 		Map<String, Object> ext = new HashMap<String, Object>();
 		ext.put(getExtensionName(), new HashMap<String, Object>());
 
-		for (int i = 0; i < names.size(); i++) {
+		OrganizationUnit orgUnit = orgUnitApi.findOrganizationUnitByName(domain, names.get(0));
+		if (orgUnit == null) {
+			orgUnit = createdRoot.get(names.get(0));
+			if (orgUnit == null) {
+				orgUnit = new OrganizationUnit();
+				orgUnit.setName(names.get(0));
+				orgUnit.setExt(ext);
+				create.add(orgUnit);
+				createdRoot.put(names.get(0), orgUnit);
+			}
+		}
+
+		for (int i = 1; i < names.size(); i++) {
 			String name = names.get(i);
-			orgUnit = orgUnitApi.findOrganizationUnitByName(domain, names.subList(0, i).toArray(new String[0]));
+
+			OrganizationUnit parent = orgUnit;
+			orgUnit = null;
+			for (OrganizationUnit child : parent.getChildren()) {
+				if (name.equals(child.getName())) {
+					orgUnit = child;
+					break;
+				}
+			}
+
 			if (orgUnit == null) {
 				orgUnit = new OrganizationUnit();
 				orgUnit.setName(name);
-				orgUnit.setParent(parentGuid);
+				orgUnit.setParent(parent.getGuid());
 				orgUnit.setExt(ext);
-				orgUnitApi.createOrganizationUnit(domain, orgUnit);
+				create.add(orgUnit);
+				parent.getChildren().add(orgUnit);
 			}
-			parentGuid = orgUnit.getGuid();
 		}
 
 		return orgUnit;
@@ -246,8 +310,29 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		String domain = profile.getTargetDomain();
 		Collection<DomainUserAccount> users = loadLdapConfig(col, "user", DomainUserAccount.class);
 
+		// remove removed ldap users
+		Set<String> loginNames = new HashSet<String>();
+		for (DomainUserAccount user : users)
+			loginNames.add(user.getAccountName());
+		for (User user : userApi.getUsers(domain)) {
+			Map<String, Object> ext = user.getExt();
+			if (ext == null || !ext.containsKey(getExtensionName()))
+				continue;
+			if (!loginNames.contains(user.getLoginName()))
+				userApi.removeUser(domain, user.getLoginName());
+		}
+
+		Admin defaultAdmin = new Admin();
+		defaultAdmin.setRole(roleApi.getRole(domain, DEFAULT_ROLE_NAME));
+		defaultAdmin.setProfile(programApi.getProgramProfile(domain, DEFAULT_PROFILE_NAME));
+		defaultAdmin.setEnabled(true);
+
+		// sync
+		List<User> create = new ArrayList<User>();
+		List<User> update = new ArrayList<User>();
 		for (DomainUserAccount user : users) {
 			User domUser = userApi.findUser(domain, user.getAccountName());
+			boolean exist = (domUser != null);
 
 			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(user);
 			ext.remove("account_name");
@@ -262,16 +347,29 @@ public class DomSyncService implements LdapSyncService, Runnable {
 				domUser.setTitle(user.getTitle());
 				domUser.setEmail(user.getMail());
 				domUser.setPhone(user.getMobile());
-				userApi.createUser(domain, domUser);
 			}
 
 			Map<String, Object> domUserExt = domUser.getExt();
 			if (domUserExt == null)
 				domUserExt = new HashMap<String, Object>();
 			domUserExt.put(getExtensionName(), ext);
+			if (user.isDomainAdmin() && !domUserExt.containsKey(adminApi.getExtensionName()))
+				domUserExt.put(adminApi.getExtensionName(), defaultAdmin);
+
+			boolean equals = domUserExt.equals(domUser.getExt());
+
 			domUser.setExt(domUserExt);
-			userApi.updateUser(domain, domUser, false);
+
+			if (!exist)
+				create.add(domUser);
+			else {
+				if (!equals)
+					update.add(domUser);
+			}
 		}
+
+		userApi.createUsers(domain, create);
+		userApi.updateUsers(domain, update, false);
 	}
 
 	@SuppressWarnings("unchecked")

@@ -17,7 +17,6 @@ package org.krakenapps.ldap.impl;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.security.KeyStore;
 import java.util.Collection;
 
 import org.krakenapps.api.Script;
@@ -29,6 +28,7 @@ import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
+import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
@@ -72,8 +72,7 @@ public class LdapScript implements Script {
 				File file = new File(args[4]);
 				if (!file.exists())
 					throw new IllegalArgumentException("file not found");
-				KeyStore trustStore = ldap.x509ToJKS(new FileInputStream(file));
-				profile.setTrustStore(trustStore);
+				profile.setTrustStore(CertificateType.JKS, new FileInputStream(file));
 			}
 
 			ldap.createProfile(profile);
@@ -155,7 +154,7 @@ public class LdapScript implements Script {
 	}
 
 	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
-	public void syncDom(String args[]) {
+	public void sync(String args[]) {
 		LdapSyncService ldapSync = getSyncService();
 		if (ldapSync == null) {
 			context.println("kraken-dom not found");
@@ -196,14 +195,6 @@ public class LdapScript implements Script {
 		} catch (NumberFormatException e) {
 			context.println("invalid number format");
 		}
-	}
-
-	public void test1(String[] args) {
-		getSyncService().importLdap(ldap.getProfile("test"));
-	}
-
-	public void test2(String[] args) {
-		getSyncService().exportDom(ldap.getProfile("test"));
 	}
 
 	private LdapSyncService getSyncService() {

@@ -15,13 +15,22 @@
  */
 package org.krakenapps.ldap;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
 import java.util.Date;
 
 import org.krakenapps.api.DateFormat;
+import org.krakenapps.api.FieldOption;
 import org.krakenapps.confdb.CollectionName;
 
 import com.novell.ldap.LDAPConnection;
+import com.novell.ldap.util.Base64;
 
 @CollectionName("profile")
 public class LdapProfile {
@@ -30,15 +39,21 @@ public class LdapProfile {
 	public static final int DEFAULT_SSL_PORT = LDAPConnection.DEFAULT_SSL_PORT; // 636
 	public static final char[] DEFAULT_TRUSTSTORE_PASSWORD = "kraken".toCharArray();
 
+	public static enum CertificateType {
+		X509, JKS;
+	}
+
 	private String name;
 	private String targetDomain = "localhost";
 	private String dc;
 	private Integer port;
 	private String account;
 	private String password;
-	private KeyStore trustStore;
+	private byte[] trustStore;
 	private long syncInterval = DEFAULT_SYNC_INTERVAL;
-	private Date lastSync = null;
+
+	@FieldOption(skip = true)
+	private Date lastSync;
 
 	public String getName() {
 		return name;
@@ -90,12 +105,49 @@ public class LdapProfile {
 		this.password = password;
 	}
 
-	public KeyStore getTrustStore() {
-		return trustStore;
+	public KeyStore getTrustStore() throws GeneralSecurityException, IOException {
+		return getTrustStore(DEFAULT_TRUSTSTORE_PASSWORD);
 	}
 
-	public void setTrustStore(KeyStore trustStore) {
-		this.trustStore = trustStore;
+	public KeyStore getTrustStore(char[] password) throws GeneralSecurityException, IOException {
+		if (trustStore == null)
+			return null;
+
+		KeyStore ts = KeyStore.getInstance("JKS");
+		ts.load(new ByteArrayInputStream(trustStore), password);
+		return ts;
+	}
+
+	public void setTrustStore(CertificateType type, String base64EncodedCert) throws GeneralSecurityException, IOException {
+		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)));
+	}
+
+	public void setTrustStore(CertificateType type, InputStream cert) throws GeneralSecurityException, IOException {
+		setTrustStore(type, cert, DEFAULT_TRUSTSTORE_PASSWORD);
+	}
+
+	public void setTrustStore(CertificateType type, String base64EncodedCert, char[] password) throws GeneralSecurityException, IOException {
+		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)), password);
+	}
+
+	public void setTrustStore(CertificateType type, InputStream cert, char[] password) throws GeneralSecurityException, IOException {
+		KeyStore jks = KeyStore.getInstance("JKS");
+
+		if (CertificateType.X509.equals(type)) {
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			Certificate certificate = cf.generateCertificate(cert);
+
+			jks.load(null, null);
+			jks.setCertificateEntry("mykey", certificate);
+		} else if (CertificateType.JKS.equals(type)) {
+			jks.load(cert, password);
+		} else {
+			throw new IllegalArgumentException("type");
+		}
+
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		jks.store(bos, password);
+		this.trustStore = bos.toByteArray();
 	}
 
 	public long getSyncInterval() {
@@ -116,7 +168,7 @@ public class LdapProfile {
 
 	@Override
 	public String toString() {
-		return String.format("name=%s, target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s", name,
-				targetDomain, dc, port, account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), (trustStore != null));
+		return String.format("%s [target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s]", name, targetDomain,
+				dc, getPort(), account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), (trustStore != null));
 	}
 }

@@ -15,16 +15,11 @@
  */
 package org.krakenapps.ldap.impl;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.security.KeyStore;
 import java.security.SecureRandom;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -54,7 +49,6 @@ import com.novell.ldap.LDAPJSSESecureSocketFactory;
 import com.novell.ldap.LDAPReferralException;
 import com.novell.ldap.LDAPSearchResults;
 import com.novell.ldap.LDAPSocketFactory;
-import com.novell.ldap.util.Base64;
 
 @Component(name = "ldap-service")
 @Provides
@@ -118,7 +112,7 @@ public class JLdapService implements LdapService {
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
-					logger.debug("kraken-ldap: fetch entry [{}]", entry);
+					logger.debug("kraken-ldap: fetch entry [{}]", entry.getDN());
 					accounts.add(new DomainUserAccount(entry));
 				} catch (LDAPReferralException e) {
 				}
@@ -150,7 +144,7 @@ public class JLdapService implements LdapService {
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
-					logger.debug("kraken-ldap: fetch org unit entry [{}]", entry);
+					logger.debug("kraken-ldap: fetch org unit entry [{}]", entry.getDN());
 					ous.add(new DomainOrganizationalUnit(entry));
 				} catch (LDAPReferralException e) {
 				}
@@ -213,63 +207,6 @@ public class JLdapService implements LdapService {
 		}
 	}
 
-	@Override
-	public KeyStore getKeyStore(String base64Encoded) {
-		return getKeyStore(KeyStore.getDefaultType(), base64Encoded);
-	}
-
-	@Override
-	public KeyStore getKeyStore(String keyStoreType, String base64Encoded) {
-		if (base64Encoded == null || base64Encoded.isEmpty())
-			return null;
-
-		byte[] b = Base64.decode(base64Encoded);
-		return getKeyStore(new ByteArrayInputStream(b));
-	}
-
-	@Override
-	public KeyStore getKeyStore(InputStream is) {
-		return getKeyStore(KeyStore.getDefaultType(), is);
-	}
-
-	@Override
-	public KeyStore getKeyStore(String keyStoreType, InputStream is) {
-		if (is == null)
-			return null;
-
-		try {
-			KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-			keyStore.load(is, LdapProfile.DEFAULT_TRUSTSTORE_PASSWORD);
-			return keyStore;
-		} catch (Exception e) {
-			throw new IllegalArgumentException("invalid keystore");
-		}
-	}
-
-	@Override
-	public KeyStore x509ToJKS(String base64Encoded) {
-		if (base64Encoded == null || base64Encoded.isEmpty())
-			return null;
-		byte[] b = Base64.decode(base64Encoded);
-		return x509ToJKS(new ByteArrayInputStream(b));
-	}
-
-	@Override
-	public KeyStore x509ToJKS(InputStream is) {
-		try {
-			CertificateFactory cf = CertificateFactory.getInstance("X.509");
-			Certificate cert = cf.generateCertificate(is);
-
-			KeyStore jks = KeyStore.getInstance("JKS");
-			jks.load(null, null);
-			jks.setCertificateEntry("mykey", cert);
-
-			return jks;
-		} catch (Exception e) {
-			throw new IllegalArgumentException("invalid x509");
-		}
-	}
-
 	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
 		try {
 			if (profile.getTrustStore() != null) {
@@ -281,6 +218,8 @@ public class JLdapService implements LdapService {
 			} else
 				LDAPConnection.setSocketFactory(new JLDAPSocketFactory(timeout));
 
+			logger.trace("kraken ldap: connect to {}:{}, user [{}]",
+					new Object[] { profile.getDc(), profile.getPort(), profile.getAccount() });
 			LDAPConnection conn = new LDAPConnection();
 			conn.connect(profile.getDc(), profile.getPort());
 			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
