@@ -18,6 +18,7 @@ package org.krakenapps.ldap.msgbus;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -50,16 +51,29 @@ public class LdapPlugin {
 		this.bc = bc;
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void getProfiles(Request req, Response resp) {
+		List<Object> profiles = new ArrayList<Object>();
+		for (LdapProfile profile : ldap.getProfiles()) {
+			Map<String, Object> serialize = (Map<String, Object>) PrimitiveConverter.serialize(profile);
+			serialize.put("trust_store", (serialize.get("trust_store") != null));
+			profiles.add(serialize);
+		}
 		resp.put("profiles", PrimitiveConverter.serialize(ldap.getProfiles()));
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void getProfile(Request req, Response resp) {
 		String name = req.getString("name");
 		LdapProfile profile = ldap.getProfile(name);
-		resp.put("profile", (profile == null) ? null : PrimitiveConverter.serialize(profile));
+		if (profile == null)
+			throw new MsgbusException("ldap", "profile not found");
+
+		Map<String, Object> serialize = (Map<String, Object>) PrimitiveConverter.serialize(profile);
+		serialize.put("trust_store", (serialize.get("trust_store") != null));
+		resp.put("profile", serialize);
 	}
 
 	@MsgbusMethod
@@ -86,10 +100,15 @@ public class LdapPlugin {
 		PrimitiveConverter.overwrite(profile, req.getParams());
 
 		if (req.has("cert_type") && req.has("cert_base64")) {
+			profile.unsetTrustStore();
 			try {
 				CertificateType type = CertificateType.valueOf(req.getString("cert_type"));
-				String base64 = req.getString("cert_base64");
-				profile.setTrustStore(type, base64);
+				if (type == null)
+					profile.unsetTrustStore();
+				else {
+					String base64 = req.getString("cert_base64");
+					profile.setTrustStore(type, base64);
+				}
 			} catch (Exception e) {
 				throw new MsgbusException("ldap", "invalid cert");
 			}
@@ -106,16 +125,16 @@ public class LdapPlugin {
 
 	@MsgbusMethod
 	public void getDomainUserAccounts(Request req, Response resp) {
-		List<Object> l = new ArrayList<Object>();
+		List<Object> users = new ArrayList<Object>();
 		String name = req.getString("name");
 		LdapProfile profile = ldap.getProfile(name);
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
 		for (DomainUserAccount account : ldap.getDomainUserAccounts(profile))
-			l.add(PrimitiveConverter.serialize(account));
+			users.add(PrimitiveConverter.serialize(account));
 
-		resp.put("users", l);
+		resp.put("users", users);
 	}
 
 	@MsgbusMethod

@@ -150,6 +150,10 @@ public class LdapProfile {
 		this.trustStore = bos.toByteArray();
 	}
 
+	public void unsetTrustStore() {
+		this.trustStore = null;
+	}
+
 	public long getSyncInterval() {
 		return syncInterval;
 	}
