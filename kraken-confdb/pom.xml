@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-confdb</artifactId>
-	<version>0.3.4</version>
+	<version>0.4.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Config Database</name>
 
