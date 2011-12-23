@@ -25,8 +25,8 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
-import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.MessageHandler;
+import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.PackageMetadataProvider;
 import org.krakenapps.msgbus.PermissionChecker;
 import org.krakenapps.msgbus.Request;
@@ -51,8 +51,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	private Set<SessionEventHandler> sessionEventListeners;
 	private ConcurrentMap<String, Set<MessageHandler>> messageHandlerMap;
 	private ConcurrentMap<String, PackageMetadataProvider> packageProviderMap;
-	private Set<PermissionChecker> permissionCheckers = Collections
-			.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
+	private Set<PermissionChecker> permissionCheckers = Collections.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
 	private final ExecutorService threadPool;
 
 	@Requires
@@ -241,8 +240,8 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	public void closeSession(Session session) {
 		sessionMap.remove(session.getId());
 
-		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed",
-				new Object[] { session, session.getOrgDomain(), session.getAdminLoginName() });
+		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed", new Object[] { session,
+				session.getOrgDomain(), session.getAdminLoginName() });
 
 		for (SessionEventHandler handler : sessionEventListeners) {
 			handler.sessionClosed(session);
@@ -339,13 +338,12 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 				handler.handleMessage(request, response);
 				respondMessage.setParameters(response);
 			} catch (SecurityException e) {
-				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]", new Object[] {
-						session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
+				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]",
+						new Object[] { session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
 				logger.debug("kraken msgbus: security violation stacktrace", e);
 				respondMessage = Message.createError(session, message, "security", "Security Violation");
 			} catch (IllegalArgumentException e) {
-				respondMessage = Message.createError(session, message, "invalid-method-signature",
-						"invalid msgbus method signature");
+				respondMessage = Message.createError(session, message, "invalid-method-signature", "invalid msgbus method signature");
 				logger.error("kraken msgbus: illegal msgbus method signature", e);
 			} catch (IllegalAccessException e) {
 				respondMessage = Message.createError(session, message, "invalid-access", "invalid msgbus access");
@@ -364,7 +362,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 					ResourceHandler resourceHandler = resourceApi.getResourceHandler(groupId);
 					String errorMessage = null;
 					if (resourceHandler != null)
-						errorMessage = resourceHandler.formatText(errorCode, new Locale(lang), wce.getProperties());
+						errorMessage = resourceHandler.formatText(errorCode, new Locale(lang), wce.getParameters());
 
 					if (errorMessage == null) {
 						final String templateErrorMessage = "kraken msgbus: error message template [group_id={}, message_id={}, lang={}] not found";
