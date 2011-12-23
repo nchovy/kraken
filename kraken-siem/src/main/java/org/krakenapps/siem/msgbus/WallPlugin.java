@@ -30,18 +30,22 @@ public class WallPlugin {
 	public void getPresetNames(Request req, Response resp) {
 		ConfigCollection col = getCol(req);
 		ConfigIterator it = col.findAll();
+		try {
+			List<Object> presets = new ArrayList<Object>();
+			while (it.hasNext()) {
+				WallPreset preset = PrimitiveConverter.parse(WallPreset.class, it.next().getDocument());
 
-		List<Object> presets = new ArrayList<Object>();
-		while (it.hasNext()) {
-			WallPreset preset = PrimitiveConverter.parse(WallPreset.class, it.next().getDocument());
+				Map<String, Object> m = new HashMap<String, Object>();
+				m.put("guid", preset.getGuid());
+				m.put("name", preset.getName());
+				presets.add(m);
+			}
 
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("guid", preset.getGuid());
-			m.put("name", preset.getName());
-			presets.add(m);
+			resp.put("presets", presets);
+		} finally {
+			if (it != null)
+				it.close();
 		}
-
-		resp.put("presets", presets);
 	}
 
 	@MsgbusMethod

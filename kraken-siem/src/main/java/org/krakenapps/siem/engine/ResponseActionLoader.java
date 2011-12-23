@@ -64,12 +64,16 @@ public class ResponseActionLoader extends ServiceTracker implements ResponseActi
 	private void loadActions(ResponseActionManager manager) {
 		ConfigCollection col = getCol();
 		ConfigIterator it = col.find(Predicates.field("manager", manager.getName()));
-
-		while (it.hasNext()) {
-			Config c = it.next();
-			ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
-			manager.newAction(instance.getNamespace(), instance.getName(), instance.getDescription(),
-					toProperties(instance.getConfigs()));
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				ResponseActionInstance instance = PrimitiveConverter.parse(ResponseActionInstance.class, c.getDocument());
+				manager.newAction(instance.getNamespace(), instance.getName(), instance.getDescription(),
+						toProperties(instance.getConfigs()));
+			}
+		} finally {
+			if (it != null)
+				it.close();
 		}
 	}
 
