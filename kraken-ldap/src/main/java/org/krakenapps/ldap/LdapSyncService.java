@@ -8,8 +8,4 @@ public interface LdapSyncService extends UserExtensionProvider {
 	void setPeriodicSync(boolean activate);
 
 	void sync(LdapProfile profile);
-
-	void importLdap(LdapProfile profile);
-
-	void exportDom(LdapProfile profile);
 }

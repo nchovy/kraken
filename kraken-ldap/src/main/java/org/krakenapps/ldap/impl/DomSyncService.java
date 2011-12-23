@@ -1,7 +1,6 @@
 package org.krakenapps.ldap.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -166,54 +165,21 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 	@Override
 	public void sync(LdapProfile profile) {
-		importLdap(profile);
-		exportDom(profile);
+		Collection<DomainOrganizationalUnit> orgUnits = ldap.getOrganizationUnits(profile);
+		Collection<DomainUserAccount> users = ldap.getDomainUserAccounts(profile);
+
+		exportDom(orgUnits, users, profile);
 		profile.setLastSync(new Date());
 	}
 
-	@Override
-	public void importLdap(LdapProfile profile) {
-		ConfigCollection col = getDatabase().ensureCollection(profile.getName());
-
-		Map<String, Object> orgMap = new HashMap<String, Object>();
-		orgMap.put("value", ldap.getOrganizationUnits(profile));
-		updateConfig(col, "org_unit", orgMap);
-
-		Map<String, Object> userMap = new HashMap<String, Object>();
-		userMap.put("value", ldap.getDomainUserAccounts(profile));
-		updateConfig(col, "user", userMap);
-
-		Map<String, Object> meta = new HashMap<String, Object>();
-		meta.put("updated", new Date());
-		updateConfig(col, "metadata", meta);
-	}
-
-	private void updateConfig(ConfigCollection col, String name, Map<String, Object> values) {
-		values.put("name", name);
-		Object doc = PrimitiveConverter.serialize(values);
-
-		Config c = col.findOne(Predicates.field("name", name));
-		if (c == null)
-			col.add(doc);
-		else {
-			c.setDocument(doc);
-			col.update(c);
-		}
-	}
-
-	@Override
-	public void exportDom(LdapProfile profile) {
-		Map<String, OrganizationUnit> orgUnits = exportOrgUnits(profile);
-		exportUsers(profile, orgUnits);
+	private void exportDom(Collection<DomainOrganizationalUnit> orgUnits, Collection<DomainUserAccount> users, LdapProfile profile) {
+		Map<String, OrganizationUnit> domOrgUnits = exportOrgUnits(profile.getTargetDomain(), orgUnits);
+		exportUsers(profile.getTargetDomain(), users, domOrgUnits);
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, OrganizationUnit> exportOrgUnits(LdapProfile profile) {
+	private Map<String, OrganizationUnit> exportOrgUnits(String domain, Collection<DomainOrganizationalUnit> orgUnits) {
 		Map<String, OrganizationUnit> result = new HashMap<String, OrganizationUnit>();
-
-		ConfigCollection col = getDatabase().ensureCollection(profile.getName());
-		String domain = profile.getTargetDomain();
-		Collection<DomainOrganizationalUnit> orgUnits = loadLdapConfig(col, "org_unit", DomainOrganizationalUnit.class);
 
 		// names-object map
 		Map<List<String>, DomainOrganizationalUnit> orgUnitsMap = new HashMap<List<String>, DomainOrganizationalUnit>();
@@ -305,11 +271,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void exportUsers(LdapProfile profile, Map<String, OrganizationUnit> orgUnits) {
-		ConfigCollection col = getDatabase().ensureCollection(profile.getName());
-		String domain = profile.getTargetDomain();
-		Collection<DomainUserAccount> users = loadLdapConfig(col, "user", DomainUserAccount.class);
-
+	private void exportUsers(String domain, Collection<DomainUserAccount> users, Map<String, OrganizationUnit> orgUnits) {
 		// remove removed ldap users
 		Set<String> loginNames = new HashSet<String>();
 		for (DomainUserAccount user : users)
@@ -370,15 +332,5 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 		userApi.createUsers(domain, create);
 		userApi.updateUsers(domain, update, false);
-	}
-
-	@SuppressWarnings("unchecked")
-	private <T> Collection<T> loadLdapConfig(ConfigCollection col, String name, Class<T> cls) {
-		Config c = col.findOne(Predicates.field("name", name));
-		if (c == null)
-			return new ArrayList<T>();
-
-		Object value = ((Map<String, Object>) c.getDocument()).get("value");
-		return PrimitiveConverter.parseCollection(cls, Arrays.asList((Object[]) value));
 	}
 }
