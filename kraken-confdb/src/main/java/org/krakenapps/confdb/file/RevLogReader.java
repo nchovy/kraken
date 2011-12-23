@@ -19,11 +19,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RevLogReader {
+	private static final byte[] MAGIC_STRING = "KRAKEN_CONFDB".getBytes();
 	private static final int REV_LOG_SIZE = 34;
 
 	private final Logger logger = LoggerFactory.getLogger(RevLogReader.class.getName());
@@ -32,11 +34,13 @@ class RevLogReader {
 	 * collection log file handle
 	 */
 	private RandomAccessFile logRaf;
+	private int logHeaderLength;
 
 	/**
 	 * doc file handle
 	 */
 	private RandomAccessFile docRaf;
+	private int docHeaderLength;
 
 	/**
 	 * collection log buffer
@@ -45,13 +49,28 @@ class RevLogReader {
 
 	public RevLogReader(File logFile, File docFile) throws IOException {
 		this.logRaf = new RandomAccessFile(logFile, "r");
+		byte[] logHeader = new byte[16];
+		this.logRaf.read(logHeader);
+		if (!Arrays.equals(Arrays.copyOf(logHeader, 13), MAGIC_STRING))
+			throw new IOException("invalid log file");
+		if (logHeader[13] != 0x2)
+			throw new IOException("invalid log file version");
+		this.logHeaderLength = 16 + ((logHeader[14] & 0xFF) << 8 + (logHeader[15] & 0xFF));
+
 		this.docRaf = new RandomAccessFile(docFile, "r");
+		byte[] docHeader = new byte[16];
+		this.docRaf.read(docHeader);
+		if (!Arrays.equals(Arrays.copyOf(docHeader, 13), MAGIC_STRING))
+			throw new IOException("invalid doc file");
+		if (docHeader[13] != 0x3)
+			throw new IOException("invalid doc file version");
+		this.docHeaderLength = 16 + ((docHeader[14] & 0xFF) << 8 + (docHeader[15] & 0xFF));
+
 		this.buffer = new byte[REV_LOG_SIZE];
 	}
 
 	public long count() throws IOException {
-		// TODO: consider file header size
-		return logRaf.length() / REV_LOG_SIZE;
+		return (logRaf.length() - logHeaderLength) / REV_LOG_SIZE;
 	}
 
 	public RevLog findDoc(int docId) throws IOException {
@@ -86,7 +105,7 @@ class RevLogReader {
 	public RevLog read(long index) throws IOException {
 		// TODO: consider file header size
 
-		logRaf.seek(index * REV_LOG_SIZE);
+		logRaf.seek(logHeaderLength + index * REV_LOG_SIZE);
 		logRaf.read(buffer);
 		ByteBuffer bb = ByteBuffer.wrap(buffer);
 		return RevLog.deserialize(bb);
@@ -95,7 +114,7 @@ class RevLogReader {
 	public byte[] readDoc(long offset, int length) throws IOException {
 		byte[] buf = new byte[length];
 
-		docRaf.seek(offset);
+		docRaf.seek(docHeaderLength + offset);
 		docRaf.readInt(); // len
 		docRaf.readInt(); // opt
 		docRaf.read(buf);
