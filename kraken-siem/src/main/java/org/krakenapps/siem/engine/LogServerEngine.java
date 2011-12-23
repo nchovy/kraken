@@ -148,12 +148,16 @@ public class LogServerEngine implements LogServer, LogPipe, LoggerRegistryEventL
 	public Collection<ManagedLogger> getManagedLoggers() {
 		ConfigCollection col = getCol();
 		ConfigIterator it = col.findAll();
+		try {
+			List<ManagedLogger> loggers = new ArrayList<ManagedLogger>();
+			while (it.hasNext())
+				loggers.add(PrimitiveConverter.parse(ManagedLogger.class, it.next().getDocument()));
 
-		List<ManagedLogger> loggers = new ArrayList<ManagedLogger>();
-		while (it.hasNext())
-			loggers.add(PrimitiveConverter.parse(ManagedLogger.class, it.next().getDocument()));
-
-		return loggers;
+			return loggers;
+		} finally {
+			if (it != null)
+				it.close();
+		}
 	}
 
 	@Override
