@@ -370,6 +370,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 					}
 
 					respondMessage = Message.createError(session, message, errorCode, errorMessage);
+					respondMessage.setParameters(wce.getParameters());
 				} else {
 					respondMessage = Message.createError(session, message, "general-error", "invocation target exception");
 				}

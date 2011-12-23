@@ -252,6 +252,9 @@ public class AdminApiImpl implements AdminApi {
 						}
 					} else if (loggedIn.size() >= maxSession) {
 						LoggedInAdmin peek = loggedIn.peek();
+						if (peek.level > admin.getRole().getLevel())
+							throw new DOMException("max-session");
+
 						Map<String, Object> m = new HashMap<String, Object>();
 						m.put("login_name", peek.loginName);
 						m.put("session_id", peek.session.getId());

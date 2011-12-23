@@ -2,8 +2,6 @@ package org.krakenapps.msgbus;
 
 import java.util.Map;
 
-import org.krakenapps.api.Primitive;
-
 public class MsgbusException extends RuntimeException {
 	private static final long serialVersionUID = 1L;
 
