@@ -22,10 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.MapTypeHint;
-import org.krakenapps.api.ReferenceKey;
 import org.krakenapps.confdb.CollectionName;
 
 @CollectionName("organization-unit")
@@ -41,8 +39,7 @@ public class OrganizationUnit {
 	@MapTypeHint({ String.class, Object.class })
 	private Map<String, Object> ext = new HashMap<String, Object>();
 
-	@ReferenceKey("guid")
-	@CollectionTypeHint(OrganizationUnit.class)
+	@FieldOption(skip = true)
 	private List<OrganizationUnit> children = new ArrayList<OrganizationUnit>();
 
 	@FieldOption(nullable = false)

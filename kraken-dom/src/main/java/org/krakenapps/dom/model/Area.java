@@ -20,9 +20,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
-import org.krakenapps.api.ReferenceKey;
 import org.krakenapps.confdb.CollectionName;
 
 @CollectionName("area")
@@ -44,8 +42,7 @@ public class Area {
 	@FieldOption(nullable = false)
 	private Date updated = new Date();
 
-	@ReferenceKey("guid")
-	@CollectionTypeHint(Area.class)
+	@FieldOption(skip = true)
 	private List<Area> children = new ArrayList<Area>();
 
 	public String getGuid() {
