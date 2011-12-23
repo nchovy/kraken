@@ -238,6 +238,9 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	}
 
 	public void closeSession(Session session) {
+		if (session == null)
+			return;
+
 		sessionMap.remove(session.getId());
 
 		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed", new Object[] { session,
