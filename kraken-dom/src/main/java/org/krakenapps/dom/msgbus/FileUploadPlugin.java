@@ -76,6 +76,7 @@ public class FileUploadPlugin {
 		logger.info(template, new Object[] { req.getSession().getId(), token, spaceGuid, fileName, fileSize });
 
 		resp.put("token", token);
+		resp.put("file_guid", uploadToken.getFileGuid());
 		resp.put("file_name", fileName);
 	}
 

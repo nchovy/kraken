@@ -184,6 +184,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		String guid = null;
 		if (totalSize == item.token.getFileSize()) {
 			UploadedFile uploaded = new UploadedFile();
+			uploaded.setGuid(item.token.getFileGuid());
 			File newFile = null;
 			guid = uploaded.getGuid();
 			if (item.token.getSpaceGuid() != null) {
