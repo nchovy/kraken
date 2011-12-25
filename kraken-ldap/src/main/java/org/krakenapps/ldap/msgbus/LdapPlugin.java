@@ -35,6 +35,8 @@ import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPException;
@@ -42,6 +44,7 @@ import com.novell.ldap.LDAPException;
 @Component(name = "ldap-plugin")
 @MsgbusPlugin
 public class LdapPlugin {
+	private final Logger logger = LoggerFactory.getLogger(LdapPlugin.class.getName());
 	private BundleContext bc;
 
 	@Requires
@@ -118,6 +121,14 @@ public class LdapPlugin {
 	}
 
 	@MsgbusMethod
+	public void removeProfiles(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
+		List<String> names = (List<String>) req.get("names");
+		for (String name : names)
+			ldap.removeProfile(name);
+	}
+
+	@MsgbusMethod
 	public void removeProfile(Request req, Response resp) {
 		String name = req.getString("name");
 		ldap.removeProfile(name);
@@ -158,8 +169,12 @@ public class LdapPlugin {
 		String account = req.getString("account");
 		String password = req.getString("password");
 
+		if (port == null)
+			port = LDAPConnection.DEFAULT_PORT;
+
 		LDAPConnection lc = new LDAPConnection();
 		try {
+			logger.trace("kraken ldap: trying to connect to dc [{}], port [{}]", dc, port);
 			lc.connect(dc, port);
 			lc.bind(LDAPConnection.LDAP_V3, account, password.getBytes("utf-8"));
 		} finally {

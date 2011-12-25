@@ -43,12 +43,21 @@ public class LdapProfile {
 		X509, JKS;
 	}
 
+	@FieldOption(nullable = false)
 	private String name;
 	private String targetDomain = "localhost";
+
+	@FieldOption(nullable = false)
 	private String dc;
+
 	private Integer port;
+
+	@FieldOption(nullable = false)
 	private String account;
+
+	@FieldOption(nullable = false)
 	private String password;
+
 	private byte[] trustStore;
 	private long syncInterval = DEFAULT_SYNC_INTERVAL;
 
@@ -126,11 +135,13 @@ public class LdapProfile {
 		setTrustStore(type, cert, DEFAULT_TRUSTSTORE_PASSWORD);
 	}
 
-	public void setTrustStore(CertificateType type, String base64EncodedCert, char[] password) throws GeneralSecurityException, IOException {
+	public void setTrustStore(CertificateType type, String base64EncodedCert, char[] password) throws GeneralSecurityException,
+			IOException {
 		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)), password);
 	}
 
-	public void setTrustStore(CertificateType type, InputStream cert, char[] password) throws GeneralSecurityException, IOException {
+	public void setTrustStore(CertificateType type, InputStream cert, char[] password) throws GeneralSecurityException,
+			IOException {
 		KeyStore jks = KeyStore.getInstance("JKS");
 
 		if (CertificateType.X509.equals(type)) {
@@ -172,7 +183,8 @@ public class LdapProfile {
 
 	@Override
 	public String toString() {
-		return String.format("%s [target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s]", name, targetDomain,
-				dc, getPort(), account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), (trustStore != null));
+		return String.format("%s [target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s]", name,
+				targetDomain, dc, getPort(), account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync),
+				(trustStore != null));
 	}
 }
