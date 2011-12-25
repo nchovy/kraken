@@ -111,6 +111,7 @@
     <module>kraken-syslogmon</module>
     <module>kraken-logdb-geoip</module>
     <module>kraken-logdb-cmd</module>
+    <module>kraken-word</module>
   </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>
