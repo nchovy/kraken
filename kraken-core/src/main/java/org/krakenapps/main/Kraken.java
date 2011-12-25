@@ -216,7 +216,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 			felix.init();
 			BundleContext bundleContext = felix.getBundleContext();
 			BundleManagerService manager = new BundleManagerService(bundleContext);
-			BundleScript script = new BundleScript(manager);
+			BundleScript script = new BundleScript(context, manager);
 			script.setScriptContext(new OutputOnlyScriptContext(logger));
 			script.updateAll(new String[] { "force" });
 			script.refresh(new String[0]);

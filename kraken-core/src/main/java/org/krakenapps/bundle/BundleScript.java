@@ -51,10 +51,12 @@ import org.osgi.service.prefs.PreferencesService;
 
 public class BundleScript implements Script {
 	private static final String BUNDLE_REPO_PATH = "/bundle/repo";
+	private BundleContext bc;
 	private ScriptContext context;
 	private BundleManager manager;
 
-	public BundleScript(BundleManager manager) {
+	public BundleScript(BundleContext bc, BundleManager manager) {
+		this.bc = bc;
 		this.manager = manager;
 	}
 
@@ -118,9 +120,7 @@ public class BundleScript implements Script {
 			@ScriptArgument(name = "alias", type = "string", description = "the alias of bundle repository"),
 			@ScriptArgument(name = "url", type = "string", description = "the url of bundle repository"),
 			@ScriptArgument(name = "trust store alias", type = "string", description = "the alias of truststore"),
-			@ScriptArgument(name = "key store alias", type = "string",
-					description = "the alias of keystore. if provided, client authentication will be used",
-					optional = true) })
+			@ScriptArgument(name = "key store alias", type = "string", description = "the alias of keystore. if provided, client authentication will be used", optional = true) })
 	public void addSecureRepository(String[] args) {
 		try {
 			String alias = args[0];
@@ -140,8 +140,7 @@ public class BundleScript implements Script {
 
 	}
 
-	@ScriptUsage(description = "Remove maven repository", arguments = { @ScriptArgument(name = "alias",
-			type = "string", description = "alias of the maven repository") })
+	@ScriptUsage(description = "Remove maven repository", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the maven repository") })
 	public void removeRepository(String[] args) {
 		try {
 			String alias = args[0];
@@ -168,8 +167,7 @@ public class BundleScript implements Script {
 		sync(repo);
 	}
 
-	@ScriptUsage(description = "Reset credential for repository http authentication", arguments = { @ScriptArgument(
-			name = "alias", type = "string", description = "alias of the maven repository") })
+	@ScriptUsage(description = "Reset credential for repository http authentication", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the maven repository") })
 	public void resetHttpAuth(String[] args) {
 		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
 		String alias = args[0];
@@ -285,12 +283,31 @@ public class BundleScript implements Script {
 
 	@ScriptUsage(description = "update the bundle(s)")
 	public void update(String[] args) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		try {
 			for (String arg : args) {
 				long bundleId = Long.parseLong(arg);
 				try {
+					Bundle b = bc.getBundle(bundleId);
+					if (b == null)
+						continue;
+
+					String before = (String) b.getHeaders().get("Bnd-LastModified");
 					manager.updateBundle(bundleId);
-					context.println("bundle " + bundleId + " updated.");
+					String after = (String) b.getHeaders().get("Bnd-LastModified");
+
+					context.print("bundle " + bundleId + " updated");
+
+					if (before != null && after != null) {
+						String beforeDate = dateFormat.format(new Date(Long.parseLong(before)));
+						String afterDate = dateFormat.format(new Date(Long.parseLong(after)));
+						if (beforeDate.equals(afterDate))
+							context.print(" (same build timestamp)");
+						else
+							context.print(", old timestamp: " + beforeDate + ", new timestamp: " + afterDate);
+					}
+
+					context.println();
 				} catch (RuntimeException re) {
 					context.println("failed to update bundle " + bundleId);
 					context.println("reason: " + re.getMessage());
@@ -301,10 +318,7 @@ public class BundleScript implements Script {
 		}
 	}
 
-	@ScriptUsage(
-			description = "update all locally-installed bundle(s). before use this method, stop ipojo bundle first.",
-			arguments = { @ScriptArgument(name = "isForced", description = "use 'force' to run this method.",
-					optional = false, type = "force or not") })
+	@ScriptUsage(description = "update all locally-installed bundle(s). before use this method, stop ipojo bundle first.", arguments = { @ScriptArgument(name = "isForced", description = "use 'force' to run this method.", optional = false, type = "force or not") })
 	public void updateAll(String[] args) {
 		if (args.length < 1 || !args[0].equals("force")) {
 			context.printf("Ignored. Use 'force' as argument.\n");
@@ -340,8 +354,7 @@ public class BundleScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "list all bundles", arguments = { @ScriptArgument(name = "filter", type = "string",
-			description = "filter text for bundle symbolic name", optional = true) })
+	@ScriptUsage(description = "list all bundles", arguments = { @ScriptArgument(name = "filter", type = "string", description = "filter text for bundle symbolic name", optional = true) })
 	public void list(String[] args) {
 		String filterText = null;
 		if (args.length > 0)
@@ -369,8 +382,7 @@ public class BundleScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "print bundle location", arguments = { @ScriptArgument(name = "bundle id",
-			description = "the bundle id") })
+	@ScriptUsage(description = "print bundle location", arguments = { @ScriptArgument(name = "bundle id", description = "the bundle id") })
 	public void location(String[] args) {
 		try {
 			long bundleId = Long.parseLong(args[0]);
@@ -459,7 +471,7 @@ public class BundleScript implements Script {
 		}
 
 		if (bundleId != -1) {
-			Bundle bundle = Kraken.getContext().getBundle(bundleId);
+			Bundle bundle = bc.getBundle(bundleId);
 			if (bundle == null) {
 				context.println("bundle [" + bundleId + "] not found");
 				return;

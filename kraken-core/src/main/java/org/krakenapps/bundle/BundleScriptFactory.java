@@ -22,16 +22,17 @@ import org.krakenapps.main.Kraken;
 import org.osgi.framework.BundleContext;
 
 public class BundleScriptFactory implements ScriptFactory {
+	private BundleContext bc;
 	private BundleManager manager;
 	
 	public BundleScriptFactory() {
-		BundleContext bc = Kraken.getContext();
+		bc = Kraken.getContext();
 		manager = new BundleManagerService(bc);
 		bc.registerService(BundleManager.class.getName(), manager, null);
 	}
 	
 	@Override
 	public Script createScript() {
-		return new BundleScript(manager);
+		return new BundleScript(bc, manager);
 	}
 }
