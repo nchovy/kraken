@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>kraken</artifactId>
+		<groupId>org.krakenapps</groupId>
+		<version>1.0.0</version>
+	</parent>
+	<groupId>org.krakenapps</groupId>
+	<artifactId>kraken-word</artifactId>
+	<version>0.1.0</version>
+	<packaging>bundle</packaging>
+	<name>Kraken Word</name>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>2.0.1</version>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-SymbolicName>kraken-word</Bundle-SymbolicName>
+						<Export-Package>YOUR_EXPORT_PACKAGES</Export-Package>
+						<Private-Package>YOUR_PRIVATE_PACKAGES</Private-Package>
+						<Import-Package>*</Import-Package>
+					</instructions>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-ipojo-plugin</artifactId>
+				<version>1.4.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>ipojo-bundle</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>3.8-beta5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>3.8-beta5</version>
+		</dependency>
+	</dependencies>
+</project>
