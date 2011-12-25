@@ -184,6 +184,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		String guid = null;
 		if (totalSize == item.token.getFileSize()) {
 			UploadedFile uploaded = new UploadedFile();
+			uploaded.setGuid(item.token.getFileGuid());
 			File newFile = null;
 			guid = uploaded.getGuid();
 			if (item.token.getSpaceGuid() != null) {
@@ -238,19 +239,17 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	}
 
 	@Override
-	public UploadedFile getFileMetadata(String tokenGuid, String fileGuid) {
+	public UploadedFile getFileMetadataWithToken(String tokenGuid, String fileGuid) {
 		DownloadToken token = downloadTokens.get(tokenGuid);
 		if (token == null)
 			throw new DOMException("download-token-not-found");
 
-		UploadedFile uploaded = cfg.get(token.session.getOrgDomain(), file, getPred(fileGuid), FILE_NOT_FOUND);
-		if (!token.session.getAdminLoginName().equals(uploaded.getOwner().getLoginName())) {
-			Map<String, Object> params = new HashMap<String, Object>();
-			params.put("guid", uploaded.getGuid());
-			params.put("owner", uploaded.getOwner().getLoginName());
-			throw new DOMException("read-access-denied", params);
-		}
-		return uploaded;
+		return getFileMetadata(token.session.getOrgDomain(), fileGuid);
+	}
+
+	@Override
+	public UploadedFile getFileMetadata(String domain, String fileGuid) {
+		return cfg.get(domain, file, getPred(fileGuid), FILE_NOT_FOUND);
 	}
 
 	@Override

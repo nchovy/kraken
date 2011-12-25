@@ -19,6 +19,8 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.AdminApi;
+import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.User;
@@ -37,13 +39,19 @@ public class AdminPlugin {
 	@Requires
 	private UserApi userApi;
 
+	@Requires
+	private RoleApi roleApi;
+
+	@Requires
+	private ConfigManager conf;
+
 	@MsgbusMethod
 	public void getAdmins(Request req, Response resp) {
 		resp.put("admins", PrimitiveConverter.serialize(adminApi.getAdmins(req.getOrgDomain())));
 	}
 
 	@MsgbusMethod
-	public void getAdminByUser(Request req, Response resp) {
+	public void getAdmin(Request req, Response resp) {
 		User user = userApi.getUser(req.getOrgDomain(), req.getString("login_name"));
 		Admin admin = adminApi.getAdmin(req.getOrgDomain(), user);
 		resp.put("admin", PrimitiveConverter.serialize(admin));
@@ -52,18 +60,9 @@ public class AdminPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void setAdmin(Request req, Response resp) {
-		Admin admin = PrimitiveConverter.parse(Admin.class, req.getParams());
+		Admin admin = (Admin) PrimitiveConverter.overwrite(new Admin(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		String loginName = req.getString("login_name");
 		adminApi.setAdmin(req.getOrgDomain(), req.getAdminLoginName(), loginName, admin);
-	}
-
-	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "admin_grant")
-	public void updateAdmin(Request req, Response resp) {
-		String loginName = req.getString("login_name");
-		Admin admin = adminApi.getAdmin(req.getOrgDomain(), loginName);
-		PrimitiveConverter.overwrite(admin, req.getParams());
-		adminApi.updateAdmin(req.getOrgDomain(), req.getAdminLoginName(), loginName, admin);
 	}
 
 	@MsgbusMethod
@@ -80,8 +79,15 @@ public class AdminPlugin {
 	}
 
 	@MsgbusMethod
+	public void hasPermission(Request req, Response resp) {
+		String group = req.getString("group");
+		String permission = req.getString("permission");
+		resp.put("result", roleApi.hasPermission(req.getOrgDomain(), req.getAdminLoginName(), group, permission));
+	}
+
+	@MsgbusMethod
 	public void updateOtpSeed(Request req, Response resp) {
 		String newSeed = adminApi.updateOtpSeed(req.getOrgDomain(), req.getAdminLoginName(), req.getString("login_name"));
-		resp.put("new_seed", newSeed);
+		resp.put("otp_seed", newSeed);
 	}
 }

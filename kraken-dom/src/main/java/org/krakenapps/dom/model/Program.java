@@ -22,8 +22,8 @@ import org.krakenapps.confdb.CollectionName;
 
 @CollectionName("program")
 public class Program {
-	@FieldOption(nullable = false)
-	private String packName;
+	@FieldOption(name = "pack", nullable = false)
+	private String pack;
 
 	@FieldOption(nullable = false, length = 60)
 	private String name;
@@ -31,8 +31,8 @@ public class Program {
 	@FieldOption(length = 255)
 	private String description;
 
-	@FieldOption(length = 255)
-	private String typeName;
+	@FieldOption(name = "path", length = 255)
+	private String path;
 
 	private boolean visible; // in start menu
 	private int seq;
@@ -43,12 +43,12 @@ public class Program {
 	@FieldOption(nullable = false)
 	private Date updated = new Date();
 
-	public String getPackName() {
-		return packName;
+	public String getPack() {
+		return pack;
 	}
 
-	public void setPackName(String packName) {
-		this.packName = packName;
+	public void setPack(String pack) {
+		this.pack = pack;
 	}
 
 	public String getName() {
@@ -67,12 +67,12 @@ public class Program {
 		this.description = description;
 	}
 
-	public String getTypeName() {
-		return typeName;
+	public String getPath() {
+		return path;
 	}
 
-	public void setTypeName(String typeName) {
-		this.typeName = typeName;
+	public void setPath(String path) {
+		this.path = path;
 	}
 
 	public boolean isVisible() {
@@ -109,7 +109,7 @@ public class Program {
 
 	@Override
 	public String toString() {
-		return "pack=" + packName + ", name=" + name + ", description=" + description + ", type=" + typeName + ", visible="
+		return "pack=" + pack + ", name=" + name + ", description=" + description + ", path=" + path + ", visible="
 				+ visible + ", seq=" + seq + ", created=" + created + ", updated=" + updated;
 	}
 }

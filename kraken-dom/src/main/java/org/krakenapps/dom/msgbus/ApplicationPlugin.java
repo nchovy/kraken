@@ -21,6 +21,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.ApplicationApi;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.model.Application;
 import org.krakenapps.dom.model.ApplicationGroup;
 import org.krakenapps.dom.model.Vendor;
@@ -32,6 +33,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-app-plugin")
 @MsgbusPlugin
 public class ApplicationPlugin {
+	@Requires
+	private ConfigManager conf;
+
 	@Requires
 	private ApplicationApi appApi;
 
@@ -83,7 +87,8 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createApplication(Request req, Response resp) {
-		Application application = (Application) PrimitiveConverter.overwrite(new Application(), req.getParams());
+		Application application = (Application) PrimitiveConverter.overwrite(new Application(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		appApi.createApplication(req.getOrgDomain(), application);
 		resp.put("guid", application.getGuid());
 	}
@@ -91,7 +96,8 @@ public class ApplicationPlugin {
 	@MsgbusMethod
 	public void updateApplication(Request req, Response resp) {
 		Application before = appApi.getApplication(req.getOrgDomain(), req.getString("guid"));
-		Application application = (Application) PrimitiveConverter.overwrite(before, req.getParams());
+		Application application = (Application) PrimitiveConverter.overwrite(before, req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		appApi.updateApplication(req.getOrgDomain(), application);
 	}
 

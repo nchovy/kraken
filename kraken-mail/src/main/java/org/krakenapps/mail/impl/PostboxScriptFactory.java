@@ -6,7 +6,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.mail.PostboxApi;
+import org.krakenapps.mail.PostboxRegistry;
 
 @Component(name = "postbox-script-factory")
 @Provides
@@ -16,7 +16,7 @@ public class PostboxScriptFactory implements ScriptFactory {
 	private String alias;
 
 	@Requires
-	private PostboxApi postbox;
+	private PostboxRegistry postbox;
 
 	@Override
 	public Script createScript() {

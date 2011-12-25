@@ -126,11 +126,15 @@ class FileConfigIterator implements ConfigIterator {
 
 	@Override
 	public Collection<Object> getDocuments() {
-		Collection<Object> docs = new ArrayList<Object>();
-		ConfigIterator it = this;
-		while (it.hasNext())
-			docs.add(it.next().getDocument());
-		return docs;
+		try {
+			Collection<Object> docs = new ArrayList<Object>();
+			ConfigIterator it = this;
+			while (it.hasNext())
+				docs.add(it.next().getDocument());
+			return docs;
+		} finally {
+			close();
+		}
 	}
 
 	@Override
@@ -140,12 +144,15 @@ class FileConfigIterator implements ConfigIterator {
 
 	@Override
 	public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback) {
-		Collection<T> docs = new ArrayList<T>();
-		ConfigIterator it = this;
-		while (it.hasNext())
-			docs.add(it.next().getDocument(cls, callback));
-		close();
-		return docs;
+		try {
+			Collection<T> docs = new ArrayList<T>();
+			ConfigIterator it = this;
+			while (it.hasNext())
+				docs.add(it.next().getDocument(cls, callback));
+			return docs;
+		} finally {
+			close();
+		}
 	}
 
 	@Override

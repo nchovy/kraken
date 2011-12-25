@@ -15,8 +15,6 @@
  */
 package org.krakenapps.ldap;
 
-import java.io.InputStream;
-import java.security.KeyStore;
 import java.util.Collection;
 
 public interface LdapService {
@@ -37,16 +35,4 @@ public interface LdapService {
 	boolean verifyPassword(LdapProfile profile, String account, String password);
 
 	boolean verifyPassword(LdapProfile profile, String account, String password, int timeout);
-
-	KeyStore getKeyStore(String base64Encoded);
-
-	KeyStore getKeyStore(String keyStoreType, String base64Encoded);
-
-	KeyStore getKeyStore(InputStream is);
-
-	KeyStore getKeyStore(String keyStoreType, InputStream is);
-
-	KeyStore x509ToJKS(String base64Encoded);
-
-	KeyStore x509ToJKS(InputStream is);
 }

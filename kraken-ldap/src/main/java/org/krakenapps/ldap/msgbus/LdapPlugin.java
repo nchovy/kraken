@@ -16,17 +16,16 @@
 package org.krakenapps.ldap.msgbus;
 
 import java.io.UnsupportedEncodingException;
-import java.security.KeyStore;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
+import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
 import org.krakenapps.msgbus.MsgbusException;
@@ -36,6 +35,8 @@ import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPException;
@@ -43,6 +44,7 @@ import com.novell.ldap.LDAPException;
 @Component(name = "ldap-plugin")
 @MsgbusPlugin
 public class LdapPlugin {
+	private final Logger logger = LoggerFactory.getLogger(LdapPlugin.class.getName());
 	private BundleContext bc;
 
 	@Requires
@@ -52,91 +54,107 @@ public class LdapPlugin {
 		this.bc = bc;
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void getProfiles(Request req, Response resp) {
-		List<Object> l = new ArrayList<Object>();
-		for (LdapProfile profile : ldap.getProfiles())
-			l.add(marshal(profile));
-
-		resp.put("profiles", l);
+		List<Object> profiles = new ArrayList<Object>();
+		for (LdapProfile profile : ldap.getProfiles()) {
+			Map<String, Object> serialize = (Map<String, Object>) PrimitiveConverter.serialize(profile);
+			serialize.put("trust_store", (serialize.get("trust_store") != null));
+			profiles.add(serialize);
+		}
+		resp.put("profiles", PrimitiveConverter.serialize(ldap.getProfiles()));
 	}
 
+	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void getProfile(Request req, Response resp) {
-		String name = req.getString("profile_name");
+		String name = req.getString("name");
 		LdapProfile profile = ldap.getProfile(name);
-		resp.put("profile", profile == null ? null : marshal(profile));
+		if (profile == null)
+			throw new MsgbusException("ldap", "profile not found");
+
+		Map<String, Object> serialize = (Map<String, Object>) PrimitiveConverter.serialize(profile);
+		serialize.put("trust_store", (serialize.get("trust_store") != null));
+		resp.put("profile", serialize);
 	}
 
 	@MsgbusMethod
 	public void createProfile(Request req, Response resp) {
-		String name = req.getString("profile_name");
-		String dc = req.getString("dc");
-		int port = LdapProfile.DEFAULT_PORT;
-		String account = req.getString("account");
-		String password = req.getString("password");
-		String encoded = null;
-		int syncInterval = 10 * 60 * 1000;
-		if (req.has("port"))
-			port = req.getInteger("port");
-		if (req.has("sync_interval"))
-			syncInterval = req.getInteger("sync_interval");
-		if (req.has("trust_store"))
-			encoded = req.getString("trust_store");
+		LdapProfile profile = PrimitiveConverter.parse(LdapProfile.class, req.getParams());
 
-		KeyStore trustStore = null;
-		try {
-			trustStore = ldap.x509ToJKS(encoded);
-		} catch (IllegalArgumentException e) {
-			throw new MsgbusException("ldap", e.getMessage());
+		if (req.has("cert_type") && req.has("cert_base64")) {
+			try {
+				CertificateType type = CertificateType.valueOf(req.getString("cert_type"));
+				String base64 = req.getString("cert_base64");
+				profile.setTrustStore(type, base64);
+			} catch (Exception e) {
+				throw new MsgbusException("ldap", "invalid cert");
+			}
 		}
 
-		LdapProfile profile = new LdapProfile(name, dc, port, account, password, trustStore, syncInterval);
 		ldap.createProfile(profile);
 	}
 
 	@MsgbusMethod
+	public void updateProfile(Request req, Response resp) {
+		String name = req.getString("name");
+		LdapProfile profile = ldap.getProfile(name);
+		PrimitiveConverter.overwrite(profile, req.getParams());
+
+		if (req.has("cert_type") && req.has("cert_base64")) {
+			profile.unsetTrustStore();
+			try {
+				CertificateType type = CertificateType.valueOf(req.getString("cert_type"));
+				if (type == null)
+					profile.unsetTrustStore();
+				else {
+					String base64 = req.getString("cert_base64");
+					profile.setTrustStore(type, base64);
+				}
+			} catch (Exception e) {
+				throw new MsgbusException("ldap", "invalid cert");
+			}
+		}
+
+		ldap.updateProfile(profile);
+	}
+
+	@MsgbusMethod
+	public void removeProfiles(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
+		List<String> names = (List<String>) req.get("names");
+		for (String name : names)
+			ldap.removeProfile(name);
+	}
+
+	@MsgbusMethod
 	public void removeProfile(Request req, Response resp) {
-		String name = req.getString("profile_name");
+		String name = req.getString("name");
 		ldap.removeProfile(name);
 	}
 
 	@MsgbusMethod
-	public void setSyncInterval(Request req, Response resp) {
-		String name = req.getString("profile_name");
-		int syncInterval = req.getInteger("sync_interval");
-
-		LdapProfile p = ldap.getProfile(name);
-		if (p == null)
-			throw new MsgbusException("ldap", "profile-not-found");
-
-		LdapProfile newProfile = new LdapProfile(name, p.getDc(), p.getPort(), p.getAccount(), p.getPassword(),
-				p.getTrustStore(), syncInterval, p.getLastSync());
-
-		ldap.updateProfile(newProfile);
-	}
-
-	@MsgbusMethod
 	public void getDomainUserAccounts(Request req, Response resp) {
-		List<Object> l = new ArrayList<Object>();
-		String profileName = req.getString("profile_name");
-		LdapProfile profile = ldap.getProfile(profileName);
+		List<Object> users = new ArrayList<Object>();
+		String name = req.getString("name");
+		LdapProfile profile = ldap.getProfile(name);
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
 		for (DomainUserAccount account : ldap.getDomainUserAccounts(profile))
-			l.add(marshal(account));
+			users.add(PrimitiveConverter.serialize(account));
 
-		resp.put("users", l);
+		resp.put("users", users);
 	}
 
 	@MsgbusMethod
 	public void verifyPassword(Request req, Response resp) {
-		String profileName = req.getString("profile_name");
+		String name = req.getString("name");
 		String account = req.getString("account");
 		String testPassword = req.getString("test_password");
 
-		LdapProfile profile = ldap.getProfile(profileName);
+		LdapProfile profile = ldap.getProfile(name);
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
@@ -147,12 +165,17 @@ public class LdapPlugin {
 	@MsgbusMethod
 	public void testConnection(Request req, Response resp) throws LDAPException, UnsupportedEncodingException {
 		String dc = req.getString("dc");
+		Integer port = req.getInteger("port");
 		String account = req.getString("account");
 		String password = req.getString("password");
 
+		if (port == null)
+			port = LDAPConnection.DEFAULT_PORT;
+
 		LDAPConnection lc = new LDAPConnection();
 		try {
-			lc.connect(dc, LDAPConnection.DEFAULT_PORT);
+			logger.trace("kraken ldap: trying to connect to dc [{}], port [{}]", dc, port);
+			lc.connect(dc, port);
 			lc.bind(LDAPConnection.LDAP_V3, account, password.getBytes("utf-8"));
 		} finally {
 			if (lc.isConnected())
@@ -161,53 +184,17 @@ public class LdapPlugin {
 	}
 
 	@MsgbusMethod
-	public void syncDom(Request req, Response resp) {
+	public void sync(Request req, Response resp) {
 		ServiceReference ref = bc.getServiceReference(LdapSyncService.class.getName());
-		if (ref == null) {
+		if (ref == null)
 			throw new MsgbusException("ldap", "kraken-dom not found");
-		}
 
-		String profileName = req.getString("profile_name");
-		LdapProfile profile = ldap.getProfile(profileName);
+		String name = req.getString("name");
+		LdapProfile profile = ldap.getProfile(name);
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
 		LdapSyncService ldapSync = (LdapSyncService) bc.getService(ref);
 		ldapSync.sync(profile);
-	}
-
-	private Map<String, Object> marshal(LdapProfile profile) {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("name", profile.getName());
-		m.put("dc", profile.getDc());
-		m.put("port", profile.getPort());
-		m.put("account", profile.getAccount());
-		m.put("password", profile.getPassword());
-		m.put("sync_interval", profile.getSyncInterval());
-		m.put("last_sync", profile.getLastSync());
-		return m;
-	}
-
-	private Map<String, Object> marshal(DomainUserAccount account) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		Map<String, Object> m = new HashMap<String, Object>();
-
-		m.put("account_name", account.getAccountName());
-		m.put("department", account.getDepartment());
-		m.put("display_name", account.getDisplayName());
-		m.put("distinguished_name", account.getDistinguishedName());
-		m.put("given_name", account.getGivenName());
-		m.put("last_logon", account.getLastLogon());
-		m.put("last_password_change", account.getLastPasswordChange());
-		m.put("login_count", account.getLoginCount());
-		m.put("mail", account.getMail());
-		m.put("mobile", account.getMobile());
-		m.put("surname", account.getSurname());
-		m.put("title", account.getTitle());
-		m.put("user_principal_name", account.getUserPrincipalName());
-		m.put("when_created", dateFormat.format(account.getWhenCreated()));
-		m.put("account_expires", dateFormat.format(account.getAccountExpires()));
-
-		return m;
 	}
 }

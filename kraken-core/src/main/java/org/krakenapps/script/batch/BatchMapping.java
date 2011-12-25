@@ -17,12 +17,25 @@ package org.krakenapps.script.batch;
 
 import java.io.File;
 
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
+
+@CollectionName("batch")
 public class BatchMapping {
 	private String alias;
+	private String filepath;
+
+	@FieldOption(skip = true)
 	private File scriptFile;
+
+	@SuppressWarnings("unused")
+	private BatchMapping() {
+		// for primitive parse
+	}
 
 	public BatchMapping(String alias, File scriptFile) {
 		this.alias = alias;
+		this.filepath = scriptFile.getAbsolutePath();
 		this.scriptFile = scriptFile;
 	}
 
@@ -30,8 +43,16 @@ public class BatchMapping {
 		return alias;
 	}
 
+	public String getFilepath() {
+		return filepath;
+	}
+
 	public File getScriptFile() {
 		return scriptFile;
+	}
+
+	public void setScriptFileFromFilepath() {
+		this.scriptFile = new File(filepath);
 	}
 
 	@Override

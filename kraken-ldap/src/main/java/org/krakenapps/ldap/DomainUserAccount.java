@@ -16,180 +16,176 @@
 package org.krakenapps.ldap;
 
 import java.util.Date;
-import java.util.Set;
-import java.util.TreeSet;
+
+import org.krakenapps.api.DateFormat;
+
+import com.novell.ldap.LDAPAttribute;
+import com.novell.ldap.LDAPAttributeSet;
+import com.novell.ldap.LDAPEntry;
 
 public class DomainUserAccount {
+	private String accountName;
 	private boolean domainAdmin;
 	private boolean allowDialIn;
-	private int loginCount;
-	private Set<String> memberOf = new TreeSet<String>();
+	private int logonCount;
+	private String[] memberOf;
 	private String distinguishedName;
 	private String userPrincipalName;
 	private String organizationUnitName;
 	private String displayName;
 	private String surname;
 	private String givenName;
-	private String accountName;
 	private String title;
 	private String department;
 	private String mail;
 	private String mobile;
 	private Date lastLogon;
 	private Date whenCreated;
-	private Date lastPasswordChange;
+	private Date pwdLastSet;
 	private Date accountExpires;
 
-	public boolean isDomainAdmin() {
-		return domainAdmin;
+	@SuppressWarnings("unused")
+	private DomainUserAccount() {
+		// for primitive parse
 	}
 
-	public void setDomainAdmin(boolean domainAdmin) {
-		this.domainAdmin = domainAdmin;
+	public DomainUserAccount(LDAPEntry entry) {
+		LDAPAttributeSet attrs = entry.getAttributeSet();
+		this.accountName = getString(attrs, "sAMAccountName");
+		this.domainAdmin = getInt(attrs, "adminCount") > 0;
+		this.allowDialIn = "TRUE".equals(getString(attrs, "msNPAllowDialin"));
+		this.logonCount = getInt(attrs, "logonCount");
+		this.memberOf = getStringArray(attrs, "memberOf");
+		this.distinguishedName = getString(attrs, "distinguishedName");
+		this.userPrincipalName = getString(attrs, "userPrincipalName");
+		this.displayName = getString(attrs, "displayName");
+		this.surname = getString(attrs, "sn");
+		this.givenName = getString(attrs, "givenName");
+		this.title = getString(attrs, "title");
+		this.department = getString(attrs, "department");
+		this.mail = getString(attrs, "mail");
+		this.mobile = getString(attrs, "mobile");
+		this.lastLogon = getTimestamp(attrs, "lastLogon");
+		this.whenCreated = getDate(attrs, "whenCreated");
+		this.pwdLastSet = getTimestamp(attrs, "pwdLastSet");
+		long expire = getLong(attrs, "accountExpires");
+		if (expire != 0L && expire != 0x7FFFFFFFFFFFFFFFL)
+			this.accountExpires = getTimestamp(attrs, "accountExpires");
+
+		for (String token : distinguishedName.split("(?<!\\\\),")) {
+			String attr = token.split("=")[0];
+			String value = token.split("=")[1];
+			if (attr.equals("OU")) {
+				this.organizationUnitName = value;
+				break;
+			}
+		}
 	}
 
-	public boolean isAllowDialIn() {
-		return allowDialIn;
+	private int getInt(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? 0 : Integer.parseInt(attr.getStringValue());
 	}
 
-	public void setAllowDialIn(boolean allowDialIn) {
-		this.allowDialIn = allowDialIn;
+	private long getLong(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? 0L : Long.parseLong(attr.getStringValue());
 	}
 
-	public int getLoginCount() {
-		return loginCount;
+	private Date getDate(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? null : DateFormat.parse("yyyyMMddHHmmss", attr.getStringValue());
 	}
 
-	public void setLoginCount(int loginCount) {
-		this.loginCount = loginCount;
+	private Date getTimestamp(LDAPAttributeSet attrs, String attrName) {
+		Long attr = getLong(attrs, attrName);
+		return (attr == null) ? null : new Date(attr / 10000L - 11644473600000L);
 	}
 
-	public Set<String> getMemberOf() {
-		return memberOf;
+	private String getString(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? null : attr.getStringValue();
 	}
 
-	public void setMemberOf(Set<String> memberOf) {
-		this.memberOf = memberOf;
-	}
-
-	public String getDistinguishedName() {
-		return distinguishedName;
-	}
-
-	public void setDistinguishedName(String distinguishedName) {
-		this.distinguishedName = distinguishedName;
-	}
-
-	public String getUserPrincipalName() {
-		return userPrincipalName;
-	}
-
-	public void setUserPrincipalName(String userPrincipalName) {
-		this.userPrincipalName = userPrincipalName;
-	}
-
-	public String getOrganizationUnitName() {
-		return organizationUnitName;
-	}
-
-	public void setOrganizationUnitName(String organizationUnitName) {
-		this.organizationUnitName = organizationUnitName;
-	}
-
-	public String getDisplayName() {
-		return displayName;
-	}
-
-	public void setDisplayName(String displayName) {
-		this.displayName = displayName;
-	}
-
-	public String getSurname() {
-		return surname;
-	}
-
-	public void setSurname(String surname) {
-		this.surname = surname;
-	}
-
-	public String getGivenName() {
-		return givenName;
-	}
-
-	public void setGivenName(String givenName) {
-		this.givenName = givenName;
+	private String[] getStringArray(LDAPAttributeSet attrs, String attrName) {
+		LDAPAttribute attr = attrs.getAttribute(attrName);
+		return (attr == null) ? null : attr.getStringValueArray();
 	}
 
 	public String getAccountName() {
 		return accountName;
 	}
 
-	public void setAccountName(String accountName) {
-		this.accountName = accountName;
+	public boolean isDomainAdmin() {
+		return domainAdmin;
+	}
+
+	public boolean isAllowDialIn() {
+		return allowDialIn;
+	}
+
+	public int getLogonCount() {
+		return logonCount;
+	}
+
+	public String[] getMemberOf() {
+		return memberOf;
+	}
+
+	public String getDistinguishedName() {
+		return distinguishedName;
+	}
+
+	public String getUserPrincipalName() {
+		return userPrincipalName;
+	}
+
+	public String getOrganizationUnitName() {
+		return organizationUnitName;
+	}
+
+	public String getDisplayName() {
+		return displayName;
+	}
+
+	public String getSurname() {
+		return surname;
+	}
+
+	public String getGivenName() {
+		return givenName;
 	}
 
 	public String getTitle() {
 		return title;
 	}
 
-	public void setTitle(String title) {
-		this.title = title;
-	}
-
 	public String getDepartment() {
 		return department;
-	}
-
-	public void setDepartment(String department) {
-		this.department = department;
 	}
 
 	public String getMail() {
 		return mail;
 	}
 
-	public void setMail(String mail) {
-		this.mail = mail;
-	}
-
 	public String getMobile() {
 		return mobile;
-	}
-
-	public void setMobile(String mobile) {
-		this.mobile = mobile;
 	}
 
 	public Date getLastLogon() {
 		return lastLogon;
 	}
 
-	public void setLastLogon(Date lastLogon) {
-		this.lastLogon = lastLogon;
-	}
-
 	public Date getWhenCreated() {
 		return whenCreated;
 	}
 
-	public void setWhenCreated(Date whenCreated) {
-		this.whenCreated = whenCreated;
-	}
-
-	public Date getLastPasswordChange() {
-		return lastPasswordChange;
-	}
-
-	public void setLastPasswordChange(Date lastPasswordChange) {
-		this.lastPasswordChange = lastPasswordChange;
+	public Date getPwdLastSet() {
+		return pwdLastSet;
 	}
 
 	public Date getAccountExpires() {
 		return accountExpires;
-	}
-
-	public void setAccountExpires(Date accountExpires) {
-		this.accountExpires = accountExpires;
 	}
 
 	@Override
@@ -198,8 +194,7 @@ public class DomainUserAccount {
 				nullToEmpty(department));
 	}
 
-	private String nullToEmpty(String s) {
-		return s == null ? "" : s;
+	private String nullToEmpty(String str) {
+		return (str == null) ? "" : str;
 	}
-
 }

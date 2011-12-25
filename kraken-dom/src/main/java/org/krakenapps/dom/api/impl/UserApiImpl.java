@@ -15,8 +15,11 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -78,6 +81,13 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		return Predicates.field("loginName", loginName);
 	}
 
+	private List<Predicate> getPreds(List<User> users) {
+		List<Predicate> preds = new ArrayList<Predicate>(users.size());
+		for (User user : users)
+			preds.add(getPred(user.getLoginName()));
+		return preds;
+	}
+
 	@Override
 	public Collection<User> getUsers(String domain) {
 		return cfg.all(domain, cls);
@@ -92,6 +102,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	public Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren) {
 		Collection<User> users = cfg.all(domain, cls, Predicates.field("orgUnit/guid", orgUnitGuid));
 		if (includeChildren) {
+			if (orgUnitGuid == null)
+				return getUsers(domain);
+
 			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
 			for (OrganizationUnit ou : parent.getChildren())
 				users.addAll(getUsers(domain, ou.getGuid(), includeChildren));
@@ -115,14 +128,47 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
+	public void createUsers(String domain, Collection<User> users) {
+		List<User> userList = new ArrayList<User>(users);
+		for (User user : users) {
+			user.setSalt(createSalt(domain));
+			user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
+		}
+		cfg.adds(domain, cls, getPreds(userList), userList, ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createUser(String domain, User user) {
+		user.setSalt(createSalt(domain));
+		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		cfg.add(domain, cls, getPred(user.getLoginName()), user, ALREADY_EXIST, this);
 	}
 
 	@Override
-	public void updateUser(String domain, User user) {
+	public void updateUsers(String domain, Collection<User> users, boolean updatePassword) {
+		List<User> userList = new ArrayList<User>(users);
+		for (User user : users) {
+			user.setUpdated(new Date());
+			if (updatePassword)
+				user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
+		}
+		cfg.updates(domain, cls, getPreds(userList), userList, NOT_FOUND, this);
+	}
+
+	@Override
+	public void updateUser(String domain, User user, boolean updatePassword) {
 		user.setUpdated(new Date());
+		if (updatePassword)
+			user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		cfg.update(domain, cls, getPred(user.getLoginName()), user, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeUsers(String domain, Collection<String> loginNames) {
+		List<Predicate> preds = new ArrayList<Predicate>(loginNames.size());
+		for (String loginName : loginNames)
+			preds.add(getPred(loginName));
+		cfg.removes(domain, cls, preds, NOT_FOUND, this);
 	}
 
 	@Override
@@ -153,6 +199,16 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		if (length == null || !(length instanceof Integer))
 			return DEFAULT_SALT_LENGTH;
 		return (Integer) length;
+	}
+
+	@Override
+	public String createSalt(String domain) {
+		StringBuilder salt = new StringBuilder();
+		Random rand = new Random();
+		char[] c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+		for (int i = 0; i < getSaltLength(domain); i++)
+			salt.append(c[rand.nextInt(c.length)]);
+		return salt.toString();
 	}
 
 	@Override

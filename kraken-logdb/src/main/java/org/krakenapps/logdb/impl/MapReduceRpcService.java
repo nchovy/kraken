@@ -28,9 +28,9 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryEventListener;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
-import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.mapreduce.MapQuery;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
@@ -59,8 +59,7 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "logdb-mapreduce")
 @Provides
-public class MapReduceRpcService extends SimpleRpcService implements MapReduceService, LogQueryEventListener,
-		DataSourceEventListener {
+public class MapReduceRpcService extends SimpleRpcService implements MapReduceService, LogQueryEventListener, DataSourceEventListener {
 	private final Logger logger = LoggerFactory.getLogger(MapReduceRpcService.class.getName());
 	private ConcurrentMap<String, MapReduceQueryStatus> queries;
 
@@ -533,8 +532,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 		try {
 			session = conn.createSession("logdb-mapreduce");
 			session.post("onDataSourceChange", ds.getName(), action, ds.getMetadata());
-			logger.info("kraken logdb: notified data source [type={}, name={}, action={}] ",
-					new Object[] { ds.getType(), ds.getName(), action });
+			logger.info("kraken logdb: notified data source [type={}, name={}, action={}] ", new Object[] { ds.getType(), ds.getName(),
+					action });
 		} catch (Exception e) {
 			logger.warn("kraken logdb: cannot update datasource info", e);
 		} finally {
@@ -558,8 +557,8 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 			try {
 				session = conn.createSession("logdb-mapreduce");
 				session.post("onQueryStatusChange", id, status.name(), queryString);
-				logger.info("kraken logdb: notified query status [id={}, status={}] to peer [{}]", new Object[] { id, status,
-						conn.getPeerGuid() });
+				logger.info("kraken logdb: notified query status [id={}, status={}] to peer [{}]",
+						new Object[] { id, status, conn.getPeerGuid() });
 			} catch (Exception e) {
 				logger.warn("kraken logdb: cannot update datasource info", e);
 			} finally {

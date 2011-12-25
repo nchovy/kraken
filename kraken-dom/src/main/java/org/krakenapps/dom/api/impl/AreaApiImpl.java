@@ -46,7 +46,7 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 	public Collection<Area> getRootAreas(String domain) {
 		Collection<Area> areas = cfg.all(domain, cls, Predicates.field("parent", null));
 		for (Area area : areas)
-			area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+			area.setChildren(getChildrens(domain, area.getGuid()));
 		return areas;
 	}
 
@@ -55,22 +55,22 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 		Area area = cfg.find(domain, cls, getPred(guid));
 		if (area == null)
 			return null;
-		area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+		area.setChildren(getChildrens(domain, area.getGuid()));
 		return area;
 	}
 
 	@Override
 	public Area getArea(String domain, String guid) {
 		Area area = cfg.get(domain, cls, getPred(guid), NOT_FOUND);
-		area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
+		area.setChildren(getChildrens(domain, area.getGuid()));
 		return area;
 	}
 
-	private Collection<Area> getChildrens(String domain, String guid) {
+	private List<Area> getChildrens(String domain, String guid) {
 		Collection<Area> areas = cfg.all(domain, cls, Predicates.field("parent", guid));
 		for (Area area : areas)
-			area.setChildren((List<Area>) getChildrens(domain, area.getGuid()));
-		return areas;
+			area.setChildren(getChildrens(domain, area.getGuid()));
+		return (List<Area>) areas;
 	}
 
 	@Override

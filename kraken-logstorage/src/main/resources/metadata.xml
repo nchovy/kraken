@@ -2,6 +2,7 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 	<instance component="logstorage-engine" />
+	<instance component="logstorage-monitor" />
 	<instance component="logstorage-script-factory" />
 	<instance component="logstorage-table-registry" />
 </ipojo>

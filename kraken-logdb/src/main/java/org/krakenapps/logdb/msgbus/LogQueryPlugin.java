@@ -185,6 +185,16 @@ public class LogQueryPlugin {
 	}
 
 	@MsgbusMethod
+	public void stopQuery(Request req, Response resp) {
+		int id = req.getInteger("id");
+		LogQuery query = service.getQuery(id);
+		if (query != null)
+			query.cancel();
+		else
+			throw new MsgbusException("logdb", "query-not-found");
+	}
+
+	@MsgbusMethod
 	public void getResult(Request req, Response resp) {
 		int id = req.getInteger("id");
 		int offset = req.getInteger("offset");
@@ -281,10 +291,11 @@ public class LogQueryPlugin {
 			m.put("count", query.getResult().size());
 			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m);
 
-			logger.trace("kraken logstorage: timeline callback => "
-					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
-					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime, Arrays.toString(values),
-							query.getResult().size() });
+			logger.trace(
+					"kraken logstorage: timeline callback => "
+							+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
+					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
+							Arrays.toString(values), query.getResult().size() });
 		}
 	}
 }

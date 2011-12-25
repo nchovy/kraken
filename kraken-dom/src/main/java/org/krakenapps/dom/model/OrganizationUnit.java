@@ -17,12 +17,13 @@ package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
-import org.krakenapps.api.ReferenceKey;
+import org.krakenapps.api.MapTypeHint;
 import org.krakenapps.confdb.CollectionName;
 
 @CollectionName("organization-unit")
@@ -33,10 +34,12 @@ public class OrganizationUnit {
 	@FieldOption(length = 60, nullable = false)
 	private String name;
 
-	private String domainController;
+	private String parent;
 
-	@ReferenceKey("guid")
-	@CollectionTypeHint(OrganizationUnit.class)
+	@MapTypeHint({ String.class, Object.class })
+	private Map<String, Object> ext = new HashMap<String, Object>();
+
+	@FieldOption(skip = true)
 	private List<OrganizationUnit> children = new ArrayList<OrganizationUnit>();
 
 	@FieldOption(nullable = false)
@@ -61,12 +64,20 @@ public class OrganizationUnit {
 		this.name = name;
 	}
 
-	public String getDomainController() {
-		return domainController;
+	public String getParent() {
+		return parent;
 	}
 
-	public void setDomainController(String domainController) {
-		this.domainController = domainController;
+	public void setParent(String parent) {
+		this.parent = parent;
+	}
+
+	public Map<String, Object> getExt() {
+		return ext;
+	}
+
+	public void setExt(Map<String, Object> ext) {
+		this.ext = ext;
 	}
 
 	public List<OrganizationUnit> getChildren() {

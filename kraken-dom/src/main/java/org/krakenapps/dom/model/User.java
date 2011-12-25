@@ -48,18 +48,10 @@ public class User {
 	private String title;
 
 	@FieldOption(length = 60)
-	private String department;
-
-	@FieldOption(length = 60)
 	private String email;
 
 	@FieldOption(length = 60)
 	private String phone;
-
-	private boolean external;
-
-	@FieldOption(length = 60)
-	private String domainController;
 
 	@MapTypeHint({ String.class, Object.class })
 	private Map<String, Object> ext = new HashMap<String, Object>();
@@ -126,14 +118,6 @@ public class User {
 		this.title = title;
 	}
 
-	public String getDepartment() {
-		return department;
-	}
-
-	public void setDepartment(String department) {
-		this.department = department;
-	}
-
 	public String getEmail() {
 		return email;
 	}
@@ -148,22 +132,6 @@ public class User {
 
 	public void setPhone(String phone) {
 		this.phone = phone;
-	}
-
-	public boolean isExternal() {
-		return external;
-	}
-
-	public void setExternal(boolean external) {
-		this.external = external;
-	}
-
-	public String getDomainController() {
-		return domainController;
-	}
-
-	public void setDomainController(String domainController) {
-		this.domainController = domainController;
 	}
 
 	public Map<String, Object> getExt() {

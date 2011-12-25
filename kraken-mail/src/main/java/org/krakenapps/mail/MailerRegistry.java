@@ -1,18 +1,20 @@
 package org.krakenapps.mail;
 
-import java.util.Map;
-import java.util.Properties;
+import java.util.Collection;
 
+import javax.mail.MessagingException;
 import javax.mail.Session;
 
 public interface MailerRegistry {
-	Map<String, Properties> getConfigs();
+	Collection<MailerConfig> getConfigs();
 
-	Properties getConfig(String name);
+	MailerConfig getConfig(String name);
 
-	void register(String name, Properties props);
+	void register(MailerConfig config);
 
 	void unregister(String name);
 
-	Session getSession(String name);
+	Session getSession(MailerConfig config);
+
+	void send(MailerConfig config, String from, String to, String subject, String message) throws MessagingException;
 }

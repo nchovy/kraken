@@ -80,8 +80,7 @@ public class BatchScript implements Script {
 
 	}
 
-	@ScriptUsage(description = "", arguments = { @ScriptArgument(name = "alias"),
-			@ScriptArgument(name = "absolute path") })
+	@ScriptUsage(description = "", arguments = { @ScriptArgument(name = "alias"), @ScriptArgument(name = "absolute path") })
 	public void register(String[] args) {
 		String alias = args[0];
 		File scriptFile = new File(args[1]);
@@ -115,6 +114,21 @@ public class BatchScript implements Script {
 				stopOnFail = Boolean.parseBoolean(args[1]);
 
 			manager.execute(context, args[0], stopOnFail);
+		} catch (Exception e) {
+			context.printf("batch failed: %s\n", e.toString());
+		}
+	}
+
+	@ScriptUsage(description = "", arguments = {
+			@ScriptArgument(name = "file path", type = "string", description = "script file path"),
+			@ScriptArgument(name = "stop on fail", type = "boolean", description = "true if you want to stop script on fail", optional = true) })
+	public void executeFile(String[] args) {
+		try {
+			boolean stopOnFail = true;
+			if (args.length > 1)
+				stopOnFail = Boolean.parseBoolean(args[1]);
+
+			manager.executeFile(context, new File(args[0]), stopOnFail);
 		} catch (Exception e) {
 			context.printf("batch failed: %s\n", e.toString());
 		}

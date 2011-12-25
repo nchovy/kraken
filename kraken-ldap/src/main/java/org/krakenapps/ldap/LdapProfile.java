@@ -15,102 +15,176 @@
  */
 package org.krakenapps.ldap;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.text.SimpleDateFormat;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
 import java.util.Date;
 
-import com.novell.ldap.LDAPConnection;
+import org.krakenapps.api.DateFormat;
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
 
+import com.novell.ldap.LDAPConnection;
+import com.novell.ldap.util.Base64;
+
+@CollectionName("profile")
 public class LdapProfile {
-	public static final int DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000; // 10 minute
+	public static final long DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000; // 10minute
 	public static final int DEFAULT_PORT = LDAPConnection.DEFAULT_PORT; // 389
 	public static final int DEFAULT_SSL_PORT = LDAPConnection.DEFAULT_SSL_PORT; // 636
 	public static final char[] DEFAULT_TRUSTSTORE_PASSWORD = "kraken".toCharArray();
 
+	public static enum CertificateType {
+		X509, JKS;
+	}
+
+	@FieldOption(nullable = false)
 	private String name;
+	private String targetDomain = "localhost";
+
+	@FieldOption(nullable = false)
 	private String dc;
-	private int port;
+
+	private Integer port;
+
+	@FieldOption(nullable = false)
 	private String account;
+
+	@FieldOption(nullable = false)
 	private String password;
-	private KeyStore trustStore;
-	private int syncInterval = DEFAULT_SYNC_INTERVAL;
-	private Date lastSync = null;
 
-	public LdapProfile(String name, String dc, String account, String password) {
-		this(name, dc, DEFAULT_PORT, account, password, null, DEFAULT_SYNC_INTERVAL);
-	}
+	private byte[] trustStore;
+	private long syncInterval = DEFAULT_SYNC_INTERVAL;
 
-	public LdapProfile(String name, String dc, String account, String password, KeyStore trustStore) {
-		this(name, dc, (trustStore != null) ? DEFAULT_SSL_PORT : DEFAULT_PORT, account, password, trustStore,
-				DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password) {
-		this(name, dc, port, account, password, null, DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, KeyStore trustStore) {
-		this(name, dc, port, account, password, trustStore, DEFAULT_SYNC_INTERVAL);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, int syncInterval) {
-		this(name, dc, port, account, password, null, syncInterval);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, KeyStore trustStore,
-			int syncInterval) {
-		this(name, dc, port, account, password, trustStore, syncInterval, null);
-	}
-
-	public LdapProfile(String name, String dc, int port, String account, String password, KeyStore trustStore,
-			int syncInterval, Date lastSync) {
-		this.name = name;
-		this.dc = dc;
-		this.port = port;
-		this.account = account;
-		this.password = password;
-		this.trustStore = trustStore;
-		this.syncInterval = syncInterval;
-		this.lastSync = lastSync;
-	}
+	@FieldOption(skip = true)
+	private Date lastSync;
 
 	public String getName() {
 		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getTargetDomain() {
+		return targetDomain;
+	}
+
+	public void setTargetDomain(String targetDomain) {
+		this.targetDomain = targetDomain;
 	}
 
 	public String getDc() {
 		return dc;
 	}
 
-	public int getPort() {
-		return port;
+	public void setDc(String dc) {
+		this.dc = dc;
+	}
+
+	public Integer getPort() {
+		if (port != null)
+			return port;
+		return (trustStore == null) ? DEFAULT_PORT : DEFAULT_SSL_PORT;
+	}
+
+	public void setPort(Integer port) {
+		this.port = port;
 	}
 
 	public String getAccount() {
 		return account;
 	}
 
+	public void setAccount(String account) {
+		this.account = account;
+	}
+
 	public String getPassword() {
 		return password;
 	}
 
-	public KeyStore getTrustStore() {
-		return trustStore;
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
-	public int getSyncInterval() {
+	public KeyStore getTrustStore() throws GeneralSecurityException, IOException {
+		return getTrustStore(DEFAULT_TRUSTSTORE_PASSWORD);
+	}
+
+	public KeyStore getTrustStore(char[] password) throws GeneralSecurityException, IOException {
+		if (trustStore == null)
+			return null;
+
+		KeyStore ts = KeyStore.getInstance("JKS");
+		ts.load(new ByteArrayInputStream(trustStore), password);
+		return ts;
+	}
+
+	public void setTrustStore(CertificateType type, String base64EncodedCert) throws GeneralSecurityException, IOException {
+		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)));
+	}
+
+	public void setTrustStore(CertificateType type, InputStream cert) throws GeneralSecurityException, IOException {
+		setTrustStore(type, cert, DEFAULT_TRUSTSTORE_PASSWORD);
+	}
+
+	public void setTrustStore(CertificateType type, String base64EncodedCert, char[] password) throws GeneralSecurityException,
+			IOException {
+		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)), password);
+	}
+
+	public void setTrustStore(CertificateType type, InputStream cert, char[] password) throws GeneralSecurityException,
+			IOException {
+		KeyStore jks = KeyStore.getInstance("JKS");
+
+		if (CertificateType.X509.equals(type)) {
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			Certificate certificate = cf.generateCertificate(cert);
+
+			jks.load(null, null);
+			jks.setCertificateEntry("mykey", certificate);
+		} else if (CertificateType.JKS.equals(type)) {
+			jks.load(cert, password);
+		} else {
+			throw new IllegalArgumentException("type");
+		}
+
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		jks.store(bos, password);
+		this.trustStore = bos.toByteArray();
+	}
+
+	public void unsetTrustStore() {
+		this.trustStore = null;
+	}
+
+	public long getSyncInterval() {
 		return syncInterval;
+	}
+
+	public void setSyncInterval(long syncInterval) {
+		this.syncInterval = syncInterval;
 	}
 
 	public Date getLastSync() {
 		return lastSync;
 	}
 
+	public void setLastSync(Date lastSync) {
+		this.lastSync = lastSync;
+	}
+
 	@Override
 	public String toString() {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		return String.format("name=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s", name,
-				dc, port, account, syncInterval, (lastSync == null) ? "none" : dateFormat.format(lastSync),
+		return String.format("%s [target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s]", name,
+				targetDomain, dc, getPort(), account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync),
 				(trustStore != null));
 	}
 }

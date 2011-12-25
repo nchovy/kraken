@@ -115,13 +115,15 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * Get file metadata using download token, space id and resource id.
 	 * 
 	 * @param tokenGuid
-	 *            the resource id that you obtained before using setUploadToken
+	 *            the resource id that you obtained before using setDownloadToken
 	 * 
 	 * @return the uploaded file metadata
 	 * @throws IOException
 	 *             when file open failed
 	 */
-	UploadedFile getFileMetadata(String tokenGuid, String fileGuid);
+	UploadedFile getFileMetadataWithToken(String tokenGuid, String fileGuid);
+
+	UploadedFile getFileMetadata(String domain, String fileGuid);
 
 	/**
 	 * Remove download token.

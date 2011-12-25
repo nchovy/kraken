@@ -15,8 +15,12 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -42,19 +46,67 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 		return Predicates.field("guid", guid);
 	}
 
+	private List<Predicate> getPreds(List<OrganizationUnit> orgUnits) {
+		List<Predicate> preds = new ArrayList<Predicate>(orgUnits.size());
+		for (OrganizationUnit orgUnit : orgUnits)
+			preds.add(getPred(orgUnit.getGuid()));
+		return preds;
+	}
+
 	@Override
 	public Collection<OrganizationUnit> getOrganizationUnits(String domain) {
-		return cfg.all(domain, cls);
+		Collection<OrganizationUnit> orgUnits = cfg.all(domain, cls);
+		for (OrganizationUnit orgUnit : orgUnits)
+			orgUnit.setChildren(getChildrens(domain, orgUnit.getGuid()));
+		return orgUnits;
 	}
 
 	@Override
 	public OrganizationUnit findOrganizationUnit(String domain, String guid) {
-		return cfg.find(domain, cls, getPred(guid));
+		OrganizationUnit orgUnit = cfg.find(domain, cls, getPred(guid));
+		if (orgUnit == null)
+			return null;
+		orgUnit.setChildren(getChildrens(domain, orgUnit.getGuid()));
+		return orgUnit;
 	}
 
 	@Override
 	public OrganizationUnit getOrganizationUnit(String domain, String guid) {
-		return cfg.get(domain, cls, getPred(guid), NOT_FOUND);
+		OrganizationUnit orgUnit = cfg.get(domain, cls, getPred(guid), NOT_FOUND);
+		orgUnit.setChildren(getChildrens(domain, orgUnit.getGuid()));
+		return orgUnit;
+	}
+
+	@Override
+	public OrganizationUnit findOrganizationUnitByName(String domain, String... names) {
+		OrganizationUnit orgUnit = null;
+		String parentGuid = null;
+
+		for (String name : names) {
+			Map<String, Object> terms = new HashMap<String, Object>();
+			terms.put("name", name);
+			terms.put("parent", parentGuid);
+			orgUnit = cfg.find(domain, OrganizationUnit.class, Predicates.field(terms));
+			if (orgUnit == null)
+				return null;
+			parentGuid = orgUnit.getGuid();
+		}
+		orgUnit.setChildren(getChildrens(domain, orgUnit.getGuid()));
+
+		return orgUnit;
+	}
+
+	private List<OrganizationUnit> getChildrens(String domain, String guid) {
+		Collection<OrganizationUnit> orgUnits = cfg.all(domain, cls, Predicates.field("parent", guid));
+		for (OrganizationUnit orgUnit : orgUnits)
+			orgUnit.setChildren(getChildrens(domain, orgUnit.getGuid()));
+		return (List<OrganizationUnit>) orgUnits;
+	}
+
+	@Override
+	public void createOrganizationUnits(String domain, Collection<OrganizationUnit> orgUnits) {
+		List<OrganizationUnit> orgUnitList = new ArrayList<OrganizationUnit>(orgUnits);
+		cfg.adds(domain, cls, getPreds(orgUnitList), orgUnitList, ALREADY_EXIST, this);
 	}
 
 	@Override
@@ -63,9 +115,25 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 	}
 
 	@Override
+	public void updateOrganizationUnits(String domain, Collection<OrganizationUnit> orgUnits) {
+		List<OrganizationUnit> orgUnitList = new ArrayList<OrganizationUnit>(orgUnits);
+		for (OrganizationUnit orgUnit : orgUnitList)
+			orgUnit.setUpdated(new Date());
+		cfg.updates(domain, cls, getPreds(orgUnitList), orgUnitList, NOT_FOUND, this);
+	}
+
+	@Override
 	public void updateOrganizationUnit(String domain, OrganizationUnit orgUnit) {
 		orgUnit.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(orgUnit.getGuid()), orgUnit, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeOrganizationUnits(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>(guids.size());
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, cls, preds, NOT_FOUND, this);
 	}
 
 	@Override

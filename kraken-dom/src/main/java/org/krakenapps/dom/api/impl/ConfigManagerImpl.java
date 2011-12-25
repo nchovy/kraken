@@ -1,6 +1,9 @@
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,6 +16,7 @@ import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
@@ -22,6 +26,9 @@ import org.krakenapps.dom.api.DefaultEntityEventProvider;
 @Component(name = "dom-config-manager")
 @Provides
 public class ConfigManagerImpl implements ConfigManager {
+	private static final String COMMITER = "kraken-dom";
+	private static final boolean IGNORE_CONFLICT = true;
+
 	@Requires
 	private ConfigService confsvc;
 
@@ -73,14 +80,87 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
+	public <T> void adds(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
+			DefaultEntityEventProvider<T> provider) {
+		if (preds.size() != docs.size())
+			throw new IllegalArgumentException("preds and docs must has equal size");
+
+		ConfigDatabase db = getDatabase(domain);
+		ConfigTransaction xact = db.beginTransaction();
+
+		Iterator<Predicate> predIterator = preds.iterator();
+		Iterator<T> docIterator = docs.iterator();
+		try {
+			while (docIterator.hasNext()) {
+				Predicate pred = predIterator.next();
+				T doc = docIterator.next();
+
+				if (db.findOne(cls, pred) != null)
+					throw new DOMException(alreadyExistMessage);
+
+				db.add(xact, doc);
+			}
+
+			xact.commit(COMMITER, "added " + docs.size() + " " + cls.getSimpleName());
+		} catch (Exception e) {
+			xact.rollback();
+			if (e instanceof DOMException)
+				throw (DOMException) e;
+			throw new RuntimeException(e);
+		}
+
+		if (provider != null) {
+			for (T doc : docs)
+				provider.fireEntityAdded(domain, doc);
+		}
+	}
+
+	@Override
 	public <T> void add(String domain, Class<T> cls, Predicate pred, T doc, String alreadyExistMessage,
 			DefaultEntityEventProvider<T> provider) {
 		ConfigDatabase db = getDatabase(domain);
 		if (db.findOne(cls, pred) != null)
 			throw new DOMException(alreadyExistMessage);
-		db.add(doc);
+		db.add(doc, COMMITER, "added 1 " + cls.getSimpleName());
 		if (provider != null)
 			provider.fireEntityAdded(domain, doc);
+	}
+
+	@Override
+	public <T> void updates(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider) {
+		if (preds.size() != docs.size())
+			throw new IllegalArgumentException("preds and docs must has equal size");
+
+		ConfigDatabase db = getDatabase(domain);
+		ConfigTransaction xact = db.beginTransaction();
+
+		Iterator<Predicate> predIterator = preds.iterator();
+		Iterator<T> docIterator = docs.iterator();
+		try {
+			while (docIterator.hasNext()) {
+				Predicate pred = predIterator.next();
+				T doc = docIterator.next();
+
+				Config c = db.findOne(cls, pred);
+				if (c == null)
+					throw new DOMException(notFoundMessage);
+
+				db.update(xact, c, doc, IGNORE_CONFLICT);
+			}
+
+			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName());
+		} catch (Exception e) {
+			xact.rollback();
+			if (e instanceof DOMException)
+				throw (DOMException) e;
+			throw new RuntimeException(e);
+		}
+
+		if (provider != null) {
+			for (T doc : docs)
+				provider.fireEntityUpdated(domain, doc);
+		}
 	}
 
 	@Override
@@ -88,9 +168,47 @@ public class ConfigManagerImpl implements ConfigManager {
 			DefaultEntityEventProvider<T> provider) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = get(db, cls, pred, notFoundMessage);
-		db.update(c, doc);
+		db.update(c, doc, IGNORE_CONFLICT, COMMITER, "updated 1 " + cls.getSimpleName());
 		if (provider != null)
 			provider.fireEntityUpdated(domain, doc);
+	}
+
+	@Override
+	public <T> void removes(String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider) {
+		ConfigDatabase db = getDatabase(domain);
+		ConfigTransaction xact = db.beginTransaction();
+
+		Iterator<Predicate> predIterator = preds.iterator();
+		Collection<T> docs = new ArrayList<T>();
+		try {
+			while (predIterator.hasNext()) {
+				Predicate pred = predIterator.next();
+
+				Config c = db.findOne(cls, pred);
+				if (c == null)
+					throw new DOMException(notFoundMessage);
+
+				T doc = c.getDocument(cls);
+				if (provider != null)
+					provider.fireEntityRemoving(domain, doc);
+				docs.add(doc);
+
+				db.remove(xact, c, IGNORE_CONFLICT);
+			}
+
+			xact.commit(COMMITER, "removed " + preds.size() + " " + cls.getSimpleName());
+		} catch (Exception e) {
+			xact.rollback();
+			if (e instanceof DOMException)
+				throw (DOMException) e;
+			throw new RuntimeException(e);
+		}
+
+		if (provider != null) {
+			for (T doc : docs)
+				provider.fireEntityRemoved(domain, doc);
+		}
 	}
 
 	@Override
@@ -100,7 +218,7 @@ public class ConfigManagerImpl implements ConfigManager {
 		T doc = c.getDocument(cls, getCallback(domain));
 		if (provider != null)
 			provider.fireEntityRemoving(domain, doc);
-		db.remove(c);
+		db.remove(c, IGNORE_CONFLICT, COMMITER, "removed 1 " + cls.getSimpleName());
 		if (provider != null)
 			provider.fireEntityRemoved(domain, doc);
 	}

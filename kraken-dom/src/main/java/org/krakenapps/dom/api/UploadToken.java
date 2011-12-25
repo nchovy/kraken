@@ -15,12 +15,15 @@
  */
 package org.krakenapps.dom.api;
 
+import java.util.UUID;
+
 import org.krakenapps.msgbus.Session;
 
 public class UploadToken {
 	private String orgDomain;
 	private String loginName;
 	private String spaceGuid;
+	private String fileGuid;
 	private String fileName;
 	private long fileSize;
 	private Object userData;
@@ -29,6 +32,7 @@ public class UploadToken {
 		this.orgDomain = session.getOrgDomain();
 		this.loginName = session.getAdminLoginName();
 		this.spaceGuid = spaceGuid;
+		this.fileGuid = UUID.randomUUID().toString();
 		this.fileName = fileName;
 		this.fileSize = fileSize;
 	}
@@ -53,6 +57,10 @@ public class UploadToken {
 	 */
 	public String getSpaceGuid() {
 		return spaceGuid;
+	}
+
+	public String getFileGuid() {
+		return fileGuid;
 	}
 
 	/**

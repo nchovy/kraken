@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-confdb</artifactId>
-	<version>0.3.3</version>
+	<version>0.4.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Config Database</name>
 
@@ -50,7 +50,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.9.5</version>
+			<version>1.9.7</version>
 		</dependency>
 	</dependencies>
 </project>

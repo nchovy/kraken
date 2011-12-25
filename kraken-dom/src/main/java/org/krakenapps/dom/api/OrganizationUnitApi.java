@@ -26,9 +26,17 @@ public interface OrganizationUnitApi extends EntityEventProvider<OrganizationUni
 
 	OrganizationUnit getOrganizationUnit(String domain, String guid);
 
+	OrganizationUnit findOrganizationUnitByName(String domain, String... names);
+
+	void createOrganizationUnits(String domain, Collection<OrganizationUnit> orgUnits);
+
 	void createOrganizationUnit(String domain, OrganizationUnit orgUnit);
 
+	void updateOrganizationUnits(String domain, Collection<OrganizationUnit> orgUnits);
+
 	void updateOrganizationUnit(String domain, OrganizationUnit orgUnit);
+
+	void removeOrganizationUnits(String domain, Collection<String> guids);
 
 	void removeOrganizationUnit(String domain, String guid);
 }

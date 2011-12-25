@@ -15,7 +15,6 @@
  */
 package org.krakenapps.pkg;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,11 +29,11 @@ public class PackageMetadata {
 	private String description;
 
 	private List<PackageVersionHistory> versions;
-	private Set<URL> mavenRepositories;
+	private Set<String> mavenRepositories;
 
 	public PackageMetadata() {
 		versions = new ArrayList<PackageVersionHistory>();
-		mavenRepositories = new HashSet<URL>();
+		mavenRepositories = new HashSet<String>();
 	}
 
 	public PackageRepository getRepository() {
@@ -69,11 +68,11 @@ public class PackageMetadata {
 		this.versions = versions;
 	}
 
-	public Set<URL> getMavenRepositories() {
+	public Set<String> getMavenRepositories() {
 		return mavenRepositories;
 	}
 
-	public void setMavenRepositories(Set<URL> mavenRepositories) {
+	public void setMavenRepositories(Set<String> mavenRepositories) {
 		this.mavenRepositories = mavenRepositories;
 	}
 

@@ -15,15 +15,12 @@
  */
 package org.krakenapps.script;
 
-import java.io.IOException;
-
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.main.Kraken;
 
 public class ConfScriptFactory implements ScriptFactory {
-
 	private ConfigService conf;
 
 	public ConfScriptFactory(ConfigService conf) {

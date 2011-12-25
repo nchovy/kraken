@@ -22,12 +22,11 @@ public class BatchScriptFactory implements ScriptFactory {
 	private BatchScriptManager manager;
 
 	public BatchScriptFactory() {
-		manager = new BatchScriptManager();
+		this.manager = new BatchScriptManager();
 	}
 
 	@Override
 	public Script createScript() {
 		return new BatchScript(manager);
 	}
-
 }

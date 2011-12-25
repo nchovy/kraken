@@ -26,6 +26,10 @@ public class Predicates {
 		return new EqObject(o);
 	}
 
+	public static Predicate has(String field) {
+		return new HasKey(field);
+	}
+
 	public static Predicate field(String field, Object value) {
 		return new KeyMatch(field, value);
 	}
@@ -50,17 +54,27 @@ public class Predicates {
 		return new Not(pred);
 	}
 
-	@SuppressWarnings("unchecked")
 	private static Object getValue(Config c, String key) {
+		return getValue(c, key, false);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Object getValue(Config c, String key, boolean throwException) {
 		key = PrimitiveConverter.toUnderscoreName(key);
 		Object value = c.getDocument();
 		for (String k : key.split("/")) {
-			if (!(value instanceof Map))
+			if (!(value instanceof Map)) {
+				if (throwException)
+					throw new IllegalArgumentException();
 				return null;
+			}
 
 			Map<String, Object> m = (Map<String, Object>) value;
-			if (!m.containsKey(k))
+			if (!m.containsKey(k)) {
+				if (throwException)
+					throw new IllegalArgumentException();
 				return null;
+			}
 
 			value = m.get(k);
 		}
@@ -77,6 +91,24 @@ public class Predicates {
 		@Override
 		public boolean eval(Config c) {
 			return c.getDocument().equals(o);
+		}
+	}
+
+	private static class HasKey implements Predicate {
+		private String key;
+
+		public HasKey(String key) {
+			this.key = key;
+		}
+
+		@Override
+		public boolean eval(Config c) {
+			try {
+				getValue(c, key, true);
+				return true;
+			} catch (IllegalArgumentException e) {
+				return false;
+			}
 		}
 	}
 

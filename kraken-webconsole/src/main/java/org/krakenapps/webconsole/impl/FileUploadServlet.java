@@ -86,7 +86,7 @@ public class FileUploadServlet extends HttpServlet {
 			if (downloadToken == null)
 				throw new IllegalStateException("download token not found");
 
-			f = upload.getFileMetadata(downloadToken, fileGuid);
+			f = upload.getFileMetadataWithToken(downloadToken, fileGuid);
 			is = new FileInputStream(f.getFile());
 			os = resp.getOutputStream();
 			logger.trace("kraken webconsole: open downstream for {}", f.getFile().getAbsolutePath());
