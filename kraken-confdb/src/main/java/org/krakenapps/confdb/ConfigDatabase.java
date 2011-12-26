@@ -68,6 +68,8 @@ public interface ConfigDatabase {
 	 */
 	List<CommitLog> getCommitLogs();
 
+	List<CommitLog> getCommitLogs(long offset, long limit);
+
 	/**
 	 * begin config transaction. timeout exception may be thrown when default
 	 * timeout period is over

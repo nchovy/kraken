@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.ListIterator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,8 +76,9 @@ class RevLogReader {
 	}
 
 	public RevLog findDoc(int docId) throws IOException {
-		for (long i = count() - 1; i >= 0; i--) {
-			RevLog log = read(i);
+		Iterator<RevLog> it = iterator();
+		while (it.hasNext()) {
+			RevLog log = it.next();
 			if (log.getDocId() == docId)
 				return log;
 		}
@@ -84,8 +87,9 @@ class RevLogReader {
 	}
 
 	public RevLog findRev(long rev) throws IOException {
-		for (long i = count() - 1; i >= 0; i--) {
-			RevLog log = read(i);
+		Iterator<RevLog> it = iterator();
+		while (it.hasNext()) {
+			RevLog log = it.next();
 			if (log.getRev() == rev)
 				return log;
 		}
@@ -122,12 +126,92 @@ class RevLogReader {
 		return buf;
 	}
 
+	public ListIterator<RevLog> iterator() throws IOException {
+		return new RevLogIterator();
+	}
+
+	public ListIterator<RevLog> iterator(long index) throws IOException {
+		return new RevLogIterator(index);
+	}
+
 	public void close() {
 		try {
 			logRaf.close();
 			docRaf.close();
 		} catch (IOException e) {
 			logger.error("kraken confdb: cannot close index file", e);
+		}
+	}
+
+	public class RevLogIterator implements ListIterator<RevLog> {
+		private long count;
+		private long index;
+
+		public RevLogIterator() throws IOException {
+			this(0L);
+		}
+
+		public RevLogIterator(long index) throws IOException {
+			this.count = count();
+			this.index = this.count - index;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return (index > 0);
+		}
+
+		@Override
+		public RevLog next() {
+			try {
+				return read(--index);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public boolean hasPrevious() {
+			try {
+				if (index < count)
+					this.count = count();
+			} catch (IOException e) {
+			}
+			return (index < count);
+		}
+
+		@Override
+		public RevLog previous() {
+			try {
+				return read(index++);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public int nextIndex() {
+			return (int) (index - 1);
+		}
+
+		@Override
+		public int previousIndex() {
+			return (int) index;
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void set(RevLog e) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void add(RevLog e) {
+			throw new UnsupportedOperationException();
 		}
 	}
 }
