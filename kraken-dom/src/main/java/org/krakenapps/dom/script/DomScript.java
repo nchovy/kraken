@@ -1,5 +1,7 @@
 package org.krakenapps.dom.script;
 
+import java.util.Map;
+
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -31,8 +33,8 @@ public class DomScript implements Script {
 	private HostApi hostApi;
 	private ApplicationApi appApi;
 
-	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi, ProgramApi programApi,
-			AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
+	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
+			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.userApi = userApi;
@@ -65,7 +67,8 @@ public class DomScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "add vendor", arguments = { @ScriptArgument(name = "domain", type = "string", description = "domain"),
+	@ScriptUsage(description = "add vendor", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "domain"),
 			@ScriptArgument(name = "name", type = "string", description = "name") })
 	public void addVendor(String[] args) {
 		Vendor vendor = new Vendor();
@@ -74,7 +77,8 @@ public class DomScript implements Script {
 		context.println("added " + vendor.getGuid());
 	}
 
-	@ScriptUsage(description = "add host type", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host type", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "vendor guid", type = "string", description = ""),
 			@ScriptArgument(name = "name", type = "string", description = ""),
 			@ScriptArgument(name = "version", type = "string", description = "") })
@@ -89,7 +93,8 @@ public class DomScript implements Script {
 		context.println("added " + t.getGuid());
 	}
 
-	@ScriptUsage(description = "add host extension", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host extension", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "host type guid", type = "string", description = ""),
 			@ScriptArgument(name = "type", type = "string", description = "host extension type"),
 			@ScriptArgument(name = "ordinal", type = "string", description = "ordinal") })
@@ -221,5 +226,29 @@ public class DomScript implements Script {
 		pack.setDll(dll);
 
 		programApi.createProgramPack(domain, pack);
+	}
+
+	@ScriptUsage(description = "set organization parameter", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "organization domain"),
+			@ScriptArgument(name = "name", type = "string", description = "organization parameter name"),
+			@ScriptArgument(name = "value", type = "string", description = "organization parameter value"),
+			@ScriptArgument(name = "type", type = "string", description = "string or int") })
+	public void setOrgParam(String[] args) {
+		Object value = null;
+		if (args[3].equalsIgnoreCase("string"))
+			value = args[2];
+		else if (args[3].equalsIgnoreCase("int"))
+			value = Integer.valueOf(args[2]);
+
+		orgApi.setOrganizationParameter(args[0], args[1], value);
+		context.println("set");
+	}
+
+	@ScriptUsage(description = "set organization parameter", arguments = { @ScriptArgument(name = "domain", type = "string", description = "organization domain") })
+	public void orgParams(String[] args) {
+		Map<String, Object> m = orgApi.getOrganizationParameters(args[0]);
+		context.println("Organization Parameters");
+		for (String key : m.keySet())
+			context.println(key + "=" + m.get(key));
 	}
 }
