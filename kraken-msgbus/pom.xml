@@ -52,7 +52,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.8.5</version>
+			<version>1.9.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
