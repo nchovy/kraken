@@ -16,7 +16,9 @@
 package org.krakenapps.dom.model;
 
 import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
 
+@CollectionName("permission")
 public class Permission {
 	@FieldOption(nullable = false, length = 60)
 	private String group;
