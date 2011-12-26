@@ -82,6 +82,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void adds(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
 			DefaultEntityEventProvider<T> provider) {
+		if (docs.isEmpty())
+			return;
+
 		if (preds.size() != docs.size())
 			throw new IllegalArgumentException("preds and docs must has equal size");
 
@@ -101,7 +104,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				db.add(xact, doc);
 			}
 
-			xact.commit(COMMITER, "added " + docs.size() + " " + cls.getSimpleName());
+			xact.commit(COMMITER, "added " + docs.size() + " " + cls.getSimpleName() + "(s)");
 		} catch (Exception e) {
 			xact.rollback();
 			if (e instanceof DOMException)
@@ -129,6 +132,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void updates(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider) {
+		if (docs.isEmpty())
+			return;
+
 		if (preds.size() != docs.size())
 			throw new IllegalArgumentException("preds and docs must has equal size");
 
@@ -149,7 +155,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				db.update(xact, c, doc, IGNORE_CONFLICT);
 			}
 
-			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName());
+			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName() + "(s)");
 		} catch (Exception e) {
 			xact.rollback();
 			if (e instanceof DOMException)
@@ -176,6 +182,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void removes(String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider) {
+		if (preds.isEmpty())
+			return;
+
 		ConfigDatabase db = getDatabase(domain);
 		ConfigTransaction xact = db.beginTransaction();
 
@@ -197,7 +206,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				db.remove(xact, c, IGNORE_CONFLICT);
 			}
 
-			xact.commit(COMMITER, "removed " + preds.size() + " " + cls.getSimpleName());
+			xact.commit(COMMITER, "removed " + preds.size() + " " + cls.getSimpleName() + "(s)");
 		} catch (Exception e) {
 			xact.rollback();
 			if (e instanceof DOMException)
