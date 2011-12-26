@@ -17,7 +17,6 @@ package org.krakenapps.dom.model;
 
 import java.io.File;
 import java.util.Date;
-import java.util.UUID;
 
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;

@@ -19,8 +19,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -130,17 +132,31 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 
 	@Override
 	public void removeOrganizationUnits(String domain, Collection<String> guids) {
-		List<Predicate> preds = new ArrayList<Predicate>(guids.size());
-		for (String guid : guids)
-			preds.add(getPred(guid));
+		Set<String> orgUnitGuids = new HashSet<String>();
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids) {
+			if (orgUnitGuids.contains(guid))
+				continue;
+
+			List<OrganizationUnit> orgUnits = getOrganizationUnitTree(getOrganizationUnit(domain, guid));
+			for (OrganizationUnit orgUnit : orgUnits)
+				orgUnitGuids.add(orgUnit.getGuid());
+			preds.addAll(getPreds(orgUnits));
+		}
 		cfg.removes(domain, cls, preds, NOT_FOUND, this);
 	}
 
 	@Override
 	public void removeOrganizationUnit(String domain, String guid) {
-		OrganizationUnit orgUnit = getOrganizationUnit(domain, guid);
+		List<OrganizationUnit> orgUnits = getOrganizationUnitTree(getOrganizationUnit(domain, guid));
+		cfg.removes(domain, cls, getPreds(orgUnits), NOT_FOUND, this);
+	}
+
+	private List<OrganizationUnit> getOrganizationUnitTree(OrganizationUnit orgUnit) {
+		List<OrganizationUnit> orgUnits = new ArrayList<OrganizationUnit>();
 		for (OrganizationUnit child : orgUnit.getChildren())
-			removeOrganizationUnit(domain, child.getGuid());
-		cfg.remove(domain, cls, getPred(guid), NOT_FOUND, this);
+			orgUnits.addAll(getOrganizationUnitTree(child));
+		orgUnits.add(orgUnit);
+		return orgUnits;
 	}
 }

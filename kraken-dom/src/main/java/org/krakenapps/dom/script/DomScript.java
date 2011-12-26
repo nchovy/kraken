@@ -251,4 +251,14 @@ public class DomScript implements Script {
 		for (String key : m.keySet())
 			context.println(key + "=" + m.get(key));
 	}
+
+	@ScriptUsage(description = "set max session count", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
+			@ScriptArgument(name = "session count", type = "integer", description = "session count") })
+	public void setMaxSession(String[] args) {
+		String domain = args[0];
+		Integer sessionCount = Integer.parseInt(args[1]);
+
+		orgApi.setOrganizationParameter(domain, "max-session", sessionCount);
+	}
 }

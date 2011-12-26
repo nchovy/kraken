@@ -25,6 +25,7 @@ import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
@@ -32,8 +33,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.api.PrimitiveSerializeCallback;
 import org.krakenapps.codec.EncodingRule;
-import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CollectionEntry;
+import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
@@ -357,14 +358,21 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public List<CommitLog> getCommitLogs() {
+		return getCommitLogs(0, Long.MAX_VALUE);
+	}
+
+	@Override
+	public List<CommitLog> getCommitLogs(long offset, long limit) {
 		List<CommitLog> commitLogs = new ArrayList<CommitLog>();
 		RevLogReader reader = null;
 		try {
 			reader = new RevLogReader(changeLogFile, changeDatFile);
-			long count = reader.count();
 
-			for (int i = 0; i < count; i++) {
-				RevLog revlog = reader.read(i);
+			ListIterator<RevLog> it = reader.iterator(offset);
+			for (long i = 0; i < limit; i++) {
+				if (!it.hasNext())
+					break;
+				RevLog revlog = it.next();
 				byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
 				ChangeLog change = ChangeLog.deserialize(doc);
 				change.setRev(revlog.getDocId());

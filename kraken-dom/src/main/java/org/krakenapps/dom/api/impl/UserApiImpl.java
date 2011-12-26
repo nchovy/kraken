@@ -69,11 +69,14 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Validate
 	public void validate() {
+		orgUnitApi.addEntityEventListener(this);
 		tracker.open();
 	}
 
 	@Invalidate
 	public void invalidate() {
+		if (orgUnitApi != null)
+			orgUnitApi.removeEntityEventListener(this);
 		tracker.close();
 	}
 
@@ -262,7 +265,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void entityRemoved(String domain, OrganizationUnit orgUnit) {
+		Collection<String> loginNames = new ArrayList<String>();
 		for (User user : getUsers(domain, orgUnit.getGuid(), false))
-			removeUser(domain, user.getLoginName());
+			loginNames.add(user.getLoginName());
+		removeUsers(domain, loginNames);
 	}
 }
