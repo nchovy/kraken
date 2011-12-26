@@ -72,6 +72,19 @@ public class WallPlugin {
 	}
 
 	@MsgbusMethod
+	public void removePresets(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
+		List<String> guids = (List<String>) req.get("guids");
+
+		ConfigCollection col = getCol(req);
+		for (String guid : guids) {
+			Config c = col.findOne(Predicates.field("guid", guid));
+			if (c != null)
+				col.remove(c);
+		}
+	}
+
+	@MsgbusMethod
 	public void removePreset(Request req, Response resp) {
 		ConfigCollection col = getCol(req);
 		String guid = req.getString("guid");
