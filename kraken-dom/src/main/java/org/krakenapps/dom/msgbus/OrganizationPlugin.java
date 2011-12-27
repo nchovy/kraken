@@ -69,7 +69,7 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "config_view")
 	public void getOrganizationParameters(Request req, Response resp) {
-		String domain = req.getString("domain");
+		String domain = req.getOrgDomain();
 		Map<String, Object> params = orgApi.getOrganizationParameters(domain);
 		resp.put("result", PrimitiveConverter.serialize(params));
 	}
@@ -77,7 +77,7 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "config_view")
 	public void getOrganizationParameter(Request req, Response resp) {
-		String domain = req.getString("domain");
+		String domain = req.getOrgDomain();
 		String key = req.getString("key");
 		Object param = orgApi.getOrganizationParameter(domain, key);
 		resp.put("result", PrimitiveConverter.serialize(param));
@@ -86,7 +86,7 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void setOrganizationParameter(Request req, Response resp) {
-		String domain = req.getString("domain");
+		String domain = req.getOrgDomain();
 		String key = req.getString("key");
 		Object value = req.get("value");
 		orgApi.setOrganizationParameter(domain, key, value);
@@ -95,7 +95,7 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void unsetOrganizationParameter(Request req, Response resp) {
-		String domain = req.getString("domain");
+		String domain = req.getOrgDomain();
 		String key = req.getString("key");
 		orgApi.unsetOrganizationParameter(domain, key);
 	}
