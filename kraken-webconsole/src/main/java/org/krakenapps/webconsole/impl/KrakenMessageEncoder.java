@@ -78,10 +78,10 @@ public class KrakenMessageEncoder {
 
 				Map<String, Object> encHeaders = new HashMap<String, Object>();
 				encHeaders.put("iv", toBase64(iv));
-				
+
 				Map<String, Object> encData = new HashMap<String, Object>();
 				encData.put("data", toBase64(encrypted));
-				
+
 				json = jsonize(encHeaders, encData);
 			} catch (Exception e) {
 				logger.error("kraken webconsole: cannot encrypt msg", e);
@@ -138,6 +138,9 @@ public class KrakenMessageEncoder {
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> convertDate(Map<String, Object> properties) {
 		Map<String, Object> m = new HashMap<String, Object>();
+		if (properties == null)
+			return m;
+
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 
 		for (String key : properties.keySet()) {
