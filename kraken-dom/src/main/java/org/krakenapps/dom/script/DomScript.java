@@ -33,8 +33,8 @@ public class DomScript implements Script {
 	private HostApi hostApi;
 	private ApplicationApi appApi;
 
-	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
-			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
+	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi, ProgramApi programApi,
+			AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.userApi = userApi;
@@ -67,8 +67,7 @@ public class DomScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "add vendor", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = "domain"),
+	@ScriptUsage(description = "add vendor", arguments = { @ScriptArgument(name = "domain", type = "string", description = "domain"),
 			@ScriptArgument(name = "name", type = "string", description = "name") })
 	public void addVendor(String[] args) {
 		Vendor vendor = new Vendor();
@@ -77,8 +76,7 @@ public class DomScript implements Script {
 		context.println("added " + vendor.getGuid());
 	}
 
-	@ScriptUsage(description = "add host type", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host type", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "vendor guid", type = "string", description = ""),
 			@ScriptArgument(name = "name", type = "string", description = ""),
 			@ScriptArgument(name = "version", type = "string", description = "") })
@@ -93,8 +91,7 @@ public class DomScript implements Script {
 		context.println("added " + t.getGuid());
 	}
 
-	@ScriptUsage(description = "add host extension", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host extension", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "host type guid", type = "string", description = ""),
 			@ScriptArgument(name = "type", type = "string", description = "host extension type"),
 			@ScriptArgument(name = "ordinal", type = "string", description = "ordinal") })
@@ -250,15 +247,5 @@ public class DomScript implements Script {
 		context.println("Organization Parameters");
 		for (String key : m.keySet())
 			context.println(key + "=" + m.get(key));
-	}
-
-	@ScriptUsage(description = "set max session count", arguments = {
-			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
-			@ScriptArgument(name = "session count", type = "integer", description = "session count") })
-	public void setMaxSession(String[] args) {
-		String domain = args[0];
-		Integer sessionCount = Integer.parseInt(args[1]);
-
-		orgApi.setOrganizationParameter(domain, "max-session", sessionCount);
 	}
 }
