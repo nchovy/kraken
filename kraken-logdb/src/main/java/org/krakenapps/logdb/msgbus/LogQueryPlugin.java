@@ -119,16 +119,20 @@ public class LogQueryPlugin {
 
 	@MsgbusMethod
 	public void createQuery(Request req, Response resp) {
-		LogQuery query = service.createQuery(req.getString("query"));
-		resp.put("id", query.getId());
+		try {
+			LogQuery query = service.createQuery(req.getString("query"));
+			resp.put("id", query.getId());
 
-		// for query cancellation at session close
-		Session session = req.getSession();
-		queries.putIfAbsent(session, new ArrayList<LogQuery>());
+			// for query cancellation at session close
+			Session session = req.getSession();
+			queries.putIfAbsent(session, new ArrayList<LogQuery>());
 
-		List<LogQuery> l = queries.get(session);
-		synchronized (l) {
-			l.add(query);
+			List<LogQuery> l = queries.get(session);
+			synchronized (l) {
+				l.add(query);
+			}
+		} catch (Exception e) {
+			throw new MsgbusException("logdb", e.getMessage());
 		}
 	}
 
@@ -291,11 +295,10 @@ public class LogQueryPlugin {
 			m.put("count", query.getResult().size());
 			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m);
 
-			logger.trace(
-					"kraken logstorage: timeline callback => "
-							+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
-					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
-							Arrays.toString(values), query.getResult().size() });
+			logger.trace("kraken logstorage: timeline callback => "
+					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
+					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime, Arrays.toString(values),
+							query.getResult().size() });
 		}
 	}
 }
