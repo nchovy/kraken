@@ -391,6 +391,20 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	@Override
+	public long getCommitCount() {
+		RevLogReader reader = null;
+		try {
+			reader = new RevLogReader(changeLogFile, changeDatFile);
+			return reader.count();
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		} finally {
+			if (reader != null)
+				reader.close();
+		}
+	}
+
+	@Override
 	public ConfigTransaction beginTransaction() {
 		return beginTransaction(defaultTimeout);
 	}
