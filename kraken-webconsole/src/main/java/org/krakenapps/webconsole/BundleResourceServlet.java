@@ -42,7 +42,7 @@ public class BundleResourceServlet extends ResourceServlet {
 	@Override
 	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
-			URL url = bundle.getEntry(basePath + req.getPathInfo());
+			URL url = bundle.getResource(basePath + req.getPathInfo());
 			return url.openStream();
 		} catch (Exception e) {
 			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(),
