@@ -101,7 +101,7 @@ public class DatabaseTest {
 		assertEquals(2, col.count());
 
 		assertEquals(2, db.getCommitLogs().size());
-		CommitLog log = db.getCommitLogs().get(1);
+		CommitLog log = db.getCommitLogs().get(0);
 		assertEquals("xeraph", log.getCommitter());
 		assertEquals("added members", log.getMessage());
 		assertEquals(1, log.getChangeSet().get(0).getDocId());
@@ -172,7 +172,7 @@ public class DatabaseTest {
 		logs = db.getCommitLogs();
 		assertEquals(3, logs.size());
 		CommitLog log1 = logs.get(1);
-		CommitLog log2 = logs.get(2);
+		CommitLog log2 = logs.get(0);
 
 		// TODO: test rev id and created timestamp
 		assertEquals("xeraph", log1.getCommitter());
@@ -204,7 +204,7 @@ public class DatabaseTest {
 		logs = db.getCommitLogs();
 		assertEquals(3, logs.size());
 		CommitLog log1 = logs.get(1);
-		CommitLog log2 = logs.get(2);
+		CommitLog log2 = logs.get(0);
 
 		// TODO: test rev id and created timestamp
 		assertEquals("xeraph", log1.getCommitter());
@@ -234,7 +234,7 @@ public class DatabaseTest {
 		logs = db.getCommitLogs();
 		assertEquals(3, logs.size());
 		CommitLog log1 = logs.get(1);
-		CommitLog log2 = logs.get(2);
+		CommitLog log2 = logs.get(0);
 
 		// TODO: test rev id and created timestamp
 		assertEquals("xeraph", log1.getCommitter());
