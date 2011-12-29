@@ -23,12 +23,12 @@ import java.util.List;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.ConfigChange;
+import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
 
 public class FileConfigTransaction implements ConfigTransaction {
-
 	private FileConfigDatabase db;
 
 	private Manifest manifest;
@@ -57,6 +57,11 @@ public class FileConfigTransaction implements ConfigTransaction {
 	@Override
 	public Manifest getManifest() {
 		return manifest;
+	}
+
+	@Override
+	public ConfigDatabase getDatabase() {
+		return db;
 	}
 
 	@Override

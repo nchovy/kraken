@@ -520,33 +520,33 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config update(Config c, Object doc) {
-		if (!isUpdated(c, doc))
+		if (!setUpdate(c, doc))
 			return c;
 		return c.getCollection().update(c);
 	}
 
 	@Override
 	public Config update(Config c, Object doc, boolean ignoreConflict) {
-		if (!isUpdated(c, doc))
+		if (!setUpdate(c, doc))
 			return c;
 		return c.getCollection().update(c, ignoreConflict);
 	}
 
 	@Override
 	public Config update(Config c, Object doc, boolean ignoreConflict, String committer, String log) {
-		if (!isUpdated(c, doc))
+		if (!setUpdate(c, doc))
 			return c;
 		return c.getCollection().update(c, ignoreConflict, committer, log);
 	}
 
 	@Override
 	public Config update(ConfigTransaction xact, Config c, Object doc, boolean ignoreConflict) {
-		if (!isUpdated(c, doc))
+		if (!setUpdate(c, doc))
 			return c;
 		return c.getCollection().update(xact, c, ignoreConflict);
 	}
 
-	private boolean isUpdated(Config c, Object doc) {
+	private boolean setUpdate(Config c, Object doc) {
 		Object newDoc = PrimitiveConverter.serialize(doc, new CascadeUpdate());
 		if (newDoc.equals(c.getDocument()))
 			return false;

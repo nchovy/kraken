@@ -18,6 +18,8 @@ package org.krakenapps.confdb;
 public interface ConfigTransaction {
 	Manifest getManifest();
 
+	ConfigDatabase getDatabase();
+
 	void begin();
 
 	void begin(int timeout);
