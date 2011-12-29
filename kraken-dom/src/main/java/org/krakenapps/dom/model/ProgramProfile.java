@@ -31,7 +31,7 @@ public class ProgramProfile {
 
 	private String description;
 
-	@ReferenceKey({ "packName", "name" })
+	@ReferenceKey({ "pack", "name" })
 	@CollectionTypeHint(Program.class)
 	private List<Program> programs = new ArrayList<Program>();
 

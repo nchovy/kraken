@@ -1,7 +1,6 @@
 package org.krakenapps.dom.msgbus;
 
 import java.util.Collection;
-import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -49,9 +48,8 @@ public class MapPlugin {
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void removeMaps(Request req, Response resp) {
-		List<String> guids = (List<String>) req.get("guids");
-		for (String guid : guids)
-			mapApi.removeMap(req.getOrgDomain(), guid);
+		Collection<String> guids = (Collection<String>) req.get("guids");
+		mapApi.removeMaps(req.getOrgDomain(), guids);
 	}
 
 	@MsgbusMethod

@@ -15,16 +15,18 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.TimetableApi;
 import org.krakenapps.dom.model.Timetable;
 
@@ -40,6 +42,13 @@ public class TimetableApiImpl extends DefaultEntityEventProvider<Timetable> impl
 
 	private Predicate getPred(String guid) {
 		return Predicates.field("guid", guid);
+	}
+
+	private List<Predicate> getPreds(List<Timetable> timetables) {
+		List<Predicate> preds = new ArrayList<Predicate>(timetables.size());
+		for (Timetable timetable : timetables)
+			preds.add(getPred(timetable.getGuid()));
+		return preds;
 	}
 
 	@Override
@@ -58,14 +67,36 @@ public class TimetableApiImpl extends DefaultEntityEventProvider<Timetable> impl
 	}
 
 	@Override
+	public void createTimetables(String domain, Collection<Timetable> timetables) {
+		List<Timetable> timetableList = new ArrayList<Timetable>(timetables);
+		cfg.adds(domain, cls, getPreds(timetableList), timetableList, ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createTimetable(String domain, Timetable timetable) {
 		cfg.add(domain, cls, getPred(timetable.getGuid()), timetable, ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateTimetables(String domain, Collection<Timetable> timetables) {
+		List<Timetable> timetableList = new ArrayList<Timetable>(timetables);
+		for (Timetable timetable : timetableList)
+			timetable.setUpdated(new Date());
+		cfg.updates(domain, cls, getPreds(timetableList), timetableList, NOT_FOUND, this);
 	}
 
 	@Override
 	public void updateTimetable(String domain, Timetable timetable) {
 		timetable.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(timetable.getGuid()), timetable, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeTimetables(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, cls, preds, NOT_FOUND, this);
 	}
 
 	@Override

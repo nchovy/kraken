@@ -15,12 +15,14 @@
  */
 package org.krakenapps.dom.api;
 
+import org.krakenapps.confdb.ConfigTransaction;
+
 public interface EntityEventListener<T> {
-	void entityAdded(String domain, T obj);
+	void entityAdded(String domain, T obj, Object state);
 
-	void entityUpdated(String domain, T obj);
+	void entityUpdated(String domain, T obj, Object state);
 
-	void entityRemoving(String domain, T obj);
+	void entityRemoving(String domain, T obj, ConfigTransaction xact, Object state);
 
-	void entityRemoved(String domain, T obj);
+	void entityRemoved(String domain, T obj, Object state);
 }

@@ -29,9 +29,15 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 
 	Vendor getVendor(String domain, String guid);
 
+	void createVendors(String domain, Collection<Vendor> vendors);
+
 	void createVendor(String domain, Vendor vendor);
 
+	void updateVendors(String domain, Collection<Vendor> vendors);
+
 	void updateVendor(String domain, Vendor vendor);
+
+	void removeVendors(String domain, Collection<String> guids);
 
 	void removeVendor(String domain, String guid);
 
@@ -41,9 +47,15 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 
 	Application getApplication(String domain, String guid);
 
+	void createApplications(String domain, Collection<Application> applications);
+
 	void createApplication(String domain, Application application);
 
+	void updateApplications(String domain, Collection<Application> applications);
+
 	void updateApplication(String domain, Application application);
+
+	void removeApplications(String domain, Collection<String> guids);
 
 	void removeApplication(String domain, String guid);
 
@@ -53,9 +65,15 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 
 	ApplicationVersion getApplicationVersion(String domain, String guid);
 
+	void createApplicationVersions(String domain, Collection<ApplicationVersion> versions);
+
 	void createApplicationVersion(String domain, ApplicationVersion version);
 
+	void updateApplicationVersions(String domain, Collection<ApplicationVersion> versions);
+
 	void updateApplicationVersion(String domain, ApplicationVersion version);
+
+	void removeApplicationVersions(String domain, Collection<String> guids);
 
 	void removeApplicationVersion(String domain, String guid);
 
@@ -65,9 +83,15 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 
 	ApplicationGroup getApplicationGroup(String domain, String guid);
 
+	void createApplicationGroups(String domain, Collection<ApplicationGroup> groups);
+
 	void createApplicationGroup(String domain, ApplicationGroup group);
 
+	void updateApplicationGroups(String domain, Collection<ApplicationGroup> groups);
+
 	void updateApplicationGroup(String domain, ApplicationGroup group);
+
+	void removeApplicationGroups(String domain, Collection<String> guids);
 
 	void removeApplicationGroup(String domain, String guid);
 }

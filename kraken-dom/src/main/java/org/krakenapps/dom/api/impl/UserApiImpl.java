@@ -28,6 +28,8 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
@@ -252,22 +254,30 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
-	public void entityAdded(String domain, OrganizationUnit orgUnit) {
+	public void entityAdded(String domain, OrganizationUnit orgUnit, Object state) {
 	}
 
 	@Override
-	public void entityUpdated(String domain, OrganizationUnit orgUnit) {
+	public void entityUpdated(String domain, OrganizationUnit orgUnit, Object state) {
 	}
 
 	@Override
-	public void entityRemoving(String domain, OrganizationUnit orgUnit) {
+	public void entityRemoving(String domain, OrganizationUnit orgUnit, ConfigTransaction xact, Object state) {
+		boolean remove = (state != null) && (state instanceof Boolean) && ((Boolean) state);
+
+		for (User user : getUsers(domain, orgUnit.getGuid(), false)) {
+			Config c = xact.getDatabase().findOne(cls, getPred(user.getLoginName()));
+
+			if (remove) {
+				xact.getDatabase().remove(xact, c, true);
+			} else {
+				user.setOrgUnit(null);
+				xact.getDatabase().update(xact, c, user, true);
+			}
+		}
 	}
 
 	@Override
-	public void entityRemoved(String domain, OrganizationUnit orgUnit) {
-		Collection<String> loginNames = new ArrayList<String>();
-		for (User user : getUsers(domain, orgUnit.getGuid(), false))
-			loginNames.add(user.getLoginName());
-		removeUsers(domain, loginNames);
+	public void entityRemoved(String domain, OrganizationUnit orgUnit, Object state) {
 	}
 }

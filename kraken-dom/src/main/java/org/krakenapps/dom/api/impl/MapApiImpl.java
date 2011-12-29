@@ -1,7 +1,9 @@
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -27,6 +29,13 @@ public class MapApiImpl extends DefaultEntityEventProvider<MapInfo> implements M
 		return Predicates.field("guid", guid);
 	}
 
+	private List<Predicate> getPreds(List<MapInfo> maps) {
+		List<Predicate> preds = new ArrayList<Predicate>(maps.size());
+		for (MapInfo map : maps)
+			preds.add(getPred(map.getGuid()));
+		return preds;
+	}
+
 	@Override
 	public Collection<MapInfo> getMaps(String domain) {
 		return cfg.all(domain, cls);
@@ -43,14 +52,36 @@ public class MapApiImpl extends DefaultEntityEventProvider<MapInfo> implements M
 	}
 
 	@Override
+	public void createMaps(String domain, Collection<MapInfo> maps) {
+		List<MapInfo> mapList = new ArrayList<MapInfo>(maps);
+		cfg.adds(domain, cls, getPreds(mapList), mapList, ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createMap(String domain, MapInfo map) {
 		cfg.add(domain, cls, getPred(map.getGuid()), map, ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateMaps(String domain, Collection<MapInfo> maps) {
+		List<MapInfo> mapList = new ArrayList<MapInfo>(maps);
+		for (MapInfo map : mapList)
+			map.setUpdated(new Date());
+		cfg.updates(domain, cls, getPreds(mapList), mapList, NOT_FOUND, this);
 	}
 
 	@Override
 	public void updateMap(String domain, MapInfo map) {
 		map.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(map.getGuid()), map, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeMaps(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, cls, preds, NOT_FOUND, this);
 	}
 
 	@Override

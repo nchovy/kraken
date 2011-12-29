@@ -27,6 +27,8 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AreaApi;
@@ -77,8 +79,21 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 		return Predicates.field("guid", guid);
 	}
 
-	private Predicate getExtPred(String className) {
-		return Predicates.field("className", className);
+	private Predicate getExtPred(String type) {
+		return Predicates.field("type", type);
+	}
+
+	private List<Predicate> getPreds(List<? extends Object> objs) {
+		List<Predicate> preds = new ArrayList<Predicate>(objs.size());
+		for (Object obj : objs) {
+			if (obj instanceof Host)
+				preds.add(getPred(((Host) obj).getGuid()));
+			else if (obj instanceof HostType)
+				preds.add(getPred(((HostType) obj).getGuid()));
+			else if (obj instanceof HostExtension)
+				preds.add(getExtPred(((HostExtension) obj).getType()));
+		}
+		return preds;
 	}
 
 	@Override
@@ -109,15 +124,37 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
+	public void createHosts(String domain, Collection<Host> hosts) {
+		List<Host> hostList = new ArrayList<Host>(hosts);
+		cfg.adds(domain, host, getPreds(hostList), hostList, HOST_ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createHost(String domain, Host host) {
 		host.setExtensions(host.getType().getDefaultExtensions());
 		cfg.add(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_ALREADY_EXIST, this);
 	}
 
 	@Override
+	public void updateHosts(String domain, Collection<Host> hosts) {
+		List<Host> hostList = new ArrayList<Host>(hosts);
+		for (Host host : hostList)
+			host.setUpdated(new Date());
+		cfg.updates(domain, host, getPreds(hostList), hostList, HOST_NOT_FOUND, this);
+	}
+
+	@Override
 	public void updateHost(String domain, Host host) {
 		host.setUpdated(new Date());
 		cfg.update(domain, HostApiImpl.host, getPred(host.getGuid()), host, HOST_NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeHosts(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, host, preds, HOST_NOT_FOUND, this);
 	}
 
 	@Override
@@ -141,13 +178,33 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
+	public void createHostTypes(String domain, Collection<HostType> hostTypes) {
+		List<HostType> hostTypeList = new ArrayList<HostType>(hostTypes);
+		cfg.adds(domain, type, getPreds(hostTypeList), hostTypeList, TYPE_ALREADY_EXIST, typeEventProvider);
+	}
+
+	@Override
 	public void createHostType(String domain, HostType hostType) {
 		cfg.add(domain, type, getPred(hostType.getGuid()), hostType, TYPE_ALREADY_EXIST, typeEventProvider);
 	}
 
 	@Override
+	public void updateHostTypes(String domain, Collection<HostType> hostTypes) {
+		List<HostType> hostTypeList = new ArrayList<HostType>(hostTypes);
+		cfg.updates(domain, type, getPreds(hostTypeList), hostTypeList, TYPE_NOT_FOUND, typeEventProvider);
+	}
+
+	@Override
 	public void updateHostType(String domain, HostType hostType) {
 		cfg.update(domain, type, getPred(hostType.getGuid()), hostType, TYPE_NOT_FOUND, typeEventProvider);
+	}
+
+	@Override
+	public void removeHostTypes(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, type, preds, TYPE_NOT_FOUND, typeEventProvider);
 	}
 
 	@Override
@@ -178,8 +235,20 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
+	public void createHostExtensions(String domain, Collection<HostExtension> extensions) {
+		List<HostExtension> extensionList = new ArrayList<HostExtension>(extensions);
+		cfg.adds(domain, ext, getPreds(extensionList), extensionList, EXT_ALREADY_EXIST, extEventProvider);
+	}
+
+	@Override
 	public void createHostExtension(String domain, HostExtension extension) {
 		cfg.add(domain, ext, getExtPred(extension.getType()), extension, EXT_ALREADY_EXIST, extEventProvider);
+	}
+
+	@Override
+	public void updateHostExtensions(String domain, Collection<HostExtension> extensions) {
+		List<HostExtension> extensionList = new ArrayList<HostExtension>(extensions);
+		cfg.updates(domain, ext, getPreds(extensionList), extensionList, EXT_NOT_FOUND, extEventProvider);
 	}
 
 	@Override
@@ -188,25 +257,43 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
-	public void removeHostExtension(String domain, String className) {
-		cfg.remove(domain, ext, getExtPred(className), EXT_NOT_FOUND, extEventProvider);
+	public void removeHostExtensions(String domain, Collection<String> types) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String type : types)
+			preds.add(getExtPred(type));
+		cfg.removes(domain, ext, preds, EXT_NOT_FOUND, extEventProvider);
 	}
 
 	@Override
-	public void entityAdded(String domain, Area area) {
+	public void removeHostExtension(String domain, String type) {
+		cfg.remove(domain, ext, getExtPred(type), EXT_NOT_FOUND, extEventProvider);
 	}
 
 	@Override
-	public void entityUpdated(String domain, Area area) {
+	public void entityAdded(String domain, Area area, Object state) {
 	}
 
 	@Override
-	public void entityRemoving(String domain, Area area) {
+	public void entityUpdated(String domain, Area area, Object state) {
 	}
 
 	@Override
-	public void entityRemoved(String domain, Area area) {
-		for (Host host : getHosts(domain, area.getGuid(), false))
-			removeHost(domain, host.getGuid());
+	public void entityRemoving(String domain, Area area, ConfigTransaction xact, Object state) {
+		boolean remove = (state != null) && (state instanceof Boolean) && ((Boolean) state);
+
+		for (Host host : getHosts(domain, area.getGuid(), false)) {
+			Config c = xact.getDatabase().findOne(HostApiImpl.host, getPred(host.getGuid()));
+
+			if (remove) {
+				xact.getDatabase().remove(xact, c, true);
+			} else {
+				host.setArea(null);
+				xact.getDatabase().update(xact, c, host, true);
+			}
+		}
+	}
+
+	@Override
+	public void entityRemoved(String domain, Area area, Object state) {
 	}
 }

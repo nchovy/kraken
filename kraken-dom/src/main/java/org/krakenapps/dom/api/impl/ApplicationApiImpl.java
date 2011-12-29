@@ -15,8 +15,10 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -60,6 +62,21 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 		return Predicates.field("guid", guid);
 	}
 
+	private List<Predicate> getPreds(List<? extends Object> objs) {
+		List<Predicate> preds = new ArrayList<Predicate>(objs.size());
+		for (Object obj : objs) {
+			if (obj instanceof Vendor)
+				preds.add(getPred(((Vendor) obj).getGuid()));
+			else if (obj instanceof Application)
+				preds.add(getPred(((Application) obj).getGuid()));
+			else if (obj instanceof ApplicationVersion)
+				preds.add(getPred(((ApplicationVersion) obj).getGuid()));
+			else if (obj instanceof ApplicationGroup)
+				preds.add(getPred(((ApplicationGroup) obj).getGuid()));
+		}
+		return preds;
+	}
+
 	@Override
 	public Collection<Vendor> getVendors(String domain) {
 		return cfg.all(domain, ven);
@@ -76,14 +93,36 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	}
 
 	@Override
+	public void createVendors(String domain, Collection<Vendor> vendors) {
+		List<Vendor> vendorList = new ArrayList<Vendor>(vendors);
+		cfg.adds(domain, ven, getPreds(vendorList), vendorList, VEN_ALREADY_EXIST, vendorEventProvider);
+	}
+
+	@Override
 	public void createVendor(String domain, Vendor vendor) {
 		cfg.add(domain, ven, getPred(vendor.getGuid()), vendor, VEN_ALREADY_EXIST, vendorEventProvider);
+	}
+
+	@Override
+	public void updateVendors(String domain, Collection<Vendor> vendors) {
+		List<Vendor> vendorList = new ArrayList<Vendor>(vendors);
+		for (Vendor vendor : vendorList)
+			vendor.setUpdated(new Date());
+		cfg.updates(domain, ven, getPreds(vendorList), vendorList, VEN_NOT_FOUND, vendorEventProvider);
 	}
 
 	@Override
 	public void updateVendor(String domain, Vendor vendor) {
 		vendor.setUpdated(new Date());
 		cfg.update(domain, ven, getPred(vendor.getGuid()), vendor, VEN_NOT_FOUND, vendorEventProvider);
+	}
+
+	@Override
+	public void removeVendors(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, ven, preds, VEN_NOT_FOUND, vendorEventProvider);
 	}
 
 	@Override
@@ -107,14 +146,36 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	}
 
 	@Override
+	public void createApplications(String domain, Collection<Application> applications) {
+		List<Application> applicationList = new ArrayList<Application>(applications);
+		cfg.adds(domain, app, getPreds(applicationList), applicationList, APP_ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createApplication(String domain, Application application) {
 		cfg.add(domain, app, getPred(application.getGuid()), application, APP_ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateApplications(String domain, Collection<Application> applications) {
+		List<Application> applicationList = new ArrayList<Application>(applications);
+		for (Application application : applicationList)
+			application.setUpdated(new Date());
+		cfg.updates(domain, app, getPreds(applicationList), applicationList, APP_NOT_FOUND, this);
 	}
 
 	@Override
 	public void updateApplication(String domain, Application application) {
 		application.setUpdated(new Date());
 		cfg.update(domain, app, getPred(application.getGuid()), application, APP_NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeApplications(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, app, preds, APP_NOT_FOUND, this);
 	}
 
 	@Override
@@ -138,14 +199,37 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	}
 
 	@Override
+	public void createApplicationVersions(String domain, Collection<ApplicationVersion> versions) {
+		List<ApplicationVersion> versionList = new ArrayList<ApplicationVersion>(versions);
+		cfg.adds(domain, ver, getPreds(versionList), versionList, VER_ALREADY_EXIST, versionEventProvider);
+
+	}
+
+	@Override
 	public void createApplicationVersion(String domain, ApplicationVersion version) {
 		cfg.add(domain, ver, getPred(version.getGuid()), version, VER_ALREADY_EXIST, versionEventProvider);
+	}
+
+	@Override
+	public void updateApplicationVersions(String domain, Collection<ApplicationVersion> versions) {
+		List<ApplicationVersion> versionList = new ArrayList<ApplicationVersion>(versions);
+		for (ApplicationVersion version : versionList)
+			version.setUpdated(new Date());
+		cfg.updates(domain, ver, getPreds(versionList), versionList, VER_NOT_FOUND, versionEventProvider);
 	}
 
 	@Override
 	public void updateApplicationVersion(String domain, ApplicationVersion version) {
 		version.setUpdated(new Date());
 		cfg.update(domain, ver, getPred(version.getGuid()), version, VER_NOT_FOUND, versionEventProvider);
+	}
+
+	@Override
+	public void removeApplicationVersions(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, ver, preds, VER_NOT_FOUND, versionEventProvider);
 	}
 
 	@Override
@@ -169,14 +253,36 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	}
 
 	@Override
+	public void createApplicationGroups(String domain, Collection<ApplicationGroup> groups) {
+		List<ApplicationGroup> groupList = new ArrayList<ApplicationGroup>(groups);
+		cfg.adds(domain, grp, getPreds(groupList), groupList, GRP_ALREADY_EXIST, groupEventProvider);
+	}
+
+	@Override
 	public void createApplicationGroup(String domain, ApplicationGroup group) {
 		cfg.add(domain, grp, getPred(group.getGuid()), group, GRP_ALREADY_EXIST, groupEventProvider);
+	}
+
+	@Override
+	public void updateApplicationGroups(String domain, Collection<ApplicationGroup> groups) {
+		List<ApplicationGroup> groupList = new ArrayList<ApplicationGroup>(groups);
+		for (ApplicationGroup group : groupList)
+			group.setUpdated(new Date());
+		cfg.updates(domain, grp, getPreds(groupList), groupList, VEN_NOT_FOUND, groupEventProvider);
 	}
 
 	@Override
 	public void updateApplicationGroup(String domain, ApplicationGroup group) {
 		group.setUpdated(new Date());
 		cfg.update(domain, grp, getPred(group.getGuid()), group, GRP_NOT_FOUND, groupEventProvider);
+	}
+
+	@Override
+	public void removeApplicationGroups(String domain, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, grp, preds, GRP_NOT_FOUND, groupEventProvider);
 	}
 
 	@Override

@@ -121,21 +121,21 @@ public class ApplicationPlugin {
 	}
 
 	@MsgbusMethod
-	public void createApplicationGroups(Request req, Response resp) {
+	public void createApplicationGroup(Request req, Response resp) {
 		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(new ApplicationGroup(), req.getParams());
 		appApi.createApplicationGroup(req.getOrgDomain(), group);
 		resp.put("guid", group.getGuid());
 	}
 
 	@MsgbusMethod
-	public void updateApplicationGroups(Request req, Response resp) {
+	public void updateApplicationGroup(Request req, Response resp) {
 		ApplicationGroup before = appApi.getApplicationGroup(req.getOrgDomain(), req.getString("guid"));
 		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(before, req.getParams());
 		appApi.updateApplicationGroup(req.getOrgDomain(), group);
 	}
 
 	@MsgbusMethod
-	public void removeApplicationGroups(Request req, Response resp) {
+	public void removeApplicationGroup(Request req, Response resp) {
 		String guid = req.getString("guid");
 		appApi.removeApplicationGroup(req.getOrgDomain(), guid);
 	}

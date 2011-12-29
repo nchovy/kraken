@@ -15,8 +15,12 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -40,6 +44,13 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 
 	private Predicate getPred(String guid) {
 		return Predicates.field("guid", guid);
+	}
+
+	private List<Predicate> getPreds(List<Area> areas) {
+		List<Predicate> preds = new ArrayList<Predicate>(areas.size());
+		for (Area area : areas)
+			preds.add(getPred(area.getGuid()));
+		return preds;
 	}
 
 	@Override
@@ -74,19 +85,67 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 	}
 
 	@Override
+	public void createAreas(String domain, Collection<Area> areas) {
+		List<Area> areaList = new ArrayList<Area>(areas);
+		cfg.adds(domain, cls, getPreds(areaList), areaList, ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createArea(String domain, Area area) {
 		cfg.add(domain, cls, getPred(area.getGuid()), area, ALREADY_EXIST, this);
 	}
 
 	@Override
+	public void updateAreas(String domain, Collection<Area> areas) {
+		List<Area> areaList = new ArrayList<Area>(areas);
+		for (Area area : areas)
+			area.setUpdated(new Date());
+		cfg.updates(domain, cls, getPreds(areaList), areaList, NOT_FOUND, this);
+	}
+
+	@Override
 	public void updateArea(String domain, Area area) {
+		area.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(area.getGuid()), area, NOT_FOUND, this);
 	}
 
 	@Override
+	public void removeAreas(String domain, Collection<String> guids) {
+		removeAreas(domain, guids, false);
+	}
+
+	@Override
 	public void removeArea(String domain, String guid) {
-		for (Area area : cfg.all(domain, Area.class, Predicates.field("parent", guid)))
-			removeArea(domain, area.getGuid());
-		cfg.remove(domain, cls, getPred(guid), NOT_FOUND, this);
+		removeArea(domain, guid, false);
+	}
+
+	@Override
+	public void removeAreas(String domain, Collection<String> guids, boolean removeHost) {
+		Set<String> areaGuids = new HashSet<String>();
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids) {
+			if (areaGuids.contains(guid))
+				continue;
+
+			List<Area> areas = getAreaTree(getArea(domain, guid));
+			for (Area area : areas)
+				areaGuids.add(area.getGuid());
+			preds.addAll(getPreds(areas));
+		}
+		cfg.removes(domain, cls, preds, NOT_FOUND, this, removeHost, null);
+	}
+
+	@Override
+	public void removeArea(String domain, String guid, boolean removeHost) {
+		List<Area> areas = getAreaTree(getArea(domain, guid));
+		cfg.removes(domain, cls, getPreds(areas), NOT_FOUND, this, removeHost, null);
+	}
+
+	private List<Area> getAreaTree(Area area) {
+		List<Area> areas = new ArrayList<Area>();
+		for (Area child : area.getChildren())
+			areas.addAll(getAreaTree(child));
+		areas.add(area);
+		return areas;
 	}
 }

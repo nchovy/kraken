@@ -20,6 +20,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -80,6 +82,17 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		return Predicates.field("guid", guid);
 	}
 
+	private List<Predicate> getPreds(List<? extends Object> objs) {
+		List<Predicate> preds = new ArrayList<Predicate>(objs.size());
+		for (Object obj : objs) {
+			if (obj instanceof FileSpace)
+				preds.add(getPred(((FileSpace) obj).getGuid()));
+			else if (obj instanceof UploadedFile)
+				preds.add(getPred(((UploadedFile) obj).getGuid()));
+		}
+		return preds;
+	}
+
 	@Override
 	public File getBaseDirectory(String domain) {
 		String dir = orgApi.getOrganizationParameter(domain, FSP_BASE_DIR_KEY, String.class);
@@ -116,8 +129,22 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	}
 
 	@Override
+	public void createFileSpaces(String domain, Collection<FileSpace> spaces) {
+		List<FileSpace> spaceList = new ArrayList<FileSpace>(spaces);
+		cfg.adds(domain, fsp, getPreds(spaceList), spaceList, FSP_ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createFileSpace(String domain, FileSpace space) {
 		cfg.add(domain, fsp, getPred(space.getGuid()), space, FSP_ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateFileSpaces(String domain, String loginName, Collection<FileSpace> spaces) {
+		List<FileSpace> spaceList = new ArrayList<FileSpace>(spaces);
+		for (FileSpace space : spaceList)
+			space.setUpdated(new Date());
+		cfg.updates(domain, fsp, getPreds(spaceList), spaceList, FSP_NOT_FOUND, this);
 	}
 
 	@Override
@@ -125,6 +152,14 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		checkPermissionLevel(domain, loginName, space.getGuid(), "update-file-space-permission-denied");
 		space.setUpdated(new Date());
 		cfg.update(domain, fsp, getPred(space.getGuid()), space, FSP_NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeFileSpaces(String domain, String loginName, Collection<String> guids) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids)
+			preds.add(getPred(guid));
+		cfg.removes(domain, fsp, preds, FSP_NOT_FOUND, this);
 	}
 
 	@Override
@@ -270,20 +305,50 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	}
 
 	@Override
+	public void deleteFiles(String domain, Collection<String> guids) {
+		List<UploadedFile> uploadeds = new ArrayList<UploadedFile>();
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids) {
+			uploadeds.add(cfg.get(domain, UploadedFile.class, getPred(guid), FILE_NOT_FOUND));
+			preds.add(getPred(guid));
+		}
+		for (UploadedFile uploaded : uploadeds)
+			deleteFile(uploaded);
+		cfg.removes(domain, file, preds, FILE_NOT_FOUND, fileEventProvider);
+	}
+
+	@Override
 	public void deleteFile(String domain, String guid) {
-		UploadedFile uploaded = cfg.get(domain, UploadedFile.class, getPred(guid), FILE_NOT_FOUND);
-		new File(uploaded.getPath()).delete();
-		cfg.remove(domain, file, getPred(guid), FILE_NOT_FOUND, fileEventProvider);
+		deleteFiles(domain, Arrays.asList(guid));
+	}
+
+	@Override
+	public void deleteFiles(String domain, String loginName, Collection<String> guids) {
+		List<UploadedFile> uploadeds = new ArrayList<UploadedFile>();
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String guid : guids) {
+			UploadedFile uploaded = cfg.get(domain, UploadedFile.class, getPred(guid), FILE_NOT_FOUND);
+			if (!loginName.equals(uploaded.getOwner().getLoginName())) {
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("guid", uploaded.getGuid());
+				throw new DOMException("file-delete-permission-denied", params);
+			}
+			uploadeds.add(uploaded);
+			preds.add(getPred(guid));
+		}
+		for (UploadedFile uploaded : uploadeds)
+			deleteFile(uploaded);
+		cfg.removes(domain, file, preds, FILE_NOT_FOUND, fileEventProvider);
 	}
 
 	@Override
 	public void deleteFile(String domain, String loginName, String guid) {
-		UploadedFile file = cfg.get(domain, UploadedFile.class, getPred(guid), FILE_NOT_FOUND);
-		if (!loginName.equals(file.getOwner().getLoginName())) {
-			Map<String, Object> params = new HashMap<String, Object>();
-			params.put("guid", file.getGuid());
-			throw new DOMException("file-delete-permission-denied", params);
-		}
-		deleteFile(domain, guid);
+		deleteFiles(domain, loginName, Arrays.asList(guid));
+	}
+
+	private void deleteFile(UploadedFile uploaded) {
+		File file = new File(uploaded.getPath());
+		if (!file.delete())
+			logger.error("kraken dom: file delete failed [{}]", file.getAbsolutePath());
 	}
 }

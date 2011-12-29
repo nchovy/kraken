@@ -34,7 +34,6 @@ public class Host {
 	@ReferenceKey("guid")
 	private HostType type;
 
-	@FieldOption(nullable = false)
 	@ReferenceKey("guid")
 	private Area area;
 

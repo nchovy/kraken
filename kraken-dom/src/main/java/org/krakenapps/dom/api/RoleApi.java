@@ -28,9 +28,15 @@ public interface RoleApi extends EntityEventProvider<Role> {
 
 	Role getRole(String domain, String name);
 
+	void createRoles(String domain, Collection<Role> roles);
+
 	void createRole(String domain, Role role);
 
+	void updateRoles(String domain, Collection<Role> roles);
+
 	void updateRole(String domain, Role role);
+
+	void removeRoles(String domain, Collection<String> names);
 
 	void removeRole(String domain, String name);
 

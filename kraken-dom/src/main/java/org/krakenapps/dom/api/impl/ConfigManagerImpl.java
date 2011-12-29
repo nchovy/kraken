@@ -82,6 +82,12 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void adds(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
 			DefaultEntityEventProvider<T> provider) {
+		adds(domain, cls, preds, docs, alreadyExistMessage, provider, null);
+	}
+
+	@Override
+	public <T> void adds(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
+			DefaultEntityEventProvider<T> provider, Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -114,24 +120,36 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		if (provider != null) {
 			for (T doc : docs)
-				provider.fireEntityAdded(domain, doc);
+				provider.fireEntityAdded(domain, doc, state);
 		}
 	}
 
 	@Override
 	public <T> void add(String domain, Class<T> cls, Predicate pred, T doc, String alreadyExistMessage,
 			DefaultEntityEventProvider<T> provider) {
+		add(domain, cls, pred, doc, alreadyExistMessage, provider, null);
+	}
+
+	@Override
+	public <T> void add(String domain, Class<T> cls, Predicate pred, T doc, String alreadyExistMessage,
+			DefaultEntityEventProvider<T> provider, Object state) {
 		ConfigDatabase db = getDatabase(domain);
 		if (db.findOne(cls, pred) != null)
 			throw new DOMException(alreadyExistMessage);
 		db.add(doc, COMMITER, "added 1 " + cls.getSimpleName());
 		if (provider != null)
-			provider.fireEntityAdded(domain, doc);
+			provider.fireEntityAdded(domain, doc, state);
 	}
 
 	@Override
 	public <T> void updates(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider) {
+		updates(domain, cls, preds, docs, notFoundMessage, provider, null);
+	}
+
+	@Override
+	public <T> void updates(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider, Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -165,23 +183,35 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		if (provider != null) {
 			for (T doc : docs)
-				provider.fireEntityUpdated(domain, doc);
+				provider.fireEntityUpdated(domain, doc, state);
 		}
 	}
 
 	@Override
 	public <T> void update(String domain, Class<T> cls, Predicate pred, T doc, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider) {
+		update(domain, cls, pred, doc, notFoundMessage, provider, null);
+	}
+
+	@Override
+	public <T> void update(String domain, Class<T> cls, Predicate pred, T doc, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider, Object state) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = get(db, cls, pred, notFoundMessage);
 		db.update(c, doc, IGNORE_CONFLICT, COMMITER, "updated 1 " + cls.getSimpleName());
 		if (provider != null)
-			provider.fireEntityUpdated(domain, doc);
+			provider.fireEntityUpdated(domain, doc, state);
 	}
 
 	@Override
 	public <T> void removes(String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider) {
+		removes(domain, cls, preds, notFoundMessage, provider, null, null);
+	}
+
+	@Override
+	public <T> void removes(String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
 		if (preds.isEmpty())
 			return;
 
@@ -200,7 +230,7 @@ public class ConfigManagerImpl implements ConfigManager {
 
 				T doc = c.getDocument(cls);
 				if (provider != null)
-					provider.fireEntityRemoving(domain, doc);
+					provider.fireEntityRemoving(domain, doc, xact, removingState);
 				docs.add(doc);
 
 				db.remove(xact, c, IGNORE_CONFLICT);
@@ -216,20 +246,35 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		if (provider != null) {
 			for (T doc : docs)
-				provider.fireEntityRemoved(domain, doc);
+				provider.fireEntityRemoved(domain, doc, removedState);
 		}
 	}
 
 	@Override
 	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
+		remove(domain, cls, pred, notFoundMessage, provider, null, null);
+	}
+
+	@Override
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider,
+			Object removingState, Object removedState) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = get(db, cls, pred, notFoundMessage);
 		T doc = c.getDocument(cls, getCallback(domain));
+		ConfigTransaction xact = db.beginTransaction();
+		try {
+			if (provider != null)
+				provider.fireEntityRemoving(domain, doc, xact, removingState);
+			db.remove(xact, c, IGNORE_CONFLICT);
+			xact.commit(COMMITER, "removed 1 " + cls.getSimpleName());
+		} catch (Exception e) {
+			xact.rollback();
+			if (e instanceof DOMException)
+				throw (DOMException) e;
+			throw new RuntimeException(e);
+		}
 		if (provider != null)
-			provider.fireEntityRemoving(domain, doc);
-		db.remove(c, IGNORE_CONFLICT, COMMITER, "removed 1 " + cls.getSimpleName());
-		if (provider != null)
-			provider.fireEntityRemoved(domain, doc);
+			provider.fireEntityRemoved(domain, doc, removedState);
 	}
 
 	private Config get(ConfigDatabase db, Class<?> cls, Predicate pred, String notFoundMessage) {

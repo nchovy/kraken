@@ -18,6 +18,7 @@ package org.krakenapps.dom.api.impl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -49,6 +50,13 @@ public class RoleApiImpl extends DefaultEntityEventProvider<Role> implements Rol
 		return Predicates.field("name", name);
 	}
 
+	private List<Predicate> getPreds(List<Role> roles) {
+		List<Predicate> preds = new ArrayList<Predicate>(roles.size());
+		for (Role role : roles)
+			preds.add(getPred(role.getName()));
+		return preds;
+	}
+
 	@Override
 	public Collection<Role> getRoles(String domain) {
 		return cfg.all(domain, cls);
@@ -78,14 +86,36 @@ public class RoleApiImpl extends DefaultEntityEventProvider<Role> implements Rol
 	}
 
 	@Override
+	public void createRoles(String domain, Collection<Role> roles) {
+		List<Role> roleList = new ArrayList<Role>(roles);
+		cfg.adds(domain, cls, getPreds(roleList), roleList, ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createRole(String domain, Role role) {
 		cfg.add(domain, cls, getPred(role.getName()), role, ALREADY_EXIST, this);
+	}
+
+	@Override
+	public void updateRoles(String domain, Collection<Role> roles) {
+		List<Role> roleList = new ArrayList<Role>(roles);
+		for (Role role : roleList)
+			role.setUpdated(new Date());
+		cfg.updates(domain, cls, getPreds(roleList), roleList, NOT_FOUND, this);
 	}
 
 	@Override
 	public void updateRole(String domain, Role role) {
 		role.setUpdated(new Date());
 		cfg.update(domain, cls, getPred(role.getName()), role, NOT_FOUND, this);
+	}
+
+	@Override
+	public void removeRoles(String domain, Collection<String> names) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String name : names)
+			preds.add(getPred(name));
+		cfg.removes(domain, cls, preds, NOT_FOUND, this);
 	}
 
 	@Override

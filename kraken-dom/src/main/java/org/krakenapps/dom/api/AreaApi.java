@@ -21,14 +21,24 @@ import org.krakenapps.dom.model.Area;
 
 public interface AreaApi extends EntityEventProvider<Area> {
 	Collection<Area> getRootAreas(String domain);
-	
+
 	Area findArea(String domain, String guid);
 
 	Area getArea(String domain, String guid);
 
+	void createAreas(String domain, Collection<Area> areas);
+
 	void createArea(String domain, Area area);
+
+	void updateAreas(String domain, Collection<Area> areas);
 
 	void updateArea(String domain, Area area);
 
+	void removeAreas(String domain, Collection<String> guids);
+
 	void removeArea(String domain, String guid);
+
+	void removeAreas(String domain, Collection<String> guids, boolean removeHost);
+
+	void removeArea(String domain, String guid, boolean removeHost);
 }

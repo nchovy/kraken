@@ -17,6 +17,7 @@ package org.krakenapps.dom.api;
 
 import java.util.WeakHashMap;
 
+import org.krakenapps.confdb.ConfigTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +44,14 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityAdded(String domain, T t) {
+		fireEntityAdded(domain, t, null);
+	}
+
+	public void fireEntityAdded(String domain, T t, Object state) {
 		for (EntityEventListener<T> listener : listeners.keySet()) {
 			if (listener != null) {
 				try {
-					listener.entityAdded(domain, t);
+					listener.entityAdded(domain, t, state);
 				} catch (Exception e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}
@@ -55,10 +60,14 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityUpdated(String domain, T t) {
+		fireEntityUpdated(domain, t, null);
+	}
+
+	public void fireEntityUpdated(String domain, T t, Object state) {
 		for (EntityEventListener<T> listener : listeners.keySet()) {
 			if (listener != null) {
 				try {
-					listener.entityUpdated(domain, t);
+					listener.entityUpdated(domain, t, state);
 				} catch (Exception e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}
@@ -67,19 +76,27 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityRemoving(String domain, T t) {
-		// do NOT add try-catch. it's intentional exception throwing
+		fireEntityRemoving(domain, t, null, null);
+	}
+
+	public void fireEntityRemoving(String domain, T t, ConfigTransaction xact, Object state) {
+		// DO NOT add try-catch. it's intentional exception throwing
 		for (EntityEventListener<T> listener : listeners.keySet()) {
 			if (listener != null) {
-				listener.entityRemoving(domain, t);
+				listener.entityRemoving(domain, t, xact, state);
 			}
 		}
 	}
 
 	public void fireEntityRemoved(String domain, T t) {
+		fireEntityRemoved(domain, t, null);
+	}
+
+	public void fireEntityRemoved(String domain, T t, Object state) {
 		for (EntityEventListener<T> listener : listeners.keySet()) {
 			if (listener != null) {
 				try {
-					listener.entityRemoved(domain, t);
+					listener.entityRemoved(domain, t, state);
 				} catch (Exception e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}

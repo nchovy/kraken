@@ -26,9 +26,15 @@ public interface TimetableApi {
 
 	Timetable getTimetable(String domain, String guid);
 
+	void createTimetables(String domain, Collection<Timetable> timetables);
+
 	void createTimetable(String domain, Timetable timetable);
 
+	void updateTimetables(String domain, Collection<Timetable> timetables);
+
 	void updateTimetable(String domain, Timetable timetable);
+
+	void removeTimetables(String domain, Collection<String> guids);
 
 	void removeTimetable(String domain, String guid);
 }

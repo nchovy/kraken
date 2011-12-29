@@ -62,7 +62,11 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @param space
 	 *            new file space
 	 */
+	void createFileSpaces(String domain, Collection<FileSpace> spaces);
+
 	void createFileSpace(String domain, FileSpace space);
+
+	void updateFileSpaces(String domain, String loginName, Collection<FileSpace> spaces);
 
 	void updateFileSpace(String domain, String loginName, FileSpace space);
 
@@ -76,6 +80,8 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @param guid
 	 *            the space guid
 	 */
+	void removeFileSpaces(String domain, String loginName, Collection<String> guids);
+
 	void removeFileSpace(String domain, String loginName, String guid);
 
 	/**
@@ -115,7 +121,8 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * Get file metadata using download token, space id and resource id.
 	 * 
 	 * @param tokenGuid
-	 *            the resource id that you obtained before using setDownloadToken
+	 *            the resource id that you obtained before using
+	 *            setDownloadToken
 	 * 
 	 * @return the uploaded file metadata
 	 * @throws IOException
@@ -139,7 +146,11 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	 * @param guid
 	 *            the resource guid
 	 */
+	void deleteFiles(String domain, Collection<String> guids);
+
 	void deleteFile(String domain, String guid);
+
+	void deleteFiles(String domain, String loginName, Collection<String> guids);
 
 	void deleteFile(String domain, String loginName, String guid);
 }

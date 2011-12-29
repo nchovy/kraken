@@ -15,20 +15,22 @@
  */
 package org.krakenapps.dom.api;
 
+import org.krakenapps.confdb.ConfigTransaction;
+
 public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
 	@Override
-	public void entityAdded(String domain, T obj) {
+	public void entityAdded(String domain, T obj, Object state) {
 	}
 
 	@Override
-	public void entityUpdated(String domain, T obj) {
+	public void entityUpdated(String domain, T obj, Object state) {
 	}
 
 	@Override
-	public void entityRemoving(String domain, T obj) {
+	public void entityRemoving(String domain, T obj, ConfigTransaction xact, Object state) {
 	}
 
 	@Override
-	public void entityRemoved(String domain, T obj) {
+	public void entityRemoved(String domain, T obj, Object state) {
 	}
 }

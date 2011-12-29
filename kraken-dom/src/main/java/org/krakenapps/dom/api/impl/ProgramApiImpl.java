@@ -15,7 +15,9 @@
  */
 package org.krakenapps.dom.api.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -23,8 +25,8 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
@@ -58,6 +60,19 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 		return Predicates.and(Predicates.field("pack", packName), Predicates.field("name", name));
 	}
 
+	private List<Predicate> getPreds(List<? extends Object> objs) {
+		List<Predicate> preds = new ArrayList<Predicate>(objs.size());
+		for (Object obj : objs) {
+			if (obj instanceof ProgramProfile)
+				preds.add(getPred(((ProgramProfile) obj).getName()));
+			else if (obj instanceof ProgramPack)
+				preds.add(getPred(((ProgramPack) obj).getName()));
+			else if (obj instanceof ProgramPack)
+				preds.add(getPred(((ProgramPack) obj).getName()));
+		}
+		return preds;
+	}
+
 	@Override
 	public Collection<ProgramProfile> getProgramProfiles(String domain) {
 		return cfg.all(domain, prof);
@@ -74,13 +89,36 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	}
 
 	@Override
+	public void createProgramProfiles(String domain, Collection<ProgramProfile> profiles) {
+		List<ProgramProfile> profileList = new ArrayList<ProgramProfile>(profiles);
+		cfg.adds(domain, prof, getPreds(profileList), profileList, PROF_ALREADY_EXIST, profileEventProvider);
+	}
+
+	@Override
 	public void createProgramProfile(String domain, ProgramProfile profile) {
 		cfg.add(domain, prof, getPred(profile.getName()), profile, PROF_ALREADY_EXIST, profileEventProvider);
 	}
 
 	@Override
+	public void updateProgramProfiles(String domain, Collection<ProgramProfile> profiles) {
+		List<ProgramProfile> profileList = new ArrayList<ProgramProfile>(profiles);
+		for (ProgramProfile profile : profileList)
+			profile.setUpdated(new Date());
+		cfg.updates(domain, prof, getPreds(profileList), profileList, PROF_NOT_FOUND, profileEventProvider);
+	}
+
+	@Override
 	public void updateProgramProfile(String domain, ProgramProfile profile) {
+		profile.setUpdated(new Date());
 		cfg.update(domain, prof, getPred(profile.getName()), profile, PROF_NOT_FOUND, profileEventProvider);
+	}
+
+	@Override
+	public void removeProgramProfiles(String domain, Collection<String> names) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String name : names)
+			preds.add(getPred(name));
+		cfg.removes(domain, prof, preds, PROF_NOT_FOUND, profileEventProvider);
 	}
 
 	@Override
@@ -113,13 +151,36 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	}
 
 	@Override
+	public void createProgramPacks(String domain, Collection<ProgramPack> packs) {
+		List<ProgramPack> packList = new ArrayList<ProgramPack>(packs);
+		cfg.adds(domain, pack, getPreds(packList), packList, PACK_ALREADY_EXIST, packEventProvider);
+	}
+
+	@Override
 	public void createProgramPack(String domain, ProgramPack pack) {
 		cfg.add(domain, ProgramApiImpl.pack, getPred(pack.getName()), pack, PACK_ALREADY_EXIST, packEventProvider);
 	}
 
 	@Override
+	public void updateProgramPacks(String domain, Collection<ProgramPack> packs) {
+		List<ProgramPack> packList = new ArrayList<ProgramPack>(packs);
+		for (ProgramPack pack : packList)
+			pack.setUpdated(new Date());
+		cfg.updates(domain, pack, getPreds(packList), packList, PACK_NOT_FOUND, packEventProvider);
+	}
+
+	@Override
 	public void updateProgramPack(String domain, ProgramPack pack) {
+		pack.setUpdated(new Date());
 		cfg.update(domain, ProgramApiImpl.pack, getPred(pack.getName()), pack, PACK_NOT_FOUND, packEventProvider);
+	}
+
+	@Override
+	public void removeProgramPacks(String domain, Collection<String> names) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String name : names)
+			preds.add(getPred(name));
+		cfg.removes(domain, pack, preds, PACK_NOT_FOUND, packEventProvider);
 	}
 
 	@Override
@@ -150,13 +211,36 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	}
 
 	@Override
+	public void createPrograms(String domain, Collection<Program> programs) {
+		List<Program> programList = new ArrayList<Program>(programs);
+		cfg.adds(domain, prog, getPreds(programList), programList, PROG_ALREADY_EXIST, this);
+	}
+
+	@Override
 	public void createProgram(String domain, Program program) {
 		cfg.add(domain, prog, getPred(program.getPack(), program.getName()), program, PROG_ALREADY_EXIST, this);
 	}
 
 	@Override
+	public void updatePrograms(String domain, Collection<Program> programs) {
+		List<Program> programList = new ArrayList<Program>(programs);
+		for (Program program : programList)
+			program.setUpdated(new Date());
+		cfg.updates(domain, prog, getPreds(programList), programList, PROG_NOT_FOUND, this);
+	}
+
+	@Override
 	public void updateProgram(String domain, Program program) {
+		program.setUpdated(new Date());
 		cfg.update(domain, prog, getPred(program.getPack(), program.getName()), program, PROG_NOT_FOUND, this);
+	}
+
+	@Override
+	public void removePrograms(String domain, Collection<String> names) {
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (String name : names)
+			preds.add(getPred(name));
+		cfg.removes(domain, prog, preds, PROG_NOT_FOUND, this);
 	}
 
 	@Override

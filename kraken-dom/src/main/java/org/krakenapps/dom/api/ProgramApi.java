@@ -28,9 +28,15 @@ public interface ProgramApi extends EntityEventProvider<Program> {
 
 	ProgramProfile getProgramProfile(String domain, String name);
 
+	void createProgramProfiles(String domain, Collection<ProgramProfile> profiles);
+
 	void createProgramProfile(String domain, ProgramProfile profile);
 
+	void updateProgramProfiles(String domain, Collection<ProgramProfile> profiles);
+
 	void updateProgramProfile(String domain, ProgramProfile profile);
+
+	void removeProgramProfiles(String domain, Collection<String> names);
 
 	void removeProgramProfile(String domain, String name);
 
@@ -40,9 +46,15 @@ public interface ProgramApi extends EntityEventProvider<Program> {
 
 	ProgramPack getProgramPack(String domain, String name);
 
+	void createProgramPacks(String domain, Collection<ProgramPack> packs);
+
 	void createProgramPack(String domain, ProgramPack pack);
 
+	void updateProgramPacks(String domain, Collection<ProgramPack> packs);
+
 	void updateProgramPack(String domain, ProgramPack pack);
+
+	void removeProgramPacks(String domain, Collection<String> names);
 
 	void removeProgramPack(String domain, String name);
 
@@ -54,9 +66,15 @@ public interface ProgramApi extends EntityEventProvider<Program> {
 
 	Program getProgram(String domain, String packName, String name);
 
+	void createPrograms(String domain, Collection<Program> programs);
+
 	void createProgram(String domain, Program program);
 
+	void updatePrograms(String domain, Collection<Program> programs);
+
 	void updateProgram(String domain, Program program);
+
+	void removePrograms(String domain, Collection<String> names);
 
 	void removeProgram(String domain, String packName, String name);
 }

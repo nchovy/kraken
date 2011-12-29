@@ -30,9 +30,15 @@ public interface HostApi extends EntityEventProvider<Host> {
 
 	Host getHost(String domain, String guid);
 
+	void createHosts(String domain, Collection<Host> hosts);
+
 	void createHost(String domain, Host host);
 
+	void updateHosts(String domain, Collection<Host> hosts);
+
 	void updateHost(String domain, Host host);
+
+	void removeHosts(String domain, Collection<String> guids);
 
 	void removeHost(String domain, String guid);
 
@@ -42,9 +48,15 @@ public interface HostApi extends EntityEventProvider<Host> {
 
 	HostType getHostType(String domain, String guid);
 
+	void createHostTypes(String domain, Collection<HostType> hostTypes);
+
 	void createHostType(String domain, HostType hostType);
 
+	void updateHostTypes(String domain, Collection<HostType> hostTypes);
+
 	void updateHostType(String domain, HostType hostType);
+
+	void removeHostTypes(String domain, Collection<String> guids);
 
 	void removeHostType(String domain, String guid);
 
@@ -54,9 +66,15 @@ public interface HostApi extends EntityEventProvider<Host> {
 
 	HostExtension getHostExtension(String domain, String guid);
 
+	void createHostExtensions(String domain, Collection<HostExtension> extensions);
+
 	void createHostExtension(String domain, HostExtension extension);
+
+	void updateHostExtensions(String domain, Collection<HostExtension> extensions);
 
 	void updateHostExtension(String domain, HostExtension extension);
 
-	void removeHostExtension(String domain, String className);
+	void removeHostExtensions(String domain, Collection<String> types);
+
+	void removeHostExtension(String domain, String type);
 }

@@ -22,7 +22,7 @@ import org.krakenapps.confdb.CollectionName;
 
 @CollectionName("program")
 public class Program {
-	@FieldOption(name = "pack", nullable = false)
+	@FieldOption(nullable = false)
 	private String pack;
 
 	@FieldOption(nullable = false, length = 60)

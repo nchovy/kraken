@@ -75,9 +75,8 @@ public class UserPlugin {
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void removeUsers(Request req, Response resp) {
-		List<String> loginNames = (List<String>) req.get("login_names");
-		for (String loginName : loginNames)
-			userApi.removeUser(req.getOrgDomain(), loginName);
+		Collection<String> loginNames = (Collection<String>) req.get("login_names");
+		userApi.removeUsers(req.getOrgDomain(), loginNames);
 	}
 
 	@MsgbusMethod
