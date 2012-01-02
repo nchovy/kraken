@@ -29,16 +29,15 @@ import org.krakenapps.cron.impl.CronField.Type;
  * @since 1.0.0
  */
 public final class Schedule {
-
 	/**
 	 * fieldName to CronField mapping
 	 */
 	private final Map<String, CronField> map;
 	private final String taskName;
 
-	private Schedule() throws Exception {
-		map = null;
-		taskName = null;
+	private Schedule() {
+		this.map = null;
+		this.taskName = null;
 	}
 
 	private Schedule(Builder builder) {
@@ -68,8 +67,8 @@ public final class Schedule {
 
 	@Override
 	public String toString() {
-		return String.format("%8s %8s %8s %8s %8s / %8s", map.get("Minute"), map.get("Hour"), map.get("DayOfMonth"),
-				map.get("Month"), map.get("DayOfWeek"), taskName);
+		return String.format("%8s %8s %8s %8s %8s / %8s", map.get("Minute"), map.get("Hour"), map.get("DayOfMonth"), map.get("Month"),
+				map.get("DayOfWeek"), taskName);
 	}
 
 	/**
@@ -123,11 +122,11 @@ public final class Schedule {
 
 		/**
 		 * Set cron field with given expression. Following expressions are
-		 * supported. 
-		 * 1. comma(',') as list. e.g:"1,3,4,8" (space inside the list must not be used) 
-		 * 2. dash('-') as range. e.g:"1-6", which means 1 to 6 
-		 * 3. asterisk('*') as wild. e.g:"*", which means every~ 
-		 * 4. slash('/') as interval. e.g:"* /5" which means every five~ (without whitespace)
+		 * supported. 1. comma(',') as list. e.g:"1,3,4,8" (space inside the
+		 * list must not be used) 2. dash('-') as range. e.g:"1-6", which means
+		 * 1 to 6 3. asterisk('*') as wild. e.g:"*", which means every~ 4.
+		 * slash('/') as interval. e.g:"* /5" which means every five~ (without
+		 * whitespace)
 		 */
 		public Builder set(CronField.Type type, String exp) throws ParseException {
 			this.map.put(type.toString(), new CronField(type, exp));
@@ -135,8 +134,9 @@ public final class Schedule {
 		}
 
 		/**
-		 * returns schedule object representing scheduling rule of current build object. 
-		 * e.g. new Schedule.Builder("test").set(CronField.Type.Minute,"5").build();
+		 * returns schedule object representing scheduling rule of current build
+		 * object. e.g. new
+		 * Schedule.Builder("test").set(CronField.Type.Minute,"5").build();
 		 * represents schedule of "5 * * * * / test"
 		 */
 		public Schedule build() {
@@ -204,6 +204,5 @@ public final class Schedule {
 			}
 		}
 	}
-
 
 }

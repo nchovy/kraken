@@ -30,20 +30,19 @@ import org.slf4j.LoggerFactory;
  * @since 1.0.0
  */
 public class Scheduler {
-
-	final Logger logger = LoggerFactory.getLogger(CronConfig.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(CronConfig.class.getName());
 	private PriorityQueue<Job> queue;
 	private final Thread loop = new Thread(new Loop());
 	private boolean running;
-
-	public void stop() {
-		running = false;
-	}
 
 	public void start(Map<Integer, Schedule> map) {
 		queue = reset(map);
 		running = true;
 		loop.start();
+	}
+
+	public void stop() {
+		running = false;
 	}
 
 	private PriorityQueue<Job> reset(Map<Integer, Schedule> map) {
@@ -171,8 +170,7 @@ public class Scheduler {
 				logger.debug("Cron: run registered task " + job);
 				job.run();
 			} catch (NullPointerException e) {
-				logger.debug("Cron: unable to run " + job + ". runnable \'" + job.schedule.getTaskName()
-						+ "\' is not active.");
+				logger.debug("Cron: unable to run " + job + ". runnable \'" + job.schedule.getTaskName() + "\' is not active.");
 			} catch (InvalidSyntaxException e) {
 				logger.warn("Cron: scheduler instance.name syntax error.", e);
 			}

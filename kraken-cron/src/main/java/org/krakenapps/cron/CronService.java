@@ -25,7 +25,6 @@ import java.util.Map;
  * @since 1.0.0
  */
 public interface CronService {
-
 	int registerSchedule(Schedule schedule);
 
 	void unregisterSchedule(int id);

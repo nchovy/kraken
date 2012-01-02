@@ -15,15 +15,9 @@
  */
 package org.krakenapps.cron.impl;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
-import org.apache.felix.ipojo.annotations.Requires;
-import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.cron.CronScript;
 import org.krakenapps.cron.CronService;
-
 import org.osgi.framework.BundleContext;
 
 /**
@@ -32,20 +26,13 @@ import org.osgi.framework.BundleContext;
  * @author periphery
  * @since 1.0.0
  */
-@Component(name = "cron-script-factory")
-@Provides
 public class CronScriptFactory implements ScriptFactory {
-	@SuppressWarnings("unused")
-	@ServiceProperty(name = "alias", value = "cron")
-	private String alias;
-
-	@Requires
+	private BundleContext context;
 	private CronService cron;
 
-	private BundleContext context;
-
-	public CronScriptFactory(BundleContext context) {
+	public CronScriptFactory(BundleContext context, CronService cron) {
 		this.context = context;
+		this.cron = cron;
 	}
 
 	@Override

@@ -1,19 +1,4 @@
-/*
- * Copyright 2009 NCHOVY
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package org.krakenapps.cron;
+package org.krakenapps.cron.impl;
 
 import java.text.ParseException;
 import java.util.Map;
@@ -23,7 +8,8 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.cron.impl.CronField;
+import org.krakenapps.cron.CronService;
+import org.krakenapps.cron.Schedule;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -103,11 +89,11 @@ public class CronScript implements Script {
 		for (String arg : args) {
 			try {
 				manager.unregisterSchedule(Integer.parseInt(arg));
-				context.printf("schedule %s unregistered.", arg);
+				context.println("schedule " + arg + " unregistered.");
 			} catch (NumberFormatException e) {
 				context.println("id should be number.");
 			} catch (NoSuchElementException e) {
-				context.printf("cron script: no schedule of given id %d", Integer.parseInt(arg));
+				context.println("cron script: no schedule of given id " + Integer.parseInt(arg));
 			}
 		}
 	}
@@ -117,11 +103,9 @@ public class CronScript implements Script {
 		context.println("SYNTAX:");
 		context.println("* * * * * Runnable instance.name\n\r" + "- - - - -\n\r" + "| | | | |\n\r"
 				+ "| | | | +----- day of week (0 - 6) (Sunday=0)\n\r" + "| | | +------- month (1 - 12)\n\r"
-				+ "| | +--------- day of month (1 - 31)\n\r" + "| +----------- hour (0 - 23)\n\r"
-				+ "+------------- min (0 - 59)\n\r");
+				+ "| | +--------- day of month (1 - 31)\n\r" + "| +----------- hour (0 - 23)\n\r" + "+------------- min (0 - 59)\n\r");
 		context.println("EXAMPLES: \n\r" + "Run once a year                       |   0 0 1 1 * \n\r"
-				+ "Run once a week                       |   0 0 * * 0 \n\r"
-				+ "Run every five minute                 | */5 * * * * \n\r"
+				+ "Run once a week                       |   0 0 * * 0 \n\r" + "Run every five minute                 | */5 * * * * \n\r"
 				+ "Run once a day from monday to friday  |   0 0 * * 1-5 \n\r"
 				+ "Run once a day on saturday and sunday |   0 0 * * 0,6 \n\r");
 
@@ -176,5 +160,4 @@ public class CronScript implements Script {
 			logger.warn("cron script: runnables error", e);
 		}
 	}
-
 }

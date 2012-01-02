@@ -62,6 +62,9 @@ import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.file.FileConfigService;
 import org.krakenapps.console.TelnetCodecFactory;
 import org.krakenapps.console.TelnetHandler;
+import org.krakenapps.cron.CronService;
+import org.krakenapps.cron.impl.CronScriptFactory;
+import org.krakenapps.cron.impl.CronServiceImpl;
 import org.krakenapps.instrumentation.InstrumentationServiceImpl;
 import org.krakenapps.keystore.KeyStoreScriptFactory;
 import org.krakenapps.logger.KrakenLogService;
@@ -114,6 +117,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	private PreferencesManager prefsManager;
 	private ConfigService conf;
 	private AuthService auth;
+	private CronService cron;
 
 	private static boolean serviceMode = false;
 
@@ -344,6 +348,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		prefsManager.start(context);
 		conf = new FileConfigService();
 		auth = new DefaultAuthService(context, conf);
+		cron = new CronServiceImpl(context);
 
 		registerScripts(context);
 		registerInstrumentation();
@@ -386,7 +391,10 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(context, SunPerfScriptFactory.class, "sunperf");
 		registerScriptFactory(context, new ConfScriptFactory(conf), "conf");
 		registerScriptFactory(context, new AuthScriptFactory(auth), "auth");
+		registerScriptFactory(context, new CronScriptFactory(context, cron), "cron");
 		registerScriptFactory(context, BatchScriptFactory.class, "batch");
+
+		Kraken.getContext().registerService(CronService.class.getName(), cron, null);
 	}
 
 	/**

@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * @since 1.0.0
  */
 public class CronConfig {
-	final Logger logger = LoggerFactory.getLogger(CronConfig.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(CronConfig.class.getName());
 	private Preferences prefs;
 	private AtomicInteger maxId = new AtomicInteger();
 

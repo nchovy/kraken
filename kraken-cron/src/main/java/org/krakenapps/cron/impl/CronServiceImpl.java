@@ -24,14 +24,9 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
-import org.apache.felix.ipojo.annotations.Provides;
-import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.cron.CronService;
 import org.krakenapps.cron.DuplicatedScheduleException;
 import org.krakenapps.cron.Schedule;
-
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -44,8 +39,6 @@ import org.osgi.service.prefs.PreferencesService;
  * @author periphery
  * @since 1.0.0
  */
-@Component(name = "cron-service")
-@Provides
 public class CronServiceImpl implements CronService {
 	private static BundleContext bundleContext;
 	/**
@@ -61,6 +54,8 @@ public class CronServiceImpl implements CronService {
 		bundleContext = context;
 		this.config = new CronConfig(getSystemPrefs());
 		refreshMap();
+		scheduler.start(getMap());
+		tracker.open();
 	}
 
 	/**
@@ -88,24 +83,6 @@ public class CronServiceImpl implements CronService {
 			throw new NoSuchElementException();
 		config.removeEntry(i);
 		scheduler.remove(i);
-	}
-
-	/**
-	 * start scheduler
-	 */
-	@Validate
-	public void validate() {
-		scheduler.start(getMap());
-		tracker.open();
-	}
-
-	/**
-	 * stop scheduler
-	 */
-	@Invalidate
-	public void invalidate() {
-		tracker.close();
-		scheduler.stop();
 	}
 
 	/**
@@ -154,8 +131,7 @@ public class CronServiceImpl implements CronService {
 	 *             when given instance name is not a valid string.
 	 */
 	private static Runnable getRef(BundleContext context, String instanceName) throws InvalidSyntaxException {
-		ServiceReference[] refs = context.getServiceReferences(Runnable.class.getName(), "(instance.name="
-				+ instanceName + ")");
+		ServiceReference[] refs = context.getServiceReferences(Runnable.class.getName(), "(instance.name=" + instanceName + ")");
 		if (refs == null || refs.length == 0) {
 			throw new NullPointerException();
 		}
