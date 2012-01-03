@@ -172,7 +172,7 @@ public class ShellSession {
 	}
 
 	private void runScript(String line) throws InstantiationException, IllegalAccessException {
-		Thread t = new Thread(new ScriptRunner(sc, line), "Kraken Script Runner [" + line + "]");
+		Thread t = new Thread(new ScriptRunner(sc, line), "Kraken Script Runner [" + line.trim() + "]");
 		t.start();
 	}
 }
