@@ -59,6 +59,32 @@ public class ConfScript implements Script {
 		context.println("dropped");
 	}
 
+	@ScriptUsage(description = "print documents", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name") })
+	public void createcol(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+		db.ensureCollection(args[1]);
+		context.println("created");
+	}
+
+	@ScriptUsage(description = "print documents", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name") })
+	public void dropcol(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+		db.dropCollection(args[1]);
+		context.println("dropped");
+	}
+
 	@ScriptUsage(description = "show revision logs", arguments = { @ScriptArgument(name = "name", type = "string", description = "database name") })
 	public void logs(String[] args) {
 		ConfigDatabase db = conf.getDatabase(args[0]);
