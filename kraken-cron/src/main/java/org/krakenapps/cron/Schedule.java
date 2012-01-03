@@ -42,19 +42,19 @@ public final class Schedule {
 
 	private Schedule(Builder builder) {
 		this.map = new HashMap<String, CronField>();
-		this.map.put("Minute", builder.map.get("Minute"));
-		this.map.put("Hour", builder.map.get("Hour"));
-		this.map.put("Month", builder.map.get("Month"));
+		this.map.put(Type.MINUTE.toString(), builder.map.get(Type.MINUTE.toString()));
+		this.map.put(Type.HOUR.toString(), builder.map.get(Type.HOUR.toString()));
+		this.map.put(Type.MONTH.toString(), builder.map.get(Type.MONTH.toString()));
 
-		CronField dom = builder.map.get("DayOfMonth");
-		CronField dow = builder.map.get("DayOfWeek");
+		CronField dom = builder.map.get(Type.DAY_OF_MONTH.toString());
+		CronField dow = builder.map.get(Type.DAY_OF_WEEK.toString());
 		try {
 			CronField.solveCollision(dom, dow);
 		} catch (Exception e) {
 			// must succeed. ignore.
 		}
-		this.map.put("DayOfMonth", dom);
-		this.map.put("DayOfWeek", dow);
+		this.map.put(Type.DAY_OF_MONTH.toString(), dom);
+		this.map.put(Type.DAY_OF_WEEK.toString(), dow);
 		this.taskName = builder.taskName;
 	}
 

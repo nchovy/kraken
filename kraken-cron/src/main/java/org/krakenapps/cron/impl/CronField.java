@@ -42,7 +42,7 @@ public final class CronField {
 		private final int bitLength;
 		private final int base;
 
-		Type(String fieldName, int bitLength, int base) {
+		private Type(String fieldName, int bitLength, int base) {
 			this.fieldName = fieldName;
 			this.bitLength = bitLength;
 			this.base = base;

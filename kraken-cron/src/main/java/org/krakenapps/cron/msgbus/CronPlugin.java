@@ -22,6 +22,13 @@ public class CronPlugin {
 	@Requires
 	private CronService cron;
 
+	public CronPlugin() {
+	}
+
+	public CronPlugin(CronService cron) {
+		this.cron = cron;
+	}
+
 	@MsgbusMethod
 	public void getSchedules(Request req, Response resp) {
 		List<Object> l = new ArrayList<Object>();

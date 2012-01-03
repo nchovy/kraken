@@ -65,6 +65,7 @@ import org.krakenapps.console.TelnetHandler;
 import org.krakenapps.cron.CronService;
 import org.krakenapps.cron.impl.CronScriptFactory;
 import org.krakenapps.cron.impl.CronServiceImpl;
+import org.krakenapps.cron.msgbus.CronPlugin;
 import org.krakenapps.instrumentation.InstrumentationServiceImpl;
 import org.krakenapps.keystore.KeyStoreScriptFactory;
 import org.krakenapps.logger.KrakenLogService;
@@ -280,14 +281,14 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * 
 	 * @throws IOException
 	 */
-	private void openConsolePort(BundleContext bc) throws IOException {
+	private void openConsolePort() throws IOException {
 		InetAddress address = getConsoleBindAddress();
 		int port = getConsolePortNumber();
 		InetSocketAddress bindSocketAddress = new InetSocketAddress(address, port);
 
 		NioSocketAcceptor acceptor = new NioSocketAcceptor();
 		acceptor.getFilterChain().addLast("protocol", new ProtocolCodecFilter(new TelnetCodecFactory()));
-		acceptor.setHandler(new TelnetHandler(bc));
+		acceptor.setHandler(new TelnetHandler(context));
 		acceptor.setReuseAddress(true);
 		acceptor.bind(bindSocketAddress);
 		logger.info("Console " + bindSocketAddress + " opened.");
@@ -348,11 +349,11 @@ public class Kraken implements BundleActivator, SignalHandler {
 		prefsManager.start(context);
 		conf = new FileConfigService();
 		auth = new DefaultAuthService(context, conf);
-		cron = new CronServiceImpl(context);
+		cron = new CronServiceImpl(context, conf);
 
-		registerScripts(context);
+		registerScripts();
 		registerInstrumentation();
-		openConsolePort(context);
+		openConsolePort();
 		startSshServer();
 		logger.info("Kraken started.");
 	}
@@ -373,44 +374,38 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * Register default kraken scripts.
 	 * 
 	 * @see Kraken API documentation
-	 * @param context
-	 *            the bundle context
 	 */
-	private void registerScripts(BundleContext context) {
-		registerScriptFactory(context, CoreScriptFactory.class, "core");
-		registerScriptFactory(context, BundleScriptFactory.class, "bundle");
-		registerScriptFactory(context, LoggerScriptFactory.class, "logger");
-		registerScriptFactory(context, OsgiScriptFactory.class, "osgi");
-		registerScriptFactory(context, PackageScriptFactory.class, "pkg");
-		registerScriptFactory(context, HistoryScriptFactory.class, "history");
-		registerScriptFactory(context, ThreadScriptFactory.class, "thread");
-		registerScriptFactory(context, PerfScriptFactory.class, "perf");
-		registerScriptFactory(context, RegistryScriptFactory.class, "registry");
-		registerScriptFactory(context, KeyStoreScriptFactory.class, "keystore");
-		registerScriptFactory(context, new AccountScriptFactory(context, conf), "account");
-		registerScriptFactory(context, SunPerfScriptFactory.class, "sunperf");
-		registerScriptFactory(context, new ConfScriptFactory(conf), "conf");
-		registerScriptFactory(context, new AuthScriptFactory(auth), "auth");
-		registerScriptFactory(context, new CronScriptFactory(context, cron), "cron");
-		registerScriptFactory(context, BatchScriptFactory.class, "batch");
-
-		Kraken.getContext().registerService(CronService.class.getName(), cron, null);
+	private void registerScripts() {
+		registerScriptFactory(CoreScriptFactory.class, "core");
+		registerScriptFactory(BundleScriptFactory.class, "bundle");
+		registerScriptFactory(LoggerScriptFactory.class, "logger");
+		registerScriptFactory(OsgiScriptFactory.class, "osgi");
+		registerScriptFactory(PackageScriptFactory.class, "pkg");
+		registerScriptFactory(HistoryScriptFactory.class, "history");
+		registerScriptFactory(ThreadScriptFactory.class, "thread");
+		registerScriptFactory(PerfScriptFactory.class, "perf");
+		registerScriptFactory(RegistryScriptFactory.class, "registry");
+		registerScriptFactory(KeyStoreScriptFactory.class, "keystore");
+		registerScriptFactory(new AccountScriptFactory(context, conf), "account");
+		registerScriptFactory(SunPerfScriptFactory.class, "sunperf");
+		registerScriptFactory(new ConfScriptFactory(conf), "conf");
+		registerScriptFactory(new AuthScriptFactory(auth), "auth");
+		registerScriptFactory(new CronScriptFactory(context, cron), "cron");
+		registerScriptFactory(BatchScriptFactory.class, "batch");
 	}
 
 	/**
 	 * Register script factory to OSGi service registry.
 	 * 
-	 * @param context
-	 *            the bundle context
 	 * @param scriptFactory
 	 *            the script factory
 	 * @param alias
 	 *            the script alias (e.g. logger is alias in "logger.list"
 	 *            command)
 	 */
-	private void registerScriptFactory(BundleContext context, Class<? extends ScriptFactory> scriptFactory, String alias) {
+	private void registerScriptFactory(Class<? extends ScriptFactory> scriptFactory, String alias) {
 		try {
-			registerScriptFactory(context, scriptFactory.newInstance(), alias);
+			registerScriptFactory(scriptFactory.newInstance(), alias);
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -418,7 +413,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		}
 	}
 
-	private void registerScriptFactory(BundleContext context, ScriptFactory scriptFactory, String alias) {
+	private void registerScriptFactory(ScriptFactory scriptFactory, String alias) {
 		Dictionary<String, Object> props = new Hashtable<String, Object>();
 		props.put("alias", alias);
 		context.registerService(ScriptFactory.class.getName(), scriptFactory, props);
@@ -426,6 +421,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 
 	private void registerInstrumentation() {
 		context.registerService(InstrumentationService.class.getName(), new InstrumentationServiceImpl(), null);
+		context.registerService(CronService.class.getName(), cron, null);
+		context.registerService(CronPlugin.class.getName(), new CronPlugin(cron), null);
 	}
 
 	/**

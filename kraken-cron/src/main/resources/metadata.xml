@@ -1,5 +1,7 @@
 <ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
+	<instance component="cron-service" />
 	<instance component="cron-plugin" />
+	<instance component="cron-script-factory" />
 </ipojo>

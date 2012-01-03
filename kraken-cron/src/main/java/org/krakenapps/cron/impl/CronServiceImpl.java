@@ -24,14 +24,18 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
+import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.cron.CronService;
 import org.krakenapps.cron.DuplicatedScheduleException;
 import org.krakenapps.cron.Schedule;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 
 /**
  * This class provides implementation for the {@link CronService} interface.
@@ -39,12 +43,17 @@ import org.osgi.service.prefs.PreferencesService;
  * @author periphery
  * @since 1.0.0
  */
+@Component(name = "cron-service")
+@Provides
 public class CronServiceImpl implements CronService {
 	private static BundleContext bundleContext;
 	/**
 	 * schedule id to Schedule mapping.
 	 */
 	private ConcurrentMap<Integer, Schedule> map;
+
+	@Requires
+	private ConfigService conf;
 	private final CronConfig config;
 	private final Scheduler scheduler = new Scheduler();
 	private JobServiceTracker tracker;
@@ -52,10 +61,28 @@ public class CronServiceImpl implements CronService {
 	public CronServiceImpl(BundleContext context) throws ParseException {
 		tracker = new JobServiceTracker(context, this);
 		bundleContext = context;
-		this.config = new CronConfig(getSystemPrefs());
+		this.config = new CronConfig(conf);
 		refreshMap();
+	}
+
+	public CronServiceImpl(BundleContext context, ConfigService conf) throws ParseException {
+		tracker = new JobServiceTracker(context, this);
+		bundleContext = context;
+		this.config = new CronConfig(conf);
+		refreshMap();
+		validate();
+	}
+
+	@Validate
+	public void validate() {
 		scheduler.start(getMap());
 		tracker.open();
+	}
+
+	@Invalidate
+	public void invalidate() {
+		tracker.close();
+		scheduler.stop();
 	}
 
 	/**
@@ -138,11 +165,5 @@ public class CronServiceImpl implements CronService {
 
 		Runnable task = ((Runnable) context.getService(refs[0]));
 		return task;
-	}
-
-	private Preferences getSystemPrefs() {
-		ServiceReference ref = bundleContext.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bundleContext.getService(ref);
-		return prefsService.getSystemPreferences();
 	}
 }

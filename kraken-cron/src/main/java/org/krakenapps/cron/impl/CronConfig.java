@@ -16,15 +16,17 @@
 package org.krakenapps.cron.impl;
 
 import java.text.ParseException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.krakenapps.confdb.CollectionName;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.cron.Schedule;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class handles jdbc operations associated with cron schedules. uses hsql
@@ -34,28 +36,21 @@ import org.slf4j.LoggerFactory;
  * @since 1.0.0
  */
 public class CronConfig {
-	private final Logger logger = LoggerFactory.getLogger(CronConfig.class.getName());
-	private Preferences prefs;
+	private ConfigDatabase db;
 	private AtomicInteger maxId = new AtomicInteger();
 
-	public CronConfig(Preferences prefs) {
-		this.prefs = prefs;
+	public CronConfig(ConfigService conf) {
+		this.db = conf.ensureDatabase("kraken-cron");
 		loadMaxId();
 	}
 
 	private void loadMaxId() {
-		try {
-			Preferences schedules = getScheduleRoot();
-			for (String name : schedules.childrenNames()) {
-				int id = Integer.parseInt(name);
-				if (maxId.get() < id) {
-					maxId.set(id);
-				}
+		Collection<ScheduleInfo> schedules = db.findAll(ScheduleInfo.class).getDocuments(ScheduleInfo.class);
+		for (ScheduleInfo schedule : schedules) {
+			if (maxId.get() < schedule.id) {
+				maxId.set(schedule.id);
 			}
-		} catch (BackingStoreException e) {
-			logger.warn("kraken cron: fetch max id failed", e);
 		}
-
 	}
 
 	/**
@@ -65,26 +60,17 @@ public class CronConfig {
 	 * @return id
 	 */
 	public int addEntry(Schedule schedule) {
-		try {
-			Preferences schedules = getScheduleRoot();
-			int nextId = maxId.incrementAndGet();
-			Preferences entry = schedules.node(Integer.toString(nextId));
+		ScheduleInfo info = new ScheduleInfo();
+		info.id = maxId.incrementAndGet();
+		info.task = schedule.getTaskName();
+		info.minute = schedule.get(CronField.Type.MINUTE).toString();
+		info.hour = schedule.get(CronField.Type.HOUR).toString();
+		info.dayOfMonth = schedule.get(CronField.Type.DAY_OF_MONTH).toString();
+		info.month = schedule.get(CronField.Type.MONTH).toString();
+		info.dayOfWeek = schedule.get(CronField.Type.DAY_OF_WEEK).toString();
+		db.add(info);
 
-			entry.put("minute", schedule.get(CronField.Type.MINUTE).toString());
-			entry.put("hour", schedule.get(CronField.Type.HOUR).toString());
-			entry.put("day_of_month", schedule.get(CronField.Type.DAY_OF_MONTH).toString());
-			entry.put("month", schedule.get(CronField.Type.MONTH).toString());
-			entry.put("day_of_week", schedule.get(CronField.Type.DAY_OF_WEEK).toString());
-			entry.put("task", schedule.getTaskName());
-
-			schedules.flush();
-			schedules.sync();
-
-			return nextId;
-		} catch (BackingStoreException e) {
-			logger.warn("kraken cron: add entry failed", e);
-			return -1;
-		}
+		return info.id;
 	}
 
 	/**
@@ -93,18 +79,9 @@ public class CronConfig {
 	 * @param id
 	 */
 	public void removeEntry(int id) {
-		try {
-			Preferences schedules = getScheduleRoot();
-			String name = Integer.toString(id);
-			if (!schedules.nodeExists(name))
-				return;
-
-			schedules.node(name).removeNode();
-			schedules.flush();
-			schedules.sync();
-		} catch (BackingStoreException e) {
-			logger.warn("kraken cron: remove entry failed", e);
-		}
+		Config c = db.findOne(ScheduleInfo.class, Predicates.field("id", id));
+		if (c != null)
+			db.remove(c);
 	}
 
 	/**
@@ -115,28 +92,27 @@ public class CronConfig {
 	 *             when data in db is corrupted and unable to parse as schedule.
 	 */
 	public Map<Integer, Schedule> getEntries() throws ParseException {
-		Preferences schedules = getScheduleRoot();
 		Map<Integer, Schedule> map = new HashMap<Integer, Schedule>();
-		try {
-			for (String id : schedules.childrenNames()) {
-				Preferences p = schedules.node(id);
-
-				Schedule.Builder builder = new Schedule.Builder(p.get("task", null));
-				builder.set(CronField.Type.MINUTE, p.get("minute", null));
-				builder.set(CronField.Type.HOUR, p.get("hour", null));
-				builder.set(CronField.Type.DAY_OF_MONTH, p.get("day_of_month", null));
-				builder.set(CronField.Type.MONTH, p.get("month", null));
-				builder.set(CronField.Type.DAY_OF_WEEK, p.get("day_of_week", null));
-				map.put(Integer.parseInt(id), builder.build());
-			}
-			return map;
-		} catch (BackingStoreException e) {
-			logger.error("kraken cron: load schedule instances error", e);
+		for (ScheduleInfo schedule : db.findAll(ScheduleInfo.class).getDocuments(ScheduleInfo.class)) {
+			Schedule.Builder builder = new Schedule.Builder(schedule.task);
+			builder.set(CronField.Type.MINUTE, schedule.minute);
+			builder.set(CronField.Type.HOUR, schedule.hour);
+			builder.set(CronField.Type.DAY_OF_MONTH, schedule.dayOfMonth);
+			builder.set(CronField.Type.MONTH, schedule.month);
+			builder.set(CronField.Type.DAY_OF_WEEK, schedule.dayOfWeek);
+			map.put(schedule.id, builder.build());
 		}
-		return null;
+		return map;
 	}
 
-	private Preferences getScheduleRoot() {
-		return prefs.node("/kraken_cron/schedules");
+	@CollectionName("schedule")
+	private static class ScheduleInfo {
+		private int id;
+		private String task;
+		private String minute;
+		private String hour;
+		private String dayOfMonth;
+		private String month;
+		private String dayOfWeek;
 	}
 }
