@@ -72,7 +72,7 @@ public class LdapScript implements Script {
 				File file = new File(args[4]);
 				if (!file.exists())
 					throw new IllegalArgumentException("file not found");
-				profile.setTrustStore(CertificateType.JKS, new FileInputStream(file));
+				profile.setTrustStore(CertificateType.X509, new FileInputStream(file));
 			}
 
 			ldap.createProfile(profile);

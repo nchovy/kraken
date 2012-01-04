@@ -27,6 +27,7 @@ import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
@@ -70,10 +71,12 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	@Requires
 	private ProgramApi programApi;
 
-	@Override
-	public String getExtensionName() {
-		return "ldap";
-	}
+	private UserExtensionProvider extProvider = new UserExtensionProvider() {
+		@Override
+		public String getExtensionName() {
+			return "ldap";
+		}
+	};
 
 	private ConfigDatabase getDatabase() {
 		return conf.ensureDatabase("kraken-ldap");
@@ -205,10 +208,10 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			Map<String, Object> domOrgUnitExt = domOrgUnit.getExt();
 			if (domOrgUnitExt == null)
 				domOrgUnitExt = new HashMap<String, Object>();
-			domOrgUnitExt.put(getExtensionName(), ext);
+			domOrgUnitExt.put(extProvider.getExtensionName(), ext);
 
-			Object before = domOrgUnit.getExt().get(getExtensionName());
-			Object after = domOrgUnitExt.get(getExtensionName());
+			Object before = domOrgUnit.getExt().get(extProvider.getExtensionName());
+			Object after = domOrgUnitExt.get(extProvider.getExtensionName());
 			boolean equals = after.equals(before);
 
 			domOrgUnit.setExt(domOrgUnitExt);
@@ -231,7 +234,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			return null;
 
 		Map<String, Object> ext = new HashMap<String, Object>();
-		ext.put(getExtensionName(), new HashMap<String, Object>());
+		ext.put(extProvider.getExtensionName(), new HashMap<String, Object>());
 
 		OrganizationUnit orgUnit = orgUnitApi.findOrganizationUnitByName(domain, names.get(0));
 		if (orgUnit == null) {
@@ -278,7 +281,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			loginNames.add(user.getAccountName());
 		for (User user : userApi.getUsers(domain)) {
 			Map<String, Object> ext = user.getExt();
-			if (ext == null || !ext.containsKey(getExtensionName()))
+			if (ext == null || !ext.containsKey(extProvider.getExtensionName()))
 				continue;
 			if (!loginNames.contains(user.getLoginName()))
 				userApi.removeUser(domain, user.getLoginName());
@@ -314,7 +317,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			Map<String, Object> domUserExt = domUser.getExt();
 			if (domUserExt == null)
 				domUserExt = new HashMap<String, Object>();
-			domUserExt.put(getExtensionName(), ext);
+			domUserExt.put(extProvider.getExtensionName(), ext);
 			if (user.isDomainAdmin() && !domUserExt.containsKey(adminApi.getExtensionName()))
 				domUserExt.put(adminApi.getExtensionName(), defaultAdmin);
 

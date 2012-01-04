@@ -1,8 +1,6 @@
 package org.krakenapps.ldap;
 
-import org.krakenapps.dom.api.UserExtensionProvider;
-
-public interface LdapSyncService extends UserExtensionProvider {
+public interface LdapSyncService {
 	boolean getPeriodicSync();
 
 	void setPeriodicSync(boolean activate);
