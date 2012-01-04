@@ -272,12 +272,14 @@ public class AdminApiImpl implements AdminApi {
 
 			return admin;
 		} catch (DOMException e) {
-			updateLoginFailures(domain, admin, false);
-			for (LoginCallback callback : callbacks) {
-				if (e.getErrorCode().equals(LOCKED_ADMIN))
-					callback.onLoginLocked(admin, session);
-				else
-					callback.onLoginFailed(admin, session, e);
+			if (!e.getErrorCode().equals("max-session")) {
+				updateLoginFailures(domain, admin, false);
+				for (LoginCallback callback : callbacks) {
+					if (e.getErrorCode().equals(LOCKED_ADMIN))
+						callback.onLoginLocked(admin, session);
+					else
+						callback.onLoginFailed(admin, session, e);
+				}
 			}
 			throw e;
 		}
