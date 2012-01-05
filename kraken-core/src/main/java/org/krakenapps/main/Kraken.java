@@ -263,7 +263,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	private String getSystemPackages() throws FileNotFoundException {
 		StringBuffer buffer = new StringBuffer(4096);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
+		BufferedReader reader = new BufferedReader(
+				new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
 		String s = null;
 		try {
 			while ((s = reader.readLine()) != null) {
@@ -302,11 +303,11 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * @throws UnknownHostException
 	 */
 	private InetAddress getConsoleBindAddress() throws UnknownHostException {
-		String bindAddress = System.getProperty("kraken.bind.address");
-		if (bindAddress == null)
+		String telnetAddress = System.getProperty("kraken.telnet.address");
+		if (telnetAddress == null)
 			return InetAddress.getByName("localhost");
 
-		return InetAddress.getByName(bindAddress);
+		return InetAddress.getByName(telnetAddress);
 	}
 
 	/**
@@ -444,8 +445,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * connected log monitor.
 	 */
 	private void startLogging() {
-		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() }, new KrakenLogService(),
-				null);
+		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() },
+				new KrakenLogService(), null);
 
 		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton().getLoggerFactory();
 		krakenLoggerFactory.start();
@@ -489,6 +490,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 		org.apache.log4j.Logger sshLogger = org.apache.log4j.Logger.getLogger("org.apache.sshd.server.session.ServerSession");
 		sshLogger.setLevel(Level.WARN);
 
+		String sshAddress = System.getProperty("kraken.ssh.address");
+
 		int port = 7022;
 		try {
 			port = Integer.parseInt((String) System.getProperty("kraken.ssh.port"));
@@ -497,6 +500,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 		}
 
 		SshServer sshd = SshServer.setUpDefaultServer();
+		sshd.setHost(sshAddress);
 		sshd.setPort(port);
 		sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider("hostkey.pem"));
 		sshd.setShellFactory(new SshCommandFactory());

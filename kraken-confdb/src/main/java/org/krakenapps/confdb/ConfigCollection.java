@@ -36,17 +36,17 @@ public interface ConfigCollection {
 
 	Config update(Config c);
 
-	Config update(Config c, boolean ignoreConflict);
+	Config update(Config c, boolean checkConflict);
 
-	Config update(Config c, boolean ignoreConflict, String committer, String log);
+	Config update(Config c, boolean checkConflict, String committer, String log);
 
 	Config update(ConfigTransaction xact, Config c, boolean ignoreConflict);
 
 	Config remove(Config c);
 
-	Config remove(Config c, boolean ignoreConflict);
+	Config remove(Config c, boolean checkConflict);
 
-	Config remove(Config c, boolean ignoreConflict, String committer, String log);
+	Config remove(Config c, boolean checkConflict, String committer, String log);
 
 	Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict);
 }

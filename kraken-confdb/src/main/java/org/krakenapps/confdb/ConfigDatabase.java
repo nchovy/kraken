@@ -117,17 +117,17 @@ public interface ConfigDatabase {
 
 	Config update(Config c, Object doc);
 
-	Config update(Config c, Object doc, boolean ignoreConflict);
+	Config update(Config c, Object doc, boolean checkConflict);
 
-	Config update(Config c, Object doc, boolean ignoreConflict, String committer, String log);
+	Config update(Config c, Object doc, boolean checkConflict, String committer, String log);
 
-	Config update(ConfigTransaction xact, Config c, Object doc, boolean ignoreConflict);
+	Config update(ConfigTransaction xact, Config c, Object doc, boolean checkConflict);
 
 	Config remove(Config c);
 
-	Config remove(Config c, boolean ignoreConflict);
+	Config remove(Config c, boolean checkConflict);
 
-	Config remove(Config c, boolean ignoreConflict, String committer, String log);
+	Config remove(Config c, boolean checkConflict, String committer, String log);
 
-	Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict);
+	Config remove(ConfigTransaction xact, Config c, boolean checkConflict);
 }

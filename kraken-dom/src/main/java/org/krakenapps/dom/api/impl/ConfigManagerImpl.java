@@ -27,7 +27,7 @@ import org.krakenapps.dom.api.DefaultEntityEventProvider;
 @Provides
 public class ConfigManagerImpl implements ConfigManager {
 	private static final String COMMITER = "kraken-dom";
-	private static final boolean IGNORE_CONFLICT = true;
+	private static final boolean CHECK_CONFLICT = false;
 
 	@Requires
 	private ConfigService confsvc;
@@ -170,7 +170,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				if (c == null)
 					throw new DOMException(notFoundMessage);
 
-				db.update(xact, c, doc, IGNORE_CONFLICT);
+				db.update(xact, c, doc, CHECK_CONFLICT);
 			}
 
 			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName() + "(s)");
@@ -198,7 +198,7 @@ public class ConfigManagerImpl implements ConfigManager {
 			DefaultEntityEventProvider<T> provider, Object state) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = get(db, cls, pred, notFoundMessage);
-		db.update(c, doc, IGNORE_CONFLICT, COMMITER, "updated 1 " + cls.getSimpleName());
+		db.update(c, doc, CHECK_CONFLICT, COMMITER, "updated 1 " + cls.getSimpleName());
 		if (provider != null)
 			provider.fireEntityUpdated(domain, doc, state);
 	}
@@ -233,7 +233,7 @@ public class ConfigManagerImpl implements ConfigManager {
 					provider.fireEntityRemoving(domain, doc, xact, removingState);
 				docs.add(doc);
 
-				db.remove(xact, c, IGNORE_CONFLICT);
+				db.remove(xact, c, CHECK_CONFLICT);
 			}
 
 			xact.commit(COMMITER, "removed " + preds.size() + " " + cls.getSimpleName() + "(s)");
@@ -265,7 +265,7 @@ public class ConfigManagerImpl implements ConfigManager {
 		try {
 			if (provider != null)
 				provider.fireEntityRemoving(domain, doc, xact, removingState);
-			db.remove(xact, c, IGNORE_CONFLICT);
+			db.remove(xact, c, CHECK_CONFLICT);
 			xact.commit(COMMITER, "removed 1 " + cls.getSimpleName());
 		} catch (Exception e) {
 			xact.rollback();

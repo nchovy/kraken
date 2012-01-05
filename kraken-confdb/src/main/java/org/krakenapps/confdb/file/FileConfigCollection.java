@@ -196,19 +196,19 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config update(Config c) {
-		return update(c, true);
+		return update(c, false);
 	}
 
 	@Override
-	public Config update(Config c, boolean ignoreConflict) {
-		return update(c, ignoreConflict, null, null);
+	public Config update(Config c, boolean checkConflict) {
+		return update(c, checkConflict, null, null);
 	}
 
 	@Override
-	public Config update(Config c, boolean ignoreConflict, String committer, String log) {
+	public Config update(Config c, boolean checkConflict, String committer, String log) {
 		ConfigTransaction xact = db.beginTransaction();
 		try {
-			Config updated = update(xact, c, ignoreConflict);
+			Config updated = update(xact, c, checkConflict);
 			xact.commit(committer, log);
 			return updated;
 		} catch (Exception e) {
@@ -218,7 +218,7 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	@Override
-	public Config update(ConfigTransaction xact, Config c, boolean ignoreConflict) {
+	public Config update(ConfigTransaction xact, Config c, boolean checkConflict) {
 		RevLogWriter writer = null;
 		ConfigIterator it = null;
 		try {
@@ -230,7 +230,7 @@ public class FileConfigCollection implements ConfigCollection {
 			while (it.hasNext()) {
 				Config o = it.next();
 				if (o.getId() == c.getId() && o.getPrevRevision() == lastRev) {
-					if (!ignoreConflict)
+					if (checkConflict)
 						throw new IllegalStateException("conflict with " + o.getRevision());
 
 					lastRev = o.getRevision();
@@ -257,20 +257,20 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config remove(Config c) {
-		return remove(c, true);
+		return remove(c, false);
 	}
 
 	@Override
-	public Config remove(Config c, boolean ignoreConflict) {
-		return remove(c, ignoreConflict, null, null);
+	public Config remove(Config c, boolean checkConflict) {
+		return remove(c, checkConflict, null, null);
 	}
 
 	@Override
-	public Config remove(Config c, boolean ignoreConflict, String committer, String log) {
+	public Config remove(Config c, boolean checkConflict, String committer, String log) {
 		ConfigTransaction xact = db.beginTransaction();
 		Config config = c;
 		try {
-			config = remove(xact, c, ignoreConflict);
+			config = remove(xact, c, checkConflict);
 			xact.commit(committer, log);
 			return config;
 		} catch (Exception e) {
@@ -280,7 +280,7 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	@Override
-	public Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict) {
+	public Config remove(ConfigTransaction xact, Config c, boolean checkConflict) {
 		RevLogWriter writer = null;
 		try {
 			writer = new RevLogWriter(logFile, datFile);

@@ -526,24 +526,24 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	@Override
-	public Config update(Config c, Object doc, boolean ignoreConflict) {
+	public Config update(Config c, Object doc, boolean checkConflict) {
 		if (!setUpdate(c, doc))
 			return c;
-		return c.getCollection().update(c, ignoreConflict);
+		return c.getCollection().update(c, checkConflict);
 	}
 
 	@Override
-	public Config update(Config c, Object doc, boolean ignoreConflict, String committer, String log) {
+	public Config update(Config c, Object doc, boolean checkConflict, String committer, String log) {
 		if (!setUpdate(c, doc))
 			return c;
-		return c.getCollection().update(c, ignoreConflict, committer, log);
+		return c.getCollection().update(c, checkConflict, committer, log);
 	}
 
 	@Override
-	public Config update(ConfigTransaction xact, Config c, Object doc, boolean ignoreConflict) {
+	public Config update(ConfigTransaction xact, Config c, Object doc, boolean checkConflict) {
 		if (!setUpdate(c, doc))
 			return c;
-		return c.getCollection().update(xact, c, ignoreConflict);
+		return c.getCollection().update(xact, c, checkConflict);
 	}
 
 	private boolean setUpdate(Config c, Object doc) {
@@ -577,18 +577,18 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	@Override
-	public Config remove(Config c, boolean ignoreConflict) {
-		return c.getCollection().remove(c, ignoreConflict);
+	public Config remove(Config c, boolean checkConflict) {
+		return c.getCollection().remove(c, checkConflict);
 	}
 
 	@Override
-	public Config remove(Config c, boolean ignoreConflict, String committer, String log) {
-		return c.getCollection().remove(c, ignoreConflict, committer, log);
+	public Config remove(Config c, boolean checkConflict, String committer, String log) {
+		return c.getCollection().remove(c, checkConflict, committer, log);
 	}
 
 	@Override
-	public Config remove(ConfigTransaction xact, Config c, boolean ignoreConflict) {
-		return c.getCollection().remove(xact, c, ignoreConflict);
+	public Config remove(ConfigTransaction xact, Config c, boolean checkConflict) {
+		return c.getCollection().remove(xact, c, checkConflict);
 	}
 
 	@Override
