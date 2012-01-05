@@ -275,7 +275,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			xact.commit(null, null);
 			int newColId = xact.getManifest().getCollectionId(name);
 			return new CollectionEntry(newColId, name);
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			throw new RollbackException(e);
 		}

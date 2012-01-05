@@ -111,7 +111,7 @@ public class ConfigManagerImpl implements ConfigManager {
 			}
 
 			xact.commit(COMMITER, "added " + docs.size() + " " + cls.getSimpleName() + "(s)");
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			if (e instanceof DOMException)
 				throw (DOMException) e;
@@ -174,7 +174,7 @@ public class ConfigManagerImpl implements ConfigManager {
 			}
 
 			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName() + "(s)");
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			if (e instanceof DOMException)
 				throw (DOMException) e;
@@ -237,7 +237,7 @@ public class ConfigManagerImpl implements ConfigManager {
 			}
 
 			xact.commit(COMMITER, "removed " + preds.size() + " " + cls.getSimpleName() + "(s)");
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			if (e instanceof DOMException)
 				throw (DOMException) e;
@@ -267,7 +267,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				provider.fireEntityRemoving(domain, doc, xact, removingState);
 			db.remove(xact, c, CHECK_CONFLICT);
 			xact.commit(COMMITER, "removed 1 " + cls.getSimpleName());
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			if (e instanceof DOMException)
 				throw (DOMException) e;

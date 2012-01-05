@@ -109,7 +109,7 @@ public class AccountManagerImpl implements AccountManager, AuthProvider {
 			credentials.add(xact, m);
 
 			xact.commit("kraken-core", "created account: " + name);
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 		}
 	}
@@ -137,7 +137,7 @@ public class AccountManagerImpl implements AccountManager, AuthProvider {
 
 			db.remove(c2);
 			xact.commit("kraken-core", "removed account: " + name);
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 		}
 	}

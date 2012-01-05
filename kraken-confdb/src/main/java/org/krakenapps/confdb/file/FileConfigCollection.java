@@ -156,7 +156,7 @@ public class FileConfigCollection implements ConfigCollection {
 			Config c = add(xact, doc);
 			xact.commit(committer, log);
 			return c;
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			throw new RollbackException(e);
 		}
@@ -211,7 +211,7 @@ public class FileConfigCollection implements ConfigCollection {
 			Config updated = update(xact, c, checkConflict);
 			xact.commit(committer, log);
 			return updated;
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			throw new RollbackException(e);
 		}
@@ -273,7 +273,7 @@ public class FileConfigCollection implements ConfigCollection {
 			config = remove(xact, c, checkConflict);
 			xact.commit(committer, log);
 			return config;
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			xact.rollback();
 			throw new RollbackException(e);
 		}
