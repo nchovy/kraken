@@ -60,8 +60,11 @@ public class AdminPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void setAdmin(Request req, Response resp) {
-		Admin admin = (Admin) PrimitiveConverter.overwrite(new Admin(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		String loginName = req.getString("login_name");
+		Admin before = adminApi.findAdmin(req.getOrgDomain(), loginName);
+		if (before == null)
+			before = new Admin();
+		Admin admin = (Admin) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		adminApi.setAdmin(req.getOrgDomain(), req.getAdminLoginName(), loginName, admin);
 	}
 
