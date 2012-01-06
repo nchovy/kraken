@@ -37,6 +37,13 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 	private String cronExp = "*/10 * * * *";
 
 	public NtpSyncServiceImpl() {
+		ensureClient();
+	}
+
+	private void ensureClient() {
+		if (client != null)
+			return;
+
 		try {
 			Preferences p = getPreference();
 			String host = p.get("server", null);
@@ -59,11 +66,13 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 
 	@Override
 	public InetAddress getTimeServer() {
+		ensureClient();
 		return this.client.getTimeServer();
 	}
 
 	@Override
 	public void setTimeServer(InetAddress timeServer) {
+		ensureClient();
 		this.client.setTimeServer(timeServer);
 		Preferences p = getPreference();
 		p.put("server", timeServer.getHostName());
@@ -77,6 +86,7 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 
 	@Override
 	public void setTimeout(int timeout) {
+		ensureClient();
 		this.client.setTimeout(timeout);
 		Preferences p = getPreference();
 		p.putInt("timeout", timeout);
