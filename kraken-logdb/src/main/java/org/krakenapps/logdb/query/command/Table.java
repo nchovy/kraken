@@ -102,11 +102,6 @@ public class Table extends LogQueryCommand {
 	@Override
 	public void start() {
 		try {
-			if (from == null)
-				from = new Date(0);
-			if (to == null)
-				to = new Date();
-
 			status = Status.Running;
 			storage.search(tableName, from, to, offset, limit, new LogSearchCallbackImpl());
 		} catch (InterruptedException e) {
