@@ -29,8 +29,8 @@ public class InitialSchema {
 	private static final String SCHEMA_VERSION = "1";
 	private static final String DEFAULT_DOMAIN = "localhost";
 
-	public static void generate(ScriptContext context, GlobalConfigApi globalConfigApi, OrganizationApi orgApi, RoleApi roleApi,
-			ProgramApi programApi, AreaApi areaApi, UserApi userApi) {
+	public static void generate(ScriptContext context, GlobalConfigApi globalConfigApi, OrganizationApi orgApi,
+			RoleApi roleApi, ProgramApi programApi, AreaApi areaApi, UserApi userApi) {
 		// TODO: check schema version, add vendor & applications
 		Object schemaVersion = globalConfigApi.getConfig("initial_schema_version");
 		if (!SCHEMA_VERSION.equals(schemaVersion)) {
@@ -95,11 +95,15 @@ public class InitialSchema {
 		}
 
 		List<Program> programs = new ArrayList<Program>();
-		programs.add(createProgram(context, programApi, "Account Manager", "Nchovy.WatchCat.Plugins.Core.AccountManager.AccountPlugin", 1));
-		programs.add(createProgram(context, programApi, "Host Manager", "Nchovy.WatchCat.Plugins.Core.HostConfig.HostConfig", 2));
-		programs.add(createProgram(context, programApi, "Task Manager", "Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 3));
+		programs.add(createProgram(context, programApi, "Account Manager",
+				"Nchovy.WatchCat.Plugins.Core.AccountManager.AccountPlugin", 1));
+		programs.add(createProgram(context, programApi, "Host Manager",
+				"Nchovy.WatchCat.Plugins.Core.HostConfig.HostConfig", 2));
+		programs.add(createProgram(context, programApi, "Task Manager",
+				"Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 3));
 		programs.add(createProgram(context, programApi, "Run", "Nchovy.WatchCat.Plugins.Core.Run.Run", 4));
-		programs.add(createProgram(context, programApi, "Developer Console", "Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 5));
+		programs.add(createProgram(context, programApi, "Developer Console",
+				"Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 5));
 
 		if (programApi.findProgramProfile(DEFAULT_DOMAIN, "all") == null) {
 			ProgramProfile profile = new ProgramProfile();
@@ -175,7 +179,7 @@ public class InitialSchema {
 		User user = new User();
 		user.setLoginName("root");
 		user.setName("root");
-		user.setPassword(Sha1.hashPassword(null, "kraken"));
+		user.setPassword("kraken");
 
 		Admin admin = new Admin();
 		admin.setRole(roleApi.getRole(DEFAULT_DOMAIN, "master"));
@@ -185,6 +189,7 @@ public class InitialSchema {
 		user.getExt().put("admin", admin);
 
 		try {
+			userApi.setSaltLength("localhost", 0);
 			userApi.createUser(DEFAULT_DOMAIN, user);
 		} catch (Exception e) {
 			logger.error("kraken dom: admin initialize failed", e);
