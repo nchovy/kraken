@@ -228,7 +228,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				if (c == null)
 					throw new DOMException(notFoundMessage);
 
-				T doc = c.getDocument(cls);
+				T doc = c.getDocument(cls, getCallback(domain));
 				if (provider != null)
 					provider.fireEntityRemoving(domain, doc, xact, removingState);
 				docs.add(doc);
@@ -251,13 +251,14 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider) {
 		remove(domain, cls, pred, notFoundMessage, provider, null, null);
 	}
 
 	@Override
-	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider,
-			Object removingState, Object removedState) {
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = get(db, cls, pred, notFoundMessage);
 		T doc = c.getDocument(cls, getCallback(domain));
