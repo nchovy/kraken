@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.lang.instrument.Instrumentation;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -196,7 +197,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void boot(StartOptions startOptions) throws Exception {
-		File jarPath = new File(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+		File jarPath = new File(URLDecoder.decode(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath(), "utf-8"));
 		File dir = jarPath.getParentFile();
 
 		Environment.setKrakenSystemProperties(dir.getAbsolutePath());
@@ -263,8 +264,7 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	private String getSystemPackages() throws FileNotFoundException {
 		StringBuffer buffer = new StringBuffer(4096);
-		BufferedReader reader = new BufferedReader(
-				new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
 		String s = null;
 		try {
 			while ((s = reader.readLine()) != null) {
@@ -445,8 +445,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * connected log monitor.
 	 */
 	private void startLogging() {
-		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() },
-				new KrakenLogService(), null);
+		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() }, new KrakenLogService(),
+				null);
 
 		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton().getLoggerFactory();
 		krakenLoggerFactory.start();
