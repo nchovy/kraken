@@ -66,8 +66,8 @@ public class LogFileReaderV2 extends LogFileReader {
 			indexBlockHeaders.add(header);
 			pos += 4 + header.logCount * INDEX_ITEM_SIZE;
 		}
-		logger.trace("kraken logstorage: {} has {} blocks, {} logs.", new Object[] { indexPath.getName(),
-				indexBlockHeaders.size(), logCount });
+		logger.trace("kraken logstorage: {} has {} blocks, {} logs.", new Object[] { indexPath.getName(), indexBlockHeaders.size(),
+				logCount });
 
 		this.dataFile = new RandomAccessFile(dataPath, "r");
 		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile);
@@ -125,31 +125,31 @@ public class LogFileReaderV2 extends LogFileReader {
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException,
-			InterruptedException {
+	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		int matched = 0;
 
+		Long fromTime = (from == null) ? null : from.getTime();
+		Long toTime = (to == null) ? null : to.getTime();
 		for (int i = dataBlockHeaders.size() - 1; i >= 0; i--) {
 			DataBlockHeader header = dataBlockHeaders.get(i);
-			if ((from == null || header.endDate >= from.getTime()) && (to == null || header.startDate <= to.getTime())) {
-				Long f = (from != null) ? from.getTime() : null;
-				Long t = (to != null) ? to.getTime() : null;
-				matched += readBlock(i, f, t, limit - matched, callback);
+			if ((fromTime == null || header.endDate >= fromTime) && (toTime == null || header.startDate <= toTime)) {
+				matched += readBlock(i, fromTime, toTime, limit - matched, callback);
 				if (matched == limit)
 					return;
 			}
 		}
 	}
 
-	private int readBlock(int blockId, Long from, Long to, int limit, LogRecordCallback callback) throws IOException,
-			InterruptedException {
+	private int readBlock(int blockId, Long from, Long to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		IndexBlockHeader header = indexBlockHeaders.get(blockId);
 		List<Integer> offsets = new ArrayList<Integer>();
 		int matched = 0;
 
 		indexFile.seek(header.fp + 4);
+		ByteBuffer indexBuffer = ByteBuffer.allocate(header.logCount * 4);
+		indexFile.read(indexBuffer.array());
 		for (int i = 0; i < header.logCount; i++)
-			offsets.add(indexFile.readInt());
+			offsets.add(indexBuffer.getInt());
 
 		// reverse order
 		for (int i = offsets.size() - 1; i >= 0; i--) {
