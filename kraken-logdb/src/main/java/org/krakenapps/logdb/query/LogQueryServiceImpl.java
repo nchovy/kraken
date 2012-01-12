@@ -47,6 +47,7 @@ import org.krakenapps.logdb.query.parser.LookupParser;
 import org.krakenapps.logdb.query.parser.OptionCheckerParser;
 import org.krakenapps.logdb.query.parser.OptionParser;
 import org.krakenapps.logdb.query.parser.RenameParser;
+import org.krakenapps.logdb.query.parser.ReplaceParser;
 import org.krakenapps.logdb.query.parser.ScriptParser;
 import org.krakenapps.logdb.query.parser.SearchParser;
 import org.krakenapps.logdb.query.parser.SortParser;
@@ -100,10 +101,9 @@ public class LogQueryServiceImpl implements LogQueryService {
 	@Validate
 	public void start() {
 		@SuppressWarnings("unchecked")
-		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, EvalParser.class,
-				SearchParser.class, FieldsParser.class, FunctionParser.class, OptionCheckerParser.class,
-				OptionParser.class, RenameParser.class, SortParser.class, StatsParser.class, TermParser.class,
-				TimechartParser.class);
+		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, EvalParser.class, SearchParser.class,
+				FieldsParser.class, FunctionParser.class, OptionCheckerParser.class, OptionParser.class, RenameParser.class,
+				ReplaceParser.class, SortParser.class, StatsParser.class, TermParser.class, TimechartParser.class);
 
 		List<LogQueryParser> parsers = new ArrayList<LogQueryParser>();
 		for (Class<? extends LogQueryParser> clazz : parserClazzes) {
