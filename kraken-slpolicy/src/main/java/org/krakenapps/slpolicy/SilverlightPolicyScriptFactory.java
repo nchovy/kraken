@@ -13,41 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.webconsole.impl;
+package org.krakenapps.slpolicy;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
-import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.httpd.HttpServer;
-import org.krakenapps.servlet.api.ServletRegistry;
-import org.krakenapps.webconsole.ProgramApi;
 
-@Component(name = "webconsole-script-factory")
+@Component(name = "slpolicy-script-factory")
 @Provides
-public class WebConsoleScriptFactory implements ScriptFactory {
+public class SilverlightPolicyScriptFactory implements ScriptFactory {
 	@SuppressWarnings("unused")
-	@ServiceProperty(name = "alias", value = "webconsole")
+	@ServiceProperty(name = "alias", value = "slpolicy")
 	private String alias;
-	
-	@Requires
-	private HttpServer server;
 
 	@Requires
-	private ServletRegistry staticResourceApi;
-	
-	@Requires
-	private ProgramApi programApi;
-	
-	@Requires
-	private KeyStoreManager keyStoreManager;
+	private SilverlightPolicyServer server;
 
 	@Override
 	public Script createScript() {
-		return new WebConsoleScript(server, staticResourceApi, programApi, keyStoreManager);
+		return new SilverlightPolicyScript(server);
 	}
-
 }

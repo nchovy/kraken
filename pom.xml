@@ -112,6 +112,9 @@
     <module>kraken-logdb-geoip</module>
     <module>kraken-logdb-cmd</module>
     <module>kraken-word</module>
+    <module>kraken-webfx</module>
+    <module>kraken-httpd</module>
+    <module>kraken-slpolicy</module>
   </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>

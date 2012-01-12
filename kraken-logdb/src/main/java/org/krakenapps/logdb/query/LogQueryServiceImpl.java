@@ -18,9 +18,10 @@ package org.krakenapps.logdb.query;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -89,12 +90,13 @@ public class LogQueryServiceImpl implements LogQueryService {
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
 	private BundleContext bc;
-	private Map<Integer, LogQuery> queries = new HashMap<Integer, LogQuery>();
+	private ConcurrentMap<Integer, LogQuery> queries;
 
 	private CopyOnWriteArraySet<LogQueryEventListener> callbacks;
 
 	public LogQueryServiceImpl(BundleContext bc) {
 		this.bc = bc;
+		this.queries = new ConcurrentHashMap<Integer, LogQuery>();
 		this.callbacks = new CopyOnWriteArraySet<LogQueryEventListener>();
 	}
 
