@@ -31,12 +31,13 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceRegistry;
-import org.krakenapps.logdb.LogQueryCommand.LogMap;
-import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
+import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogScript;
 import org.krakenapps.logdb.LogScriptRegistry;
+import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
@@ -51,12 +52,15 @@ public class LogDBScript implements Script {
 	private MapReduceService mapreduce;
 	private LogScriptRegistry scriptRegistry;
 	private ScriptContext context;
+	private LookupHandlerRegistry lookup;
 
-	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter, LogScriptRegistry scriptRegistry) {
+	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter, LogScriptRegistry scriptRegistry,
+			LookupHandlerRegistry lookup) {
 		this.qs = qs;
 		this.dsr = dsr;
 		this.mapreduce = arbiter;
 		this.scriptRegistry = scriptRegistry;
+		this.lookup = lookup;
 	}
 
 	@Override
@@ -317,5 +321,12 @@ public class LogDBScript implements Script {
 		}
 
 		rpc.eof();
+	}
+
+	public void lookuphandlers(String[] args) {
+		context.println("Lookup Handlers");
+		context.println("---------------------");
+		for (String name : lookup.getLookupHandlerNames())
+			context.println(name);
 	}
 }

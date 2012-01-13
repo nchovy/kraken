@@ -24,6 +24,7 @@ import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogScriptRegistry;
+import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
 
 @Component(name = "logdb-script-factory")
@@ -44,10 +45,13 @@ public class LogDBScriptFactory implements ScriptFactory {
 
 	@Requires
 	private LogScriptRegistry scriptRegistry;
+	
+	@Requires
+	private LookupHandlerRegistry lookup;
 
 	@Override
 	public Script createScript() {
-		return new LogDBScript(qs, dsr, mapreduce, scriptRegistry);
+		return new LogDBScript(qs, dsr, mapreduce, scriptRegistry, lookup);
 	}
 
 }

@@ -15,7 +15,11 @@
  */
 package org.krakenapps.logdb;
 
+import java.util.Collection;
+
 public interface LookupHandlerRegistry {
+	Collection<String> getLookupHandlerNames();
+
 	LookupHandler getLookupHandler(String name);
 
 	void addLookupHandler(String name, LookupHandler handler);

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logdb.impl;
 
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -27,6 +28,11 @@ import org.krakenapps.logdb.LookupHandlerRegistry;
 @Provides
 public class LookupHandlerRegistryImpl implements LookupHandlerRegistry {
 	private ConcurrentMap<String, LookupHandler> lookupHandlers;
+
+	@Override
+	public Collection<String> getLookupHandlerNames() {
+		return lookupHandlers.keySet();
+	}
 
 	public LookupHandlerRegistryImpl() {
 		lookupHandlers = new ConcurrentHashMap<String, LookupHandler>();

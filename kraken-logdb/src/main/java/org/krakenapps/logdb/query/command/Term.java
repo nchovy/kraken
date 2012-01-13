@@ -9,8 +9,8 @@ import org.krakenapps.logdb.query.ObjectComparator;
 
 public class Term {
 	public static enum Operator {
-		Eq("=="), Neq("!="), Gt(">"), Lt("<"), Ge(">="), Le("<="), Contain("contain"), Regexp("regexp"), In("in"), IsNull("is null"), NotNull(
-				"not null");
+		Eq("=="), Neq("!="), Gt(">"), Lt("<"), Ge(">="), Le("<="), Contain("contain"), Regexp("regexp"), In("in"), IsNull(
+				"is null"), NotNull("not null");
 
 		private String str;
 
@@ -65,9 +65,9 @@ public class Term {
 			case In:
 				return Arrays.asList(r.toString().replaceAll(",( )*", ",").split(",")).contains(l.toString());
 			case IsNull:
-				return (l == null);
+				return (l == null || l.toString().isEmpty());
 			case NotNull:
-				return (l != null);
+				return (l != null && !l.toString().isEmpty());
 			}
 		} catch (Exception e) {
 		}
