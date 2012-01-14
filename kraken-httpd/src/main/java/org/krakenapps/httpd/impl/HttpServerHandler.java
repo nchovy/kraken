@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -39,6 +40,7 @@ import org.krakenapps.httpd.HttpContext;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.VirtualHost;
 import org.krakenapps.httpd.WebSocketFrame;
+import org.krakenapps.httpd.WebSocketManager;
 import org.krakenapps.servlet.api.ServletRegistry;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -58,6 +60,12 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 	}
 
 	@Override
+	public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+		Channel channel = ctx.getChannel();
+		ctx.setAttachment(new HttpSessionImpl(channel.getId().toString(), channel));
+	}
+
+	@Override
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 		Object msg = e.getMessage();
 		if (msg instanceof HttpRequest) {
@@ -69,7 +77,7 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 				return;
 			}
 
-			service(ctx, req, httpContext.getServletRegistry());
+			service(ctx, req, httpContext);
 		} else if (msg instanceof WebSocketFrame) {
 			WebSocketFrame frame = (WebSocketFrame) msg;
 			HttpContext httpContext = findHttpContext(frame.getHost());
@@ -95,22 +103,32 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 		}
 	}
 
-	public void service(ChannelHandlerContext ctx, HttpRequest req, ServletRegistry servletRegistry) throws IOException {
+	private void service(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext) throws IOException {
+		HttpServlet servlet = null;
 		Response response = null;
+		String pathInfo = null;
+
+		WebSocketManager webSocketManager = httpContext.getWebSocketManager();
+		ServletRegistry servletRegistry = httpContext.getServletRegistry();
+		response = new Response(bc, ctx, req);
 
 		try {
 			String servletPath = servletRegistry.getServletPath(req.getUri());
-			if (servletPath == null)
-				throw new IllegalArgumentException("invalid request path");
+			if (servletPath != null) {
+				servlet = servletRegistry.getServlet(servletPath);
+				pathInfo = req.getUri().substring(servletPath.length());
+			} else if (webSocketManager.getPath().equals(req.getUri())) {
+				servlet = webSocketManager.getServlet();
+				pathInfo = req.getUri();
+			} else
+				throw new IllegalArgumentException("invalid request path: " + req.getUri());
 
-			HttpServlet servlet = servletRegistry.getServlet(servletPath);
-
-			String pathInfo = req.getUri().substring(servletPath.length());
 			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
-			response = new Response(bc, ctx, req);
-
 			servlet.service(request, response);
 
+			// prevent http response closing for websocket
+			if (webSocketManager.getPath().equals(req.getUri()))
+				response = null;
 		} catch (FileNotFoundException e) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		} catch (IOException e) {

@@ -116,9 +116,8 @@ public class Response implements HttpServletResponse {
 			HttpHeaders.setContentLength(resp, dup.readableBytes());
 
 			ChannelFuture f = ctx.getChannel().write(resp);
-			if (!HttpHeaders.isKeepAlive(req) || !resp.getStatus().equals(HttpResponseStatus.OK)) {
+			if (!HttpHeaders.isKeepAlive(req))
 				f.addListener(ChannelFutureListener.CLOSE);
-			}
 		}
 
 		@Override

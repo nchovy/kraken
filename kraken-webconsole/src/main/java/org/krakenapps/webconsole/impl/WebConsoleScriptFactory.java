@@ -19,11 +19,8 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
-import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.httpd.HttpServer;
-import org.krakenapps.servlet.api.ServletRegistry;
 import org.krakenapps.webconsole.ProgramApi;
 
 @Component(name = "webconsole-script-factory")
@@ -32,22 +29,13 @@ public class WebConsoleScriptFactory implements ScriptFactory {
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "alias", value = "webconsole")
 	private String alias;
-	
-	@Requires
-	private HttpServer server;
 
 	@Requires
-	private ServletRegistry staticResourceApi;
-	
-	@Requires
 	private ProgramApi programApi;
-	
-	@Requires
-	private KeyStoreManager keyStoreManager;
 
 	@Override
 	public Script createScript() {
-		return new WebConsoleScript(server, staticResourceApi, programApi, keyStoreManager);
+		return new WebConsoleScript(programApi);
 	}
 
 }

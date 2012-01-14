@@ -22,11 +22,6 @@ import java.io.InputStream;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
-
-@Component(name = "webconsole-file-resource-servlet")
-@Provides
 public class FileResourceServlet extends ResourceServlet {
 	private static final long serialVersionUID = 1L;
 	private File basePath;

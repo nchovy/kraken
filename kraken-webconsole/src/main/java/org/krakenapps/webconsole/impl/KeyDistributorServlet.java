@@ -27,9 +27,10 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.httpd.HttpContext;
+import org.krakenapps.httpd.HttpService;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.Session;
-import org.krakenapps.servlet.api.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,7 @@ public class KeyDistributorServlet extends HttpServlet {
 	private final Logger logger = LoggerFactory.getLogger(KeyDistributorServlet.class.getName());
 
 	@Requires
-	private ServletRegistry servletRegistry;
+	private HttpService httpd;
 
 	@Requires
 	private MessageBus msgbus;
@@ -50,7 +51,8 @@ public class KeyDistributorServlet extends HttpServlet {
 	 */
 	@Validate
 	public void start() {
-		servletRegistry.register(PREFIX, this);
+		HttpContext ctx = httpd.ensureContext("webconsole");
+		ctx.getServletRegistry().register(PREFIX, this);
 	}
 
 	/**
@@ -58,8 +60,10 @@ public class KeyDistributorServlet extends HttpServlet {
 	 */
 	@Invalidate
 	public void stop() {
-		if (servletRegistry != null)
-			servletRegistry.unregister(PREFIX);
+		if (httpd != null) {
+			HttpContext ctx = httpd.ensureContext("webconsole");
+			ctx.getServletRegistry().unregister(PREFIX);
+		}
 	}
 
 	@Override

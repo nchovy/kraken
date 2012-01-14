@@ -33,8 +33,9 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.model.UploadedFile;
+import org.krakenapps.httpd.HttpContext;
+import org.krakenapps.httpd.HttpService;
 import org.krakenapps.httpd.MimeTypes;
-import org.krakenapps.servlet.api.ServletRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,7 @@ public class FileUploadServlet extends HttpServlet {
 	private final Logger logger = LoggerFactory.getLogger(FileUploadServlet.class.getName());
 
 	@Requires
-	private ServletRegistry servletRegistry;
+	private HttpService httpd;
 
 	@Requires
 	private FileUploadApi upload;
@@ -54,7 +55,8 @@ public class FileUploadServlet extends HttpServlet {
 	 */
 	@Validate
 	public void start() {
-		servletRegistry.register("/upload", this);
+		HttpContext ctx = httpd.ensureContext("webconsole");
+		ctx.getServletRegistry().register("/upload", this);
 	}
 
 	/**
@@ -62,8 +64,10 @@ public class FileUploadServlet extends HttpServlet {
 	 */
 	@Invalidate
 	public void stop() {
-		if (servletRegistry != null)
-			servletRegistry.unregister("/upload");
+		if (httpd != null) {
+			HttpContext ctx = httpd.ensureContext("webconsole");
+			ctx.getServletRegistry().unregister("/upload");
+		}
 	}
 
 	@Override

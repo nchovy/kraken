@@ -15,7 +15,6 @@
  */
 package org.krakenapps.webconsole.impl;
 
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -27,7 +26,8 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.httpd.BundleResourceServlet;
-import org.krakenapps.servlet.api.ServletRegistry;
+import org.krakenapps.httpd.HttpContext;
+import org.krakenapps.httpd.HttpService;
 import org.krakenapps.webconsole.PackageApi;
 import org.krakenapps.webconsole.ProgramApi;
 import org.osgi.framework.Bundle;
@@ -49,7 +49,7 @@ public class BundleMetadataMonitor implements BundleListener {
 	@Requires
 	private ProgramApi programApi;
 	@Requires
-	private ServletRegistry servletRegistry;
+	private HttpService httpd;
 
 	public BundleMetadataMonitor(BundleContext bc) {
 		this.bc = bc;
@@ -176,7 +176,8 @@ public class BundleMetadataMonitor implements BundleListener {
 		if (prefix != null) {
 			URL url = bundle.getEntry("/WEB-INF");
 			if (url != null) {
-				servletRegistry.register(prefix, new BundleResourceServlet(bundle, "/WEB-INF"));
+				HttpContext ctx = httpd.ensureContext("webconsole");
+				ctx.getServletRegistry().register(prefix, new BundleResourceServlet(bundle, "/WEB-INF"));
 				logger.info("kraken webconsole: prefix [{}] is mapped to bundle {}/WEB-INF", prefix, bundleId);
 			} else {
 				logger.warn("kraken webconsole: WEB-INF directory not found in bundle {}", bundleId);
@@ -187,6 +188,7 @@ public class BundleMetadataMonitor implements BundleListener {
 	}
 
 	private void unregisterStaticResource(Bundle bundle, String prefix) {
-		servletRegistry.unregister(prefix);
+		HttpContext ctx = httpd.ensureContext("webconsole");
+		ctx.getServletRegistry().unregister(prefix);
 	}
 }

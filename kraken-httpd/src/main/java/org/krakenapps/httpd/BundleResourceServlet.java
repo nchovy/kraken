@@ -20,14 +20,10 @@ import java.net.URL;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "webconsole-bundle-resource-servlet")
-@Provides
 public class BundleResourceServlet extends ResourceServlet {
 	private static final long serialVersionUID = 1L;
 	private final Logger logger = LoggerFactory.getLogger(BundleResourceServlet.class.getName());
@@ -45,8 +41,7 @@ public class BundleResourceServlet extends ResourceServlet {
 			URL url = bundle.getResource(basePath + req.getPathInfo());
 			return url.openStream();
 		} catch (Exception e) {
-			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(),
-					req.getRequestURI());
+			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(), req.getRequestURI());
 			return null;
 		}
 	}

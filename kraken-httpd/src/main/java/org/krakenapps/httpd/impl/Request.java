@@ -109,6 +109,8 @@ public class Request implements HttpServletRequest {
 			}
 			this.cookies[i] = new Cookie(name, value);
 		}
+
+		setAttribute("netty.channel", ctx.getChannel());
 	}
 
 	private void setParams(String params) {
@@ -222,6 +224,11 @@ public class Request implements HttpServletRequest {
 	@Override
 	public String getRemoteHost() {
 		return ((InetSocketAddress) ctx.getChannel().getRemoteAddress()).getHostName();
+	}
+
+	@Override
+	public int getRemotePort() {
+		return ((InetSocketAddress) ctx.getChannel().getRemoteAddress()).getPort();
 	}
 
 	@Override
@@ -340,14 +347,12 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public HttpSession getSession() {
-		// TODO Auto-generated method stub
-		return null;
+		return getSession(false);
 	}
 
 	@Override
 	public HttpSession getSession(boolean create) {
-		// TODO Auto-generated method stub
-		return null;
+		return (HttpSession) ctx.getAttachment();
 	}
 
 	@Override
@@ -377,7 +382,7 @@ public class Request implements HttpServletRequest {
 	@Override
 	public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -389,7 +394,7 @@ public class Request implements HttpServletRequest {
 	@Override
 	public void removeAttribute(String name) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -414,12 +419,6 @@ public class Request implements HttpServletRequest {
 	public RequestDispatcher getRequestDispatcher(String path) {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	@Override
-	public int getRemotePort() {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 
 	@Override
@@ -453,8 +452,7 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-			throws IllegalStateException {
+	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -522,13 +520,13 @@ public class Request implements HttpServletRequest {
 	@Override
 	public void login(String username, String password) throws ServletException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void logout() throws ServletException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override

@@ -14,6 +14,7 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.jboss.netty.channel.Channel;
 import org.krakenapps.httpd.HttpContext;
 import org.krakenapps.httpd.HttpContextRegistry;
+import org.krakenapps.httpd.HttpService;
 import org.krakenapps.httpd.WebSocketFrame;
 import org.krakenapps.httpd.WebSocketListener;
 import org.krakenapps.msgbus.Message;
@@ -28,16 +29,17 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 	private final Logger logger = LoggerFactory.getLogger(WebConsoleImpl.class.getName());
 
 	@Requires
-	private HttpContextRegistry contextRegistry;
+	private HttpService httpd;
 
 	@Requires
 	private MessageBus msgbus;
 
-	private ConcurrentMap<String, WebSocketSession> sessions;
+	private ConcurrentMap<InetSocketAddress, WebSocketSession> sessions;
 
 	@Validate
 	public void start() {
-		sessions = new ConcurrentHashMap<String, WebSocketSession>();
+		sessions = new ConcurrentHashMap<InetSocketAddress, WebSocketSession>();
+		HttpContextRegistry contextRegistry = httpd.getContextRegistry();
 		HttpContext ctx = contextRegistry.ensureContext("webconsole");
 		ctx.getWebSocketManager().addListener(this);
 	}
@@ -48,9 +50,10 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 
 	@Override
 	public void onConnected(InetSocketAddress remote, HttpSession session) {
-		logger.trace("kraken webconsole: websocket connected [{}]", session);
+		logger.trace("kraken webconsole: websocket connected [{}] from [{}]", session, remote);
 		Channel channel = (Channel) session.getAttribute("netty.channel");
 		WebSocketSession webSocketSession = new WebSocketSession(channel);
+		sessions.put(remote, webSocketSession);
 		msgbus.openSession(webSocketSession);
 	}
 
@@ -68,7 +71,7 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 	public void onMessage(WebSocketFrame frame) {
 		WebSocketSession session = sessions.get(frame.getRemote());
 		if (session == null) {
-			logger.error("kraken webconsole: session [{}] not found", session);
+			logger.error("kraken webconsole: session not found for [{}]", frame.getRemote());
 			return;
 		}
 
