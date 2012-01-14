@@ -24,6 +24,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -51,20 +54,24 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class Request implements HttpServletRequest {
+	private final String contextPath = "";
 	private ChannelHandlerContext ctx;
+	private boolean secure;
 	private HttpRequest req;
 	private String servletPath;
 	private String pathInfo;
 	private String queryString;
 	private ServletInputStream is;
 	private Map<String, Object> attributes = new HashMap<String, Object>();
-	private Map<String, String> parameters = new HashMap<String, String>();
+	private Map<String, List<String>> parameters = new HashMap<String, List<String>>();
 	private Cookie[] cookies;
+	private List<Locale> locales = new ArrayList<Locale>();
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
 	public Request(ChannelHandlerContext ctx, HttpRequest req, String servletPath, String pathInfo) {
@@ -73,6 +80,20 @@ public class Request implements HttpServletRequest {
 		this.servletPath = servletPath;
 		this.pathInfo = pathInfo;
 		this.queryString = "";
+
+		SslHandler sslHandler = (SslHandler) ctx.getPipeline().get("ssl");
+		this.secure = sslHandler != null;
+		if (secure) {
+			SSLSession session = sslHandler.getEngine().getSession();
+			String cipherSuite = session.getCipherSuite();
+			try {
+				setAttribute("javax.servlet.request.X509Certificate", session.getPeerCertificateChain());
+			} catch (SSLPeerUnverifiedException e) {
+			}
+
+			setAttribute("javax.servlet.request.cipher_suite", cipherSuite);
+			setAttribute("javax.servlet.request.key_size", deduceKeyLength(cipherSuite));
+		}
 
 		ChannelBuffer content = req.getContent();
 
@@ -110,7 +131,34 @@ public class Request implements HttpServletRequest {
 			this.cookies[i] = new Cookie(name, value);
 		}
 
+		List<String> langs = req.getHeaders(HttpHeaders.Names.ACCEPT_LANGUAGE);
+		if (langs != null)
+			for (String lang : langs)
+				locales.add(new Locale(lang));
+
+		// see servlet spec section 3.9
+		if (langs.size() == 0)
+			locales.add(Locale.getDefault());
+
 		setAttribute("netty.channel", ctx.getChannel());
+	}
+
+	private int deduceKeyLength(String cipherSuite) {
+		if (cipherSuite.equals("IDEA_CBC"))
+			return 128;
+		if (cipherSuite.equals("RC2_CBC_40"))
+			return 40;
+		if (cipherSuite.equals("RC4_40"))
+			return 40;
+		if (cipherSuite.equals("RC4_128"))
+			return 128;
+		if (cipherSuite.equals("DES40_CBC"))
+			return 40;
+		if (cipherSuite.equals("DES_CBC"))
+			return 56;
+		if (cipherSuite.equals("3DES_EDE_CBC"))
+			return 168;
+		return 0;
 	}
 
 	private void setParams(String params) {
@@ -126,7 +174,13 @@ public class Request implements HttpServletRequest {
 				if (value.isEmpty())
 					value = null;
 
-				parameters.put(name, value);
+				List<String> values = new ArrayList<String>();
+				if (!parameters.containsKey(name))
+					parameters.put(name, values);
+				else
+					values = parameters.get(name);
+
+				values.add(value);
 				logger.trace("kraken webconsole: param name [{}], value [{}]", name, value);
 			} else {
 				parameters.put(param, null);
@@ -149,13 +203,34 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
+	public boolean isSecure() {
+		return secure;
+	}
+
+	// TODO: parse should be deferred for character encoding support
+	@Override
+	public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
+	}
+
+	@Override
 	public Object getAttribute(String name) {
 		return attributes.get(name);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Enumeration getAttributeNames() {
 		return Collections.enumeration(attributes.keySet());
+	}
+
+	@Override
+	public void setAttribute(String name, Object o) {
+		attributes.put(name, o);
+	}
+
+	@Override
+	public void removeAttribute(String name) {
+		attributes.remove(name);
 	}
 
 	@Override
@@ -187,9 +262,21 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getParameter(String name) {
-		return parameters.get(name);
+		String[] values = getParameterValues(name);
+		if (values == null || values.length == 0)
+			return null;
+		return values[0];
 	}
 
+	@Override
+	public Map<String, String[]> getParameterMap() {
+		Map<String, String[]> m = new HashMap<String, String[]>();
+		for (String key : parameters.keySet())
+			m.put(key, (String[]) parameters.get(key).toArray());
+		return m;
+	}
+
+	@SuppressWarnings("unchecked")
 	@Override
 	public Enumeration getParameterNames() {
 		return Collections.enumeration(parameters.keySet());
@@ -197,7 +284,11 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String[] getParameterValues(String name) {
-		return (String[]) parameters.values().toArray();
+		List<String> values = parameters.get(name);
+		if (values == null)
+			return null;
+
+		return (String[]) values.toArray();
 	}
 
 	@Override
@@ -214,6 +305,21 @@ public class Request implements HttpServletRequest {
 	@Override
 	public String getRealPath(String path) {
 		return null;
+	}
+
+	@Override
+	public String getLocalName() {
+		return null;
+	}
+
+	@Override
+	public String getLocalAddr() {
+		return ((InetSocketAddress) ctx.getChannel().getLocalAddress()).getAddress().getHostAddress();
+	}
+
+	@Override
+	public int getLocalPort() {
+		return ((InetSocketAddress) ctx.getChannel().getLocalAddress()).getPort();
 	}
 
 	@Override
@@ -257,11 +363,6 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public void setAttribute(String name, Object o) {
-		attributes.put(name, o);
-	}
-
-	@Override
 	public String getAuthType() {
 		String auth = req.getHeader(HttpHeaders.Names.AUTHORIZATION);
 		if (auth == null)
@@ -274,14 +375,10 @@ public class Request implements HttpServletRequest {
 		return cookies;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public long getDateHeader(String name) {
-		try {
-			long value = Long.parseLong(req.getHeader(name));
-			return value;
-		} catch (NumberFormatException e) {
-			return -1;
-		}
+	public Enumeration getHeaderNames() {
+		return Collections.enumeration(req.getHeaderNames());
 	}
 
 	@Override
@@ -290,8 +387,17 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public Enumeration getHeaderNames() {
-		return Collections.enumeration(req.getHeaderNames());
+	public Enumeration<String> getHeaders(String name) {
+		return Collections.enumeration(req.getHeaders(name));
+	}
+
+	@Override
+	public long getDateHeader(String name) {
+		try {
+			return Long.parseLong(req.getHeader(name));
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException(e);
+		}
 	}
 
 	@Override
@@ -302,21 +408,6 @@ public class Request implements HttpServletRequest {
 	@Override
 	public String getMethod() {
 		return req.getMethod().getName();
-	}
-
-	@Override
-	public String getPathInfo() {
-		return pathInfo;
-	}
-
-	public void setPathInfo(String pathInfo) {
-		this.pathInfo = pathInfo;
-	}
-
-	@Override
-	public String getPathTranslated() {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
@@ -331,7 +422,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		return servletPath + pathInfo;
+		return contextPath + servletPath + pathInfo;
 	}
 
 	@Override
@@ -341,8 +432,38 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
+	public String getContextPath() {
+		return contextPath;
+	}
+
+	@Override
 	public String getServletPath() {
 		return servletPath;
+	}
+
+	@Override
+	public String getPathInfo() {
+		return pathInfo;
+	}
+
+	public void setPathInfo(String pathInfo) {
+		this.pathInfo = pathInfo;
+	}
+
+	@Override
+	public String getPathTranslated() {
+		// it must return null if local file system path cannot be determined
+		return null;
+	}
+
+	@Override
+	public Enumeration<Locale> getLocales() {
+		return Collections.enumeration(locales);
+	}
+
+	@Override
+	public Locale getLocale() {
+		return locales.get(0);
 	}
 
 	@Override
@@ -380,68 +501,13 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public Map<String, String[]> getParameterMap() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void removeAttribute(String name) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public Locale getLocale() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Enumeration<Locale> getLocales() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public boolean isSecure() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
 	public RequestDispatcher getRequestDispatcher(String path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String getLocalName() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getLocalAddr() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public int getLocalPort() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
 	public ServletContext getServletContext() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -477,18 +543,6 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public DispatcherType getDispatcherType() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Enumeration<String> getHeaders(String name) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getContextPath() {
 		// TODO Auto-generated method stub
 		return null;
 	}

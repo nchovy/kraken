@@ -70,6 +70,7 @@ public class ServletRegistryImpl implements ServletRegistry {
 		if (directoryMap.containsKey("/context"))
 			prefix = dir;
 
+		// TODO: For now, it does not comply with servlet spec. see section 3.5
 		// longest match
 		for (int i = 0; i < tokens.length; i++) {
 			dir += "/" + tokens[i];
