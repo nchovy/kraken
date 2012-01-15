@@ -83,12 +83,16 @@ public class FileUploadServlet extends HttpServlet {
 		String downloadToken = null;
 		String fileGuid = null;
 
+		logger.trace("kraken webconsole: jsession [{}]", req.getSession().getId());
+
 		try {
 			downloadToken = getDownloadToken(req);
 			fileGuid = req.getParameter("resource");
 
-			if (downloadToken == null)
-				throw new IllegalStateException("download token not found");
+			if (downloadToken == null) {
+				resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+				return;
+			}
 
 			f = upload.getFileMetadataWithToken(downloadToken, fileGuid);
 			is = new FileInputStream(f.getFile());

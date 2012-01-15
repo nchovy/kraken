@@ -65,7 +65,8 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 			HttpRequest req = (HttpRequest) msg;
 			HttpContext httpContext = findHttpContext(req.getHeader(HttpHeaders.Names.HOST));
 			if (httpContext == null) {
-				Response r = new Response(bc, ctx, req);
+				HttpServletRequest request = new Request(ctx, req, null, null, null);
+				Response r = new Response(bc, ctx, request);
 				r.sendError(404);
 				return;
 			}
@@ -103,7 +104,6 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 
 		WebSocketManager webSocketManager = httpContext.getWebSocketManager();
 		ServletRegistry servletRegistry = httpContext.getServletRegistry();
-		response = new Response(bc, ctx, req);
 
 		try {
 			String servletPath = servletRegistry.getServletPath(req.getUri());
@@ -113,21 +113,22 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 			} else if (webSocketManager.getPath().equals(req.getUri())) {
 				servlet = webSocketManager.getServlet();
 				pathInfo = req.getUri();
-			} else
-				throw new IllegalArgumentException("invalid request path: " + req.getUri());
+			} else {
+				HttpServletRequest request = new Request(ctx, req, httpContext, servletPath, req.getUri());
+				response = new Response(bc, ctx, request);
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+				return;
+			}
 
-			HttpServletRequest request = new Request(ctx, req, servletPath, pathInfo);
+			HttpServletRequest request = new Request(ctx, req, httpContext, servletPath, pathInfo);
+			response = new Response(bc, ctx, request);
 			servlet.service(request, response);
-
-			// prevent http response closing for websocket
-			if (webSocketManager.getPath().equals(req.getUri()))
-				response = null;
 		} catch (FileNotFoundException e) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		} catch (IOException e) {
 			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		} catch (ServletException e) {
-			logger.error("kraken webconsole: servlet service error.", e);
+			logger.error("kraken httpd: servlet service error.", e);
 		} finally {
 			if (response != null)
 				response.close();
@@ -140,11 +141,11 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 				"An existing connection was forcibly closed by the remote host");
 
 		if (e.getCause() instanceof IOException && trace.contains(e.getCause().getMessage())) {
-			logger.trace("kraken webconsole: websocket reset", e.getCause());
+			logger.trace("kraken httpd: connection reset", e.getCause());
 		} else if (e.getCause() instanceof ClosedChannelException) {
-			logger.trace("kraken webconsole: websocket closed", e.getCause());
+			logger.trace("kraken httpd: connection closed", e.getCause());
 		} else {
-			logger.error("kraken webconsole: websocket transport error", e.getCause());
+			logger.error("kraken httpd: transport error", e.getCause());
 			e.getChannel().close();
 		}
 	}

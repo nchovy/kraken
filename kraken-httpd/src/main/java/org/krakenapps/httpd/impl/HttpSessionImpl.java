@@ -25,7 +25,18 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionContext;
 
+@SuppressWarnings("deprecation")
 public class HttpSessionImpl implements HttpSession {
+	/**
+	 * 30min timeout by default
+	 */
+	private static final int DEFAULT_IDLE_TIMEOUT = 1800;
+
+	/**
+	 * http response will send Set-Cookie header if session is new
+	 */
+	private boolean isNew;
+
 	/**
 	 * session key
 	 */
@@ -57,7 +68,10 @@ public class HttpSessionImpl implements HttpSession {
 	 */
 	public HttpSessionImpl(String id) {
 		this.id = id;
+		this.isNew = true;
 		this.created = new Date();
+		this.lastHit = new Date();
+		this.maxInactiveInterval = DEFAULT_IDLE_TIMEOUT;
 		this.attributes = new ConcurrentHashMap<String, Object>();
 	}
 
@@ -146,6 +160,14 @@ public class HttpSessionImpl implements HttpSession {
 
 	@Override
 	public boolean isNew() {
-		return false;
+		return isNew;
+	}
+
+	public void setNew(boolean isNew) {
+		this.isNew = isNew;
+	}
+
+	public void setLastAccess(Date lastAccess) {
+		this.lastHit = lastAccess;
 	}
 }

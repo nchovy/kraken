@@ -18,6 +18,7 @@ package org.krakenapps.httpd.impl;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -26,6 +27,7 @@ import java.util.Set;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -35,10 +37,11 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.slf4j.Logger;
@@ -49,14 +52,14 @@ public class Response implements HttpServletResponse {
 
 	private BundleContext bc;
 	private ChannelHandlerContext ctx;
-	private HttpRequest req;
+	private HttpServletRequest req;
 	private ServletOutputStream os;
 	private PrintWriter writer;
 	private HttpResponseStatus status = HttpResponseStatus.OK;
 	private Map<String, Object> headers = new HashMap<String, Object>();
 	private Set<Cookie> cookies = new HashSet<Cookie>();
 
-	public Response(BundleContext bc, ChannelHandlerContext ctx, HttpRequest req) {
+	public Response(BundleContext bc, ChannelHandlerContext ctx, HttpServletRequest req) {
 		this.bc = bc;
 		this.ctx = ctx;
 		this.req = req;
@@ -94,6 +97,17 @@ public class Response implements HttpServletResponse {
 			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
 			String cookie = null;
+
+			HttpSessionImpl session = (HttpSessionImpl) req.getSession(false);
+			if (session != null) {
+				if (session.isNew()) {
+					cookie = "JSESSIONID=" + session.getId();
+					session.setNew(false);
+				}
+
+				session.setLastAccess(new Date());
+			}
+
 			for (Cookie c : cookies) {
 				if (cookie == null)
 					cookie = String.format("%s=%s", c.getName(), c.getValue());
@@ -102,7 +116,7 @@ public class Response implements HttpServletResponse {
 			}
 
 			if (cookie != null)
-				headers.put(HttpHeaders.Names.COOKIE, cookie);
+				headers.put(HttpHeaders.Names.SET_COOKIE, cookie);
 
 			for (String name : headers.keySet())
 				resp.setHeader(name, headers.get(name));
@@ -116,13 +130,28 @@ public class Response implements HttpServletResponse {
 			HttpHeaders.setContentLength(resp, dup.readableBytes());
 
 			ChannelFuture f = ctx.getChannel().write(resp);
-			if (!HttpHeaders.isKeepAlive(req))
+			if (!isKeepAlive()) {
+				logger.trace("kraken-httpd: channel [{}] will be closed", ctx.getChannel());
 				f.addListener(ChannelFutureListener.CLOSE);
+			}
 		}
 
 		@Override
 		public void flush() throws IOException {
 			// do not move flush code here (header should not sent twice)
+		}
+
+		private boolean isKeepAlive() {
+			String connection = req.getHeader(Names.CONNECTION);
+			if (connection != null && Values.CLOSE.equalsIgnoreCase(connection))
+				return false;
+
+			System.out.println(req.getProtocol());
+			if (req.getProtocol().equals("HTTP/1.1")) {
+				return !Values.CLOSE.equalsIgnoreCase(connection);
+			} else {
+				return Values.KEEP_ALIVE.equalsIgnoreCase(connection);
+			}
 		}
 
 	}

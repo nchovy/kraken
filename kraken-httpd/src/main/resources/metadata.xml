@@ -3,4 +3,5 @@
 	xmlns="org.apache.felix.ipojo">
 	<instance component="http-service" />
 	<instance component="httpd-script-factory" />
+	<instance component="httpd-session-checker" />
 </ipojo>

@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -55,6 +56,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.krakenapps.httpd.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,10 +65,23 @@ public class Request implements HttpServletRequest {
 	private final String contextPath = "";
 	private ChannelHandlerContext ctx;
 	private boolean secure;
-	private HttpRequest req;
+
+	/**
+	 * can be null if not found
+	 */
+	private HttpContext httpContext;
+
+	/**
+	 * can be null if not found
+	 */
 	private String servletPath;
+
 	private String pathInfo;
+
 	private String queryString;
+
+	private HttpRequest req;
+	private HttpSession session;
 	private ServletInputStream is;
 	private Map<String, Object> attributes = new HashMap<String, Object>();
 	private Map<String, List<String>> parameters = new HashMap<String, List<String>>();
@@ -74,29 +89,34 @@ public class Request implements HttpServletRequest {
 	private List<Locale> locales = new ArrayList<Locale>();
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-	public Request(ChannelHandlerContext ctx, HttpRequest req, String servletPath, String pathInfo) {
+	public Request(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext, String servletPath, String pathInfo) {
 		this.ctx = ctx;
 		this.req = req;
+		this.httpContext = httpContext;
 		this.servletPath = servletPath;
 		this.pathInfo = pathInfo;
 		this.queryString = "";
 
-		SslHandler sslHandler = (SslHandler) ctx.getPipeline().get("ssl");
-		this.secure = sslHandler != null;
-		if (secure) {
-			SSLSession session = sslHandler.getEngine().getSession();
-			String cipherSuite = session.getCipherSuite();
-			try {
-				setAttribute("javax.servlet.request.X509Certificate", session.getPeerCertificateChain());
-			} catch (SSLPeerUnverifiedException e) {
-			}
-
-			setAttribute("javax.servlet.request.cipher_suite", cipherSuite);
-			setAttribute("javax.servlet.request.key_size", deduceKeyLength(cipherSuite));
-		}
-
 		ChannelBuffer content = req.getContent();
+		this.is = new RequestInputStream(new ByteArrayInputStream(content.array(), 0, content.readableBytes()));
 
+		parseParameters(req, pathInfo, content);
+		parseCookies(req);
+		parseLocales(req);
+
+		setSslAttributes(ctx);
+		setSession();
+		setChannel(ctx);
+	}
+
+	private void setSession() {
+		// TODO: domain check
+		String key = getRequestedSessionId();
+		if (key != null)
+			session = httpContext.getHttpSessions().get(key);
+	}
+
+	private void parseParameters(HttpRequest req, String pathInfo, ChannelBuffer content) {
 		String contentType = req.getHeader("Content-Type");
 
 		if (req.getMethod().equals(HttpMethod.POST)) {
@@ -113,8 +133,41 @@ public class Request implements HttpServletRequest {
 			String params = pathInfo.substring(pathInfo.indexOf("?") + 1);
 			setParams(params);
 		}
+	}
 
-		this.is = new RequestInputStream(new ByteArrayInputStream(content.array(), 0, content.readableBytes()));
+	private void setSslAttributes(ChannelHandlerContext ctx) {
+		SslHandler sslHandler = (SslHandler) ctx.getPipeline().get("ssl");
+		this.secure = sslHandler != null;
+		if (secure) {
+			SSLSession session = sslHandler.getEngine().getSession();
+			String cipherSuite = session.getCipherSuite();
+			try {
+				setAttribute("javax.servlet.request.X509Certificate", session.getPeerCertificateChain());
+			} catch (SSLPeerUnverifiedException e) {
+			}
+
+			setAttribute("javax.servlet.request.cipher_suite", cipherSuite);
+			setAttribute("javax.servlet.request.key_size", deduceKeyLength(cipherSuite));
+		}
+	}
+
+	private void setChannel(ChannelHandlerContext ctx) {
+		// set netty channel (only for internal use)
+		setAttribute("netty.channel", ctx.getChannel());
+	}
+
+	private void parseLocales(HttpRequest req) {
+		List<String> langs = req.getHeaders(HttpHeaders.Names.ACCEPT_LANGUAGE);
+		if (langs != null)
+			for (String lang : langs)
+				locales.add(new Locale(lang));
+
+		// see servlet spec section 3.9
+		if (langs.size() == 0)
+			locales.add(Locale.getDefault());
+	}
+
+	private void parseCookies(HttpRequest req) {
 		List<String> cs = req.getHeaders(HttpHeaders.Names.COOKIE);
 		this.cookies = new Cookie[cs.size()];
 		for (int i = 0; i < cs.size(); i++) {
@@ -130,17 +183,6 @@ public class Request implements HttpServletRequest {
 			}
 			this.cookies[i] = new Cookie(name, value);
 		}
-
-		List<String> langs = req.getHeaders(HttpHeaders.Names.ACCEPT_LANGUAGE);
-		if (langs != null)
-			for (String lang : langs)
-				locales.add(new Locale(lang));
-
-		// see servlet spec section 3.9
-		if (langs.size() == 0)
-			locales.add(Locale.getDefault());
-
-		setAttribute("netty.channel", ctx.getChannel());
 	}
 
 	private int deduceKeyLength(String cipherSuite) {
@@ -200,6 +242,17 @@ public class Request implements HttpServletRequest {
 		public int read() throws IOException {
 			return is.read();
 		}
+	}
+
+	@Override
+	public ServletContext getServletContext() {
+		return null;
+	}
+
+	@Override
+	public DispatcherType getDispatcherType() {
+		// TODO: implement other dispatcher routines
+		return DispatcherType.REQUEST;
 	}
 
 	@Override
@@ -293,7 +346,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getProtocol() {
-		return "HTTP/1.1";
+		return req.getProtocolVersion().getText();
 	}
 
 	@Override
@@ -427,8 +480,38 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getRequestedSessionId() {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO: support session id from url
+		String key = null;
+		for (Cookie c : getCookies())
+			if (c.getName().equals("JSESSIONID"))
+				key = c.getValue();
+
+		return key;
+	}
+
+	/**
+	 * requested path except query string, protocol scheme and domain
+	 */
+	@Override
+	public StringBuffer getRequestURL() {
+		String path = req.getUri();
+
+		// cut protocol scheme and domain
+		int p = path.indexOf("://");
+		if (p > 0) {
+			int p2 = path.indexOf('/', p + 3);
+			if (p2 > 0)
+				path = path.substring(p2);
+			else
+				path = "/";
+		}
+
+		// cut query string off
+		p = path.indexOf('?');
+		if (p > 0)
+			path = path.substring(0, p);
+
+		return new StringBuffer(path);
 	}
 
 	@Override
@@ -468,23 +551,34 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public HttpSession getSession() {
-		return getSession(false);
+		return getSession(true);
 	}
 
 	@Override
 	public HttpSession getSession(boolean create) {
-		return (HttpSession) ctx.getAttachment();
+		if (!create)
+			return session;
+
+		if (session == null) {
+			String key = UUID.randomUUID().toString();
+			session = new HttpSessionImpl(key);
+			HttpSession old = httpContext.getHttpSessions().putIfAbsent(key, session);
+			if (old != null)
+				session = old;
+		}
+
+		return session;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromCookie() {
-		// TODO Auto-generated method stub
-		return false;
+		// TODO: support session key from url
+		return getSession(false) != null;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromURL() {
-		// TODO Auto-generated method stub
+		// TODO: will be implemented later
 		return false;
 	}
 
@@ -496,8 +590,11 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public boolean isRequestedSessionIdValid() {
-		// TODO Auto-generated method stub
-		return false;
+		String key = getRequestedSessionId();
+		if (key == null)
+			return false;
+
+		return httpContext.getHttpSessions().containsKey(key);
 	}
 
 	@Override
@@ -507,7 +604,8 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public ServletContext getServletContext() {
+	public AsyncContext getAsyncContext() {
+		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -536,18 +634,6 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public AsyncContext getAsyncContext() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public DispatcherType getDispatcherType() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public boolean isUserInRole(String role) {
 		// TODO Auto-generated method stub
 		return false;
@@ -555,12 +641,6 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public Principal getUserPrincipal() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public StringBuffer getRequestURL() {
 		// TODO Auto-generated method stub
 		return null;
 	}
