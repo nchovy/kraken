@@ -68,6 +68,6 @@ public class WebSocketFrame {
 
 	@Override
 	public String toString() {
-		return "host=" + host + ", type=" + type + ", text=" + text;
+		return "remote=" + remote + ", host=" + host + ", type=" + type + ", text=" + text;
 	}
 }

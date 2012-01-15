@@ -15,14 +15,10 @@
  */
 package org.krakenapps.httpd;
 
-import java.net.InetSocketAddress;
-
-import javax.servlet.http.HttpSession;
-
 public interface WebSocketListener {
-	void onConnected(InetSocketAddress remote, HttpSession session);
+	void onConnected(WebSocket socket);
 
-	void onDisconnected(InetSocketAddress remote);
+	void onDisconnected(WebSocket socket);
 
-	void onMessage(WebSocketFrame frame);
+	void onMessage(WebSocket socket, WebSocketFrame frame);
 }

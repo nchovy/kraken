@@ -15,6 +15,11 @@
  */
 package org.krakenapps.httpd;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import javax.servlet.http.HttpSession;
+
 import org.krakenapps.httpd.impl.ServletRegistryImpl;
 import org.krakenapps.servlet.api.ServletRegistry;
 
@@ -22,11 +27,13 @@ public class HttpContext {
 	private String name;
 	private ServletRegistry servletRegistry;
 	private WebSocketManager webSocketManager;
+	private ConcurrentMap<String, HttpSession> httpSessions;
 
 	public HttpContext(String name) {
 		this.name = name;
 		this.servletRegistry = new ServletRegistryImpl();
 		this.webSocketManager = new WebSocketManager();
+		this.httpSessions = new ConcurrentHashMap<String, HttpSession>();
 	}
 
 	public String getName() {
@@ -41,8 +48,12 @@ public class HttpContext {
 		return webSocketManager;
 	}
 
+	public ConcurrentMap<String, HttpSession> getHttpSessions() {
+		return httpSessions;
+	}
+
 	@Override
 	public String toString() {
-		return "[" + name + "]\n" + servletRegistry + webSocketManager;
+		return "[" + name + ", sessions=" + httpSessions.size() + "]\n" + servletRegistry + webSocketManager;
 	}
 }

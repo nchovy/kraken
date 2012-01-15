@@ -16,10 +16,9 @@
 package org.krakenapps.webconsole.impl;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.util.Random;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.handler.codec.http.websocket.DefaultWebSocketFrame;
+import org.krakenapps.httpd.WebSocket;
 import org.krakenapps.msgbus.AbstractSession;
 import org.krakenapps.msgbus.Message;
 import org.slf4j.Logger;
@@ -27,24 +26,26 @@ import org.slf4j.LoggerFactory;
 
 public class WebSocketSession extends AbstractSession {
 	private final Logger logger = LoggerFactory.getLogger(WebSocketSession.class.getName());
-	private Channel channel;
+	private int id;
+	private WebSocket socket;
 
-	public WebSocketSession(Channel channel) {
-		this.channel = channel;
+	public WebSocketSession(WebSocket socket) {
+		this.id = Math.abs(new Random().nextInt(Integer.MAX_VALUE));
+		this.socket = socket;
 	}
 
 	public int getId() {
-		return channel.getId();
+		return id;
 	}
 
 	@Override
 	public InetAddress getLocalAddress() {
-		return ((InetSocketAddress) channel.getLocalAddress()).getAddress();
+		return socket.getLocalAddress().getAddress();
 	}
 
 	@Override
 	public InetAddress getRemoteAddress() {
-		return ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
+		return socket.getRemoteAddress().getAddress();
 	}
 
 	public void send(Message msg) {
@@ -52,18 +53,20 @@ public class WebSocketSession extends AbstractSession {
 		if (logger.isDebugEnabled())
 			logger.debug("kraken webconsole: sending [{}]", payload);
 
-		if (channel != null)
-			channel.write(new DefaultWebSocketFrame(payload));
+		if (socket != null)
+			socket.send(payload);
 	}
 
 	public void close() {
-		channel.close();
-		channel = null;
+		if (socket != null) {
+			socket.close();
+			socket = null;
+		}
 	}
 
 	@Override
 	public String toString() {
-		return channel.toString();
+		return socket.toString();
 	}
 
 }

@@ -22,8 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import javax.servlet.http.HttpSession;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +36,12 @@ public class WebSocketManager {
 
 	private WebSocketServlet servlet;
 
-	private ConcurrentMap<InetSocketAddress, HttpSession> sessions;
+	private ConcurrentMap<InetSocketAddress, WebSocket> sockets;
 	private CopyOnWriteArraySet<WebSocketListener> listeners;
 
 	public WebSocketManager() {
 		servlet = new WebSocketServlet(this);
-		sessions = new ConcurrentHashMap<InetSocketAddress, HttpSession>();
+		sockets = new ConcurrentHashMap<InetSocketAddress, WebSocket>();
 		listeners = new CopyOnWriteArraySet<WebSocketListener>();
 	}
 
@@ -59,18 +57,18 @@ public class WebSocketManager {
 		this.path = path;
 	}
 
-	public Collection<HttpSession> getSessions() {
-		return new ArrayList<HttpSession>(sessions.values());
+	public Collection<WebSocket> getSockets() {
+		return new ArrayList<WebSocket>(sockets.values());
 	}
 
-	public void register(InetSocketAddress remote, HttpSession session) {
-		logger.trace("kraken httpd: adding websocket session [{}]", session);
-		sessions.put(remote, session);
+	public void register(WebSocket socket) {
+		logger.trace("kraken httpd: adding websocket session [{}]", socket);
+		sockets.put(socket.getRemoteAddress(), socket);
 
 		// invoke callbacks
 		for (WebSocketListener listener : listeners) {
 			try {
-				listener.onConnected(remote, session);
+				listener.onConnected(socket);
 			} catch (Exception e) {
 				logger.warn("kraken httpd: callback should not throw any exception", e);
 			}
@@ -78,25 +76,33 @@ public class WebSocketManager {
 	}
 
 	public void unregister(InetSocketAddress remote) {
+		WebSocket socket = sockets.remove(remote);
+		if (socket == null)
+			return;
+
 		logger.trace("kraken httpd: removing websocket session [{}]", remote);
 
 		for (WebSocketListener listener : listeners) {
 			try {
-				listener.onDisconnected(remote);
+				listener.onDisconnected(socket);
 			} catch (Exception e) {
 				logger.warn("kraken httpd: callback should not throw any exception", e);
 			}
 		}
-
-		sessions.remove(remote);
 	}
 
 	public void dispatch(WebSocketFrame frame) {
+		WebSocket socket = sockets.get(frame.getRemote());
+		if (socket == null) {
+			logger.warn("kraken httpd: websocket not found for frame [{}]", frame);
+			return;
+		}
+
 		logger.trace("kraken httpd: received frame [{}]", frame);
 
 		for (WebSocketListener listener : listeners) {
 			try {
-				listener.onMessage(frame);
+				listener.onMessage(socket, frame);
 			} catch (Exception e) {
 				logger.warn("kraken httpd: callback should not throw any exception", e);
 			}
@@ -116,6 +122,6 @@ public class WebSocketManager {
 
 	@Override
 	public String toString() {
-		return "WebSocket path [" + path + "], sessions [" + sessions.size() + "]";
+		return "WebSocket path [" + path + "], sessions [" + sockets.size() + "]";
 	}
 }

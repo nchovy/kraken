@@ -18,8 +18,8 @@ package org.krakenapps.httpd.impl;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
@@ -39,18 +39,28 @@ public class HttpSessionImpl implements HttpSession {
 	private Date created;
 
 	/**
-	 * last accessed time
+	 * last accessed time before current access
 	 */
 	private Date lastHit;
 
+	/**
+	 * max idle timeout in seconds
+	 */
 	private int maxInactiveInterval;
 
-	private Map<String, Object> attributes;
+	/**
+	 * session can be concurrently accessed by multiple threads
+	 */
+	private ConcurrentMap<String, Object> attributes;
 
+	/**
+	 * TODO: it should have request object for setcookie operation (header flush
+	 * check)
+	 */
 	public HttpSessionImpl(String id, Channel channel) {
 		this.id = id;
 		this.created = new Date();
-		this.attributes = new HashMap<String, Object>();
+		this.attributes = new ConcurrentHashMap<String, Object>();
 		attributes.put("netty.channel", channel);
 	}
 

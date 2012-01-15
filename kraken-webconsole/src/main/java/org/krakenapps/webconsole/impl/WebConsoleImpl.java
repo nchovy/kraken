@@ -4,17 +4,15 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.servlet.http.HttpSession;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.jboss.netty.channel.Channel;
 import org.krakenapps.httpd.HttpContext;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.HttpService;
+import org.krakenapps.httpd.WebSocket;
 import org.krakenapps.httpd.WebSocketFrame;
 import org.krakenapps.httpd.WebSocketListener;
 import org.krakenapps.msgbus.Message;
@@ -49,17 +47,16 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 	}
 
 	@Override
-	public void onConnected(InetSocketAddress remote, HttpSession session) {
-		logger.trace("kraken webconsole: websocket connected [{}] from [{}]", session, remote);
-		Channel channel = (Channel) session.getAttribute("netty.channel");
-		WebSocketSession webSocketSession = new WebSocketSession(channel);
-		sessions.put(remote, webSocketSession);
+	public void onConnected(WebSocket socket) {
+		logger.trace("kraken webconsole: websocket connected [{}]", socket);
+		WebSocketSession webSocketSession = new WebSocketSession(socket);
+		sessions.put(socket.getRemoteAddress(), webSocketSession);
 		msgbus.openSession(webSocketSession);
 	}
 
 	@Override
-	public void onDisconnected(InetSocketAddress remote) {
-		WebSocketSession session = sessions.get(remote);
+	public void onDisconnected(WebSocket socket) {
+		WebSocketSession session = sessions.get(socket.getRemoteAddress());
 		if (session == null)
 			return;
 
@@ -68,10 +65,10 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 	}
 
 	@Override
-	public void onMessage(WebSocketFrame frame) {
-		WebSocketSession session = sessions.get(frame.getRemote());
+	public void onMessage(WebSocket socket, WebSocketFrame frame) {
+		WebSocketSession session = sessions.get(socket.getRemoteAddress());
 		if (session == null) {
-			logger.error("kraken webconsole: session not found for [{}]", frame.getRemote());
+			logger.error("kraken webconsole: session not found for [{}]", socket);
 			return;
 		}
 

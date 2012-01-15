@@ -16,7 +16,6 @@
 package org.krakenapps.httpd;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 
@@ -30,6 +29,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrameEncoder;
+import org.krakenapps.httpd.impl.WebSocketChannel;
 import org.krakenapps.httpd.impl.WebSocketFrameDecoderWithHost;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,8 +104,8 @@ public class WebSocketServlet extends HttpServlet {
 			p.replace("encoder", "wsencoder", new WebSocketFrameEncoder());
 
 			// open session
-			InetSocketAddress remote = new InetSocketAddress(req.getRemoteAddr(), req.getRemotePort());
-			manager.register(remote, req.getSession());
+			WebSocket socket = new WebSocketChannel(channel);
+			manager.register(socket);
 		} catch (Throwable t) {
 			logger.error("kraken httpd: websocket handshake failed", t);
 		}
