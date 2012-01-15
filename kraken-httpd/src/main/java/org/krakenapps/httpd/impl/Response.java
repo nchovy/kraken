@@ -88,20 +88,20 @@ public class Response implements HttpServletResponse {
 
 		@Override
 		public void close() throws IOException {
-			if (closed)
+			if (closed) {
+				logger.trace("kraken httpd: response output closed");
 				return;
+			}
 
 			closed = true;
 
 			// send response if not sent
 			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
-			String cookie = null;
-
 			HttpSessionImpl session = (HttpSessionImpl) req.getSession(false);
 			if (session != null) {
 				if (session.isNew()) {
-					cookie = "JSESSIONID=" + session.getId();
+					resp.addHeader(HttpHeaders.Names.SET_COOKIE, "JSESSIONID=" + session.getId() + "; path=/");
 					session.setNew(false);
 				}
 
@@ -109,17 +109,14 @@ public class Response implements HttpServletResponse {
 			}
 
 			for (Cookie c : cookies) {
-				if (cookie == null)
-					cookie = String.format("%s=%s", c.getName(), c.getValue());
-				else
-					cookie = String.format("%s; %s=%s", cookie, c.getName(), c.getValue());
+				resp.addHeader(HttpHeaders.Names.SET_COOKIE, c.getName() + "=" + c.getValue());
 			}
-
-			if (cookie != null)
-				headers.put(HttpHeaders.Names.SET_COOKIE, cookie);
 
 			for (String name : headers.keySet())
 				resp.setHeader(name, headers.get(name));
+
+			// resp.setHeader("Access-Control-Allow-Origin", "*");
+			// resp.setHeader("Access-Control-Allow-Credentials", "true");
 
 			logger.debug("kraken webconsole: flush response [{}]", buf.readableBytes());
 
@@ -146,7 +143,6 @@ public class Response implements HttpServletResponse {
 			if (connection != null && Values.CLOSE.equalsIgnoreCase(connection))
 				return false;
 
-			System.out.println(req.getProtocol());
 			if (req.getProtocol().equals("HTTP/1.1")) {
 				return !Values.CLOSE.equalsIgnoreCase(connection);
 			} else {

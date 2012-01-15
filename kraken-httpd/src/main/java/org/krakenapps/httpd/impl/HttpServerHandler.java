@@ -65,9 +65,11 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 			HttpRequest req = (HttpRequest) msg;
 			HttpContext httpContext = findHttpContext(req.getHeader(HttpHeaders.Names.HOST));
 			if (httpContext == null) {
-				HttpServletRequest request = new Request(ctx, req, null, null, null);
-				Response r = new Response(bc, ctx, request);
-				r.sendError(404);
+				Request request = new Request(ctx, req, null, null, null);
+				Response response = new Response(bc, ctx, request);
+				request.setResponse(response);
+
+				response.sendError(404);
 				return;
 			}
 
@@ -99,9 +101,11 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 
 	private void service(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext) throws IOException {
 		HttpServlet servlet = null;
+		Request request = null;
 		Response response = null;
 		String pathInfo = null;
 
+		logger.trace("kraken httpd: request [{} {}]", req.getMethod(), req.getUri());
 		WebSocketManager webSocketManager = httpContext.getWebSocketManager();
 		ServletRegistry servletRegistry = httpContext.getServletRegistry();
 
@@ -114,14 +118,18 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 				servlet = webSocketManager.getServlet();
 				pathInfo = req.getUri();
 			} else {
-				HttpServletRequest request = new Request(ctx, req, httpContext, servletPath, req.getUri());
+				request = new Request(ctx, req, httpContext, servletPath, req.getUri());
 				response = new Response(bc, ctx, request);
+				request.setResponse(response);
+
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
 
-			HttpServletRequest request = new Request(ctx, req, httpContext, servletPath, pathInfo);
+			request = new Request(ctx, req, httpContext, servletPath, pathInfo);
 			response = new Response(bc, ctx, request);
+			request.setResponse(response);
+			
 			servlet.service(request, response);
 		} catch (FileNotFoundException e) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -130,7 +138,7 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 		} catch (ServletException e) {
 			logger.error("kraken httpd: servlet service error.", e);
 		} finally {
-			if (response != null)
+			if (response != null && !request.isAsyncStarted())
 				response.close();
 		}
 	}

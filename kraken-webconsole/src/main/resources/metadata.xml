@@ -13,4 +13,5 @@
 	<instance component="webconsole-bundle-monitor" />
 	<instance component="webconsole-file-upload-servlet" />
 	<instance component="webconsole-keydist-servlet" />
+	<instance component="webconsole-msgbus-servlet" />
 </ipojo>

@@ -24,14 +24,19 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.krakenapps.httpd.impl.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class ResourceServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private final Logger logger = LoggerFactory.getLogger(ResourceServlet.class.getName());
 
 	protected abstract InputStream getInputStream(HttpServletRequest req);
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		logger.trace("kraken httpd: httpd session [{}]", req.getSession().getId());
+
 		String pathInfo = req.getPathInfo();
 		if (req instanceof Request) {
 			if (pathInfo.endsWith("/"))

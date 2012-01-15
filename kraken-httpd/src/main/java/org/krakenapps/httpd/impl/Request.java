@@ -65,6 +65,7 @@ public class Request implements HttpServletRequest {
 	private final String contextPath = "";
 	private ChannelHandlerContext ctx;
 	private boolean secure;
+	private boolean asyncStarted;
 
 	/**
 	 * can be null if not found
@@ -81,6 +82,7 @@ public class Request implements HttpServletRequest {
 	private String queryString;
 
 	private HttpRequest req;
+	private Response resp;
 	private HttpSession session;
 	private ServletInputStream is;
 	private Map<String, Object> attributes = new HashMap<String, Object>();
@@ -89,7 +91,8 @@ public class Request implements HttpServletRequest {
 	private List<Locale> locales = new ArrayList<Locale>();
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-	public Request(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext, String servletPath, String pathInfo) {
+	public Request(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext, String servletPath,
+			String pathInfo) {
 		this.ctx = ctx;
 		this.req = req;
 		this.httpContext = httpContext;
@@ -107,6 +110,10 @@ public class Request implements HttpServletRequest {
 		setSslAttributes(ctx);
 		setSession();
 		setChannel(ctx);
+	}
+
+	public void setResponse(Response resp) {
+		this.resp = resp;
 	}
 
 	private void setSession() {
@@ -181,6 +188,8 @@ public class Request implements HttpServletRequest {
 			} else {
 				name = s.trim();
 			}
+
+			logger.debug("kraken httpd: cookie [name={}, value={}]", name, value);
 			this.cookies[i] = new Cookie(name, value);
 		}
 	}
@@ -560,7 +569,10 @@ public class Request implements HttpServletRequest {
 			return session;
 
 		if (session == null) {
-			String key = UUID.randomUUID().toString();
+			String key = getRequestedSessionId();
+			if (key == null)
+				key = UUID.randomUUID().toString();
+
 			session = new HttpSessionImpl(key);
 			HttpSession old = httpContext.getHttpSessions().putIfAbsent(key, session);
 			if (old != null)
@@ -611,25 +623,24 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public AsyncContext startAsync() throws IllegalStateException {
-		// TODO Auto-generated method stub
-		return null;
+		asyncStarted = true;
+		return new AsyncContextImpl(this, resp);
 	}
 
 	@Override
-	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
+	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
+			throws IllegalStateException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public boolean isAsyncStarted() {
-		// TODO Auto-generated method stub
-		return false;
+		return asyncStarted;
 	}
 
 	@Override
 	public boolean isAsyncSupported() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
