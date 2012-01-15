@@ -27,7 +27,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -57,12 +56,6 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 		this.bc = bc;
 		this.config = config;
 		this.contextRegistry = contextRegistry;
-	}
-
-	@Override
-	public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		Channel channel = ctx.getChannel();
-		ctx.setAttachment(new HttpSessionImpl(channel.getId().toString(), channel));
 	}
 
 	@Override

@@ -25,8 +25,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionContext;
 
-import org.jboss.netty.channel.Channel;
-
 public class HttpSessionImpl implements HttpSession {
 	/**
 	 * session key
@@ -57,11 +55,10 @@ public class HttpSessionImpl implements HttpSession {
 	 * TODO: it should have request object for setcookie operation (header flush
 	 * check)
 	 */
-	public HttpSessionImpl(String id, Channel channel) {
+	public HttpSessionImpl(String id) {
 		this.id = id;
 		this.created = new Date();
 		this.attributes = new ConcurrentHashMap<String, Object>();
-		attributes.put("netty.channel", channel);
 	}
 
 	@Override
