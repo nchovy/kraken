@@ -99,12 +99,21 @@ public class LogFileReaderV1 extends LogFileReader {
 
 	@Override
 	public void traverse(int limit, LogRecordCallback callback) throws IOException, InterruptedException {
-		traverse(null, null, limit, callback);
+		traverse(0, limit, callback);
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException,
-			InterruptedException {
+	public void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+		traverse(null, null, offset, limit, callback);
+	}
+
+	@Override
+	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+		traverse(from, to, 0, limit, callback);
+	}
+
+	@Override
+	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		int matched = 0;
 
 		int block = blockHeaders.size() - 1;
@@ -115,8 +124,7 @@ public class LogFileReaderV1 extends LogFileReader {
 			blockLogNum = (indexFile.length() - (header.fp + 18)) / INDEX_ITEM_SIZE;
 
 		// block validate
-		while ((from != null && header.endTime != 0L && header.endTime < from.getTime())
-				|| (to != null && header.startTime > to.getTime())) {
+		while ((from != null && header.endTime != 0L && header.endTime < from.getTime()) || (to != null && header.startTime > to.getTime())) {
 			if (--block < 0)
 				return;
 			header = blockHeaders.get(block);
@@ -130,8 +138,7 @@ public class LogFileReaderV1 extends LogFileReader {
 						return;
 					header = blockHeaders.get(block);
 					blockLogNum = header.blockLength / INDEX_ITEM_SIZE - 1;
-				} while ((from != null && header.endTime < from.getTime())
-						|| (to != null && header.startTime > to.getTime()));
+				} while ((from != null && header.endTime < from.getTime()) || (to != null && header.startTime > to.getTime()));
 			}
 
 			// begin of item (ignore id)
@@ -155,6 +162,11 @@ public class LogFileReaderV1 extends LogFileReader {
 			int dataLen = dataFile.readInt();
 			byte[] data = new byte[dataLen];
 			dataFile.readFully(data);
+
+			if (offset > 0) {
+				offset--;
+				continue;
+			}
 
 			ByteBuffer bb = ByteBuffer.wrap(data, 0, dataLen);
 			if (callback.onLog(new LogRecord(dataDate, dataId, bb))) {

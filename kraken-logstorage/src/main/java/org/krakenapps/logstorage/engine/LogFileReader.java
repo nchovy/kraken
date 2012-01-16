@@ -24,8 +24,7 @@ import org.krakenapps.logstorage.engine.v1.LogFileReaderV1;
 import org.krakenapps.logstorage.engine.v2.LogFileReaderV2;
 
 public abstract class LogFileReader {
-	public static LogFileReader getLogFileReader(File indexPath, File dataPath) throws InvalidLogFileHeaderException,
-			IOException {
+	public static LogFileReader getLogFileReader(File indexPath, File dataPath) throws InvalidLogFileHeaderException, IOException {
 		LogFileReader reader = null;
 		RandomAccessFile indexHeaderReader = null;
 		RandomAccessFile dataHeaderReader = null;
@@ -37,7 +36,7 @@ public abstract class LogFileReader {
 			LogFileHeader dataHeader = LogFileHeader.extractHeader(dataHeaderReader);
 
 			if (indexHeader.version() != dataHeader.version())
-				throw new InvalidLogFileHeaderException("diffrent log version index and data file");
+				throw new InvalidLogFileHeaderException("different log version index and data file");
 
 			if (indexHeader.version() == 1)
 				reader = new LogFileReaderV1(indexPath, dataPath);
@@ -59,7 +58,11 @@ public abstract class LogFileReader {
 
 	public abstract void traverse(int limit, LogRecordCallback callback) throws IOException, InterruptedException;
 
-	public abstract void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException,
+	public abstract void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException;
+
+	public abstract void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException;
+
+	public abstract void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
 			InterruptedException;
 
 	public abstract void close() throws IOException;

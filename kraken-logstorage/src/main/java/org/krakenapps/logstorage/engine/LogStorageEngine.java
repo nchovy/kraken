@@ -451,8 +451,7 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback)
-			throws InterruptedException {
+	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException {
 		verify();
 
 		Collection<Date> days = getLogDates(tableName);
@@ -485,14 +484,14 @@ public class LogStorageEngine implements LogStorage {
 		return found;
 	}
 
-	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit,
-			final LogSearchCallback callback) throws InterruptedException {
+	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit, final LogSearchCallback callback)
+			throws InterruptedException {
 		int tableId = tableRegistry.getTableId(tableName);
 
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);
 		File dataPath = DatapathUtil.getDataFile(tableId, day);
 		LogFileReader reader = null;
-		TraverseCallback c = new TraverseCallback(tableName, from, to, offset, callback);
+		TraverseCallback c = new TraverseCallback(tableName, from, to, callback);
 
 		try {
 			OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
@@ -513,7 +512,7 @@ public class LogStorageEngine implements LogStorage {
 				}
 			}
 
-			reader.traverse(from, to, limit, c);
+			reader.traverse(from, to, offset, limit, c);
 		} catch (InterruptedException e) {
 			throw e;
 		} catch (Exception e) {
@@ -535,52 +534,40 @@ public class LogStorageEngine implements LogStorage {
 		private String tableName;
 		private Date from;
 		private Date to;
-		private int offset;
 		private LogSearchCallback callback;
 		private int matched = 0;
 
-		public TraverseCallback(String tableName, Date from, Date to, int offset, LogSearchCallback callback) {
+		public TraverseCallback(String tableName, Date from, Date to, LogSearchCallback callback) {
 			this.tableName = tableName;
 			this.from = from;
 			this.to = to;
-			this.offset = offset;
 			this.callback = callback;
 		}
 
 		@Override
 		public boolean onLog(LogRecord logData) throws InterruptedException {
-			Log log = convert(tableName, logData);
-			logger.debug("log storage: traverse log [{}]", log);
-
-			Date d = log.getDate();
+			Date d = logData.getDate();
 			if (from != null && d.before(from))
 				return false;
-
 			if (to != null && d.after(to))
 				return false;
 
-			return onMatch(log);
-		}
-
-		private boolean onMatch(Log log) throws InterruptedException {
 			if (callback.isInterrupted())
 				throw new InterruptedException("interrupted log traverse");
 
-			matched++;
+			try {
+				matched++;
 
-			if (offset > 0) {
-				offset--;
-				return false;
-			} else {
-				try {
-					callback.onLog(log);
-				} catch (Exception e) {
-					if (callback.isInterrupted())
-						throw new InterruptedException("interrupted log traverse");
-					else
-						throw new RuntimeException(e);
-				}
+				Log log = convert(tableName, logData);
+				logger.debug("kraken logdb: traverse log [{}]", log);
+				callback.onLog(log);
+
 				return true;
+			} catch (Exception e) {
+				if (callback.isInterrupted())
+					throw new InterruptedException("interrupted log traverse");
+				else
+					throw new RuntimeException(e);
 			}
 		}
 	}

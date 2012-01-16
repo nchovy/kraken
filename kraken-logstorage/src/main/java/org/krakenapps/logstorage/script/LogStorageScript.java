@@ -317,6 +317,10 @@ public class LogStorageScript implements Script {
 			String line = null;
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+			tableRegistry.setTableMetadata(tableName, "logparser", "delimiter");
+			tableRegistry.setTableMetadata(tableName, "delimiter_target", "log");
+			tableRegistry.setTableMetadata(tableName, "delimiter", " ");
+
 			int count = 0;
 			while (count < loadLimit) {
 				line = br.readLine();
@@ -325,7 +329,7 @@ public class LogStorageScript implements Script {
 
 				if (line.startsWith("#")) {
 					if (line.startsWith("#Fields: "))
-						tableRegistry.setTableMetadata(tableName, "logformat", line.replace("#Fields: ", ""));
+						tableRegistry.setTableMetadata(tableName, "column_headers", line.replace("#Fields: ", "").replace(" ", ","));
 					continue;
 				}
 
@@ -333,9 +337,9 @@ public class LogStorageScript implements Script {
 
 				Date date = dateFormat.parse(tokens[0] + " " + tokens[1]);
 				Map<String, Object> m = new HashMap<String, Object>();
-				m.put("log", line);
+				m.put("line", line);
 
-				Log log = new Log(tableName, date, m);
+				Log log = new Log(tableName, new Date(), m);
 				try {
 					storage.write(log);
 				} catch (IllegalArgumentException e) {

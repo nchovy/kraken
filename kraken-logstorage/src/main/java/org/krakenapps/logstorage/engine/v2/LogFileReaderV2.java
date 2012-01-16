@@ -87,6 +87,8 @@ public class LogFileReaderV2 extends LogFileReader {
 			pos += 24 + header.compressedLength;
 		}
 
+		if (indexBlockHeaders.size() != dataBlockHeaders.size())
+			throw new IOException("invalid log file");
 	}
 
 	private int getInt(byte[] extraData) {
@@ -113,7 +115,8 @@ public class LogFileReaderV2 extends LogFileReader {
 
 			indexFile.seek(header.fp + (id - header.firstId) * INDEX_ITEM_SIZE);
 			int offset = indexFile.readInt();
-			return getLogRecord(m, offset);
+
+			return getLogRecord(dataBlockHeaders.get(m), offset);
 		}
 
 		return null;
@@ -121,45 +124,73 @@ public class LogFileReaderV2 extends LogFileReader {
 
 	@Override
 	public void traverse(int limit, LogRecordCallback callback) throws IOException, InterruptedException {
-		traverse(null, null, limit, callback);
+		traverse(0, limit, callback);
+	}
+
+	@Override
+	public void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+		traverse(null, null, offset, limit, callback);
 	}
 
 	@Override
 	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
-		int matched = 0;
+		traverse(from, to, 0, limit, callback);
+	}
 
-		Long fromTime = (from == null) ? null : from.getTime();
-		Long toTime = (to == null) ? null : to.getTime();
-		for (int i = dataBlockHeaders.size() - 1; i >= 0; i--) {
-			DataBlockHeader header = dataBlockHeaders.get(i);
-			if ((fromTime == null || header.endDate >= fromTime) && (toTime == null || header.startDate <= toTime)) {
-				matched += readBlock(i, fromTime, toTime, limit - matched, callback);
-				if (matched == limit)
+	@Override
+	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+		for (int i = indexBlockHeaders.size() - 1; i >= 0; i--) {
+			IndexBlockHeader index = indexBlockHeaders.get(i);
+			if (index.logCount <= offset) {
+				offset -= index.logCount;
+				continue;
+			}
+
+			DataBlockHeader data = dataBlockHeaders.get(i);
+			Long fromTime = (from == null) ? null : from.getTime();
+			Long toTime = (to == null) ? null : to.getTime();
+			if ((fromTime == null || data.endDate >= fromTime) && (toTime == null || data.startDate <= toTime)) {
+				int matched = readBlock(index, data, fromTime, toTime, offset, limit, callback);
+				if (matched < offset)
+					offset -= matched;
+				else {
+					matched -= offset;
+					offset = 0;
+					limit -= matched;
+				}
+
+				if (limit == 0)
 					return;
 			}
 		}
 	}
 
-	private int readBlock(int blockId, Long from, Long to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
-		IndexBlockHeader header = indexBlockHeaders.get(blockId);
+	private int readBlock(IndexBlockHeader index, DataBlockHeader data, Long from, Long to, int offset, int limit,
+			LogRecordCallback callback) throws IOException, InterruptedException {
 		List<Integer> offsets = new ArrayList<Integer>();
 		int matched = 0;
 
-		indexFile.seek(header.fp + 4);
-		ByteBuffer indexBuffer = ByteBuffer.allocate(header.logCount * 4);
+		indexFile.seek(index.fp + 4);
+		ByteBuffer indexBuffer = ByteBuffer.allocate(index.logCount * 4);
 		indexFile.read(indexBuffer.array());
-		for (int i = 0; i < header.logCount; i++)
+		for (int i = 0; i < index.logCount; i++)
 			offsets.add(indexBuffer.getInt());
 
 		// reverse order
 		for (int i = offsets.size() - 1; i >= 0; i--) {
-			long date = getLogRecordDate(blockId, offsets.get(i));
+			long date = getLogRecordDate(data, offsets.get(i));
 			if (from != null && date < from)
 				return matched;
 			if (to != null && date > to)
-				return matched;
+				continue;
 
-			if (callback.onLog(getLogRecord(blockId, offsets.get(i)))) {
+			if (offset > 0) {
+				offset--;
+				matched++;
+				continue;
+			}
+
+			if (callback.onLog(getLogRecord(data, offsets.get(i)))) {
 				if (++matched == limit)
 					return matched;
 			}
@@ -168,25 +199,23 @@ public class LogFileReaderV2 extends LogFileReader {
 		return matched;
 	}
 
-	private long getLogRecordDate(int blockId, int offset) throws IOException {
-		DataBlockHeader header = dataBlockHeaders.get(blockId);
-		prepareDataBlock(header);
+	private long getLogRecordDate(DataBlockHeader data, int offset) throws IOException {
+		prepareDataBlock(data);
 
 		dataBuffer.position(offset + 8);
 		return dataBuffer.getLong();
 	}
 
-	private LogRecord getLogRecord(int blockId, int offset) throws IOException {
-		DataBlockHeader header = dataBlockHeaders.get(blockId);
-		prepareDataBlock(header);
+	private LogRecord getLogRecord(DataBlockHeader data, int offset) throws IOException {
+		prepareDataBlock(data);
 
 		dataBuffer.position(offset);
 		long id = dataBuffer.getLong();
 		Date date = new Date(dataBuffer.getLong());
-		byte[] data = new byte[dataBuffer.getInt()];
-		dataBuffer.get(data);
+		byte[] b = new byte[dataBuffer.getInt()];
+		dataBuffer.get(b);
 
-		return new LogRecord(date, id, ByteBuffer.wrap(data));
+		return new LogRecord(date, id, ByteBuffer.wrap(b));
 	}
 
 	private void prepareDataBlock(DataBlockHeader header) throws IOException {
@@ -194,8 +223,8 @@ public class LogFileReaderV2 extends LogFileReader {
 			nowDataBlock = header;
 
 			dataBuffer.clear();
-			dataFile.seek(header.fp + 24);
-			dataFile.read(buf, 0, header.compressedLength);
+			dataFile.seek(header.fp + 24L);
+			dataFile.readFully(buf, 0, header.compressedLength);
 			decompresser.setInput(buf, 0, header.compressedLength);
 			try {
 				dataBuffer.limit(header.origLength);
@@ -227,7 +256,8 @@ public class LogFileReaderV2 extends LogFileReader {
 		}
 	}
 
-	private class DataBlockHeader {
+	private static class DataBlockHeader {
+		private static ByteBuffer buf = ByteBuffer.allocate(24);
 		private long fp;
 		private long startDate;
 		private long endDate;
@@ -235,10 +265,12 @@ public class LogFileReaderV2 extends LogFileReader {
 		private int compressedLength;
 
 		private DataBlockHeader(RandomAccessFile f) throws IOException {
-			this.startDate = f.readLong();
-			this.endDate = f.readLong();
-			this.origLength = f.readInt();
-			this.compressedLength = f.readInt();
+			f.readFully(buf.array());
+			buf.position(0);
+			this.startDate = buf.getLong();
+			this.endDate = buf.getLong();
+			this.origLength = buf.getInt();
+			this.compressedLength = buf.getInt();
 		}
 	}
 }
