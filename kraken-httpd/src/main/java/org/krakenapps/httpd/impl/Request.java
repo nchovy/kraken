@@ -91,8 +91,7 @@ public class Request implements HttpServletRequest {
 	private List<Locale> locales = new ArrayList<Locale>();
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-	public Request(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext, String servletPath,
-			String pathInfo) {
+	public Request(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext, String servletPath, String pathInfo) {
 		this.ctx = ctx;
 		this.req = req;
 		this.httpContext = httpContext;
@@ -128,8 +127,7 @@ public class Request implements HttpServletRequest {
 
 		if (req.getMethod().equals(HttpMethod.POST)) {
 			if (!(contentType != null && contentType.equals("application/octet-stream"))) {
-				String body = new String(content.array(), content.readerIndex(), content.readableBytes(),
-						Charset.forName("utf-8"));
+				String body = new String(content.array(), content.readerIndex(), content.readableBytes(), Charset.forName("utf-8"));
 				setParams(body);
 			}
 		}
@@ -350,7 +348,7 @@ public class Request implements HttpServletRequest {
 		if (values == null)
 			return null;
 
-		return (String[]) values.toArray();
+		return values.toArray(new String[0]);
 	}
 
 	@Override
@@ -628,8 +626,7 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-			throws IllegalStateException {
+	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
 		// TODO Auto-generated method stub
 		return null;
 	}
