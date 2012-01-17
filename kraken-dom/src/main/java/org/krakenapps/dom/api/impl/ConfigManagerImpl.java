@@ -2,6 +2,7 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +49,11 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public ConfigDatabase getDatabase(String domain) {
 		ConfigDatabase db = findDatabase(domain);
-		if (db == null)
-			throw new DOMException("organization-not-found");
+		if (db == null) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("domain", domain);
+			throw new DOMException("organization-not-found", m);
+		}
 		return db;
 	}
 
@@ -251,14 +255,13 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
-			DefaultEntityEventProvider<T> provider) {
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
 		remove(domain, cls, pred, notFoundMessage, provider, null, null);
 	}
 
 	@Override
-	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
-			DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
+	public <T> void remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider,
+			Object removingState, Object removedState) {
 		ConfigDatabase db = getDatabase(domain);
 		Config c = get(db, cls, pred, notFoundMessage);
 		T doc = c.getDocument(cls, getCallback(domain));
