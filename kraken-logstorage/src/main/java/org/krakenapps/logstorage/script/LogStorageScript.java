@@ -109,7 +109,7 @@ public class LogStorageScript implements Script {
 			context.println();
 			context.println("Table Metadata");
 			context.println("----------");
-			for (String key : tableRegistry.getTableMetadataKeys(tableName)) {
+			for (String key : tableRegistry.getTableMetadatas(tableName).keySet()) {
 				String value = tableRegistry.getTableMetadata(tableName, key);
 				context.println(key + "=" + value);
 			}
