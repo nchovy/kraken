@@ -422,7 +422,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public void rollback(int changeset) {
-		rollback(changeset, null, null);
+		rollback(changeset, null, "rollback to rev " + changeset);
 	}
 
 	@Override
