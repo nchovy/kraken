@@ -15,6 +15,8 @@
  */
 package org.krakenapps.script;
 
+import java.util.List;
+
 import org.krakenapps.api.Primitive;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -85,7 +87,10 @@ public class ConfScript implements Script {
 		context.println("dropped");
 	}
 
-	@ScriptUsage(description = "show revision logs", arguments = { @ScriptArgument(name = "name", type = "string", description = "database name") })
+	@ScriptUsage(description = "show revision logs", arguments = {
+			@ScriptArgument(name = "name", type = "string", description = "database name"),
+			@ScriptArgument(name = "offset", type = "integer", optional = true, description = "log offset"),
+			@ScriptArgument(name = "limit", type = "integer", optional = true, description = "log count limit") })
 	public void logs(String[] args) {
 		ConfigDatabase db = conf.getDatabase(args[0]);
 		if (db == null) {
@@ -93,7 +98,16 @@ public class ConfScript implements Script {
 			return;
 		}
 
-		for (CommitLog log : db.getCommitLogs())
+		long offset = 0;
+		long limit = 10;
+
+		if (args.length > 1)
+			offset = Long.parseLong(args[1]);
+		if (args.length > 2)
+			limit = Long.parseLong(args[2]);
+
+		List<CommitLog> logs = db.getCommitLogs(offset, limit);
+		for (CommitLog log : logs)
 			context.println(log);
 	}
 
@@ -139,5 +153,19 @@ public class ConfScript implements Script {
 		} finally {
 			it.close();
 		}
+	}
+
+	@ScriptUsage(description = "print documents", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "rollback revision", type = "integer", description = "rollback revision id") })
+	public void rollback(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		db.rollback(Integer.parseInt(args[1]));
+		context.println("complete");
 	}
 }

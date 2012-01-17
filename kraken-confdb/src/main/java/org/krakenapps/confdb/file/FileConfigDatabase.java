@@ -288,10 +288,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public void dropCollection(String name) {
+		ConfigTransaction xact = beginTransaction();
 		try {
-			lock();
-		} finally {
-			unlock();
+			xact.getManifest();
+			xact.log(CommitOp.DropCol, name, 0, 0);
+			xact.commit(null, null);
+		} catch (Throwable e) {
+			xact.rollback();
+			throw new RollbackException(e);
 		}
 	}
 
