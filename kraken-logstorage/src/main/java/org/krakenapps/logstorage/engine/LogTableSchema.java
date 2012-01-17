@@ -18,6 +18,9 @@ package org.krakenapps.logstorage.engine;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.krakenapps.confdb.CollectionName;
+
+@CollectionName("table")
 public class LogTableSchema {
 	private int id;
 	private String name;

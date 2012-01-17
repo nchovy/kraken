@@ -26,7 +26,7 @@ import org.krakenapps.confdb.ConfigService;
 
 public class ConfigUtil {
 	public static String get(ConfigService conf, Constants key) {
-		ConfigDatabase db = conf.ensureDatabase("kraken-confdb");
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
 		ConfigCollection col = db.ensureCollection("global_settings");
 		Config c = getGlobalConfig(col);
 		if (c == null)
@@ -39,7 +39,7 @@ public class ConfigUtil {
 
 	@SuppressWarnings("unchecked")
 	public static void set(ConfigService conf, Constants key, String value) {
-		ConfigDatabase db = conf.ensureDatabase("kraken-confdb");
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
 		ConfigCollection col = db.ensureCollection("global_settings");
 
 		Config c = getGlobalConfig(col);

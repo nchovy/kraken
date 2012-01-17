@@ -29,9 +29,11 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableNotFoundException;
@@ -77,7 +79,26 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		int maxId = 0;
 
 		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
-		ConfigIterator it = db.findAll(LogTableSchema.class);
+		ConfigCollection col = db.getCollection(LogTableSchema.class);
+		if (col == null) {
+			col = db.ensureCollection(LogTableSchema.class);
+			ConfigCollection before = db.getCollection("org.krakenapps.logstorage.engine.LogTableSchema");
+			if (before != null) {
+				ConfigTransaction xact = db.beginTransaction();
+				try {
+					ConfigIterator it = before.findAll();
+					while (it.hasNext())
+						col.add(xact, it.next().getDocument());
+					xact.commit("kraken-logstorage", "migration from collection org.krakenapps.logstorage.engine.LogTableSchema");
+					db.dropCollection("org.krakenapps.logstorage.engine.LogTableSchema");
+				} catch (Throwable e) {
+					xact.rollback();
+					throw new IllegalStateException("migration failed");
+				}
+			}
+		}
+
+		ConfigIterator it = col.findAll();
 		for (LogTableSchema t : it.getDocuments(LogTableSchema.class)) {
 			tableNames.put(t.getId(), t.getName());
 			tableSchemas.put(t.getName(), t);
@@ -148,6 +169,7 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 		Config c = db.findOne(LogTableSchema.class, Predicates.field("name", tableName));
 		if (c == null)
 			return;
+		db.remove(c);
 
 		LogTableSchema t = tableSchemas.remove(tableName);
 		if (t != null)

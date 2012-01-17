@@ -91,6 +91,7 @@ public class LogStorageEngine implements LogStorage {
 		logDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/log");
 		logDir = new File(getStringParameter(Constants.LogStorageDirectory, logDir.getAbsolutePath()));
 		logDir.mkdirs();
+		DatapathUtil.setLogDir(logDir);
 	}
 
 	@Override
@@ -108,6 +109,7 @@ public class LogStorageEngine implements LogStorage {
 
 		ConfigUtil.set(conf, Constants.LogStorageDirectory, f.getAbsolutePath());
 		logDir = f;
+		DatapathUtil.setLogDir(logDir);
 	}
 
 	private String getStringParameter(Constants key, String defaultValue) {
@@ -143,14 +145,6 @@ public class LogStorageEngine implements LogStorage {
 		status = LogStorageStatus.Open;
 
 		isDebugloggerTraceEnabled = debuglogger.isTraceEnabled();
-
-		File queryDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/query");
-		queryDir.mkdirs();
-
-		for (File f : queryDir.listFiles()) {
-			if ((f.getName().startsWith("fbl") || f.getName().startsWith("fbm")) && f.getName().endsWith(".buf"))
-				f.delete();
-		}
 	}
 
 	@Invalidate
