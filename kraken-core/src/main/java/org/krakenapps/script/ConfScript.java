@@ -157,6 +157,46 @@ public class ConfScript implements Script {
 
 	@ScriptUsage(description = "print documents", arguments = {
 			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "collection name", type = "string", description = "collection name"),
+			@ScriptArgument(name = "doc id", type = "integer", description = "document id") })
+	public void delete(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+
+		ConfigCollection col = db.getCollection(args[1]);
+		if (col == null) {
+			context.println("collection not found");
+			return;
+		}
+
+		int id = Integer.parseInt(args[2]);
+		ConfigIterator it = col.findAll();
+		Config config = null;
+		try {
+			while (it.hasNext()) {
+				Config c = it.next();
+				if (c.getId() == id) {
+					config = c;
+					break;
+				}
+			}
+		} finally {
+			it.close();
+		}
+
+		if (config != null) {
+			col.remove(config);
+			context.println("removed");
+		} else {
+			context.println("document not found");
+		}
+	}
+
+	@ScriptUsage(description = "print documents", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
 			@ScriptArgument(name = "rollback revision", type = "integer", description = "rollback revision id") })
 	public void rollback(String[] args) {
 		ConfigDatabase db = conf.getDatabase(args[0]);
