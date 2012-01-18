@@ -346,7 +346,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 								temp.renameTo(before);
 						}
 					} else {
-						before.mkdirs();
+						before.getParentFile().mkdirs();
 						MavenResolver resolver = new MavenResolver(getLocalRepository(),
 								config.getBundleRepositories(), null, getKeyStoreManager());
 						MavenArtifact artifact = getArtifact(bundle);
