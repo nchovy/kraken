@@ -134,7 +134,14 @@ public class AdminApiImpl implements AdminApi {
 		checkPermissionLevel(domain, requestAdminLoginName, admin, "set-admin-permission-denied");
 
 		prepare(admin);
+
 		User target = userApi.getUser(domain, targetUserLoginName);
+		if (target.getExt().get(getExtensionName()) != null) {
+			Admin oldAdmin = parseAdmin(domain, target);
+			if (oldAdmin != null && !oldAdmin.isEnabled() && admin.isEnabled())
+				admin.setLoginFailures(0);
+		}
+
 		target.getExt().put(getExtensionName(), admin);
 		userApi.updateUser(domain, target, false);
 	}
