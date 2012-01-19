@@ -286,10 +286,29 @@ public class AdminApiImpl implements AdminApi {
 	}
 
 	private void checkAcl(Session session, Admin admin) {
-		if (!admin.isUseAcl())
-			return;
-
 		String remote = session.getRemoteAddress().getHostAddress();
+		boolean failed = false;
+
+		String hosts = orgApi.getOrganizationParameter(session.getOrgDomain(), "dom.admin.trust_hosts", String.class);
+		if (hosts != null && !hosts.isEmpty()) {
+			String[] tokens = hosts.split(",");
+			for (String token : tokens) {
+				token = token.trim();
+				if (token.equals(remote))
+					return;
+			}
+
+			// check admin specific config (give change)
+			failed = true;
+		}
+
+		// check per admin
+		if (!admin.isUseAcl()) {
+			if (failed)
+				throw new DOMException("not-trust-host");
+			return;
+		}
+
 		for (String host : admin.getTrustHosts()) {
 			if (host != null && host.equals(remote))
 				return;
