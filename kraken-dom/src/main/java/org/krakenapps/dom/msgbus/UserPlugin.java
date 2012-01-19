@@ -82,7 +82,8 @@ public class UserPlugin {
 
 		// try to check role
 		Admin targetAdmin = adminApi.findAdmin(req.getOrgDomain(), loginName);
-		if (targetAdmin != null && targetAdmin.getRole().getLevel() >= request.getRole().getLevel())
+		if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
+				&& targetAdmin.getRole().getLevel() >= request.getRole().getLevel())
 			throw new DOMException("no-permission");
 
 		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
