@@ -19,6 +19,7 @@ import org.krakenapps.dom.model.HostType;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
 import org.krakenapps.dom.model.ProgramProfile;
+import org.krakenapps.dom.model.User;
 import org.krakenapps.dom.model.Vendor;
 
 public class DomScript implements Script {
@@ -33,8 +34,8 @@ public class DomScript implements Script {
 	private HostApi hostApi;
 	private ApplicationApi appApi;
 
-	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi, ProgramApi programApi,
-			AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
+	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
+			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.userApi = userApi;
@@ -48,6 +49,22 @@ public class DomScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	@ScriptUsage(description = "reset password", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
+			@ScriptArgument(name = "login name", type = "string", description = "login name"),
+			@ScriptArgument(name = "password", type = "string", description = "new password") })
+	public void passwd(String[] args) {
+		String domain = args[0];
+		String loginName = args[1];
+		String password = args[2];
+
+		User user = userApi.getUser(domain, loginName);
+		user.setPassword(password);
+
+		userApi.updateUser(domain, user, true);
+		context.println("password reset");
 	}
 
 	public void install(String[] args) {
@@ -67,7 +84,8 @@ public class DomScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "add vendor", arguments = { @ScriptArgument(name = "domain", type = "string", description = "domain"),
+	@ScriptUsage(description = "add vendor", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "domain"),
 			@ScriptArgument(name = "name", type = "string", description = "name") })
 	public void addVendor(String[] args) {
 		Vendor vendor = new Vendor();
@@ -76,7 +94,8 @@ public class DomScript implements Script {
 		context.println("added " + vendor.getGuid());
 	}
 
-	@ScriptUsage(description = "add host type", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host type", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "vendor guid", type = "string", description = ""),
 			@ScriptArgument(name = "name", type = "string", description = ""),
 			@ScriptArgument(name = "version", type = "string", description = "") })
@@ -91,7 +110,8 @@ public class DomScript implements Script {
 		context.println("added " + t.getGuid());
 	}
 
-	@ScriptUsage(description = "add host extension", arguments = { @ScriptArgument(name = "domain", type = "string", description = ""),
+	@ScriptUsage(description = "add host extension", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = ""),
 			@ScriptArgument(name = "host type guid", type = "string", description = ""),
 			@ScriptArgument(name = "type", type = "string", description = "host extension type"),
 			@ScriptArgument(name = "ordinal", type = "string", description = "ordinal") })

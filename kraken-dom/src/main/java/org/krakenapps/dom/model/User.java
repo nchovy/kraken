@@ -62,6 +62,9 @@ public class User {
 	@FieldOption(nullable = false)
 	private Date updated = new Date();
 
+	@FieldOption(nullable = false)
+	private Date lastPasswordChange;
+
 	public String getLoginName() {
 		return loginName;
 	}
@@ -100,6 +103,7 @@ public class User {
 
 	public void setPassword(String password) {
 		this.password = password;
+		this.lastPasswordChange = new Date();
 	}
 
 	public String getSalt() {
@@ -157,4 +161,13 @@ public class User {
 	public void setUpdated(Date updated) {
 		this.updated = updated;
 	}
+
+	public Date getLastPasswordChange() {
+		return lastPasswordChange;
+	}
+
+	public void setLastPasswordChange(Date lastPasswordChange) {
+		this.lastPasswordChange = lastPasswordChange;
+	}
+
 }

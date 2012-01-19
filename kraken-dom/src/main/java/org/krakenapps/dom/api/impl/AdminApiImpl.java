@@ -227,6 +227,8 @@ public class AdminApiImpl implements AdminApi {
 					throw new DOMException("invalid-password");
 			}
 
+			enforcePasswordChange(domain, admin);
+
 			Integer maxSession = orgApi.getOrganizationParameter(domain, "max_sessions", Integer.class);
 			if (maxSession != null) {
 				if (maxSession > 0) {
@@ -283,6 +285,21 @@ public class AdminApiImpl implements AdminApi {
 			}
 			throw e;
 		}
+	}
+
+	private void enforcePasswordChange(String domain, Admin admin) {
+		logger.trace("kraken dom: last password change [{}]", admin.getUser().getLastPasswordChange());
+		long interval = new Date().getTime() - admin.getUser().getLastPasswordChange().getTime();
+
+		Integer passwordExpiry = (Integer) orgApi.getOrganizationParameter(domain, "dom.user.password_expiry");
+		if (passwordExpiry == null)
+			passwordExpiry = 365;
+
+		long baseline = passwordExpiry * 86400 * 1000L;
+		logger.trace("kraken dom: checking expired password interval [{}], last change [{}]", interval, baseline);
+
+		if (interval > baseline)
+			throw new DOMException("expired-password");
 	}
 
 	private void checkAcl(Session session, Admin admin) {
