@@ -16,18 +16,26 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.EntityEventListener;
+import org.krakenapps.dom.api.EntityEventProvider;
+import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.model.Application;
 import org.krakenapps.dom.model.ApplicationGroup;
 import org.krakenapps.dom.model.ApplicationVersion;
@@ -39,7 +47,7 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	private static final Class<Vendor> ven = Vendor.class;
 	private static final String VEN_NOT_FOUND = "vendor-not-found";
 	private static final String VEN_ALREADY_EXIST = "vendor-already-exist";
-	private static DefaultEntityEventProvider<Vendor> vendorEventProvider = new DefaultEntityEventProvider<Vendor>();
+	private DefaultEntityEventProvider<Vendor> vendorEventProvider = new DefaultEntityEventProvider<Vendor>();
 
 	private static final Class<Application> app = Application.class;
 	private static final String APP_NOT_FOUND = "application-not-found";
@@ -48,15 +56,43 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	private static final Class<ApplicationVersion> ver = ApplicationVersion.class;
 	private static final String VER_NOT_FOUND = "application-version-not-found";
 	private static final String VER_ALREADY_EXIST = "application-version-already-exist";
-	private static DefaultEntityEventProvider<ApplicationVersion> versionEventProvider = new DefaultEntityEventProvider<ApplicationVersion>();
+	private DefaultEntityEventProvider<ApplicationVersion> versionEventProvider = new DefaultEntityEventProvider<ApplicationVersion>();
 
 	private static final Class<ApplicationGroup> grp = ApplicationGroup.class;
 	private static final String GRP_NOT_FOUND = "application-group-not-found";
 	private static final String GRP_ALREADY_EXIST = "application-group-already-exist";
-	private static DefaultEntityEventProvider<ApplicationGroup> groupEventProvider = new DefaultEntityEventProvider<ApplicationGroup>();
+	private DefaultEntityEventProvider<ApplicationGroup> groupEventProvider = new DefaultEntityEventProvider<ApplicationGroup>();
+
+	private EntityEventListener<Vendor> vendorEventListener = new DefaultEntityEventListener<Vendor>() {
+		@Override
+		public void entityRemoving(String domain, Vendor obj, ConfigTransaction xact, Object state) {
+			List<Predicate> preds = Arrays.asList(Predicates.field("vendor/guid", obj.getGuid()));
+			Transaction x = Transaction.getInstance(xact);
+			cfg.removes(x, domain, Application.class, preds, null, ApplicationApiImpl.this, state, null);
+		}
+	};
+	private EntityEventListener<Application> applicationEventListener = new DefaultEntityEventListener<Application>() {
+		@Override
+		public void entityRemoving(String domain, Application obj, ConfigTransaction xact, Object state) {
+			Transaction x = Transaction.getInstance(xact);
+			cfg.removes(x, domain, ApplicationVersion.class, getPreds(obj.getVersions()), null, versionEventProvider, state, null);
+		}
+	};
 
 	@Requires
 	private ConfigManager cfg;
+
+	@Validate
+	public void validate() {
+		vendorEventProvider.addEntityEventListener(vendorEventListener);
+		this.addEntityEventListener(applicationEventListener);
+	}
+
+	@Invalidate
+	public void invalidate() {
+		vendorEventProvider.removeEntityEventListener(vendorEventListener);
+		this.removeEntityEventListener(applicationEventListener);
+	}
 
 	private Predicate getPred(String guid) {
 		return Predicates.field("guid", guid);
@@ -128,6 +164,11 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	@Override
 	public void removeVendor(String domain, String guid) {
 		cfg.remove(domain, ven, getPred(guid), VEN_NOT_FOUND, vendorEventProvider);
+	}
+
+	@Override
+	public EntityEventProvider<Vendor> getVendorEventProvider() {
+		return vendorEventProvider;
 	}
 
 	@Override
@@ -238,6 +279,11 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	}
 
 	@Override
+	public EntityEventProvider<ApplicationVersion> getApplicationVersionEventProvider() {
+		return versionEventProvider;
+	}
+
+	@Override
 	public Collection<ApplicationGroup> getApplicationGroups(String domain) {
 		return cfg.all(domain, grp);
 	}
@@ -288,5 +334,10 @@ public class ApplicationApiImpl extends DefaultEntityEventProvider<Application> 
 	@Override
 	public void removeApplicationGroup(String domain, String guid) {
 		cfg.remove(domain, grp, getPred(guid), GRP_NOT_FOUND, groupEventProvider);
+	}
+
+	@Override
+	public EntityEventProvider<ApplicationGroup> getApplicationGroupEventProvider() {
+		return groupEventProvider;
 	}
 }

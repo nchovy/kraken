@@ -21,13 +21,20 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.EntityEventListener;
+import org.krakenapps.dom.api.EntityEventProvider;
 import org.krakenapps.dom.api.ProgramApi;
+import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
 import org.krakenapps.dom.model.ProgramProfile;
@@ -38,19 +45,67 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	private static final Class<ProgramProfile> prof = ProgramProfile.class;
 	private static final String PROF_NOT_FOUND = "program-profile-not-found";
 	private static final String PROF_ALREADY_EXIST = "program-profile-already-exist";
-	private static DefaultEntityEventProvider<ProgramProfile> profileEventProvider = new DefaultEntityEventProvider<ProgramProfile>();
+	private DefaultEntityEventProvider<ProgramProfile> profileEventProvider = new DefaultEntityEventProvider<ProgramProfile>();
 
 	private static final Class<ProgramPack> pack = ProgramPack.class;
 	private static final String PACK_NOT_FOUND = "program-pack-not-found";
 	private static final String PACK_ALREADY_EXIST = "program-pack-already-exist";
-	private static DefaultEntityEventProvider<ProgramPack> packEventProvider = new DefaultEntityEventProvider<ProgramPack>();
+	private DefaultEntityEventProvider<ProgramPack> packEventProvider = new DefaultEntityEventProvider<ProgramPack>();
 
 	private static final Class<Program> prog = Program.class;
 	private static final String PROG_NOT_FOUND = "program-not-found";
 	private static final String PROG_ALREADY_EXIST = "program-already-exist";
 
+	private EntityEventListener<ProgramPack> packEventListener = new DefaultEntityEventListener<ProgramPack>() {
+		@Override
+		public void entityRemoving(String domain, ProgramPack obj, ConfigTransaction xact, Object state) {
+			List<Program> programs = obj.getPrograms();
+			List<Predicate> preds = new ArrayList<Predicate>();
+			for (Program program : programs) {
+				preds.add(getPred(program.getPack(), program.getName()));
+				program.setPack(null);
+			}
+
+			Transaction x = Transaction.getInstance(xact);
+			cfg.updates(x, prog, preds, programs, null);
+		}
+	};
+
+	private EntityEventListener<Program> programEventListener = new DefaultEntityEventListener<Program>() {
+		@Override
+		public void entityRemoving(String domain, Program obj, ConfigTransaction xact, Object state) {
+			List<Predicate> preds = new ArrayList<Predicate>();
+			List<ProgramProfile> profiles = new ArrayList<ProgramProfile>();
+			for (ProgramProfile profile : getProgramProfiles(domain)) {
+				for (Program program : profile.getPrograms()) {
+					if (program.getPack() == obj.getPack() && program.getName() == obj.getName()) {
+						profile.getPrograms().remove(program);
+						preds.add(getPred(profile.getName()));
+						profiles.add(profile);
+						break;
+					}
+				}
+			}
+
+			Transaction x = Transaction.getInstance(xact);
+			cfg.updates(x, ProgramProfile.class, preds, profiles, null);
+		}
+	};
+
 	@Requires
 	private ConfigManager cfg;
+
+	@Validate
+	public void validate() {
+		packEventProvider.addEntityEventListener(packEventListener);
+		this.addEntityEventListener(programEventListener);
+	}
+
+	@Invalidate
+	public void invalidate() {
+		packEventProvider.removeEntityEventListener(packEventListener);
+		this.removeEntityEventListener(programEventListener);
+	}
 
 	private Predicate getPred(String name) {
 		return Predicates.field("name", name);
@@ -67,8 +122,8 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 				preds.add(getPred(((ProgramProfile) obj).getName()));
 			else if (obj instanceof ProgramPack)
 				preds.add(getPred(((ProgramPack) obj).getName()));
-			else if (obj instanceof ProgramPack)
-				preds.add(getPred(((ProgramPack) obj).getName()));
+			else if (obj instanceof Program)
+				preds.add(getPred(((Program) obj).getName()));
 		}
 		return preds;
 	}
@@ -124,6 +179,11 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 	@Override
 	public void removeProgramProfile(String domain, String name) {
 		cfg.remove(domain, prof, getPred(name), PROF_NOT_FOUND, profileEventProvider);
+	}
+
+	@Override
+	public EntityEventProvider<ProgramProfile> getProgramProfileEventProvider() {
+		return profileEventProvider;
 	}
 
 	@Override
@@ -188,6 +248,11 @@ public class ProgramApiImpl extends DefaultEntityEventProvider<Program> implemen
 		cfg.remove(domain, ProgramApiImpl.pack, getPred(name), PACK_NOT_FOUND, packEventProvider);
 		for (Program p : getPrograms(domain, name))
 			removeProgram(domain, name, p.getName());
+	}
+
+	@Override
+	public EntityEventProvider<ProgramPack> getProgramPackEventProvider() {
+		return packEventProvider;
 	}
 
 	@Override

@@ -22,25 +22,34 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
+import org.krakenapps.dom.api.EntityEventListener;
 import org.krakenapps.dom.api.LoginCallback;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OtpApi;
+import org.krakenapps.dom.api.ProgramApi;
+import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.PushApi;
 import org.krakenapps.msgbus.Session;
@@ -55,11 +64,40 @@ public class AdminApiImpl implements AdminApi {
 	private static final String LOCKED_ADMIN = "locked-admin";
 	private final Logger logger = LoggerFactory.getLogger(AdminApiImpl.class.getName());
 
+	private EntityEventListener<User> userEventListener = new DefaultEntityEventListener<User>() {
+		@Override
+		public void entityRemoving(String domain, User obj, ConfigTransaction xact, Object state) {
+			Admin admin = getAdmin(domain, obj);
+			if (admin != null && admin.getRole().getName().equals("master"))
+				throw new DOMException("cannot-master-unset");
+		}
+	};
+	private EntityEventListener<ProgramProfile> programProfileEventListener = new DefaultEntityEventListener<ProgramProfile>() {
+		@Override
+		public void entityRemoving(String domain, ProgramProfile obj, ConfigTransaction xact, Object state) {
+			List<User> users = new ArrayList<User>();
+			List<Predicate> preds = new ArrayList<Predicate>();
+			for (Admin admin : getAdmins(domain)) {
+				if (admin.getProfile().getName().equals(obj.getName())) {
+					admin.setProfile(null);
+					users.add(admin.getUser());
+					preds.add(Predicates.field("loginName", admin.getUser().getLoginName()));
+				}
+			}
+
+			Transaction x = Transaction.getInstance(xact);
+			cfg.updates(x, User.class, preds, users, null);
+		}
+	};
+
 	@Requires
 	private ConfigManager cfg;
 
 	@Requires
 	private OrganizationApi orgApi;
+
+	@Requires
+	private ProgramApi programApi;
 
 	@Requires
 	private UserApi userApi;
@@ -72,6 +110,20 @@ public class AdminApiImpl implements AdminApi {
 
 	private Set<LoginCallback> callbacks = new HashSet<LoginCallback>();
 	private PriorityQueue<LoggedInAdmin> loggedIn = new PriorityQueue<LoggedInAdmin>(11, new LoggedInAdminComparator());
+
+	@Validate
+	public void validate() {
+		userApi.addEntityEventListener(userEventListener);
+		programApi.getProgramProfileEventProvider().addEntityEventListener(programProfileEventListener);
+	}
+
+	@Invalidate
+	public void invalidate() {
+		if (userApi != null)
+			userApi.removeEntityEventListener(userEventListener);
+		if (programApi != null)
+			programApi.getProgramProfileEventProvider().removeEntityEventListener(programProfileEventListener);
+	}
 
 	@Override
 	public String getExtensionName() {
@@ -173,11 +225,12 @@ public class AdminApiImpl implements AdminApi {
 
 	@Override
 	public void unsetAdmin(String domain, String requestAdminLoginName, String targetUserLoginName) {
-		if (requestAdminLoginName.equals(targetUserLoginName))
+		if (targetUserLoginName.equals(requestAdminLoginName))
 			throw new DOMException("cannot-remove-requesting-admin");
 
 		Admin target = getAdmin(domain, targetUserLoginName);
-		checkPermissionLevel(domain, requestAdminLoginName, target, "unset-admin-permission-denied");
+		if (requestAdminLoginName != null)
+			checkPermissionLevel(domain, requestAdminLoginName, target, "unset-admin-permission-denied");
 
 		User user = target.getUser();
 		user.getExt().remove(getExtensionName());
@@ -186,11 +239,14 @@ public class AdminApiImpl implements AdminApi {
 
 	private void checkPermissionLevel(String domain, String requestAdminLoginName, Admin admin, String exceptionMessage) {
 		Admin request = findAdmin(domain, requestAdminLoginName);
-		if (requestAdminLoginName == null || request == null)
+		if (request == null)
 			throw new DOMException("request-admin-not-found");
 
 		if (request.getRole().getLevel() < admin.getRole().getLevel())
 			throw new DOMException(exceptionMessage);
+
+		if (admin.getRole().getName().equals("master"))
+			throw new DOMException("cannot-master-unset");
 	}
 
 	@Override

@@ -32,20 +32,30 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.EntityEventListener;
+import org.krakenapps.dom.api.EntityEventProvider;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UploadCallback;
 import org.krakenapps.dom.api.UploadToken;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.FileSpace;
 import org.krakenapps.dom.model.UploadedFile;
+import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,12 +72,57 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	private static final Class<UploadedFile> file = UploadedFile.class;
 	private static final String FILE_NOT_FOUND = "uploaded-file-not-found";
 	private static final String FILE_ALREADY_EXIST = "uploaded-file-already-exist";
-	private static DefaultEntityEventProvider<UploadedFile> fileEventProvider = new DefaultEntityEventProvider<UploadedFile>();
+	private DefaultEntityEventProvider<UploadedFile> fileEventProvider = new DefaultEntityEventProvider<UploadedFile>();
 
 	private Logger logger = LoggerFactory.getLogger(FileUploadApiImpl.class);
 	private ConcurrentMap<String, UploadItem> uploadTokens = new ConcurrentHashMap<String, FileUploadApiImpl.UploadItem>();
 	private ConcurrentMap<Integer, String> sessionDownloadTokens = new ConcurrentHashMap<Integer, String>(); // session-token
 	private ConcurrentMap<String, DownloadToken> downloadTokens = new ConcurrentHashMap<String, DownloadToken>(); // session-token
+
+	private EntityEventListener<User> userEventListener = new DefaultEntityEventListener<User>() {
+		@Override
+		public void entityRemoving(String domain, User obj, ConfigTransaction xact, Object state) {
+			List<FileSpace> spaces = new ArrayList<FileSpace>(cfg.all(domain, FileSpace.class,
+					Predicates.field("owner/loginName", obj.getLoginName())));
+			List<Predicate> spacePreds = new ArrayList<Predicate>();
+
+			List<UploadedFile> files = new ArrayList<UploadedFile>(cfg.all(domain, UploadedFile.class,
+					Predicates.field("owner/loginName", obj.getLoginName())));
+			List<Predicate> filePreds = new ArrayList<Predicate>();
+
+			if (!spaces.isEmpty() && !files.isEmpty()) {
+				User master = null;
+				for (Admin admin : adminApi.getAdmins(domain)) {
+					if (admin.getRole().getName().equals("master"))
+						master = admin.getUser();
+				}
+
+				for (FileSpace space : spaces)
+					space.setOwner(master);
+				for (UploadedFile file : files)
+					file.setOwner(master);
+
+				Transaction x = Transaction.getInstance(xact);
+				cfg.updates(x, FileSpace.class, spacePreds, spaces, null);
+				cfg.updates(x, UploadedFile.class, filePreds, files, null);
+			}
+		}
+	};
+	private EntityEventListener<FileSpace> spaceEventListener = new DefaultEntityEventListener<FileSpace>() {
+		@Override
+		public void entityRemoving(String domain, FileSpace obj, ConfigTransaction xact, Object state) {
+			Transaction x = Transaction.getInstance(xact);
+			cfg.removes(x, domain, file, getPreds(obj.getFiles()), null, fileEventProvider, state, null);
+		}
+	};
+	private EntityEventListener<UploadedFile> fileEventListener = new DefaultEntityEventListener<UploadedFile>() {
+		@Override
+		public void entityRemoved(String domain, UploadedFile obj, Object state) {
+			File file = new File(obj.getPath());
+			if (!file.delete())
+				logger.error("kraken dom: file delete failed [{}]", file.getAbsolutePath());
+		}
+	};
 
 	@Requires
 	private ConfigManager cfg;
@@ -77,6 +132,24 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Requires
 	private UserApi userApi;
+
+	@Requires
+	private AdminApi adminApi;
+
+	@Validate
+	public void validate() {
+		userApi.addEntityEventListener(userEventListener);
+		this.addEntityEventListener(spaceEventListener);
+		fileEventProvider.addEntityEventListener(fileEventListener);
+	}
+
+	@Invalidate
+	public void invalidate() {
+		if (userApi != null)
+			userApi.removeEntityEventListener(userEventListener);
+		this.removeEntityEventListener(spaceEventListener);
+		fileEventProvider.removeEntityEventListener(fileEventListener);
+	}
 
 	private Predicate getPred(String guid) {
 		return Predicates.field("guid", guid);
@@ -312,8 +385,6 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 			uploadeds.add(cfg.get(domain, UploadedFile.class, getPred(guid), FILE_NOT_FOUND));
 			preds.add(getPred(guid));
 		}
-		for (UploadedFile uploaded : uploadeds)
-			deleteFile(uploaded);
 		cfg.removes(domain, file, preds, FILE_NOT_FOUND, fileEventProvider);
 	}
 
@@ -336,8 +407,6 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 			uploadeds.add(uploaded);
 			preds.add(getPred(guid));
 		}
-		for (UploadedFile uploaded : uploadeds)
-			deleteFile(uploaded);
 		cfg.removes(domain, file, preds, FILE_NOT_FOUND, fileEventProvider);
 	}
 
@@ -346,9 +415,8 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 		deleteFiles(domain, loginName, Arrays.asList(guid));
 	}
 
-	private void deleteFile(UploadedFile uploaded) {
-		File file = new File(uploaded.getPath());
-		if (!file.delete())
-			logger.error("kraken dom: file delete failed [{}]", file.getAbsolutePath());
+	@Override
+	public EntityEventProvider<UploadedFile> getUploadedFileEventProvider() {
+		return fileEventProvider;
 	}
 }

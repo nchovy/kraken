@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -24,6 +25,7 @@ import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
+import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -52,8 +54,12 @@ public class ProgramPlugin {
 	@MsgbusMethod
 	public void getAvailablePrograms(Request req, Response resp) {
 		Collection<ProgramPack> packs = programApi.getProgramPacks(req.getOrgDomain());
-		Collection<Program> programs = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName()).getProfile().getPrograms();
 		resp.put("packs", PrimitiveConverter.serialize(packs, PrimitiveConverter.SerializeOption.INCLUDE_SKIP_FIELD));
+
+		ProgramProfile profile = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName()).getProfile();
+		Collection<Program> programs = new ArrayList<Program>();
+		if (profile != null)
+			programs = profile.getPrograms();
 		resp.put("programs", PrimitiveConverter.serialize(programs));
 	}
 }

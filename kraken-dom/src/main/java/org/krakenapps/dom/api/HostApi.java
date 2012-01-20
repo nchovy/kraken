@@ -59,6 +59,8 @@ public interface HostApi extends EntityEventProvider<Host> {
 	void removeHostTypes(String domain, Collection<String> guids);
 
 	void removeHostType(String domain, String guid);
+	
+	EntityEventProvider<HostType> getHostTypeEventProvider();
 
 	Collection<HostExtension> getHostExtensions(String domain);
 
@@ -77,4 +79,6 @@ public interface HostApi extends EntityEventProvider<Host> {
 	void removeHostExtensions(String domain, Collection<String> types);
 
 	void removeHostExtension(String domain, String type);
+	
+	EntityEventProvider<HostExtension> getHostExtensionEventProvider();
 }

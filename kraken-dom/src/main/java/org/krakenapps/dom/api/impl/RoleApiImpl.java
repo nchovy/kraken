@@ -116,11 +116,21 @@ public class RoleApiImpl extends DefaultEntityEventProvider<Role> implements Rol
 		for (String name : names)
 			preds.add(getPred(name));
 		cfg.removes(domain, cls, preds, NOT_FOUND, this);
+
+		for (Admin admin : adminApi.getAdmins(domain)) {
+			if (names.contains(admin.getRole().getName()))
+				adminApi.unsetAdmin(domain, null, admin.getUser().getLoginName());
+		}
 	}
 
 	@Override
 	public void removeRole(String domain, String name) {
 		cfg.remove(domain, cls, getPred(name), NOT_FOUND, this);
+
+		for (Admin admin : adminApi.getAdmins(domain)) {
+			if (name.equals(admin.getRole().getName()))
+				adminApi.unsetAdmin(domain, null, admin.getUser().getLoginName());
+		}
 	}
 
 	@Override

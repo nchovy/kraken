@@ -33,7 +33,6 @@ public class Admin {
 	@ReferenceKey("name")
 	private Role role;
 
-	@FieldOption(nullable = false)
 	@ReferenceKey("name")
 	private ProgramProfile profile;
 

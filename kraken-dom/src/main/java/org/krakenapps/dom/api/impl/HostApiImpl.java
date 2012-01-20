@@ -27,23 +27,27 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.EntityEventListener;
+import org.krakenapps.dom.api.EntityEventProvider;
 import org.krakenapps.dom.api.HostApi;
+import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.model.Area;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
+import org.krakenapps.dom.model.Vendor;
 
 @Component(name = "dom-host-api")
 @Provides
-public class HostApiImpl extends DefaultEntityEventProvider<Host> implements HostApi, EntityEventListener<Area> {
+public class HostApiImpl extends DefaultEntityEventProvider<Host> implements HostApi {
 	private static final Class<Host> host = Host.class;
 	private static final String HOST_NOT_FOUND = "host-not-found";
 	private static final String HOST_ALREADY_EXIST = "host-already-exist";
@@ -51,12 +55,47 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	private static final Class<HostType> type = HostType.class;
 	private static final String TYPE_NOT_FOUND = "host-type-not-found";
 	private static final String TYPE_ALREADY_EXIST = "host-type-already-exist";
-	private static DefaultEntityEventProvider<HostType> typeEventProvider = new DefaultEntityEventProvider<HostType>();
+	private DefaultEntityEventProvider<HostType> typeEventProvider = new DefaultEntityEventProvider<HostType>();
 
 	private static final Class<HostExtension> ext = HostExtension.class;
 	private static final String EXT_NOT_FOUND = "host-extension-not-found";
 	private static final String EXT_ALREADY_EXIST = "host-extension-already-exist";
-	private static DefaultEntityEventProvider<HostExtension> extEventProvider = new DefaultEntityEventProvider<HostExtension>();
+	private DefaultEntityEventProvider<HostExtension> extEventProvider = new DefaultEntityEventProvider<HostExtension>();
+
+	private EntityEventListener<Area> areaEventListener = new DefaultEntityEventListener<Area>() {
+		@Override
+		public void entityRemoving(String domain, Area area, ConfigTransaction xact, Object state) {
+			boolean remove = (state != null) && (state instanceof Boolean) && ((Boolean) state);
+
+			List<Host> hosts = new ArrayList<Host>(getHosts(domain, area.getGuid(), false));
+			Transaction x = Transaction.getInstance(xact);
+			if (remove) {
+				cfg.removes(x, domain, host, getPreds(hosts), null, HostApiImpl.this, state, null);
+			} else {
+				for (Host host : hosts)
+					host.setArea(null);
+				cfg.updates(x, host, getPreds(hosts), hosts, null, state);
+			}
+		}
+	};
+	private EntityEventListener<Vendor> vendorEventListener = new DefaultEntityEventListener<Vendor>() {
+		@Override
+		public void entityRemoving(String domain, Vendor obj, ConfigTransaction xact, Object state) {
+			List<HostType> types = new ArrayList<HostType>(cfg.all(domain, type, Predicates.field("vendor/guid", obj.getGuid())));
+			for (HostType type : types)
+				type.setVendor(null);
+			Transaction x = Transaction.getInstance(xact);
+			cfg.updates(x, type, getPreds(types), types, null, state);
+		}
+	};
+	private EntityEventListener<HostType> typeEventListener = new DefaultEntityEventListener<HostType>() {
+		@Override
+		public void entityRemoving(String domain, HostType obj, ConfigTransaction xact, Object state) {
+			List<Host> hosts = new ArrayList<Host>(cfg.all(domain, host, Predicates.field("type/guid", obj.getGuid())));
+			Transaction x = Transaction.getInstance(xact);
+			cfg.removes(x, domain, host, getPreds(hosts), null, HostApiImpl.this, state, null);
+		}
+	};
 
 	@Requires
 	private ConfigManager cfg;
@@ -64,15 +103,23 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	@Requires
 	private AreaApi areaApi;
 
+	@Requires
+	private ApplicationApi appApi;
+
 	@Validate
 	public void validate() {
-		areaApi.addEntityEventListener(this);
+		areaApi.addEntityEventListener(areaEventListener);
+		appApi.getVendorEventProvider().addEntityEventListener(vendorEventListener);
+		typeEventProvider.addEntityEventListener(typeEventListener);
 	}
 
 	@Invalidate
 	public void invalidate() {
 		if (areaApi != null)
-			areaApi.removeEntityEventListener(this);
+			areaApi.removeEntityEventListener(areaEventListener);
+		if (appApi != null)
+			appApi.getVendorEventProvider().removeEntityEventListener(vendorEventListener);
+		typeEventProvider.removeEntityEventListener(typeEventListener);
 	}
 
 	private Predicate getPred(String guid) {
@@ -213,6 +260,11 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
+	public EntityEventProvider<HostType> getHostTypeEventProvider() {
+		return typeEventProvider;
+	}
+
+	@Override
 	public Collection<HostExtension> getHostExtensions(String domain) {
 		List<HostExtension> extensions = (List<HostExtension>) cfg.all(domain, ext);
 		Collections.sort(extensions, new Comparator<HostExtension>() {
@@ -270,30 +322,7 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
-	public void entityAdded(String domain, Area area, Object state) {
-	}
-
-	@Override
-	public void entityUpdated(String domain, Area area, Object state) {
-	}
-
-	@Override
-	public void entityRemoving(String domain, Area area, ConfigTransaction xact, Object state) {
-		boolean remove = (state != null) && (state instanceof Boolean) && ((Boolean) state);
-
-		for (Host host : getHosts(domain, area.getGuid(), false)) {
-			Config c = xact.getDatabase().findOne(HostApiImpl.host, getPred(host.getGuid()));
-
-			if (remove) {
-				xact.getDatabase().remove(xact, c, true);
-			} else {
-				host.setArea(null);
-				xact.getDatabase().update(xact, c, host, true);
-			}
-		}
-	}
-
-	@Override
-	public void entityRemoved(String domain, Area area, Object state) {
+	public EntityEventProvider<HostExtension> getHostExtensionEventProvider() {
+		return extEventProvider;
 	}
 }
