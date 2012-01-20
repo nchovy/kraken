@@ -153,4 +153,6 @@ public interface FileUploadApi extends EntityEventProvider<FileSpace> {
 	void deleteFiles(String domain, String loginName, Collection<String> guids);
 
 	void deleteFile(String domain, String loginName, String guid);
+	
+	EntityEventProvider<UploadedFile> getUploadedFileEventProvider();
 }

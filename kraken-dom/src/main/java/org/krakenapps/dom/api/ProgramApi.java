@@ -39,6 +39,8 @@ public interface ProgramApi extends EntityEventProvider<Program> {
 	void removeProgramProfiles(String domain, Collection<String> names);
 
 	void removeProgramProfile(String domain, String name);
+	
+	EntityEventProvider<ProgramProfile> getProgramProfileEventProvider();
 
 	Collection<ProgramPack> getProgramPacks(String domain);
 
@@ -57,6 +59,8 @@ public interface ProgramApi extends EntityEventProvider<Program> {
 	void removeProgramPacks(String domain, Collection<String> names);
 
 	void removeProgramPack(String domain, String name);
+	
+	EntityEventProvider<ProgramPack> getProgramPackEventProvider();
 
 	Collection<Program> getPrograms(String domain);
 

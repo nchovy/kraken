@@ -40,6 +40,8 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 	void removeVendors(String domain, Collection<String> guids);
 
 	void removeVendor(String domain, String guid);
+	
+	EntityEventProvider<Vendor> getVendorEventProvider();
 
 	Collection<Application> getApplications(String domain);
 
@@ -76,6 +78,8 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 	void removeApplicationVersions(String domain, Collection<String> guids);
 
 	void removeApplicationVersion(String domain, String guid);
+	
+	EntityEventProvider<ApplicationVersion> getApplicationVersionEventProvider();
 
 	Collection<ApplicationGroup> getApplicationGroups(String domain);
 
@@ -94,4 +98,6 @@ public interface ApplicationApi extends EntityEventProvider<Application> {
 	void removeApplicationGroups(String domain, Collection<String> guids);
 
 	void removeApplicationGroup(String domain, String guid);
+	
+	EntityEventProvider<ApplicationGroup> getApplicationGroupEventProvider();
 }

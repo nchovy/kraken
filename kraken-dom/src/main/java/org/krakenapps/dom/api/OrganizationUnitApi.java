@@ -38,9 +38,9 @@ public interface OrganizationUnitApi extends EntityEventProvider<OrganizationUni
 
 	void removeOrganizationUnits(String domain, Collection<String> guids);
 
+	void removeOrganizationUnits(String domain, Collection<String> guids, boolean moveUser);
+
 	void removeOrganizationUnit(String domain, String guid);
 
-	void removeOrganizationUnits(String domain, Collection<String> guids, boolean removeUser);
-
-	void removeOrganizationUnit(String domain, String guid, boolean removeUser);
+	void removeOrganizationUnit(String domain, String guid, boolean moveUser);
 }

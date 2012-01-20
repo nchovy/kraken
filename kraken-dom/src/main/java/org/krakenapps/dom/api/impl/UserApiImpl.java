@@ -28,16 +28,16 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.confdb.Config;
-import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.EntityEventListener;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
+import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.OrganizationUnit;
@@ -50,12 +50,30 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-user-api")
 @Provides
-public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi, EntityEventListener<OrganizationUnit> {
+public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi {
 	private final Logger logger = LoggerFactory.getLogger(UserApiImpl.class.getName());
 	private static final Class<User> cls = User.class;
 	private static final String NOT_FOUND = "user-not-found";
 	private static final String ALREADY_EXIST = "user-already-exist";
 	private static final int DEFAULT_SALT_LENGTH = 10;
+
+	private EntityEventListener<OrganizationUnit> orgUnitEventListener = new DefaultEntityEventListener<OrganizationUnit>() {
+		@Override
+		public void entityRemoving(String domain, OrganizationUnit orgUnit, ConfigTransaction xact, Object state) {
+			List<User> users = new ArrayList<User>(getUsers(domain, orgUnit.getGuid(), false));
+			List<Predicate> preds = new ArrayList<Predicate>();
+			for (User user : users) {
+				user.setOrgUnit(null);
+				preds.add(getPred(user.getLoginName()));
+			}
+
+			Transaction x = Transaction.getInstance(xact);
+			if ((state != null) && (state instanceof Boolean) && ((Boolean) state))
+				cfg.updates(x, cls, preds, users, null);
+			else
+				cfg.removes(x, domain, cls, preds, null, UserApiImpl.this);
+		}
+	};
 
 	@Requires
 	private ConfigManager cfg;
@@ -75,14 +93,14 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Validate
 	public void validate() {
-		orgUnitApi.addEntityEventListener(this);
+		orgUnitApi.addEntityEventListener(orgUnitEventListener);
 		tracker.open();
 	}
 
 	@Invalidate
 	public void invalidate() {
 		if (orgUnitApi != null)
-			orgUnitApi.removeEntityEventListener(this);
+			orgUnitApi.removeEntityEventListener(orgUnitEventListener);
 		tracker.close();
 	}
 
@@ -215,7 +233,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		StringBuilder salt = new StringBuilder();
 		Random rand = new Random();
 		char[] c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
-		
+
 		int saltLength = getSaltLength(domain);
 		logger.trace("kraken dom: salt length [{}]", saltLength);
 
@@ -259,39 +277,5 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			userExtensionProviders.remove(p.getExtensionName());
 			super.removedService(reference, service);
 		}
-	}
-
-	@Override
-	public void entityAdded(String domain, OrganizationUnit orgUnit, Object state) {
-	}
-
-	@Override
-	public void entityUpdated(String domain, OrganizationUnit orgUnit, Object state) {
-	}
-
-	@Override
-	public void entityRemoving(String domain, OrganizationUnit orgUnit, ConfigTransaction xact, Object state) {
-		boolean move = (state != null) && (state instanceof Boolean) && ((Boolean) state);
-
-		List<Predicate> preds = new ArrayList<Predicate>();
-		for (User user : getUsers(domain, orgUnit.getGuid(), false))
-			preds.add(getPred(user.getLoginName()));
-
-		ConfigIterator it = xact.getDatabase().find(cls, Predicates.or(preds.toArray(new Predicate[0])));
-		while (it.hasNext()) {
-			Config c = it.next();
-			User user = c.getDocument(User.class);
-
-			if (move) {
-				user.setOrgUnit(null);
-				xact.getDatabase().update(xact, c, user, true);
-			} else {
-				xact.getDatabase().remove(xact, c, true);
-			}
-		}
-	}
-
-	@Override
-	public void entityRemoved(String domain, OrganizationUnit orgUnit, Object state) {
 	}
 }

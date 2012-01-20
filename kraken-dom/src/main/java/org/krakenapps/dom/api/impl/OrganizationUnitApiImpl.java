@@ -136,11 +136,6 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 	}
 
 	@Override
-	public void removeOrganizationUnit(String domain, String guid) {
-		removeOrganizationUnit(domain, guid, false);
-	}
-
-	@Override
 	public void removeOrganizationUnits(String domain, Collection<String> guids, boolean moveUser) {
 		Set<String> orgUnitGuids = new HashSet<String>();
 		List<Predicate> preds = new ArrayList<Predicate>();
@@ -155,6 +150,11 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 		}
 
 		cfg.removes(domain, cls, preds, NOT_FOUND, this, moveUser, null);
+	}
+
+	@Override
+	public void removeOrganizationUnit(String domain, String guid) {
+		removeOrganizationUnit(domain, guid, false);
 	}
 
 	@Override

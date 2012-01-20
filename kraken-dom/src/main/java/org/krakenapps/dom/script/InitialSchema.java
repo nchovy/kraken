@@ -10,7 +10,6 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.api.impl.Sha1;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.Area;
 import org.krakenapps.dom.model.Organization;

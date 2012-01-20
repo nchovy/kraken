@@ -52,7 +52,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			if (listener != null) {
 				try {
 					listener.entityAdded(domain, t, state);
-				} catch (Exception e) {
+				} catch (Throwable e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}
 			}
@@ -68,7 +68,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			if (listener != null) {
 				try {
 					listener.entityUpdated(domain, t, state);
-				} catch (Exception e) {
+				} catch (Throwable e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}
 			}
@@ -97,7 +97,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			if (listener != null) {
 				try {
 					listener.entityRemoved(domain, t, state);
-				} catch (Exception e) {
+				} catch (Throwable e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}
 			}
