@@ -296,7 +296,9 @@ public class AdminApiImpl implements AdminApi {
 
 	private void enforcePasswordChange(String domain, Admin admin) {
 		logger.trace("kraken dom: last password change [{}]", admin.getUser().getLastPasswordChange());
-		long interval = new Date().getTime() - admin.getUser().getLastPasswordChange().getTime();
+		long interval = 0;
+		if (admin.getUser().getLastPasswordChange() != null)
+			interval = new Date().getTime() - admin.getUser().getLastPasswordChange().getTime();
 
 		Integer passwordExpiry = (Integer) orgApi.getOrganizationParameter(domain, "dom.user.password_expiry");
 		if (passwordExpiry == null)
