@@ -22,9 +22,12 @@ import java.util.List;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
+import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -39,6 +42,9 @@ public class UserPlugin {
 
 	@Requires
 	private ConfigManager conf;
+
+	@Requires
+	private AdminApi adminApi;
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
@@ -67,7 +73,19 @@ public class UserPlugin {
 
 	@MsgbusMethod
 	public void updateUser(Request req, Response resp) {
-		User before = userApi.getUser(req.getOrgDomain(), req.getString("login_name"));
+		Admin request = adminApi.findAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		if (request == null)
+			throw new DOMException("admin-not-found");
+
+		String loginName = req.getString("login_name");
+		User before = userApi.getUser(req.getOrgDomain(), loginName);
+
+		// try to check role
+		Admin targetAdmin = adminApi.findAdmin(req.getOrgDomain(), loginName);
+		if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
+				&& targetAdmin.getRole().getLevel() >= request.getRole().getLevel())
+			throw new DOMException("no-permission");
+
 		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		userApi.updateUser(req.getOrgDomain(), user, req.has("password"));
 	}

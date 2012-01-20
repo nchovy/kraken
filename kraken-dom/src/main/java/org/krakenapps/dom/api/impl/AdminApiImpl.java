@@ -134,7 +134,14 @@ public class AdminApiImpl implements AdminApi {
 		checkPermissionLevel(domain, requestAdminLoginName, admin, "set-admin-permission-denied");
 
 		prepare(admin);
+
 		User target = userApi.getUser(domain, targetUserLoginName);
+		if (target.getExt().get(getExtensionName()) != null) {
+			Admin oldAdmin = parseAdmin(domain, target);
+			if (oldAdmin != null && !oldAdmin.isEnabled() && admin.isEnabled())
+				admin.setLoginFailures(0);
+		}
+
 		target.getExt().put(getExtensionName(), admin);
 		userApi.updateUser(domain, target, false);
 	}
@@ -227,6 +234,8 @@ public class AdminApiImpl implements AdminApi {
 					throw new DOMException("invalid-password");
 			}
 
+			enforcePasswordChange(domain, admin);
+
 			Integer maxSession = orgApi.getOrganizationParameter(domain, "max_sessions", Integer.class);
 			if (maxSession != null) {
 				if (maxSession > 0) {
@@ -285,11 +294,45 @@ public class AdminApiImpl implements AdminApi {
 		}
 	}
 
-	private void checkAcl(Session session, Admin admin) {
-		if (!admin.isUseAcl())
-			return;
+	private void enforcePasswordChange(String domain, Admin admin) {
+		logger.trace("kraken dom: last password change [{}]", admin.getUser().getLastPasswordChange());
+		long interval = new Date().getTime() - admin.getUser().getLastPasswordChange().getTime();
 
+		Integer passwordExpiry = (Integer) orgApi.getOrganizationParameter(domain, "dom.user.password_expiry");
+		if (passwordExpiry == null)
+			passwordExpiry = 365;
+
+		long baseline = passwordExpiry * 86400 * 1000L;
+		logger.trace("kraken dom: checking expired password interval [{}], last change [{}]", interval, baseline);
+
+		if (interval > baseline)
+			throw new DOMException("expired-password");
+	}
+
+	private void checkAcl(Session session, Admin admin) {
 		String remote = session.getRemoteAddress().getHostAddress();
+		boolean failed = false;
+
+		String hosts = orgApi.getOrganizationParameter(session.getOrgDomain(), "dom.admin.trust_hosts", String.class);
+		if (hosts != null && !hosts.isEmpty()) {
+			String[] tokens = hosts.split(",");
+			for (String token : tokens) {
+				token = token.trim();
+				if (token.equals(remote))
+					return;
+			}
+
+			// check admin specific config (give change)
+			failed = true;
+		}
+
+		// check per admin
+		if (!admin.isUseAcl()) {
+			if (failed)
+				throw new DOMException("not-trust-host");
+			return;
+		}
+
 		for (String host : admin.getTrustHosts()) {
 			if (host != null && host.equals(remote))
 				return;

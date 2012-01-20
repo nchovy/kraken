@@ -45,10 +45,13 @@ import org.krakenapps.dom.model.User;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-user-api")
 @Provides
 public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi, EntityEventListener<OrganizationUnit> {
+	private final Logger logger = LoggerFactory.getLogger(UserApiImpl.class.getName());
 	private static final Class<User> cls = User.class;
 	private static final String NOT_FOUND = "user-not-found";
 	private static final String ALREADY_EXIST = "user-already-exist";
@@ -212,7 +215,11 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		StringBuilder salt = new StringBuilder();
 		Random rand = new Random();
 		char[] c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
-		for (int i = 0; i < getSaltLength(domain); i++)
+		
+		int saltLength = getSaltLength(domain);
+		logger.trace("kraken dom: salt length [{}]", saltLength);
+
+		for (int i = 0; i < saltLength; i++)
 			salt.append(c[rand.nextInt(c.length)]);
 		return salt.toString();
 	}

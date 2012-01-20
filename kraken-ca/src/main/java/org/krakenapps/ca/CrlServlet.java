@@ -42,7 +42,8 @@ public class CrlServlet extends HttpServlet {
 
 	@Invalidate
 	public void stop() {
-		servletRegistry.unregister("/ca/crl");
+		if (servletRegistry != null)
+			servletRegistry.unregister("/ca/crl");
 	}
 
 	@Override
