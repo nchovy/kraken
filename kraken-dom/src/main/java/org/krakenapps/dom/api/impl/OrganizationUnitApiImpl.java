@@ -141,7 +141,7 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 	}
 
 	@Override
-	public void removeOrganizationUnits(String domain, Collection<String> guids, boolean removeUser) {
+	public void removeOrganizationUnits(String domain, Collection<String> guids, boolean moveUser) {
 		Set<String> orgUnitGuids = new HashSet<String>();
 		List<Predicate> preds = new ArrayList<Predicate>();
 		for (String guid : guids) {
@@ -154,13 +154,13 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 			preds.addAll(getPreds(orgUnits));
 		}
 
-		cfg.removes(domain, cls, preds, NOT_FOUND, this, removeUser, null);
+		cfg.removes(domain, cls, preds, NOT_FOUND, this, moveUser, null);
 	}
 
 	@Override
-	public void removeOrganizationUnit(String domain, String guid, boolean removeUser) {
+	public void removeOrganizationUnit(String domain, String guid, boolean moveUser) {
 		List<OrganizationUnit> orgUnits = getOrganizationUnitTree(getOrganizationUnit(domain, guid));
-		cfg.removes(domain, cls, getPreds(orgUnits), NOT_FOUND, this, removeUser, null);
+		cfg.removes(domain, cls, getPreds(orgUnits), NOT_FOUND, this, moveUser, null);
 	}
 
 	private List<OrganizationUnit> getOrganizationUnitTree(OrganizationUnit orgUnit) {

@@ -16,6 +16,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
@@ -99,26 +100,19 @@ public class ConfigManagerImpl implements ConfigManager {
 			throw new IllegalArgumentException("preds and docs must has equal size");
 
 		ConfigDatabase db = getDatabase(domain);
-		ConfigTransaction xact = db.beginTransaction();
 
-		Iterator<Predicate> predIterator = preds.iterator();
+		Predicate pred = Predicates.or(preds.toArray(new Predicate[0]));
+		if (db.findOne(cls, pred) != null)
+			throw new DOMException(alreadyExistMessage);
+
+		ConfigTransaction xact = db.beginTransaction();
 		Iterator<T> docIterator = docs.iterator();
 		try {
-			while (docIterator.hasNext()) {
-				Predicate pred = predIterator.next();
-				T doc = docIterator.next();
-
-				if (db.findOne(cls, pred) != null)
-					throw new DOMException(alreadyExistMessage);
-
-				db.add(xact, doc);
-			}
-
+			while (docIterator.hasNext())
+				db.add(xact, docIterator.next());
 			xact.commit(COMMITER, "added " + docs.size() + " " + cls.getSimpleName() + "(s)");
 		} catch (Throwable e) {
 			xact.rollback();
-			if (e instanceof DOMException)
-				throw (DOMException) e;
 			throw new RuntimeException(e);
 		}
 
@@ -161,20 +155,17 @@ public class ConfigManagerImpl implements ConfigManager {
 			throw new IllegalArgumentException("preds and docs must has equal size");
 
 		ConfigDatabase db = getDatabase(domain);
-		ConfigTransaction xact = db.beginTransaction();
 
-		Iterator<Predicate> predIterator = preds.iterator();
+		Predicate pred = Predicates.or(preds.toArray(new Predicate[0]));
+		if (db.findOne(cls, pred) == null)
+			throw new DOMException(notFoundMessage);
+
+		ConfigTransaction xact = db.beginTransaction();
 		Iterator<T> docIterator = docs.iterator();
 		try {
 			while (docIterator.hasNext()) {
-				Predicate pred = predIterator.next();
-				T doc = docIterator.next();
-
 				Config c = db.findOne(cls, pred);
-				if (c == null)
-					throw new DOMException(notFoundMessage);
-
-				db.update(xact, c, doc, CHECK_CONFLICT);
+				db.update(xact, c, docIterator.next(), CHECK_CONFLICT);
 			}
 
 			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName() + "(s)");
@@ -220,18 +211,17 @@ public class ConfigManagerImpl implements ConfigManager {
 			return;
 
 		ConfigDatabase db = getDatabase(domain);
-		ConfigTransaction xact = db.beginTransaction();
 
-		Iterator<Predicate> predIterator = preds.iterator();
+		Predicate pred = Predicates.or(preds.toArray(new Predicate[0]));
+		if (db.findOne(cls, pred) == null)
+			throw new DOMException(notFoundMessage);
+
+		ConfigTransaction xact = db.beginTransaction();
 		Collection<T> docs = new ArrayList<T>();
 		try {
-			while (predIterator.hasNext()) {
-				Predicate pred = predIterator.next();
-
-				Config c = db.findOne(cls, pred);
-				if (c == null)
-					throw new DOMException(notFoundMessage);
-
+			ConfigIterator it = db.find(cls, pred);
+			while (it.hasNext()) {
+				Config c = it.next();
 				T doc = c.getDocument(cls, getCallback(domain));
 				if (provider != null)
 					provider.fireEntityRemoving(domain, doc, xact, removingState);

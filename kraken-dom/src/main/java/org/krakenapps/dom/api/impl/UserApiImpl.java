@@ -29,6 +29,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
@@ -270,16 +271,22 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void entityRemoving(String domain, OrganizationUnit orgUnit, ConfigTransaction xact, Object state) {
-		boolean remove = (state != null) && (state instanceof Boolean) && ((Boolean) state);
+		boolean move = (state != null) && (state instanceof Boolean) && ((Boolean) state);
 
-		for (User user : getUsers(domain, orgUnit.getGuid(), false)) {
-			Config c = xact.getDatabase().findOne(cls, getPred(user.getLoginName()));
+		List<Predicate> preds = new ArrayList<Predicate>();
+		for (User user : getUsers(domain, orgUnit.getGuid(), false))
+			preds.add(getPred(user.getLoginName()));
 
-			if (remove) {
-				xact.getDatabase().remove(xact, c, true);
-			} else {
+		ConfigIterator it = xact.getDatabase().find(cls, Predicates.or(preds.toArray(new Predicate[0])));
+		while (it.hasNext()) {
+			Config c = it.next();
+			User user = c.getDocument(User.class);
+
+			if (move) {
 				user.setOrgUnit(null);
 				xact.getDatabase().update(xact, c, user, true);
+			} else {
+				xact.getDatabase().remove(xact, c, true);
 			}
 		}
 	}
