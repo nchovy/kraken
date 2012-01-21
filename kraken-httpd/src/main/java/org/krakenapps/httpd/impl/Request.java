@@ -91,24 +91,24 @@ public class Request implements HttpServletRequest {
 	private List<Locale> locales = new ArrayList<Locale>();
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-	public Request(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext, String servletPath, String pathInfo) {
+	public Request(ChannelHandlerContext ctx, HttpRequest req) {
 		this.ctx = ctx;
 		this.req = req;
-		this.httpContext = httpContext;
-		this.servletPath = servletPath;
-		this.pathInfo = pathInfo;
 		this.queryString = "";
 
-		ChannelBuffer content = req.getContent();
-		this.is = new RequestInputStream(new ByteArrayInputStream(content.array(), 0, content.readableBytes()));
+		ChannelBuffer c = req.getContent();
+		this.is = new RequestInputStream(new ByteArrayInputStream(c.array(), 0, c.readableBytes()));
 
-		parseParameters(req, pathInfo, content);
 		parseCookies(req);
 		parseLocales(req);
 
 		setSslAttributes(ctx);
-		setSession();
 		setChannel(ctx);
+	}
+
+	public void setHttpContext(HttpContext httpContext) {
+		this.httpContext = httpContext;
+		setSession();
 	}
 
 	public void setResponse(Response resp) {
@@ -122,12 +122,13 @@ public class Request implements HttpServletRequest {
 			session = httpContext.getHttpSessions().get(key);
 	}
 
-	private void parseParameters(HttpRequest req, String pathInfo, ChannelBuffer content) {
+	private void parseParameters() {
 		String contentType = req.getHeader("Content-Type");
 
 		if (req.getMethod().equals(HttpMethod.POST)) {
 			if (!(contentType != null && contentType.equals("application/octet-stream"))) {
-				String body = new String(content.array(), content.readerIndex(), content.readableBytes(), Charset.forName("utf-8"));
+				ChannelBuffer c = req.getContent();
+				String body = new String(c.array(), c.readerIndex(), c.readableBytes(), Charset.forName("utf-8"));
 				setParams(body);
 			}
 		}
@@ -482,7 +483,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		return contextPath + servletPath + pathInfo;
+		return req.getUri();
 	}
 
 	@Override
@@ -531,6 +532,10 @@ public class Request implements HttpServletRequest {
 		return servletPath;
 	}
 
+	public void setServletPath(String servletPath) {
+		this.servletPath = servletPath;
+	}
+
 	@Override
 	public String getPathInfo() {
 		return pathInfo;
@@ -538,6 +543,7 @@ public class Request implements HttpServletRequest {
 
 	public void setPathInfo(String pathInfo) {
 		this.pathInfo = pathInfo;
+		parseParameters();
 	}
 
 	@Override
@@ -626,7 +632,8 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
+	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
+			throws IllegalStateException {
 		// TODO Auto-generated method stub
 		return null;
 	}

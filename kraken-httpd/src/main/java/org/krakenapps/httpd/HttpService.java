@@ -18,8 +18,6 @@ package org.krakenapps.httpd;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
-import org.krakenapps.servlet.api.ServletRegistry;
-
 public interface HttpService {
 	HttpContextRegistry getContextRegistry();
 
@@ -27,9 +25,10 @@ public interface HttpService {
 
 	HttpContext findContext(String name);
 
-	ServletRegistry findServletRegistry(int port);
-
-	ServletRegistry findServletRegistry(String domain, int port);
+	//
+	// ServletRegistry findServletRegistry(int port);
+	//
+	// ServletRegistry findServletRegistry(String domain, int port);
 
 	Collection<InetSocketAddress> getListenAddresses();
 

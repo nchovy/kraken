@@ -19,6 +19,10 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletRegistration;
+
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -171,32 +175,14 @@ public class HttpdScript implements Script {
 		HttpContext ctx = httpd.ensureContext(args[0]);
 
 		try {
-			ctx.getServletRegistry().register(prefix, new FileResourceServlet(new File(basePath)));
+			ServletContext servletContext = ctx.getServletContext();
+			servletContext.addServlet("file", new FileResourceServlet(new File(basePath)));
+			ServletRegistration r = servletContext.getServletRegistration("file");
+			r.addMapping(prefix + "/*");
 			context.println("attached");
 		} catch (Throwable t) {
 			context.println("cannot attach filesystem path: " + t.getMessage());
 			logger.error("kraken httpd: cannot attach filesystem path", t);
 		}
 	}
-
-	@ScriptUsage(description = "detach filesystem path", arguments = {
-			@ScriptArgument(name = "context", type = "string", description = "http context name"),
-			@ScriptArgument(name = "prefix", type = "string", description = "path prefix") })
-	public void detachDirectory(String[] args) {
-		HttpContext ctx = httpd.findContext(args[0]);
-		String prefix = args[1];
-
-		if (ctx == null) {
-			context.println("http context not found");
-			return;
-		}
-
-		try {
-			ctx.getServletRegistry().unregister(prefix);
-			context.println("context removed");
-		} catch (Exception e) {
-			context.println("cannot remove prefix " + prefix);
-		}
-	}
-
 }

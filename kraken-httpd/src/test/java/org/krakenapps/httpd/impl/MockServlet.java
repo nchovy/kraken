@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.httpd;
+package org.krakenapps.httpd.impl;
 
-import java.net.InetSocketAddress;
+import javax.servlet.http.HttpServlet;
 
-public interface WebSocket {
-	InetSocketAddress getLocalAddress();
+public class MockServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+	private int id;
+	
+	public MockServlet(int id) {
+		this.id = id;
+	}
 
-	InetSocketAddress getRemoteAddress();
-
-	void send(String frame);
-
-	void close();
+	public int getId() {
+		return id;
+	}
 }

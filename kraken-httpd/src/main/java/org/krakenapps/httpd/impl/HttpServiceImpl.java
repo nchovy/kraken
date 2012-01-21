@@ -17,7 +17,6 @@ package org.krakenapps.httpd.impl;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -31,8 +30,6 @@ import org.krakenapps.httpd.HttpContext;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.HttpServer;
 import org.krakenapps.httpd.HttpService;
-import org.krakenapps.httpd.VirtualHost;
-import org.krakenapps.servlet.api.ServletRegistry;
 import org.osgi.framework.BundleContext;
 
 @Component(name = "http-service")
@@ -75,34 +72,27 @@ public class HttpServiceImpl implements HttpService {
 		return httpContextRegistry.findContext(name);
 	}
 
-	@Override
-	public ServletRegistry findServletRegistry(int port) {
-		HttpServer server = getServer(new InetSocketAddress(port));
-		List<VirtualHost> hosts = server.getConfiguration().getVirtualHosts();
-		String contextName = hosts.get(0).getHttpContextName();
-		HttpContext ctx = httpContextRegistry.findContext(contextName);
-		if (ctx == null)
-			throw new IllegalStateException("cannot find context: " + contextName);
-
-		return ctx.getServletRegistry();
-	}
-
-	@Override
-	public ServletRegistry findServletRegistry(String domain, int port) {
-		HttpServer server = getServer(new InetSocketAddress(port));
-		for (VirtualHost host : server.getConfiguration().getVirtualHosts()) {
-			if (host.matches(domain)) {
-				String contextName = host.getHttpContextName();
-				HttpContext ctx = httpContextRegistry.findContext(contextName);
-				if (ctx == null)
-					throw new IllegalStateException("cannot find context: " + contextName);
-
-				return ctx.getServletRegistry();
-			}
-		}
-		return null;
-	}
-
+	/*
+	 * public ServletRegistry findServletRegistry(int port) { HttpServer server
+	 * = getServer(new InetSocketAddress(port)); List<VirtualHost> hosts =
+	 * server.getConfiguration().getVirtualHosts(); String contextName =
+	 * hosts.get(0).getHttpContextName(); HttpContext ctx =
+	 * httpContextRegistry.findContext(contextName); if (ctx == null) throw new
+	 * IllegalStateException("cannot find context: " + contextName);
+	 * 
+	 * return ctx.getServletRegistry(); }
+	 */
+	/*
+	 * @Override public ServletRegistry findServletRegistry(String domain, int
+	 * port) { HttpServer server = getServer(new InetSocketAddress(port)); for
+	 * (VirtualHost host : server.getConfiguration().getVirtualHosts()) { if
+	 * (host.matches(domain)) { String contextName = host.getHttpContextName();
+	 * HttpContext ctx = httpContextRegistry.findContext(contextName); if (ctx
+	 * == null) throw new IllegalStateException("cannot find context: " +
+	 * contextName);
+	 * 
+	 * return ctx.getServletRegistry(); } } return null; }
+	 */
 	@Override
 	public Collection<InetSocketAddress> getListenAddresses() {
 		return listeners.keySet();

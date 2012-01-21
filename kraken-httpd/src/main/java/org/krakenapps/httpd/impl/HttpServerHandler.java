@@ -15,17 +15,11 @@
  */
 package org.krakenapps.httpd.impl;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -39,8 +33,6 @@ import org.krakenapps.httpd.HttpContext;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.VirtualHost;
 import org.krakenapps.httpd.WebSocketFrame;
-import org.krakenapps.httpd.WebSocketManager;
-import org.krakenapps.servlet.api.ServletRegistry;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +57,7 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 			HttpRequest req = (HttpRequest) msg;
 			HttpContext httpContext = findHttpContext(req.getHeader(HttpHeaders.Names.HOST));
 			if (httpContext == null) {
-				Request request = new Request(ctx, req, null, null, null);
+				Request request = new Request(ctx, req);
 				Response response = new Response(bc, ctx, request);
 				request.setResponse(response);
 
@@ -73,7 +65,11 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 				return;
 			}
 
-			service(ctx, req, httpContext);
+			Request request = new Request(ctx, req);
+			Response response = new Response(bc, ctx, request);
+			request.setResponse(response);
+
+			httpContext.handle(request, response);
 		} else if (msg instanceof WebSocketFrame) {
 			WebSocketFrame frame = (WebSocketFrame) msg;
 			HttpContext httpContext = findHttpContext(frame.getHost());
@@ -96,50 +92,6 @@ public class HttpServerHandler extends SimpleChannelUpstreamHandler {
 			HttpContext context = contextRegistry.findContext(name);
 			InetSocketAddress remote = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
 			context.getWebSocketManager().unregister(remote);
-		}
-	}
-
-	private void service(ChannelHandlerContext ctx, HttpRequest req, HttpContext httpContext) throws IOException {
-		HttpServlet servlet = null;
-		Request request = null;
-		Response response = null;
-		String pathInfo = null;
-
-		logger.trace("kraken httpd: request [{} {}]", req.getMethod(), req.getUri());
-		WebSocketManager webSocketManager = httpContext.getWebSocketManager();
-		ServletRegistry servletRegistry = httpContext.getServletRegistry();
-
-		try {
-			String servletPath = servletRegistry.getServletPath(req.getUri());
-			if (servletPath != null) {
-				servlet = servletRegistry.getServlet(servletPath);
-				pathInfo = req.getUri().substring(servletPath.length());
-			} else if (webSocketManager.getPath().equals(req.getUri())) {
-				servlet = webSocketManager.getServlet();
-				pathInfo = req.getUri();
-			} else {
-				request = new Request(ctx, req, httpContext, servletPath, req.getUri());
-				response = new Response(bc, ctx, request);
-				request.setResponse(response);
-
-				response.sendError(HttpServletResponse.SC_NOT_FOUND);
-				return;
-			}
-
-			request = new Request(ctx, req, httpContext, servletPath, pathInfo);
-			response = new Response(bc, ctx, request);
-			request.setResponse(response);
-			
-			servlet.service(request, response);
-		} catch (FileNotFoundException e) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-		} catch (IOException e) {
-			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-		} catch (ServletException e) {
-			logger.error("kraken httpd: servlet service error.", e);
-		} finally {
-			if (response != null && !request.isAsyncStarted())
-				response.close();
 		}
 	}
 

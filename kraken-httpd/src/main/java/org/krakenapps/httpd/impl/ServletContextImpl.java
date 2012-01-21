@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.httpd.impl;
 
 import java.io.InputStream;
@@ -23,10 +38,8 @@ import javax.servlet.ServletRegistration.Dynamic;
 import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
-import javax.servlet.http.HttpServlet;
 
 import org.krakenapps.httpd.MimeTypes;
-import org.krakenapps.util.DirectoryMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,9 +48,7 @@ public class ServletContextImpl implements ServletContext {
 	private String name;
 	private String serverInfo;
 	private String contextPath;
-	private ConcurrentMap<String, Servlet> servlets;
-
-	private DirectoryMap<HttpServlet> directoryMap;
+	private ServletDispatcher dispatcher;
 
 	private ConcurrentMap<String, String> initParams;
 	private ConcurrentMap<String, Object> attrs;
@@ -49,12 +60,15 @@ public class ServletContextImpl implements ServletContext {
 		this.name = name;
 		this.serverInfo = serverInfo;
 		this.contextPath = contextPath;
-		this.servlets = new ConcurrentHashMap<String, Servlet>();
-		this.directoryMap = new DirectoryMap<HttpServlet>();
+		this.dispatcher = new ServletDispatcher();
 		this.initParams = new ConcurrentHashMap<String, String>();
 		this.attrs = new ConcurrentHashMap<String, Object>();
 		this.sessionCookieConfig = new SessionCookieConfigImpl();
 		this.sessionTrackingModes = new HashSet<SessionTrackingMode>();
+	}
+
+	public ServletMatchResult matches(String path) {
+		return dispatcher.matches(path);
 	}
 
 	@Override
@@ -140,7 +154,7 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public Dynamic addServlet(String servletName, Servlet servlet) {
-		servlets.putIfAbsent(servletName, servlet);
+		dispatcher.addServlet(servletName, servlet);
 		return null;
 	}
 
@@ -156,13 +170,12 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public ServletRegistration getServletRegistration(String servletName) {
-		return null;
+		return dispatcher.getServletRegistration(servletName);
 	}
 
 	@Override
 	public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-		// TODO Auto-generated method stub
-		return null;
+		return dispatcher.getServletRegistrations();
 	}
 
 	@Override
@@ -202,17 +215,17 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public Servlet getServlet(String name) throws ServletException {
-		return servlets.get(name);
+		return dispatcher.getServlet(name);
 	}
 
 	@Override
 	public Enumeration<Servlet> getServlets() {
-		return Collections.enumeration(servlets.values());
+		return Collections.enumeration(dispatcher.getServlets());
 	}
 
 	@Override
 	public Enumeration<String> getServletNames() {
-		return Collections.enumeration(servlets.keySet());
+		return Collections.enumeration(dispatcher.getServletNames());
 	}
 
 	@Override
