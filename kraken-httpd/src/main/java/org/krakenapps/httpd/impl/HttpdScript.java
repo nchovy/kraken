@@ -59,6 +59,7 @@ public class HttpdScript implements Script {
 		for (String name : registry.getContextNames()) {
 			HttpContext ctx = registry.findContext(name);
 			context.println(ctx);
+			context.println("");
 		}
 	}
 

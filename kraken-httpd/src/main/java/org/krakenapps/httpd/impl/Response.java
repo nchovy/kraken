@@ -118,7 +118,7 @@ public class Response implements HttpServletResponse {
 			// resp.setHeader("Access-Control-Allow-Origin", "*");
 			// resp.setHeader("Access-Control-Allow-Credentials", "true");
 
-			logger.debug("kraken webconsole: flush response [{}]", buf.readableBytes());
+			logger.debug("kraken httpd: flush response [{}]", buf.readableBytes());
 
 			ChannelBuffer dup = buf.duplicate();
 			buf.clear();
@@ -128,7 +128,7 @@ public class Response implements HttpServletResponse {
 
 			ChannelFuture f = ctx.getChannel().write(resp);
 			if (!isKeepAlive()) {
-				logger.trace("kraken-httpd: channel [{}] will be closed", ctx.getChannel());
+				logger.trace("kraken httpd: channel [{}] will be closed", ctx.getChannel());
 				f.addListener(ChannelFutureListener.CLOSE);
 			}
 		}
@@ -231,7 +231,7 @@ public class Response implements HttpServletResponse {
 				+ "</title></head>\n" //
 				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>"
 				+ msg
-				+ "</pre><hr/><address>Kraken Web Console/"
+				+ "</pre><hr/><address>Kraken HTTPd/"
 				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION)
 				+ "</address></body></html>";
 

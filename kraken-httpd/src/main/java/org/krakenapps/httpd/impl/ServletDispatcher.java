@@ -15,10 +15,12 @@
  */
 package org.krakenapps.httpd.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,6 +88,27 @@ public class ServletDispatcher {
 		ServletRegistrationImpl reg = new ServletRegistrationImpl(servletName, this);
 		regs.putIfAbsent(servletName, reg);
 		return reg;
+	}
+
+	public boolean removeServlet(String servletName) {
+		Servlet servlet = servlets.remove(servletName);
+		if (servlet != null) {
+			// remove from registrations
+			regs.remove(servletName);
+
+			// remove from exact mappings
+			List<String> evicts = new ArrayList<String>();
+			for (String path : exactMappings.keySet()) {
+				ServletRegistration reg = exactMappings.get(path);
+				if (reg.getName().equals(servletName))
+					evicts.add(path);
+			}
+
+			for (String evict : evicts)
+				exactMappings.remove(evict);
+		}
+
+		return servlet != null;
 	}
 
 	/**
@@ -197,5 +220,32 @@ public class ServletDispatcher {
 		}
 
 		return failPatterns;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("  Exact Mappings\n");
+		for (String path : exactMappings.keySet()) {
+			sb.append("    ");
+			sb.append(path);
+			sb.append(" => Servlet ");
+			sb.append(exactMappings.get(path).getName());
+			sb.append("\n");
+		}
+
+		for (ServletRegistration reg : regs.values()) {
+			sb.append("  Servlet ");
+			sb.append(reg.getName());
+			sb.append("\n");
+			for (String pattern : urlMappings.get(reg.getName())) {
+				sb.append("    ");
+				sb.append(pattern);
+				sb.append("\n");
+			}
+		}
+
+		return sb.toString();
 	}
 }

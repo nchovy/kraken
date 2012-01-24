@@ -110,8 +110,12 @@ public class HttpContext {
 		reg.addMapping(urlPatterns);
 	}
 
+	public boolean removeServlet(String name) {
+		return servletContext.removeServlet(name);
+	}
+
 	@Override
 	public String toString() {
-		return "[" + name + ", sessions=" + httpSessions.size() + "]\n" + servletContext + webSocketManager;
+		return "HTTP Context [" + name + ", sessions=" + httpSessions.size() + "]\n>>\n" + servletContext + webSocketManager;
 	}
 }

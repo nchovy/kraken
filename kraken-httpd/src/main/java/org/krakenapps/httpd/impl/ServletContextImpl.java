@@ -163,6 +163,10 @@ public class ServletContextImpl implements ServletContext {
 		throw new UnsupportedOperationException();
 	}
 
+	public boolean removeServlet(String servletName) {
+		return dispatcher.removeServlet(servletName);
+	}
+
 	@Override
 	public <T extends Servlet> T createServlet(Class<T> clazz) throws ServletException {
 		throw new UnsupportedOperationException();
@@ -340,6 +344,20 @@ public class ServletContextImpl implements ServletContext {
 	public void declareRoles(String... roleNames) {
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Servlet Context [");
+		sb.append(name);
+		sb.append("]\n* Context Path=");
+		sb.append(contextPath);
+		sb.append("\t");
+		sb.append("\n* URL Mappings\n");
+		sb.append(dispatcher);
+
+		return sb.toString();
 	}
 
 }
