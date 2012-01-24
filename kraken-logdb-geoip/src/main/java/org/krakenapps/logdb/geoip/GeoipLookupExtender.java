@@ -32,29 +32,35 @@ public class GeoipLookupExtender implements LookupHandler {
 
 	@Override
 	public Object lookup(String srcField, String dstField, Object value) {
+		InetAddress ip = null;
 		if (value instanceof InetAddress)
-			return geoip.locate((InetAddress) value);
+			ip = (InetAddress) value;
 
 		if (value instanceof String) {
 			try {
-				InetAddress ip = InetAddress.getByName((String) value);
-				GeoIpLocation location = geoip.locate(ip);
-				if (dstField.equals("country"))
-					return location.getCountry();
-				else if (dstField.equals("region"))
-					return location.getRegion();
-				else if (dstField.equals("city"))
-					return location.getCity();
-				else if (dstField.equals("latitude"))
-					return location.getLatitude();
-				else if (dstField.equals("longitude"))
-					return location.getLongitude();
-
-				return null;
+				ip = InetAddress.getByName((String) value);
 			} catch (Throwable t) {
 				return null;
 			}
 		}
+
+		if (ip == null)
+			return null;
+
+		GeoIpLocation location = geoip.locate(ip);
+		if (location == null)
+			return null;
+
+		if (dstField.equals("country"))
+			return location.getCountry();
+		else if (dstField.equals("region"))
+			return location.getRegion();
+		else if (dstField.equals("city"))
+			return location.getCity();
+		else if (dstField.equals("latitude"))
+			return location.getLatitude();
+		else if (dstField.equals("longitude"))
+			return location.getLongitude();
 
 		return null;
 	}
