@@ -197,7 +197,7 @@ public abstract class GeneralHashFunction {
 		}
 	};
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	public static HashFunction[] stringHashFunctions = { RSHash, JSHash,
 			PJWHash, ELFHash, BKDRHash, SDBMHash, DJBHash, BPHash, FNVHash };
 

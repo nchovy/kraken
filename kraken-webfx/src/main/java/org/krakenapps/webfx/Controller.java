@@ -26,17 +26,16 @@ public abstract class Controller {
 	protected Map<String, Object> data;
 	protected BundleContext bc;
 
-	public void init(BundleContext bc, GroovyShell sh, Map<String, Object> data, HttpServletRequest req,
+	public void init(BundleContext bc, GroovyShell sh, File baseDir, Map<String, Object> data, HttpServletRequest req,
 			HttpServletResponse resp) {
 		this.bc = bc;
+		this.baseDir = baseDir;
 		this.req = req;
 		this.resp = resp;
 		this.data = data;
 		this.sh = sh;
 		sh.setProperty("controller", this);
 
-		String krakenDir = System.getProperty("kraken.data.dir");
-		baseDir = new File(krakenDir, "kraken-webfx/sample");
 	}
 
 	protected void render() {

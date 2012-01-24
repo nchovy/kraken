@@ -8,7 +8,6 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-msn-decoder</artifactId>
 	<version>1.2.0</version>
 	<packaging>bundle</packaging>
@@ -52,11 +51,6 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-pcap</artifactId>
 			<version>1.5.0</version>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

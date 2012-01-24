@@ -67,7 +67,7 @@ public class JsonHttpServlet extends HttpServlet {
 
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	private Map<String, Object> buildParameterMap(HttpServletRequest req) {
 		Map<String, Object> paramMap = new HashMap<String, Object>();
 		Enumeration it = req.getParameterNames();

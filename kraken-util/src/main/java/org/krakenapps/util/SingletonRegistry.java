@@ -1,21 +1,20 @@
 package org.krakenapps.util;
 
 import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SingletonRegistry<K, V extends Managed> {
 	private ConcurrentHashMap<K, V> instances = new ConcurrentHashMap<K, V>();
 	private ManagedInstanceFactory<V, K> factory;
-	
+
 	public SingletonRegistry(ManagedInstanceFactory<V, K> factory) {
 		this.factory = factory;
 	}
-	
+
 	public V get(K key) {
 		return get(key, this.factory);
 	}
-	
+
 	public V get(K key, ManagedInstanceFactory<V, K> fctry) {
 		// check table existence
 		V online = instances.get(key);
@@ -36,7 +35,7 @@ public class SingletonRegistry<K, V extends Managed> {
 						while (instances.get(key) == old) {
 							Thread.yield();
 						}
-						
+
 						online = getNewSingleInstance(key, fctry);
 					} else if (old.isClosed()) {
 						while (instances.get(key) == old) {
@@ -72,7 +71,7 @@ public class SingletonRegistry<K, V extends Managed> {
 	}
 
 	public void closeAll() {
-		for (K key: instances.keySet()) {
+		for (K key : instances.keySet()) {
 			V v = instances.get(key);
 			try {
 				synchronized (v) {
@@ -81,7 +80,7 @@ public class SingletonRegistry<K, V extends Managed> {
 				}
 			} catch (IOException e) {
 			} catch (Exception e) {
-			}		
+			}
 		}
 	}
 

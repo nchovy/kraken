@@ -1,6 +1,5 @@
 package org.krakenapps.pcap.decoder.netbios;
 
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
 import org.krakenapps.pcap.Injectable;

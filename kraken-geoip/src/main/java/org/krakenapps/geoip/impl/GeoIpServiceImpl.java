@@ -162,9 +162,6 @@ public class GeoIpServiceImpl implements GeoIpService {
 				int length = (int) (end - begin);
 				String line = new String(all, begin, length);
 
-				if (line == null)
-					break;
-
 				char c = line.charAt(0);
 				if (c < '0' || c > '9') {
 					pos += length;
@@ -195,7 +192,6 @@ public class GeoIpServiceImpl implements GeoIpService {
 
 		ByteBuffer bb = ByteBuffer.allocate(BLOCK_SIZE); // 4 + 4 + 4
 
-		int count = 0;
 		try {
 			while (true) {
 				String line = br.readLine();
@@ -218,8 +214,6 @@ public class GeoIpServiceImpl implements GeoIpService {
 				bb.flip();
 
 				bw.write(bb.array());
-
-				count++;
 			}
 		} finally {
 			if (br != null)

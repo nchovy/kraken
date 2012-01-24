@@ -8,7 +8,6 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-pcap</artifactId>
 	<version>1.6.0</version>
 	<packaging>bundle</packaging>
@@ -75,11 +74,6 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
 			<version>1.6.0</version>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.8.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

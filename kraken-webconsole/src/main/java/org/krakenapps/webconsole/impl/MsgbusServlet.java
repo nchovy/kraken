@@ -65,7 +65,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	public void start() {
 		doStop = false;
 		HttpContext ctx = httpd.ensureContext("webconsole");
-		ctx.getServletRegistry().register("/msgbus", this);
+		ctx.addServlet("msgbus", this, "/msgbus");
 
 		t = new Thread(this, "Msgbus Push");
 		t.start();
@@ -75,11 +75,6 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	public void stop() {
 		doStop = true;
 		t.interrupt();
-
-		if (httpd != null) {
-			HttpContext ctx = httpd.ensureContext("webconsole");
-			ctx.getServletRegistry().unregister("/msgbus");
-		}
 	}
 
 	@Override

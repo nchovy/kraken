@@ -42,7 +42,6 @@ import org.krakenapps.ahocorasick.AhoCorasickSearch;
 import org.krakenapps.ahocorasick.Pair;
 import org.krakenapps.ahocorasick.Pattern;
 import org.krakenapps.ahocorasick.SearchContext;
-import org.krakenapps.api.Script;
 import org.krakenapps.rule.Rule;
 import org.krakenapps.rule.RuleDatabase;
 import org.krakenapps.rule.RuleGroup;

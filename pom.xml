@@ -153,11 +153,6 @@
 	</distributionManagement>
 	<dependencyManagement>
 		<dependencies>
-			<dependency>
-				<groupId>org.krakenapps</groupId>
-				<artifactId>kraken-api</artifactId>
-				<version>1.7.0</version>
-			</dependency>
 			<!-- Testing -->
 			<dependency>
 				<groupId>junit</groupId>

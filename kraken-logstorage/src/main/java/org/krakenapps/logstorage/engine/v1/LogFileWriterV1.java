@@ -190,11 +190,9 @@ public class LogFileWriterV1 extends LogFileWriter {
 		bufferedLogs = new ArrayList<LogRecord>(maxLogBuffering * 2);
 
 		Iterator<LogRecord> it = b.iterator();
-		int rawWriteCount = 0;
 
 		while (it.hasNext()) {
 			rawWrite(it.next());
-			rawWriteCount++;
 		}
 
 		indexFile.getFD().sync();

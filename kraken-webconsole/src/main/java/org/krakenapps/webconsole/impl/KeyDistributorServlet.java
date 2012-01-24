@@ -15,6 +15,7 @@
  */
 package org.krakenapps.webconsole.impl;
 
+
 import java.io.IOException;
 import java.util.UUID;
 
@@ -24,7 +25,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.httpd.HttpContext;
@@ -52,18 +52,7 @@ public class KeyDistributorServlet extends HttpServlet {
 	@Validate
 	public void start() {
 		HttpContext ctx = httpd.ensureContext("webconsole");
-		ctx.getServletRegistry().register(PREFIX, this);
-	}
-
-	/**
-	 * Unregister servlet from servlet registry
-	 */
-	@Invalidate
-	public void stop() {
-		if (httpd != null) {
-			HttpContext ctx = httpd.ensureContext("webconsole");
-			ctx.getServletRegistry().unregister(PREFIX);
-		}
+		ctx.addServlet("keydist", this, PREFIX);
 	}
 
 	@Override

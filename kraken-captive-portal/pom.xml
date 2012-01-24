@@ -8,7 +8,6 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-captive-portal</artifactId>
 	<version>0.5.0</version>
 	<packaging>bundle</packaging>

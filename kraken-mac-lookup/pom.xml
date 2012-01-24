@@ -8,7 +8,6 @@
 		<version>1.0.0</version>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-mac-lookup</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken MAC Address Lookup</name>

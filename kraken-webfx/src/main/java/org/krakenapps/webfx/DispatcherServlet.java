@@ -15,11 +15,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
-import org.apache.felix.ipojo.annotations.Requires;
-import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.servlet.api.ServletRegistry;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,15 +30,13 @@ public class DispatcherServlet extends HttpServlet {
 	private Map<String, Object> data;
 	private Router router;
 
-	public DispatcherServlet(BundleContext bc) {
+	public DispatcherServlet(BundleContext bc, File baseDir) {
 		this.bc = bc;
+		this.baseDir = baseDir;
+		this.router = new Router();
 	}
 
-	@Validate
-	public void start() throws Exception {
-		String krakenDir = System.getProperty("kraken.data.dir");
-		baseDir = new File(krakenDir, "kraken-webfx/sample");
-		baseDir.mkdirs();
+	public void start() throws IOException {
 
 		File controllerDir = new File(baseDir, "app/controllers");
 		engine = new GroovyScriptEngine(new String[] { controllerDir.getAbsolutePath() });
@@ -56,16 +49,14 @@ public class DispatcherServlet extends HttpServlet {
 		data.put("osgi", shell.evaluate("def c = { s -> controller.osgi(s) }"));
 		data.put("yield", shell.evaluate("def c = { s -> controller.yield(s) }"));
 		data.put("bc", bc);
-
-		// add dummy routes
-		router = new Router();
-		router.add(new Resource("Hello"));
-		router.add(new Resource("Blogosphere"));
 	}
 
-	@Invalidate
 	public void stop() {
 		engine.getGroovyClassLoader().clearCache();
+	}
+
+	public Router getRouter() {
+		return router;
 	}
 
 	@Override
@@ -75,7 +66,7 @@ public class DispatcherServlet extends HttpServlet {
 			Date begin = new Date();
 			invokeGroovy(req, resp, begin);
 			long elapsed = new Date().getTime() - begin.getTime();
-			resp.getWriter().println(elapsed + "ms used");
+			logger.trace("kraken webfx: request [{}], {}ms used", req.getRequestURI(), elapsed);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -95,7 +86,7 @@ public class DispatcherServlet extends HttpServlet {
 		String name = action.getController() + "Controller";
 		Class<?> clazz = engine.getGroovyClassLoader().loadClass(name, true, false, true);
 		Controller controller = (Controller) clazz.newInstance();
-		controller.init(bc, shell, d, req, resp);
+		controller.init(bc, shell, baseDir, d, req, resp);
 
 		Method m = controller.getClass().getMethod(action.getAction());
 		m.invoke(controller);

@@ -69,7 +69,7 @@ public class FilterHandler extends PrimitiveHandler {
 	 * Invoked when a filter component instance is created. Inject filter chain
 	 * field here.
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	@Override
 	public void configure(Element metadata, Dictionary config) throws ConfigurationException {
 

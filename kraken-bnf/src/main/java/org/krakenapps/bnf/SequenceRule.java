@@ -33,14 +33,12 @@ public class SequenceRule implements Rule {
 	public Result eval(String text, int position, ParserContext ctx) throws ParseException {
 		ArrayList<Binding> args = new ArrayList<Binding>();
 
-		int count = 0;
 		for (Rule rule : rules) {
 			Result ret = rule.eval(text, position, ctx);
 			if (ret.binding != null)
 				args.add(ret.binding);
 			
 			position = ret.nextPosition;
-			count++;
 		}
 
 		if (args.size() == 1)

@@ -177,7 +177,7 @@ public class BundleMetadataMonitor implements BundleListener {
 			URL url = bundle.getEntry("/WEB-INF");
 			if (url != null) {
 				HttpContext ctx = httpd.ensureContext("webconsole");
-				ctx.getServletRegistry().register(prefix, new BundleResourceServlet(bundle, "/WEB-INF"));
+				ctx.addServlet("bundle" + bundle.getBundleId(), new BundleResourceServlet(bundle, "/WEB-INF"), prefix);
 				logger.info("kraken webconsole: prefix [{}] is mapped to bundle {}/WEB-INF", prefix, bundleId);
 			} else {
 				logger.warn("kraken webconsole: WEB-INF directory not found in bundle {}", bundleId);
@@ -188,7 +188,5 @@ public class BundleMetadataMonitor implements BundleListener {
 	}
 
 	private void unregisterStaticResource(Bundle bundle, String prefix) {
-		HttpContext ctx = httpd.ensureContext("webconsole");
-		ctx.getServletRegistry().unregister(prefix);
 	}
 }

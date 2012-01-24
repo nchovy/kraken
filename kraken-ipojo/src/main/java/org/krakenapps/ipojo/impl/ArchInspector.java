@@ -196,12 +196,11 @@ public class ArchInspector {
 	/**
 	 * Prints the statistics
 	 */
-	@SuppressWarnings("unchecked")
 	public void printStats() {
 		try {
 			Field field = IPojoFactory.class.getDeclaredField("INSTANCE_NAME");
 			field.setAccessible(true);
-			List names = (List) field.get(null);
+			List<?> names = (List<?>) field.get(null);
 			out.println("Number of living instances: " + names.size());
 		} catch (NoSuchFieldException e) {
 			e.printStackTrace();

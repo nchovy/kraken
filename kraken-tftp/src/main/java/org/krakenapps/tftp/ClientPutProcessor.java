@@ -67,9 +67,6 @@ public class ClientPutProcessor {
 			DatagramPacket incoming = new DatagramPacket(inbuf, inbuf.length);
 			socket.receive(incoming);
 
-			if (incoming == null)
-				return;
-
 			this.target = target;
 			this.port = incoming.getPort();
 

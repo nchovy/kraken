@@ -39,7 +39,8 @@ public class PrimitiveConverterTest {
 	@SuppressWarnings("unchecked")
 	@Test
 	public void testToPrimitive() {
-		Sample s = new Sample("qoo", 123, "ignore field", new Nested("xeraph", "cucumber", "pumpkin"), new Nested("delmitz"));
+		Sample s = new Sample("qoo", 123, "ignore field", new Nested("xeraph", "cucumber", "pumpkin"), new Nested(
+				"delmitz"));
 		Map<String, Object> o = (Map<String, Object>) PrimitiveConverter.serialize(s);
 		assertEquals("qoo", o.get("foo"));
 		assertEquals(123, o.get("bar"));
@@ -135,9 +136,11 @@ public class PrimitiveConverterTest {
 		@FieldOption(skip = true)
 		private String ignore;
 		private Nested nested;
+		@SuppressWarnings("unused")
 		@ReferenceKey("name")
 		private Nested ref;
 
+		@SuppressWarnings("unused")
 		public Sample() {
 		}
 

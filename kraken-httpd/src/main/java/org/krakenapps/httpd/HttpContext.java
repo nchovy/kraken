@@ -20,8 +20,10 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -84,7 +86,6 @@ public class HttpContext {
 			if (response != null && !request.isAsyncStarted())
 				response.close();
 		}
-
 	}
 
 	public String getName() {
@@ -101,6 +102,12 @@ public class HttpContext {
 
 	public ConcurrentMap<String, HttpSession> getHttpSessions() {
 		return httpSessions;
+	}
+
+	public void addServlet(String name, Servlet servlet, String... urlPatterns) {
+		servletContext.addServlet(name, servlet);
+		ServletRegistration reg = servletContext.getServletRegistration(name);
+		reg.addMapping(urlPatterns);
 	}
 
 	@Override

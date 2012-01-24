@@ -23,14 +23,14 @@ public class NetBiosNamePacket implements Injectable {
 	private NetBiosNameData data;
 
 	/* qeustion section */
-	private List<QuestionResourceRecord> questions;
+	//	private List<QuestionResourceRecord> questions;
 
 	/* resouce record */
-	private List<ResourceRecord> answerResources;
-	private List<ResourceRecord> authorityResources;
-	private List<ResourceRecord> additionalResources;
-
-	private byte domainType;
+	// private List<ResourceRecord> answerResources;
+	// private List<ResourceRecord> authorityResources;
+	// private List<ResourceRecord> additionalResources;
+	//
+	// private byte domainType;
 
 	//
 
@@ -72,7 +72,7 @@ public class NetBiosNamePacket implements Injectable {
 		headerb.putShort((short) header.getAdditionalCoount());
 
 		Buffer buffer = new ChainBuffer();
-		//TODO : data add
+		// TODO : data add
 		buffer.addLast(headerb.array());
 		return buffer;
 	}
@@ -84,9 +84,9 @@ public class NetBiosNamePacket implements Injectable {
 		private short transactionId;
 		private short opCode; // opcode + nmflag + resultcode
 		//
-		private short op;
-		private short nmflag;
-		private short resultcode;
+		// private short op;
+		// private short nmflag;
+		// private short resultcode;
 		// op+ nmflag + resultcode = opCode
 		private short questionCount;// it must 0x0001
 		private short answerCount;// it must 0x0001

@@ -8,7 +8,6 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-siem</artifactId>
 	<version>1.2.0</version>
 	<packaging>bundle</packaging>

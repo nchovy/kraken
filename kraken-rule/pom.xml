@@ -8,9 +8,7 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-rule</artifactId>
-	<version>1.0.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Rule</name>
 	<build>

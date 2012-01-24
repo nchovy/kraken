@@ -99,9 +99,9 @@ public class CsvHttpServlet extends HttpServlet {
 		return v;
 	}
 
-	@SuppressWarnings("unchecked")
 	private Map<String, Object> buildParameterMap(HttpServletRequest req) {
 		Map<String, Object> paramMap = new HashMap<String, Object>();
+		@SuppressWarnings("rawtypes")
 		Enumeration it = req.getParameterNames();
 		while (it.hasMoreElements()) {
 			String name = (String) it.nextElement();

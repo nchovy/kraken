@@ -13,6 +13,6 @@ public interface WebApplicationRegistry {
 
 	void removeWebApplication(String name);
 
-	void reload(String name);
+	void reload();
 
 }

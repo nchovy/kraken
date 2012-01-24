@@ -28,7 +28,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dom.api.FileUploadApi;
@@ -56,18 +55,7 @@ public class FileUploadServlet extends HttpServlet {
 	@Validate
 	public void start() {
 		HttpContext ctx = httpd.ensureContext("webconsole");
-		ctx.getServletRegistry().register("/upload", this);
-	}
-
-	/**
-	 * Unregister servlet from servlet registry
-	 */
-	@Invalidate
-	public void stop() {
-		if (httpd != null) {
-			HttpContext ctx = httpd.ensureContext("webconsole");
-			ctx.getServletRegistry().unregister("/upload");
-		}
+		ctx.addServlet("upload", this, "/upload");
 	}
 
 	@Override
@@ -143,7 +131,8 @@ public class FileUploadServlet extends HttpServlet {
 		Cookie[] cookies = req.getCookies();
 		if (cookies != null) {
 			for (Cookie cookie : cookies) {
-				logger.trace("kraken webconsole: checking all cookie for download, {} = {}", cookie.getName(), cookie.getValue());
+				logger.trace("kraken webconsole: checking all cookie for download, {} = {}", cookie.getName(),
+						cookie.getValue());
 				if (cookie.getName().equals("kraken_session"))
 					return cookie.getValue();
 			}
@@ -180,7 +169,8 @@ public class FileUploadServlet extends HttpServlet {
 				if (begin >= end)
 					throw new IllegalArgumentException("begin should be smaller than end range");
 
-				logger.info("kraken webconsole: partial upload, token [{}], [{}~{}]", new Object[] { token, begin, end });
+				logger.info("kraken webconsole: partial upload, token [{}], [{}~{}]",
+						new Object[] { token, begin, end });
 
 				// TODO: after complete dom porting
 				// upload.writePartialFile(token, begin, end, is);

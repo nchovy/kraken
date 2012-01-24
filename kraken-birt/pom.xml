@@ -8,7 +8,6 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-birt</artifactId>
 	<version>1.1.0</version>
 	<packaging>bundle</packaging>
@@ -39,7 +38,7 @@
 							!org.w3c.dom.stylesheets,
 							javax.xml.datatype,
 							*
-         				</Import-Package>
+						</Import-Package>
 						<Private-Package>
 							org.krakenapps.report.birt,
 							!org.eclipse.birt.*;-split-package:=merge-last

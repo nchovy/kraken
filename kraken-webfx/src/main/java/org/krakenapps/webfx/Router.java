@@ -30,7 +30,6 @@ public class Router {
 			if (i >= r.pathTokens.size())
 				return false;
 
-			System.out.println("current: " + token + ", compare: " + r.pathTokens.get(i));
 			if (r.pathTokens.get(i).startsWith(":")) {
 				// TODO: validate using regexp
 				params.put(r.pathTokens.get(i).substring(1), token);
