@@ -15,8 +15,12 @@
  */
 package org.krakenapps.logfile;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import org.krakenapps.log.api.LogParser;
@@ -24,15 +28,25 @@ import org.krakenapps.log.api.LogParser;
 public class OpenSshLogParser implements LogParser {
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd HH:mm:ss", Locale.ENGLISH);
 		Map<String, Object> m = new HashMap<String, Object>();
 
-		Date date = (Date) params.get("date");
 		String line = (String) params.get("line");
+		Date date = null;
+		try {
+			date = dateFormat.parse(line);
+			Calendar c = Calendar.getInstance();
+			int year = c.get(Calendar.YEAR);
+			c.setTime(date);
+			c.set(Calendar.YEAR, year);
+			date = c.getTime();
+		} catch (ParseException e) {
+		}
 
 		String[] tokens = split(line);
 
 		m.put("logtype", "openssh");
-		m.put("date", date);
+		m.put("_time", date);
 		m.put("host", tokens[3]);
 		m.put("logger", tokens[4].substring(0, tokens[4].length() - 1));
 
