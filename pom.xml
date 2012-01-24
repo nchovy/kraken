@@ -100,7 +100,6 @@
 		<module>kraken-dhcp</module>
 		<module>kraken-captive-portal</module>
 		<module>kraken-radius</module>
-		<module>kraken-grid</module>
     <module>kraken-logdb-client</module>
     <module>kraken-logdb</module>
     <module>kraken-confdb</module>
