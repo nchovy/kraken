@@ -46,13 +46,16 @@ public class TextFile extends LogQueryCommand {
 					break;
 
 				Map<String, Object> m = new HashMap<String, Object>();
+				Map<String, Object> parsed = null;
 				m.put("line", line);
-				Map<String, Object> parsed = parser.parse(m);
-				if (parsed == null)
-					continue;
+				if (parser != null) {
+					parsed = parser.parse(m);
+					if (parsed == null)
+						continue;
+				}
 
 				if (i >= offset) {
-					write(new LogMap(parsed));
+					write(new LogMap(parsed != null ? parsed : m));
 					count++;
 				}
 				i++;

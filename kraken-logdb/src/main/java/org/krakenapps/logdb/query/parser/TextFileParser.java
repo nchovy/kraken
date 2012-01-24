@@ -41,8 +41,16 @@ public class TextFileParser implements LogQueryParser {
 				limit = Integer.valueOf(options.get("limit"));
 
 			FileInputStream is = new FileInputStream(new File(filePath));
-			LogParserFactory factory = parserFactoryRegistry.get(options.get("parser"));
-			LogParser parser = factory.createParser(convert(options));
+			String parserName = options.get("parser");
+			LogParser parser = null;
+			if (parserName != null) {
+				LogParserFactory factory = parserFactoryRegistry.get(parserName);
+				if (factory == null)
+					throw new IllegalStateException("log parser not found: " + parserName);
+
+				parser = factory.createParser(convert(options));
+			}
+
 			return new TextFile(is, parser, offset, limit);
 		} catch (Throwable t) {
 			throw new RuntimeException("cannot create textfile source", t);
