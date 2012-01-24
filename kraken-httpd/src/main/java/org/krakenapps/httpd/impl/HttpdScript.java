@@ -140,8 +140,20 @@ public class HttpdScript implements Script {
 		context.println("added");
 	}
 
+	@ScriptUsage(description = "remove virtual host", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "bind port"),
+			@ScriptArgument(name = "http context", type = "string", description = "http context name") })
 	public void removeVirtualHost(String[] args) {
+		int port = Integer.valueOf(args[0]);
+		InetSocketAddress listen = new InetSocketAddress(port);
+		HttpServer server = httpd.getServer(listen);
+		if (server == null) {
+			context.println("http server not found");
+			return;
+		}
 
+		server.getConfiguration().removeVirtualHost(args[1]);
+		context.println("removed");
 	}
 
 	@ScriptUsage(description = "close port", arguments = {
@@ -175,8 +187,19 @@ public class HttpdScript implements Script {
 		HttpContext ctx = httpd.ensureContext(args[0]);
 
 		try {
+			File target = new File(basePath);
+			if (!target.exists()) {
+				context.println("directory does not exists: " + target.getAbsolutePath());
+				return;
+			}
+
+			if (!target.isDirectory()) {
+				context.println("filesystem path is not a directory");
+				return;
+			}
+
 			ServletContext servletContext = ctx.getServletContext();
-			servletContext.addServlet("file", new FileResourceServlet(new File(basePath)));
+			servletContext.addServlet("file", new FileResourceServlet(target));
 			ServletRegistration r = servletContext.getServletRegistration("file");
 			r.addMapping(prefix + "/*");
 			context.println("attached");
