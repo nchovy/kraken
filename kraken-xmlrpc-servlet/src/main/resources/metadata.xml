@@ -2,6 +2,6 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 
-	<instance component="kraken-xmlrpc-method-registry" />
-	<instance component="kraken-xmlrpc-servlet-script-factory" />
+	<instance component="xmlrpc-method-registry" />
+	<instance component="xmlrpc-servlet-script-factory" />
 </ipojo>
