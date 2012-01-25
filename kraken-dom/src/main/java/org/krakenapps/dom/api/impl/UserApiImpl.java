@@ -184,6 +184,10 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void updateUser(String domain, User user, boolean updatePassword) {
+		// for backward compatibility
+		if (user.getLastPasswordChange() == null)
+			user.setLastPasswordChange(new Date());
+
 		user.setUpdated(new Date());
 		if (updatePassword)
 			user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
