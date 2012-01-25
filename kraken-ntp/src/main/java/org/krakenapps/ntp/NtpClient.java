@@ -121,11 +121,15 @@ public class NtpClient {
 
 	private ServerTime getTime() throws IOException {
 		DatagramSocket socket = new DatagramSocket();
-		socket.setSoTimeout(timeout);
-		transmit(socket, timeServer, 123);
-		ServerTime time = receive(socket);
-		time.setDestination(getUtcTimeMillis());
-		return time;
+		try {
+			socket.setSoTimeout(timeout);
+			transmit(socket, timeServer, 123);
+			ServerTime time = receive(socket);
+			time.setDestination(getUtcTimeMillis());
+			return time;
+		} finally {
+			socket.close();
+		}
 	}
 
 	private void transmit(DatagramSocket socket, InetAddress addr, int port) throws IOException {
