@@ -225,6 +225,11 @@ public class AdminApiImpl implements AdminApi {
 
 	@Override
 	public void unsetAdmin(String domain, String requestAdminLoginName, String targetUserLoginName) {
+		// login name is immutable, only one master account per domain, and
+		// default name is "admin"
+		if (targetUserLoginName.equals("admin"))
+			throw new DOMException("cannot-master-unset");
+
 		if (targetUserLoginName.equals(requestAdminLoginName))
 			throw new DOMException("cannot-remove-requesting-admin");
 
@@ -244,9 +249,6 @@ public class AdminApiImpl implements AdminApi {
 
 		if (request.getRole().getLevel() < admin.getRole().getLevel())
 			throw new DOMException(exceptionMessage);
-
-		if (admin.getRole().getName().equals("master"))
-			throw new DOMException("cannot-master-unset");
 	}
 
 	@Override
