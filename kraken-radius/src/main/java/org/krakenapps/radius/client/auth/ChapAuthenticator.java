@@ -68,25 +68,29 @@ public class ChapAuthenticator implements Authenticator {
 
 		// send request
 		DatagramSocket socket = new DatagramSocket();
-		socket.connect(client.getIpAddress(), client.getPort());
+		try {
+			socket.connect(client.getIpAddress(), client.getPort());
 
-		byte[] payload = req.getBytes();
-		DatagramPacket packet = new DatagramPacket(payload, payload.length);
-		socket.setSoTimeout(5000);
-		socket.send(packet);
+			byte[] payload = req.getBytes();
+			DatagramPacket packet = new DatagramPacket(payload, payload.length);
+			socket.setSoTimeout(5000);
+			socket.send(packet);
 
-		// receive chap response
-		byte[] buf = new byte[65535];
-		DatagramPacket response = new DatagramPacket(buf, buf.length);
-		socket.receive(response);
+			// receive chap response
+			byte[] buf = new byte[65535];
+			DatagramPacket response = new DatagramPacket(buf, buf.length);
+			socket.receive(response);
 
-		RadiusResponse resp = (RadiusResponse) RadiusPacket.parse(sharedSecret, buf);
-		
-		byte[] expectedAuthenticator = RadiusResponse.calculateResponseAuthenticator(resp, sharedSecret,
-				req.getAuthenticator());
-		if (!Arrays.equals(expectedAuthenticator, resp.getAuthenticator()))
-			throw new MalformedResponseException(req, resp);
+			RadiusResponse resp = (RadiusResponse) RadiusPacket.parse(sharedSecret, buf);
 
-		return resp;
+			byte[] expectedAuthenticator = RadiusResponse.calculateResponseAuthenticator(resp, sharedSecret,
+					req.getAuthenticator());
+			if (!Arrays.equals(expectedAuthenticator, resp.getAuthenticator()))
+				throw new MalformedResponseException(req, resp);
+
+			return resp;
+		} finally {
+			socket.close();
+		}
 	}
 }
