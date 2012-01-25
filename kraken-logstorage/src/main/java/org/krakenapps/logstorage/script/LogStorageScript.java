@@ -109,7 +109,7 @@ public class LogStorageScript implements Script {
 			context.println();
 			context.println("Table Metadata");
 			context.println("----------");
-			for (String key : tableRegistry.getTableMetadatas(tableName).keySet()) {
+			for (String key : tableRegistry.getTableMetadataKeys(tableName)) {
 				String value = tableRegistry.getTableMetadata(tableName, key);
 				context.println(key + "=" + value);
 			}
@@ -179,7 +179,8 @@ public class LogStorageScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "get logs", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name"),
+	@ScriptUsage(description = "get logs", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
 			@ScriptArgument(name = "from", type = "string", description = "yyyyMMddHH format"),
 			@ScriptArgument(name = "to", type = "string", description = "yyyyMMddHH format"),
 			@ScriptArgument(name = "offset", type = "int", description = "offset"),
@@ -298,7 +299,8 @@ public class LogStorageScript implements Script {
 		context.println("set");
 	}
 
-	@ScriptUsage(description = "", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name"),
+	@ScriptUsage(description = "", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
 			@ScriptArgument(name = "path", type = "string", description = "iis file path") })
 	public void loadTest(String[] args) {
 		Date begin = new Date();
@@ -329,7 +331,8 @@ public class LogStorageScript implements Script {
 
 				if (line.startsWith("#")) {
 					if (line.startsWith("#Fields: "))
-						tableRegistry.setTableMetadata(tableName, "column_headers", line.replace("#Fields: ", "").replace(" ", ","));
+						tableRegistry.setTableMetadata(tableName, "column_headers",
+								line.replace("#Fields: ", "").replace(" ", ","));
 					continue;
 				}
 
@@ -426,7 +429,8 @@ public class LogStorageScript implements Script {
 		Map<String, Object> text = new HashMap<String, Object>();
 		text.put("_data", "2011-08-22 17:30:23 Google 111.222.33.44 GET /search q=cache:xgLxoOQBOoIJ:"
 				+ "krakenapps.org/+krakenapps&cd=1&hl=en&ct=clnk&source=www.google.com 80 - 123.234.34.45 "
-				+ "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 " + "Safari/535.1 404 0 3");
+				+ "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 "
+				+ "Safari/535.1 404 0 3");
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("c-ip", "111.222.33.44");

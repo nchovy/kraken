@@ -17,6 +17,7 @@ package org.krakenapps.logstorage;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 public interface LogTableRegistry {
 	boolean exists(String tableName);
@@ -31,8 +32,8 @@ public interface LogTableRegistry {
 
 	void dropTable(String tableName);
 
-	Map<String, Object> getTableMetadatas(String tableName);
-	
+	Set<String> getTableMetadataKeys(String tableName);
+
 	String getTableMetadata(String tableName, String key);
 
 	void setTableMetadata(String tableName, String key, String value);

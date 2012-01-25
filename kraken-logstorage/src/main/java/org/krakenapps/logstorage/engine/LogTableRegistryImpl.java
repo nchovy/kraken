@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -201,12 +202,12 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 	}
 
 	@Override
-	public Map<String, Object> getTableMetadatas(String tableName) {
+	public Set<String> getTableMetadataKeys(String tableName) {
 		LogTableSchema t = tableSchemas.get(tableName);
 		if (t == null)
 			throw new IllegalArgumentException("table not exists: " + tableName);
 
-		return t.getMetadata();
+		return t.getMetadata().keySet();
 	}
 
 	@Override
