@@ -37,7 +37,6 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 	private String cronExp = "*/10 * * * *";
 
 	public NtpSyncServiceImpl() {
-		ensureClient();
 	}
 
 	private void ensureClient() {
@@ -118,8 +117,12 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 
 	@Override
 	public void run() {
-		if (client != null)
-			client.sync();
+		try {
+			if (client != null)
+				client.sync();
+		} catch (Throwable t) {
+			logger.error("kraken ntp: cannot sync time", t);
+		}
 	}
 
 	@Override

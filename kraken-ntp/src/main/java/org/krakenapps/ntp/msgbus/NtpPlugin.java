@@ -65,7 +65,11 @@ public class NtpPlugin {
 
 	@MsgbusMethod
 	public void sync(Request req, Response resp) {
-		resp.put("synced_time", syncService.getNtpClient().sync());
+		try {
+			resp.put("synced_time", syncService.getNtpClient().sync());
+		} catch (IOException e) {
+			throw new MsgbusException("ntp", "ntp-sync-failed");
+		}
 	}
 
 	@MsgbusMethod

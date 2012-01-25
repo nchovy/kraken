@@ -103,20 +103,12 @@ public class NtpClient {
 		}
 	}
 
-	public Date sync() {
-		try {
-			ServerTime time = getTime();
-			setSystemTime(addOffset(time));
-			logger.trace("kraken ntp: The time has been successfully synchronized with {} on {}", timeServer,
-					new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(time.getTransmit()));
-			return time.getTransmit();
-		} catch (SocketTimeoutException e) {
-			logger.error("kraken ntp: receive timeout.", e);
-		} catch (IOException e) {
-			logger.error("kraken ntp: sync failed.", e);
-		}
-
-		return null;
+	public Date sync() throws IOException {
+		ServerTime time = getTime();
+		setSystemTime(addOffset(time));
+		logger.trace("kraken ntp: The time has been successfully synchronized with {} on {}", timeServer, new SimpleDateFormat(
+				"yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(time.getTransmit()));
+		return time.getTransmit();
 	}
 
 	private ServerTime getTime() throws IOException {

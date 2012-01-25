@@ -15,6 +15,7 @@
  */
 package org.krakenapps.ntp.script;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
@@ -42,8 +43,7 @@ public class NtpScript implements Script {
 		this.context = context;
 	}
 
-	@ScriptUsage(description = "get/set time server", arguments = { @ScriptArgument(name = "server address",
-			type = "string", description = "new timeserver address", optional = true) })
+	@ScriptUsage(description = "get/set time server", arguments = { @ScriptArgument(name = "server address", type = "string", description = "new timeserver address", optional = true) })
 	public void timeserver(String[] args) {
 		if (args.length > 0) {
 			try {
@@ -57,8 +57,7 @@ public class NtpScript implements Script {
 		context.println(syncService.getTimeServer());
 	}
 
-	@ScriptUsage(description = "get/set connection timeout", arguments = { @ScriptArgument(name = "timeout limit",
-			type = "integer", description = "in millisecond", optional = true) })
+	@ScriptUsage(description = "get/set connection timeout", arguments = { @ScriptArgument(name = "timeout limit", type = "integer", description = "in millisecond", optional = true) })
 	public void timeout(String[] args) {
 		if (args.length > 0) {
 			Integer millisecond = Integer.parseInt(args[0]);
@@ -69,12 +68,13 @@ public class NtpScript implements Script {
 	}
 
 	public void sync(String[] args) {
-		Date result = syncService.getNtpClient().sync();
-		if (result != null)
+		try {
+			Date result = syncService.getNtpClient().sync();
 			context.printf("The time has been successfully synchronized with %s on %s\n", syncService.getTimeServer()
 					.getHostName(), new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS 'UTC'").format(result));
-		else
-			context.println("synchronized failed.");
+		} catch (IOException e) {
+			context.println("synchronized failed: " + e.getMessage());
+		}
 	}
 
 }
