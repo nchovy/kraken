@@ -47,6 +47,9 @@ public class AreaApiImpl extends DefaultEntityEventProvider<Area> implements Are
 	}
 
 	private List<Predicate> getPreds(List<Area> areas) {
+		if (areas == null)
+			return new ArrayList<Predicate>();
+		
 		List<Predicate> preds = new ArrayList<Predicate>(areas.size());
 		for (Area area : areas)
 			preds.add(getPred(area.getGuid()));

@@ -51,6 +51,9 @@ public class RoleApiImpl extends DefaultEntityEventProvider<Role> implements Rol
 	}
 
 	private List<Predicate> getPreds(List<Role> roles) {
+		if (roles == null)
+			return new ArrayList<Predicate>();
+		
 		List<Predicate> preds = new ArrayList<Predicate>(roles.size());
 		for (Role role : roles)
 			preds.add(getPred(role.getName()));

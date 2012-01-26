@@ -30,6 +30,9 @@ public class MapApiImpl extends DefaultEntityEventProvider<MapInfo> implements M
 	}
 
 	private List<Predicate> getPreds(List<MapInfo> maps) {
+		if (maps == null)
+			return new ArrayList<Predicate>();
+
 		List<Predicate> preds = new ArrayList<Predicate>(maps.size());
 		for (MapInfo map : maps)
 			preds.add(getPred(map.getGuid()));

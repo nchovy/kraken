@@ -109,6 +109,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	private List<Predicate> getPreds(List<User> users) {
+		if (users == null)
+			return new ArrayList<Predicate>();
+		
 		List<Predicate> preds = new ArrayList<Predicate>(users.size());
 		for (User user : users)
 			preds.add(getPred(user.getLoginName()));

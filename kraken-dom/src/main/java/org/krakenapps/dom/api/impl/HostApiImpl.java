@@ -131,6 +131,9 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	private List<Predicate> getPreds(List<? extends Object> objs) {
+		if (objs == null)
+			return new ArrayList<Predicate>();
+
 		List<Predicate> preds = new ArrayList<Predicate>(objs.size());
 		for (Object obj : objs) {
 			if (obj instanceof Host)

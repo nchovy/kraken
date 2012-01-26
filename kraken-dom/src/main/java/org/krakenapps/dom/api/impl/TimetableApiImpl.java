@@ -45,6 +45,9 @@ public class TimetableApiImpl extends DefaultEntityEventProvider<Timetable> impl
 	}
 
 	private List<Predicate> getPreds(List<Timetable> timetables) {
+		if (timetables == null)
+			return new ArrayList<Predicate>();
+		
 		List<Predicate> preds = new ArrayList<Predicate>(timetables.size());
 		for (Timetable timetable : timetables)
 			preds.add(getPred(timetable.getGuid()));

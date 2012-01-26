@@ -49,6 +49,9 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 	}
 
 	private List<Predicate> getPreds(List<OrganizationUnit> orgUnits) {
+		if (orgUnits == null)
+			return new ArrayList<Predicate>();
+
 		List<Predicate> preds = new ArrayList<Predicate>(orgUnits.size());
 		for (OrganizationUnit orgUnit : orgUnits)
 			preds.add(getPred(orgUnit.getGuid()));
