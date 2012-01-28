@@ -135,7 +135,8 @@ public class FileConfigCollection implements ConfigCollection {
 		Manifest manifest = db.getManifest(changeset);
 		List<RevLog> snapshot = new ArrayList<RevLog>();
 
-		for (long index = 0; index < reader.count(); index++) {
+		long count = reader.count();
+		for (long index = 0; index < count; index++) {
 			RevLog log = reader.read(index);
 			if (manifest.containsDoc(col.getName(), log.getDocId(), log.getRev()))
 				snapshot.add(log);
