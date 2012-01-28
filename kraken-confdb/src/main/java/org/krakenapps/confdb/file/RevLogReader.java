@@ -15,13 +15,17 @@
  */
 package org.krakenapps.confdb.file;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.ListIterator;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +53,11 @@ class RevLogReader {
 	 */
 	private byte[] buffer;
 
+	/**
+	 * cache log index table as possible
+	 */
+	private Map<Long, RevLog> logCache;
+
 	public RevLogReader(File logFile, File docFile) throws IOException {
 		this.logRaf = new RandomAccessFile(logFile, "r");
 		byte[] logHeader = new byte[16];
@@ -69,6 +78,22 @@ class RevLogReader {
 		this.docHeaderLength = 16 + ((docHeader[14] & 0xFF) << 8 + (docHeader[15] & 0xFF));
 
 		this.buffer = new byte[REV_LOG_SIZE];
+		this.logCache = new WeakHashMap<Long, RevLog>();
+
+		// load all index table
+		BufferedInputStream is = new BufferedInputStream(new FileInputStream(logFile));
+		try {
+			long index = 0;
+			is.skip(logHeaderLength);
+			while (is.read(buffer) > 0) {
+				ByteBuffer bb = ByteBuffer.wrap(buffer);
+				RevLog revLog = RevLog.deserialize(bb);
+				logCache.put(index++, revLog);
+			}
+		} finally {
+			is.close();
+		}
+
 	}
 
 	public long count() throws IOException {
@@ -107,7 +132,10 @@ class RevLogReader {
 	 * @throws IOException
 	 */
 	public RevLog read(long index) throws IOException {
-		// TODO: consider file header size
+		RevLog revLog = logCache.get(index);
+		if (revLog != null)
+			return revLog;
+
 		logRaf.seek(logHeaderLength + index * REV_LOG_SIZE);
 		logRaf.read(buffer);
 		ByteBuffer bb = ByteBuffer.wrap(buffer);
@@ -117,9 +145,8 @@ class RevLogReader {
 	public byte[] readDoc(long offset, int length) throws IOException {
 		byte[] buf = new byte[length];
 
-		docRaf.seek(docHeaderLength + offset);
-		docRaf.readInt(); // len
-		docRaf.readInt(); // opt
+		// skip also len(4) and option(4) field
+		docRaf.seek(docHeaderLength + offset + 8);
 		docRaf.read(buf);
 
 		return buf;
