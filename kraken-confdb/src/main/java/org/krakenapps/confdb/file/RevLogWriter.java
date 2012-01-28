@@ -15,8 +15,11 @@
  */
 package org.krakenapps.confdb.file;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -34,14 +37,18 @@ public class RevLogWriter {
 	/**
 	 * collection log file handle
 	 */
-	private RandomAccessFile logRaf;
+	private FileOutputStream logFileOutput;
+	private BufferedOutputStream logOutput;
+	private long logFileLength;
 	private int logHeaderLength;
 
 	/**
 	 * doc file handle
 	 */
-	private RandomAccessFile datRaf;
-	private int datHeaderLength;
+	private FileOutputStream datFileOutput;
+	private BufferedOutputStream datOutput;
+	private long datFileLength;
+	private final int datHeaderLength;
 
 	/**
 	 * collection log buffer
@@ -68,39 +75,54 @@ public class RevLogWriter {
 		if (datOption == null)
 			datOption = new byte[0];
 
-		this.logRaf = new RandomAccessFile(logFile, "rw");
-		if (!logExists) {
-			byte[] b = Arrays.copyOf(MAGIC_STRING, 16);
-			b[13] = 0x2; // version 1, log
-			b[14] = (byte) ((logOption.length >> 8) & 0xFF);
-			b[15] = (byte) (logOption.length & 0xFF);
-			this.logRaf.write(b);
-			this.logRaf.write(logOption);
-			this.logHeaderLength = 16 + logOption.length;
-		} else {
-			this.logRaf.seek(14);
-			byte b1 = this.logRaf.readByte();
-			byte b2 = this.logRaf.readByte();
-			this.logHeaderLength = 16 + ((b1 & 0xFF) << 8) + (b2 & 0xFF);
+		RandomAccessFile logRaf = new RandomAccessFile(logFile, "rw");
+		try {
+			if (!logExists) {
+				byte[] b = Arrays.copyOf(MAGIC_STRING, 16);
+				b[13] = 0x2; // version 1, log
+				b[14] = (byte) ((logOption.length >> 8) & 0xFF);
+				b[15] = (byte) (logOption.length & 0xFF);
+				logRaf.write(b);
+				logRaf.write(logOption);
+				this.logHeaderLength = 16 + logOption.length;
+			} else {
+				logRaf.seek(14);
+				byte b1 = logRaf.readByte();
+				byte b2 = logRaf.readByte();
+				this.logHeaderLength = 16 + ((b1 & 0xFF) << 8) + (b2 & 0xFF);
+			}
+		} finally {
+			logRaf.close();
 		}
 
-		this.datRaf = new RandomAccessFile(datFile, "rw");
-		if (!datExists) {
-			byte[] b = Arrays.copyOf(MAGIC_STRING, 16);
-			b[13] = 0x3; // version 1, dat
-			b[14] = (byte) ((datOption.length >> 8) & 0xFF);
-			b[15] = (byte) (datOption.length & 0xFF);
-			this.datRaf.write(b);
-			this.datRaf.write(datOption);
-			this.datHeaderLength = 16 + datOption.length;
-		} else {
-			this.datRaf.seek(14);
-			byte b1 = this.datRaf.readByte();
-			byte b2 = this.datRaf.readByte();
-			this.datHeaderLength = 16 + ((b1 & 0xFF) << 8) + (b2 & 0xFF);
+		RandomAccessFile datRaf = new RandomAccessFile(datFile, "rw");
+		try {
+			if (!datExists) {
+				byte[] b = Arrays.copyOf(MAGIC_STRING, 16);
+				b[13] = 0x3; // version 1, dat
+				b[14] = (byte) ((datOption.length >> 8) & 0xFF);
+				b[15] = (byte) (datOption.length & 0xFF);
+				datRaf.write(b);
+				datRaf.write(datOption);
+				this.datHeaderLength = 16 + datOption.length;
+			} else {
+				datRaf.seek(14);
+				byte b1 = datRaf.readByte();
+				byte b2 = datRaf.readByte();
+				this.datHeaderLength = 16 + ((b1 & 0xFF) << 8) + (b2 & 0xFF);
+			}
+		} finally {
+			datRaf.close();
 		}
 
 		this.buffer = new byte[COL_LOG_SIZE];
+		this.datFileLength = datFile.length();
+		this.logFileLength = logFile.length();
+
+		this.logFileOutput = new FileOutputStream(logFile, true);
+		this.datFileOutput = new FileOutputStream(datFile, true);
+		this.logOutput = new BufferedOutputStream(logFileOutput);
+		this.datOutput = new BufferedOutputStream(datFileOutput);
 
 		// TODO: check signature and collection metadata (e.g. version, name)
 	}
@@ -109,47 +131,51 @@ public class RevLogWriter {
 		byte[] doc = log.getDoc();
 
 		// append doc binary data
-		long datSize = datRaf.length();
-		datRaf.seek(datSize);
-		datRaf.writeInt(doc == null ? 0 : doc.length);
-		datRaf.writeInt(0); // option
+		ByteBuffer hbb = ByteBuffer.allocate(8);
+		hbb.putInt(doc == null ? 0 : doc.length);
+		hbb.putInt(0); // option
+
+		datOutput.write(hbb.array());
 		if (doc != null)
-			datRaf.write(doc);
+			datOutput.write(doc);
 
 		// append collection log
-		log.setDocOffset(datSize - datHeaderLength);
+		log.setDocOffset(datFileLength - datHeaderLength);
 		log.setDocLength(doc == null ? 0 : doc.length);
 
-		long logSize = logRaf.length();
+		if (doc != null)
+			datFileLength += 8 + doc.length;
+
 		if (log.getOperation() == CommitOp.CreateDoc)
-			log.setDocId((int) ((logSize - logHeaderLength) / COL_LOG_SIZE) + 1);
+			log.setDocId((int) ((logFileLength - logHeaderLength) / COL_LOG_SIZE) + 1);
 
 		ByteBuffer bb = ByteBuffer.wrap(buffer);
 		log.serialize(bb);
-		logRaf.seek(logSize);
-		logRaf.write(bb.array());
+		logOutput.write(bb.array());
 
-		sync();
+		logFileLength += COL_LOG_SIZE;
 
 		return log.getDocId();
 	}
 
-	private void sync() throws IOException {
-		datRaf.getFD().sync();
-		logRaf.getFD().sync();
+	public void sync() throws IOException {
+		datOutput.flush();
+		logOutput.flush();
+
+		datFileOutput.getFD().sync();
+		logFileOutput.getFD().sync();
 	}
 
 	public void close() {
-		try {
-			logRaf.close();
-		} catch (IOException e) {
-			logger.error("kraken confdb: cannot close collection log file", e);
-		}
+		closeOutput(datOutput, "doc file");
+		closeOutput(logOutput, "log file");
+	}
 
+	private void closeOutput(OutputStream os, String target) {
 		try {
-			datRaf.close();
+			os.close();
 		} catch (IOException e) {
-			logger.error("kraken confdb: cannot close doc file", e);
+			logger.error("kraken confdb: cannot close " + target, e);
 		}
 	}
 

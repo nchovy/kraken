@@ -108,7 +108,6 @@ class RevLogReader {
 	 */
 	public RevLog read(long index) throws IOException {
 		// TODO: consider file header size
-
 		logRaf.seek(logHeaderLength + index * REV_LOG_SIZE);
 		logRaf.read(buffer);
 		ByteBuffer bb = ByteBuffer.wrap(buffer);

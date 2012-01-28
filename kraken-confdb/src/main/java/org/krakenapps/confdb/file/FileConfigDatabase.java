@@ -265,7 +265,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 				manifest = getManifest(changeset);
 			else
 				manifest = xact.getManifest();
-			
+
 			CollectionEntry col = manifest.getCollectionEntry(name);
 
 			// create new collection if not exists

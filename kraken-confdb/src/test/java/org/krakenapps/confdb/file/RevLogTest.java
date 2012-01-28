@@ -145,6 +145,7 @@ public class RevLogTest {
 
 		int doc1 = writer.write(log1);
 		int doc2 = writer.write(log2);
+		writer.sync();
 
 		RevLog read1 = reader.findRev(1);
 		RevLog read2 = reader.findRev(2);
@@ -158,6 +159,7 @@ public class RevLogTest {
 		RevLog log = newLog(1, 0, "goodbye world");
 
 		writer.write(log);
+		writer.sync();
 
 		RevLog read = reader.read(0);
 
