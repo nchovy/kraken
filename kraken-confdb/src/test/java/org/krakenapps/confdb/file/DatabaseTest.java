@@ -62,14 +62,12 @@ public class DatabaseTest {
 
 	@Test
 	public void testDbRollback2() throws IOException {
-		assertEquals(0, db.count(String.class));
-
 		db.add("xeraph");
 		db.add("8con");
 		assertEquals(2, db.count(String.class));
 
-		db.rollback(1, "xeraph", "back to the initial state");
-		assertEquals(0, db.count(String.class));
+		db.rollback(2, "xeraph", "back to the initial state");
+		assertEquals(1, db.count(String.class));
 	}
 
 	@Test

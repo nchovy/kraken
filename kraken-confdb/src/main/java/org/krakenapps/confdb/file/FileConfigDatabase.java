@@ -249,13 +249,28 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigCollection ensureCollection(String name) {
+		return ensureCollection(null, name);
+	}
+
+	@Override
+	public ConfigCollection ensureCollection(ConfigTransaction xact, Class<?> cls) {
+		return ensureCollection(xact, getCollectionName(cls));
+	}
+
+	@Override
+	public ConfigCollection ensureCollection(ConfigTransaction xact, String name) {
 		try {
-			Manifest manifest = getManifest(changeset);
+			Manifest manifest = null;
+			if (xact == null)
+				manifest = getManifest(changeset);
+			else
+				manifest = xact.getManifest();
+			
 			CollectionEntry col = manifest.getCollectionEntry(name);
 
 			// create new collection if not exists
 			if (col == null)
-				col = createCollection(name);
+				col = createCollection(xact, name);
 
 			FileConfigCollection collection = new FileConfigCollection(this, changeset, col);
 			if (changeset != null)
@@ -268,11 +283,18 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	private CollectionEntry createCollection(String name) throws IOException {
-		ConfigTransaction xact = beginTransaction();
+	private CollectionEntry createCollection(ConfigTransaction xact, String name) throws IOException {
+		boolean implicitTransact = xact == null;
+
+		if (xact == null)
+			xact = beginTransaction();
+
 		try {
 			xact.log(CommitOp.CreateCol, name, 0, 0);
-			xact.commit(null, null);
+			if (implicitTransact) {
+				xact.commit(null, null);
+			}
+
 			int newColId = xact.getManifest().getCollectionId(name);
 			return new CollectionEntry(newColId, name);
 		} catch (Throwable e) {
@@ -476,49 +498,78 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public int count(Class<?> cls) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			throw new IllegalStateException("Collection not found: class " + cls.getName());
 		return collection.count();
 	}
 
 	@Override
-	public int count(Class<?> cls, ConfigTransaction xact) {
-		ConfigCollection collection = ensureCollection(cls);
+	public int count(ConfigTransaction xact, Class<?> cls) {
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			throw new IllegalStateException("Collection not found: class " + cls.getName());
 		return collection.count(xact);
 	}
 
 	@Override
 	public ConfigIterator findAll(Class<?> cls) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			return null;
+
 		return collection.findAll();
 	}
 
 	@Override
 	public ConfigIterator find(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			return null;
+
 		return collection.find(pred);
 	}
 
 	@Override
 	public Config findOne(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = ensureCollection(cls);
+		ConfigCollection collection = getCollection(cls);
+		if (collection == null)
+			return null;
+
 		return collection.findOne(pred);
 	}
 
 	@Override
 	public Config add(Object doc) {
-		ConfigCollection collection = ensureCollection(doc.getClass());
-		return collection.add(PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+		ConfigTransaction xact = beginTransaction();
+		try {
+			ConfigCollection collection = ensureCollection(xact, doc.getClass());
+			Config c = collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+			xact.commit(null, null);
+			return c;
+		} catch (Throwable t) {
+			xact.rollback();
+			throw new RollbackException(t);
+		}
 	}
 
 	@Override
 	public Config add(Object doc, String committer, String log) {
-		ConfigCollection collection = ensureCollection(doc.getClass());
-		return collection.add(PrimitiveConverter.serialize(doc, new CascadeUpdate()), committer, log);
+		ConfigTransaction xact = beginTransaction();
+		try {
+			ConfigCollection collection = ensureCollection(xact, doc.getClass());
+			Config c = collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+			xact.commit(committer, log);
+			return c;
+		} catch (Throwable t) {
+			xact.rollback();
+			throw new RollbackException(t);
+		}
 	}
 
 	@Override
 	public Config add(ConfigTransaction xact, Object doc) {
-		ConfigCollection collection = ensureCollection(doc.getClass());
+		ConfigCollection collection = ensureCollection(xact, doc.getClass());
 		return collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
 	}
 

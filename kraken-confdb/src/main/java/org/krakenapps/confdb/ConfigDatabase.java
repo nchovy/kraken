@@ -50,6 +50,10 @@ public interface ConfigDatabase {
 
 	ConfigCollection ensureCollection(String name);
 
+	ConfigCollection ensureCollection(ConfigTransaction xact, Class<?> cls);
+
+	ConfigCollection ensureCollection(ConfigTransaction xact, String name);
+
 	/**
 	 * drop collection, but it's just logical deletion (physical data will not
 	 * be removed)
@@ -101,7 +105,7 @@ public interface ConfigDatabase {
 
 	int count(Class<?> cls);
 
-	int count(Class<?> cls, ConfigTransaction xact);
+	int count(ConfigTransaction xact, Class<?> cls);
 
 	ConfigIterator findAll(Class<?> cls);
 
@@ -130,4 +134,5 @@ public interface ConfigDatabase {
 	Config remove(Config c, boolean checkConflict, String committer, String log);
 
 	Config remove(ConfigTransaction xact, Config c, boolean checkConflict);
+
 }
