@@ -164,24 +164,21 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config add(ConfigTransaction xact, Object doc) {
-		RevLogWriter writer = null;
 		try {
-			writer = new RevLogWriter(logFile, datFile);
+			RevLogWriter writer = getWriter(xact);
 
 			ByteBuffer bb = encodeDocument(doc);
 			RevLog revlog = newLog(0, 0, CommitOp.CreateDoc, bb.array());
 
 			// write collection log
 			int docId = writer.write(revlog);
+			writer.sync();
 
 			// write db changelog
 			xact.log(CommitOp.CreateDoc, col.getName(), docId, revlog.getRev());
 			return new FileConfig(db, this, docId, revlog.getRev(), revlog.getPrevRev(), doc);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot add object", e);
-		} finally {
-			if (writer != null)
-				writer.close();
 		}
 	}
 
@@ -217,10 +214,9 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config update(ConfigTransaction xact, Config c, boolean checkConflict) {
-		RevLogWriter writer = null;
 		ConfigIterator it = null;
 		try {
-			writer = new RevLogWriter(logFile, datFile);
+			RevLogWriter writer = getWriter(xact);
 			it = getIterator(null);
 
 			// find any conflict (if common parent exists)
@@ -245,9 +241,6 @@ public class FileConfigCollection implements ConfigCollection {
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
 		} finally {
-			if (writer != null)
-				writer.close();
-
 			if (it != null)
 				it.close();
 		}
@@ -279,9 +272,8 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config remove(ConfigTransaction xact, Config c, boolean checkConflict) {
-		RevLogWriter writer = null;
 		try {
-			writer = new RevLogWriter(logFile, datFile);
+			RevLogWriter writer = getWriter(xact);
 
 			// TODO: check conflict
 			RevLog revlog = newLog(c.getId(), c.getRevision(), CommitOp.DeleteDoc, null);
@@ -292,9 +284,6 @@ public class FileConfigCollection implements ConfigCollection {
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), null);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot remove object", e);
-		} finally {
-			if (writer != null)
-				writer.close();
 		}
 	}
 
@@ -306,6 +295,17 @@ public class FileConfigCollection implements ConfigCollection {
 		log.setOperation(op);
 		log.setDoc(doc);
 		return log;
+	}
+
+	private RevLogWriter getWriter(ConfigTransaction xact) throws IOException {
+		FileConfigTransaction fxact = (FileConfigTransaction) xact;
+		RevLogWriter writer = fxact.getWriters().get(logFile);
+
+		if (writer == null) {
+			writer = new RevLogWriter(logFile, datFile);
+			fxact.getWriters().put(logFile, writer);
+		}
+		return writer;
 	}
 
 	private static class EmptyIterator implements ConfigIterator {

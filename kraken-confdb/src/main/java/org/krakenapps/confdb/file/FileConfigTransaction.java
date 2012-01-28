@@ -18,7 +18,9 @@ package org.krakenapps.confdb.file;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
@@ -40,6 +42,8 @@ public class FileConfigTransaction implements ConfigTransaction {
 	private File manifestLogFile;
 	private File manifestDatFile;
 
+	private Map<File, RevLogWriter> writers;
+
 	public FileConfigTransaction(FileConfigDatabase db) {
 		this.db = db;
 		File dbDir = db.getDbDirectory();
@@ -52,6 +56,12 @@ public class FileConfigTransaction implements ConfigTransaction {
 		changeDatFile = new File(dbDir, "changeset.dat");
 		manifestLogFile = new File(dbDir, "manifest.log");
 		manifestDatFile = new File(dbDir, "manifest.dat");
+
+		writers = new HashMap<File, RevLogWriter>();
+	}
+
+	public Map<File, RevLogWriter> getWriters() {
+		return writers;
 	}
 
 	@Override
@@ -108,15 +118,23 @@ public class FileConfigTransaction implements ConfigTransaction {
 		} catch (Exception e) {
 			throw new IllegalStateException(e);
 		} finally {
+			closeWriters();
 			db.unlock();
 		}
 	}
 
 	@Override
 	public void rollback() {
-		// rollback other transaction
-
+		closeWriters();
 		db.unlock();
+	}
+
+	private void closeWriters() {
+		for (RevLogWriter writer : writers.values()) {
+			writer.close();
+		}
+
+		writers.clear();
 	}
 
 	private Manifest writeManifestLog() throws IOException {
