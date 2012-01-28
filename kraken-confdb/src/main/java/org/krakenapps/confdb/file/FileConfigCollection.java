@@ -168,8 +168,6 @@ public class FileConfigCollection implements ConfigCollection {
 		try {
 			writer = new RevLogWriter(logFile, datFile);
 
-			// TODO: check previous revision, is need update?
-
 			ByteBuffer bb = encodeDocument(doc);
 			RevLog revlog = newLog(0, 0, CommitOp.CreateDoc, bb.array());
 

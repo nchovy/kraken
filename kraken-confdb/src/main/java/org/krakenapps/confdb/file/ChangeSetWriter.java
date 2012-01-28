@@ -38,7 +38,7 @@ class ChangeSetWriter {
 		cl.setRev(1);
 		cl.setOperation(CommitOp.CreateDoc);
 		cl.setDoc(change.serialize());
-
+		
 		RevLogWriter writer = null;
 		try {
 			writer = new RevLogWriter(changeLogFile, changeDatFile);
