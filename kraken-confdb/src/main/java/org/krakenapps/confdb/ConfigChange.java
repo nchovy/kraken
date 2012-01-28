@@ -15,6 +15,8 @@
  */
 package org.krakenapps.confdb;
 
+import org.krakenapps.api.FieldOption;
+
 /**
  * changed config entry for changeset log
  * 
@@ -24,6 +26,7 @@ package org.krakenapps.confdb;
 public class ConfigChange {
 	private CommitOp operation;
 
+	@FieldOption(skip = true)
 	private String colName;
 
 	private int colId;

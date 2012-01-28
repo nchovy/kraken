@@ -18,6 +18,7 @@ package org.krakenapps.confdb.file;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -109,6 +110,7 @@ class ChangeLog implements CommitLog {
 		m.put("committer", committer);
 		m.put("msg", message);
 		m.put("manifest_id", manifestId);
+		m.put("col_names", serializeCollectionNames());
 		m.put("changeset", PrimitiveConverter.serialize(changeset));
 
 		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOf(m));
@@ -116,9 +118,35 @@ class ChangeLog implements CommitLog {
 		return bb.array();
 	}
 
+	private List<Object> serializeCollectionNames() {
+		Map<String, Integer> m = new HashMap<String, Integer>();
+		for (ConfigChange c : changeset)
+			m.put(c.getColName(), c.getColId());
+
+		List<Object> cols = new ArrayList<Object>();
+		for (String name : m.keySet()) {
+			cols.add(new Object[] { m.get(name), name });
+		}
+		return cols;
+	}
+
+	private static Map<Integer, String> parseCollectionNames(Object[] l) {
+		Map<Integer, String> m = new HashMap<Integer, String>();
+		if (l == null)
+			return m;
+
+		for (Object o : l) {
+			Object[] arr = (Object[]) o;
+			m.put((Integer) arr[0], (String) arr[1]);
+		}
+		return m;
+	}
+
 	public static ChangeLog deserialize(byte[] b) {
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
+
+		Map<Integer, String> colNames = parseCollectionNames((Object[]) m.get("col_names"));
 
 		ChangeLog c = new ChangeLog();
 		c.setCreated((Date) m.get("created"));
@@ -126,8 +154,16 @@ class ChangeLog implements CommitLog {
 		c.setMessage((String) m.get("msg"));
 		c.setManifestId((Integer) m.get("manifest_id"));
 		List<Object> list = Arrays.asList((Object[]) m.get("changeset"));
-		c.setChangeSet(new ArrayList<ConfigChange>(PrimitiveConverter.parseCollection(ConfigChange.class, list)));
+		c.setChangeSet(parseConfigChanges(list, colNames));
 		return c;
+	}
+
+	private static List<ConfigChange> parseConfigChanges(List<Object> list, Map<Integer, String> colNames) {
+		Collection<ConfigChange> changes = PrimitiveConverter.parseCollection(ConfigChange.class, list);
+		List<ConfigChange> l = new ArrayList<ConfigChange>(changes);
+		for (ConfigChange c : l)
+			c.setColName(colNames.get(c.getColId()));
+		return l;
 	}
 
 	@Override
