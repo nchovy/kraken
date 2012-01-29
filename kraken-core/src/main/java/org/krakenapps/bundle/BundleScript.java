@@ -17,6 +17,7 @@ package org.krakenapps.bundle;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -40,6 +41,7 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.main.Kraken;
+import org.krakenapps.pkg.HttpWagon;
 import org.krakenapps.pkg.MavenMetadata;
 import org.krakenapps.pkg.ProgressMonitorImpl;
 import org.osgi.framework.Bundle;
@@ -217,6 +219,28 @@ public class BundleScript implements Script {
 				} else if (args[0].startsWith("file:\\\\")) {
 					String path = args[0].replace('\\', '/');
 					bundleId = manager.installBundle(path);
+				} else if (args[0].startsWith("http://")) {
+					URL url = new URL(args[0]);
+					String dir = System.getProperty("kraken.download.dir");
+					String[] pathTokens = url.getPath().split("/");
+					File f = new File(dir, pathTokens[pathTokens.length - 1]);
+					f.getParentFile().mkdirs();
+					context.println("trying download to " + f.getAbsolutePath());
+
+					if (f.createNewFile()) {
+						byte[] b = HttpWagon.download(url);
+						FileOutputStream os = new FileOutputStream(f);
+						try {
+							os.write(b);
+						} finally {
+							os.close();
+						}
+
+						bundleId = manager.installBundle("file:///" + f.getAbsolutePath());
+					} else {
+						context.println("cannot download file, file already exists");
+						return;
+					}
 				} else {
 					context.println("local path should starts with file:// or file:\\\\");
 					return;
@@ -243,6 +267,10 @@ public class BundleScript implements Script {
 			context.println("Usage:  bundle.install bundlePath ");
 			context.println("        bundle.install groupId artifactId version");
 			context.println("    bundlePath example: file:///C:\\bundle\\sample.jar or file:///root/kraken/sample.jar");
+		} catch (MalformedURLException e) {
+			context.println("Invalid bundle download URL");
+		} catch (IOException e) {
+			context.println(e.getMessage());
 		}
 	}
 
