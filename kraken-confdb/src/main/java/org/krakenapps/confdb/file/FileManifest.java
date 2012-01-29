@@ -26,7 +26,6 @@ import java.util.TreeSet;
 
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
-import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.ConfigEntry;
@@ -131,10 +130,27 @@ class FileManifest implements Manifest {
 
 	@Override
 	public byte[] serialize() {
-		Object o = PrimitiveConverter.serialize(this);
-		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOf(o));
-		EncodingRule.encode(bb, o);
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("cols", serializeCols());
+		m.put("configs", serializeConfigs());
+
+		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOfMap(m));
+		EncodingRule.encodeMap(bb, m);
 		return bb.array();
+	}
+
+	private List<Object> serializeCols() {
+		List<Object> l = new ArrayList<Object>(cols.size());
+		for (CollectionEntry e : cols)
+			l.add(new Object[] { e.getId(), e.getName() });
+		return l;
+	}
+
+	private List<Object> serializeConfigs() {
+		List<Object> l = new ArrayList<Object>(configs.size());
+		for (ConfigEntry e : configs)
+			l.add(new Object[] { e.getColId(), e.getDocId(), e.getRev() });
+		return l;
 	}
 
 	public static FileManifest deserialize(byte[] b) {
@@ -144,15 +160,27 @@ class FileManifest implements Manifest {
 
 		// manual coding instead of primitive converter for performance
 		for (Object o : (Object[]) m.get("cols")) {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> col = (Map<String, Object>) o;
-			manifest.add(new CollectionEntry((Integer) col.get("id"), (String) col.get("name")));
+			if (o instanceof Map) {
+				// legacy format support
+				@SuppressWarnings("unchecked")
+				Map<String, Object> col = (Map<String, Object>) o;
+				manifest.add(new CollectionEntry((Integer) col.get("id"), (String) col.get("name")));
+			} else {
+				Object[] arr = (Object[]) o;
+				manifest.add(new CollectionEntry((Integer) arr[0], (String) arr[1]));
+			}
 		}
 
 		for (Object o : (Object[]) m.get("configs")) {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> c = (Map<String, Object>) o;
-			manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
+			if (o instanceof Map) {
+				// legacy format support
+				@SuppressWarnings("unchecked")
+				Map<String, Object> c = (Map<String, Object>) o;
+				manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
+			} else {
+				Object[] arr = (Object[]) o;
+				manifest.add(new ConfigEntry((Integer) arr[0], (Integer) arr[1], (Long) arr[2]));
+			}
 		}
 
 		return manifest;
