@@ -140,7 +140,22 @@ class FileManifest implements Manifest {
 	public static FileManifest deserialize(byte[] b) {
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
-		return PrimitiveConverter.parse(FileManifest.class, m);
+		FileManifest manifest = new FileManifest();
+
+		// manual coding instead of primitive converter for performance
+		for (Object o : (Object[]) m.get("cols")) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> col = (Map<String, Object>) o;
+			manifest.add(new CollectionEntry((Integer) col.get("id"), (String) col.get("name")));
+		}
+
+		for (Object o : (Object[]) m.get("configs")) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> c = (Map<String, Object>) o;
+			manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
+		}
+
+		return manifest;
 	}
 
 	@Override

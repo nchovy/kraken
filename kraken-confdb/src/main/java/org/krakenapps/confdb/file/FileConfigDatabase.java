@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
@@ -32,7 +31,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.api.PrimitiveSerializeCallback;
-import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CommitLog;
@@ -41,7 +39,6 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
-import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
@@ -368,11 +365,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			reader = new RevLogReader(manifestLogFile, manifestDatFile);
 			RevLog revlog = reader.findDoc(manifestId);
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
-			Map<String, Object> m = EncodingRule.decodeMap(ByteBuffer.wrap(doc));
 
 			// manifest id should be set here (id = revlog id)
-			FileManifest manifest = parseManifest(m);
+			FileManifest manifest = FileManifest.deserialize(doc);
 			manifest.setId(manifestId);
+
 			return manifest;
 		} catch (FileNotFoundException e) {
 			return new FileManifest();
@@ -382,25 +379,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 			if (reader != null)
 				reader.close();
 		}
-	}
-
-	// manual coding instead of primitive converter for performance
-	private FileManifest parseManifest(Map<String, Object> m) {
-		FileManifest manifest = new FileManifest();
-
-		for (Object o : (Object[]) m.get("cols")) {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> col = (Map<String, Object>) o;
-			manifest.add(new CollectionEntry((Integer) col.get("id"), (String) col.get("name")));
-		}
-
-		for (Object o : (Object[]) m.get("configs")) {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> c = (Map<String, Object>) o;
-			manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
-		}
-
-		return manifest;
 	}
 
 	@Override

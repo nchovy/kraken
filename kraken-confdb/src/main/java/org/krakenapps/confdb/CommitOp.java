@@ -29,10 +29,6 @@ public enum CommitOp {
 	}
 
 	public static CommitOp parse(int code) {
-		for (CommitOp op : values())
-			if (op.getCode() == code)
-				return op;
-
-		return null;
+		return values()[code - 1];
 	}
 }

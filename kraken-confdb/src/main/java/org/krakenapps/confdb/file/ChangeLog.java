@@ -17,14 +17,12 @@ package org.krakenapps.confdb.file;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.api.CollectionTypeHint;
-import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
@@ -111,11 +109,19 @@ class ChangeLog implements CommitLog {
 		m.put("msg", message);
 		m.put("manifest_id", manifestId);
 		m.put("col_names", serializeCollectionNames());
-		m.put("changeset", PrimitiveConverter.serialize(changeset));
+		m.put("changeset", serializeChangeset());
 
 		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOf(m));
 		EncodingRule.encode(bb, m);
 		return bb.array();
+	}
+
+	private List<Object> serializeChangeset() {
+		List<Object> l = new ArrayList<Object>(changeset.size());
+		for (ConfigChange c : changeset) {
+			l.add(new Object[] { c.getOperation().getCode(), c.getColId(), c.getDocId() });
+		}
+		return l;
 	}
 
 	private List<Object> serializeCollectionNames() {
@@ -153,22 +159,33 @@ class ChangeLog implements CommitLog {
 		c.setManifestId((Integer) m.get("manifest_id"));
 
 		Map<Integer, String> colNames = parseCollectionNames((Object[]) m.get("col_names"));
-		List<Object> list = Arrays.asList((Object[]) m.get("changeset"));
-		c.setChangeSet(parseConfigChanges(list, colNames));
+		c.setChangeSet(parseConfigChanges((Object[]) m.get("changeset"), colNames));
+
 		return c;
 	}
 
-	private static List<ConfigChange> parseConfigChanges(List<Object> list, Map<Integer, String> colNames) {
-		List<ConfigChange> l = new ArrayList<ConfigChange>(list.size());
+	private static List<ConfigChange> parseConfigChanges(Object[] list, Map<Integer, String> colNames) {
+		List<ConfigChange> l = new ArrayList<ConfigChange>(list.length);
 		for (Object o : list) {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> m = (Map<String, Object>) o;
-			ConfigChange c = new ConfigChange();
-			c.setOperation(CommitOp.valueOf((String) m.get("operation")));
-			c.setColId((Integer) m.get("col_id"));
-			c.setColName(colNames.get(c.getColId()));
-			c.setDocId((Integer) m.get("doc_id"));
-			l.add(c);
+			if (o instanceof Map) {
+				// legacy format support
+				@SuppressWarnings("unchecked")
+				Map<String, Object> m = (Map<String, Object>) o;
+				ConfigChange c = new ConfigChange();
+				c.setOperation(CommitOp.valueOf((String) m.get("operation")));
+				c.setColId((Integer) m.get("col_id"));
+				c.setColName(colNames.get(c.getColId()));
+				c.setDocId((Integer) m.get("doc_id"));
+				l.add(c);
+			} else {
+				Object[] arr = (Object[]) o;
+				ConfigChange c = new ConfigChange();
+				c.setOperation(CommitOp.parse((Integer) arr[0]));
+				c.setColId((Integer) arr[1]);
+				c.setColName(colNames.get(c.getColId()));
+				c.setDocId((Integer) arr[2]);
+				l.add(c);
+			}
 		}
 		return l;
 	}
