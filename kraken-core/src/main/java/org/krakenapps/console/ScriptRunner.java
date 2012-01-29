@@ -17,9 +17,6 @@ package org.krakenapps.console;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -40,7 +37,7 @@ public class ScriptRunner implements Runnable {
 	private boolean isPromptEnabled = true;
 
 	public ScriptRunner(ScriptContext context, String line) {
-		String[] tokens = tokenize(line);
+		String[] tokens = ScriptArgumentParser.tokenize(line.trim());
 		String[] commandTokens = tokens[0].split("\\.");
 		String alias = null;
 		if (commandTokens.length != 2) {
@@ -72,30 +69,6 @@ public class ScriptRunner implements Runnable {
 		Script script = scriptFactory.createScript();
 		context.setCurrentScript(script);
 		Kraken.getContext().ungetService(refs[0]);
-	}
-
-	// http://www.regular-expressions.info/regexbuddy/stringescaped.html
-	private static String tokenizerRegex = "\"([^\"\\\\]*(?:\\\\.[^\"\\\\]*)*)\"|(\\S+)";
-	private static String escapeSequenceRegex = "\\\\(.)(?=[^\"\\\\]*)";
-	private static Pattern tokenizerPattern = Pattern.compile(tokenizerRegex);
-	private static Pattern escapeSequencePattern = Pattern.compile(escapeSequenceRegex);
-	private static String[] tokenize(String line) {
-		ArrayList<String> r = new ArrayList<String>();
-	    Matcher m = tokenizerPattern.matcher(line);
-	    while (m.find()) {
-	    	String matched;
-	        if (m.group(1) != null) {
-	            matched = m.group(1);
-	        } else {
-	            matched = m.group(2);
-	        }
-	        Matcher em = escapeSequencePattern.matcher(matched);
-	        r.add(em.replaceAll("$1"));
-	    }
-	    
-	    String[] result = new String[r.size()];
-	    
-		return r.toArray(result);
 	}
 
 	public void setPrompt(boolean enabled) {
@@ -136,12 +109,11 @@ public class ScriptRunner implements Runnable {
 
 			method.invoke(script, (Object) args);
 		} catch (IllegalArgumentException e) {
-			if (usage == null)
-			{
+			if (usage == null) {
 				context.println("IllegalArgumentException, but no usage found. Please ask script author to add usage information.");
 				return;
 			}
-			
+
 			if (usage.description() != null) {
 				context.println("Description");
 				context.println("");
@@ -191,19 +163,5 @@ public class ScriptRunner implements Runnable {
 				count++;
 		}
 		return count;
-	}
-
-	/* to test quoted tokenizer
-	 * expected result: 
-	 *   abc "hello" def
-	 *   hah aha
-	 *   abc \" def
-	 */
-	public static void main(String[] args) {
-		String haystack = "\"abc \\\"hello\\\" def\" \"hah aha\" \"abc \\\\\\\" def\"";
-		String[] tokenized = tokenize(haystack);
-		for (String token: tokenized) {
-			System.out.println(token);
-		}
 	}
 }
