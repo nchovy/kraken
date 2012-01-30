@@ -54,16 +54,21 @@ public class DomScript implements Script {
 	@ScriptUsage(description = "reset password", arguments = {
 			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
 			@ScriptArgument(name = "login name", type = "string", description = "login name"),
-			@ScriptArgument(name = "password", type = "string", description = "new password") })
+			@ScriptArgument(name = "password", type = "string", description = "new password"),
+			@ScriptArgument(name = "password as hash", type = "string", description = "true if hash input or false. false by default", optional = false) })
 	public void passwd(String[] args) {
 		String domain = args[0];
 		String loginName = args[1];
 		String password = args[2];
+		boolean updatePassword = true;
+		if (args.length >= 4) {
+			updatePassword = !Boolean.parseBoolean(args[3]);
+		}
 
 		User user = userApi.getUser(domain, loginName);
 		user.setPassword(password);
 
-		userApi.updateUser(domain, user, true);
+		userApi.updateUser(domain, user, updatePassword);
 		context.println("password reset");
 	}
 

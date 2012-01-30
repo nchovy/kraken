@@ -62,7 +62,7 @@ public class User {
 	@FieldOption(nullable = false)
 	private Date updated = new Date();
 
-	@FieldOption(nullable = false)
+	@FieldOption(nullable = true)
 	private Date lastPasswordChange;
 
 	public String getLoginName() {
