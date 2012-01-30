@@ -513,7 +513,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigIterator findAll(Class<?> cls) {
-		ConfigCollection collection = getCollection(cls);
+		ConfigCollection collection = ensureCollection(cls);
 		if (collection == null)
 			return null;
 
@@ -522,7 +522,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public ConfigIterator find(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = getCollection(cls);
+		ConfigCollection collection = ensureCollection(cls);
 		if (collection == null)
 			return null;
 
@@ -531,7 +531,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config findOne(Class<?> cls, Predicate pred) {
-		ConfigCollection collection = getCollection(cls);
+		ConfigCollection collection = ensureCollection(cls);
 		if (collection == null)
 			return null;
 
