@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.krakenapps.rpc.RpcAsyncCallback;
+import org.krakenapps.rpc.RpcAsyncResult;
 import org.krakenapps.rpc.RpcAsyncTable;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;

@@ -5,19 +5,24 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.krakenapps.log.api.Logger;
+import org.krakenapps.rpc.RpcAsyncCallback;
 import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcSession;
 
 public interface SentryProxy {
 	boolean isOpen();
-	
+
 	String getGuid();
 
 	Object call(String method, Object[] params) throws RpcException, InterruptedException;
 
 	Object call(String method, Object[] params, long timeout) throws RpcException, InterruptedException;
 
-	void requestLogChannel() throws RpcException, InterruptedException;
+	void call(String method, Object[] params, RpcAsyncCallback callback);
+
+	void post(String method, Object[] params);
+
+	void requestLogChannel();
 
 	RpcSession getLogSession();
 
@@ -59,8 +64,8 @@ public interface SentryProxy {
 	void registerLogger(Logger logger);
 
 	void unregisterLogger(String loggerFullName);
-	
+
 	void loggerStarted(String loggerFullName, int interval);
-	
+
 	void loggerStopped(String loggerFullName);
 }

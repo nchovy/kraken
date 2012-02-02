@@ -33,6 +33,7 @@ import org.krakenapps.base.SentryProxyRegistry;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerFactory;
 import org.krakenapps.log.api.LoggerRegistry;
+import org.krakenapps.rpc.RpcAsyncCallback;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcException;
 import org.krakenapps.rpc.RpcSession;
@@ -96,7 +97,19 @@ public class SentryProxyImpl implements SentryProxy {
 	}
 
 	@Override
-	public void requestLogChannel() throws RpcException, InterruptedException {
+	public void call(String method, Object[] params, RpcAsyncCallback callback) {
+		verify();
+		commandSession.call("run", new Object[] { method, params }, callback);
+	}
+
+	@Override
+	public void post(String method, Object[] params) {
+		verify();
+		commandSession.post("run", new Object[] { method, params });
+	}
+
+	@Override
+	public void requestLogChannel() {
 		verify();
 
 		if (nonce != null)
@@ -106,11 +119,7 @@ public class SentryProxyImpl implements SentryProxy {
 			throw new IllegalStateException("log session already exists");
 
 		nonce = UUID.randomUUID().toString();
-		try {
-			call("connectLogChannel", new Object[] { nonce });
-		} catch (Exception e) {
-			nonce = null;
-		}
+		post("connectLogChannel", new Object[] { nonce });
 	}
 
 	@Override

@@ -17,6 +17,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.channel.Channel;
+import org.krakenapps.rpc.RpcAsyncCallback;
+import org.krakenapps.rpc.RpcAsyncResult;
 import org.krakenapps.rpc.RpcAsyncTable;
 import org.krakenapps.rpc.RpcBlockingTable;
 import org.krakenapps.rpc.RpcConnection;

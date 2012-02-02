@@ -70,7 +70,7 @@ public class BaseRpcService extends SimpleRpcService {
 	@RpcMethod(name = "hello")
 	public void hello(String guid) {
 		RpcConnection connection = RpcContext.getSession().getConnection();
-		//validateGuid(guid, connection);
+		// validateGuid(guid, connection);
 
 		// create reverse connection
 		RpcSession sentryCommandSession;
@@ -109,11 +109,7 @@ public class BaseRpcService extends SimpleRpcService {
 		}
 
 		// make log channel
-		try {
-			sentry.requestLogChannel();
-		} catch (InterruptedException e) {
-			slogger.error("kraken-base: interrupted request log channel", e);
-		}
+		sentry.requestLogChannel();
 	}
 
 	private void validateGuid(String guid, RpcConnection connection) {
@@ -126,9 +122,9 @@ public class BaseRpcService extends SimpleRpcService {
 		}
 
 		if (!guid.equals(cn)) {
-			slogger.error("kraken base: connection [{}] certificate mismatch, CN [{}], GUID [{}]",
-					new Object[] { connection.getRemoteAddress(), cn, guid });
-			
+			slogger.error("kraken base: connection [{}] certificate mismatch, CN [{}], GUID [{}]", new Object[] {
+					connection.getRemoteAddress(), cn, guid });
+
 			throw new IllegalStateException("subject does not match");
 		}
 	}

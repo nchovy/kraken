@@ -1,7 +1,5 @@
 package org.krakenapps.rpc;
 
-import org.krakenapps.rpc.impl.RpcAsyncCallback;
-import org.krakenapps.rpc.impl.RpcAsyncResult;
 
 public interface RpcSession {
 	RpcSessionState getState();

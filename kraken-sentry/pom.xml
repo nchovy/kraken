@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-sentry</artifactId>
-	<version>1.2.0</version>
+	<version>1.3.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Sentry</name>
 	<build>
@@ -25,14 +25,16 @@
 							org.krakenapps.sentry
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.sentry;version="1.2.0",
-							org.krakenapps.sentry.process;version="1.2.0"
+							org.krakenapps.sentry;version=${project.version},
+							org.krakenapps.sentry.process;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.sentry.impl,
 							org.krakenapps.sentry.logger
 						</Private-Package>
-						<Import-Package>*</Import-Package>
+						<Import-Package>
+							org.krakenapps.rpc;version="1.5.0",*
+						</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -70,7 +72,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-rpc</artifactId>
-			<version>1.4.0</version>
+			<version>1.5.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>

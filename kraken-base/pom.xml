@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-base</artifactId>
-	<version>1.2.0</version>
+	<version>1.3.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Base</name>
 	<build>
@@ -23,19 +23,15 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.base</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.base,
-							org.krakenapps.base.msgbus,
-							org.krakenapps.base.msgbus.exception
+							org.krakenapps.base;version=${project.version},
+							org.krakenapps.base.msgbus;version=${project.version},
+							org.krakenapps.base.msgbus.exception;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.base.impl</Private-Package>
 						<Import-Package>
+							org.krakenapps.rpc;version="1.5.0",
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
-							org.krakenapps.dom.model;resolution:=optional,
-							org.krakenapps.dom.api;resolution:=optional,
-							javax.persistence;resolution:=optional,
-							org.krakenapps.jpa;resolution:=optional,
-							org.krakenapps.jpa.handler;resolution:=optional,
 							*
 						</Import-Package>
 					</instructions>
@@ -59,12 +55,12 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.9.4</version>
+			<version>1.9.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-rpc</artifactId>
-			<version>1.4.0</version>
+			<version>1.5.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -74,19 +70,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-log-api</artifactId>
-			<version>1.2.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-msgbus</artifactId>
-			<version>1.3.0</version>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-dom</artifactId>
-			<version>2.0.1</version>
-			<optional>true</optional>
+			<version>1.4.0</version>
 		</dependency>
 	</dependencies>
 </project>

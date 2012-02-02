@@ -1,6 +1,5 @@
-package org.krakenapps.rpc.impl;
+package org.krakenapps.rpc;
 
-import org.krakenapps.rpc.RpcException;
 
 public class RpcAsyncResult {
 	private boolean isCompleted;

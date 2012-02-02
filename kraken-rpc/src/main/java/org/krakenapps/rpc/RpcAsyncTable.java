@@ -2,7 +2,6 @@ package org.krakenapps.rpc;
 
 import java.util.Collection;
 
-import org.krakenapps.rpc.impl.RpcAsyncResult;
 
 public interface RpcAsyncTable {
 	Collection<RpcWaitingCall> getWaitingCalls();
