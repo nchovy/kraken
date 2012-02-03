@@ -114,6 +114,7 @@
     <module>kraken-webfx</module>
     <module>kraken-httpd</module>
     <module>kraken-slpolicy</module>
+    <module>kraken-sslscan</module>
   </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>
