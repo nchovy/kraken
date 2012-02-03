@@ -249,7 +249,11 @@ public class DatabaseTest {
 	}
 
 	@Test
-	public void testThreadLock() {
-		// coming soon
+	public void testRollbackBug() throws IOException {
+		FileConfigDatabase db = new FileConfigDatabase(new File("src/test/resources"), "rollback-bug");
+		ConfigCollection col = db.ensureCollection("table");
+		ConfigIterator it = col.findAll();
+		while (it.hasNext())
+			it.next();
 	}
 }
