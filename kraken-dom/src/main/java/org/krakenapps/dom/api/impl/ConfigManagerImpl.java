@@ -17,6 +17,7 @@ import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
@@ -33,11 +34,17 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Requires
 	private ConfigService confsvc;
 
+	private ConcurrentMap<Class<?>, ConfigParser> parsers = new ConcurrentHashMap<Class<?>, ConfigParser>();
 	private ConcurrentMap<String, ParseCallback> callbacks = new ConcurrentHashMap<String, ParseCallback>();
 
 	private PrimitiveParseCallback getCallback(String domain) {
 		callbacks.putIfAbsent(domain, new ParseCallback(domain));
 		return callbacks.get(domain);
+	}
+
+	@Override
+	public void setParser(Class<?> cls, ConfigParser parser) {
+		parsers.put(cls, parser);
 	}
 
 	@Override
@@ -64,7 +71,9 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	@Override
 	public <T> Collection<T> all(String domain, Class<T> cls, Predicate pred) {
-		return getDatabase(domain).ensureCollection(cls).find(pred).getDocuments(cls, getCallback(domain));
+		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
+		it.setParser(parsers.get(cls));
+		return it.getDocuments(cls, getCallback(domain));
 	}
 
 	@Override
@@ -302,6 +311,7 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		Collection<T> docs = new ArrayList<T>();
 		ConfigIterator it = db.find(cls, pred);
+		it.setParser(parsers.get(cls));
 		while (it.hasNext()) {
 			Config c = it.next();
 			T doc = c.getDocument(cls, getCallback(domain));

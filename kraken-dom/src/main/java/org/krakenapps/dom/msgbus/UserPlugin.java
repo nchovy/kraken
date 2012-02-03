@@ -48,14 +48,33 @@ public class UserPlugin {
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
+		Collection<User> users = null;
 		if (!req.has("ou_guid"))
-			resp.put("users", PrimitiveConverter.serialize(userApi.getUsers(req.getOrgDomain())));
+			users = userApi.getUsers(req.getOrgDomain());
 		else {
 			String orgUnitGuid = req.getString("ou_guid");
 			boolean includeChildren = req.has("inc_children") ? req.getBoolean("inc_children") : false;
-			Collection<User> users = userApi.getUsers(req.getOrgDomain(), orgUnitGuid, includeChildren);
-			resp.put("users", PrimitiveConverter.serialize(users));
+			users = userApi.getUsers(req.getOrgDomain(), orgUnitGuid, includeChildren);
 		}
+
+		int offset = 0;
+		int limit = users.size();
+
+		if (req.has("offset"))
+			offset = range(0, users.size(), req.getInteger("offset"));
+		if (req.has("limit"))
+			limit = range(0, users.size() - offset, req.getInteger("limit"));
+
+		resp.put("users", PrimitiveConverter.serialize(new ArrayList<User>(users).subList(offset, offset + limit)));
+		resp.put("total", users.size());
+	}
+
+	private int range(int min, int max, int value) {
+		if (value < min)
+			return min;
+		if (value > max)
+			return max;
+		return value;
 	}
 
 	@MsgbusMethod

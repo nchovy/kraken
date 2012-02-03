@@ -5,9 +5,12 @@ import java.util.List;
 
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.Predicate;
 
 public interface ConfigManager {
+	void setParser(Class<?> cls, ConfigParser parser);
+
 	ConfigDatabase findDatabase(String domain);
 
 	ConfigDatabase getDatabase(String domain);
