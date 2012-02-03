@@ -139,7 +139,9 @@ public class FileConfigCollection implements ConfigCollection {
 		long count = reader.count();
 		for (long index = 0; index < count; index++) {
 			RevLog log = reader.read(index);
-			if (manifest.containsDoc(col.getName(), log.getDocId(), log.getRev()))
+			// assume that rev is unique
+			if ((log.getOperation() == CommitOp.CreateDoc || log.getOperation() == CommitOp.UpdateDoc)
+					&& manifest.containsDoc(col.getName(), log.getDocId(), log.getRev()))
 				snapshot.add(log);
 		}
 

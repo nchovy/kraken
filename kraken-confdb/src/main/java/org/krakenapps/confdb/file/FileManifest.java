@@ -231,5 +231,10 @@ class FileManifest implements Manifest {
 				return false;
 			return true;
 		}
+
+		@Override
+		public String toString() {
+			return "col=" + colId + ", doc=" + docId;
+		}
 	}
 }
