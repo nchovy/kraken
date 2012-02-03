@@ -20,6 +20,7 @@ import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigParser;
 
 class FileConfig implements Config {
 	private ConfigDatabase db;
@@ -28,14 +29,20 @@ class FileConfig implements Config {
 	private long rev;
 	private long prevRev;
 	private Object doc;
+	private ConfigParser parser;
 
 	public FileConfig(ConfigDatabase db, ConfigCollection col, int id, long rev, long prevRev, Object doc) {
+		this(db, col, id, rev, prevRev, doc, null);
+	}
+
+	public FileConfig(ConfigDatabase db, ConfigCollection col, int id, long rev, long prevRev, Object doc, ConfigParser parser) {
 		this.db = db;
 		this.col = col;
 		this.id = id;
 		this.rev = rev;
 		this.prevRev = prevRev;
 		this.doc = doc;
+		this.parser = parser;
 	}
 
 	@Override
@@ -70,11 +77,17 @@ class FileConfig implements Config {
 
 	@Override
 	public <T> T getDocument(Class<T> cls) {
-		return PrimitiveConverter.parse(cls, doc);
+		return getDocument(cls, null);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getDocument(Class<T> cls, PrimitiveParseCallback callback) {
+		if (parser != null) {
+			Object o = parser.parse(doc, callback);
+			if (o == null || cls.isAssignableFrom(o.getClass()))
+				return (T) o;
+		}
 		return PrimitiveConverter.parse(cls, doc, callback);
 	}
 

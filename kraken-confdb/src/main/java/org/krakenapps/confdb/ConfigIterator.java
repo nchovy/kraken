@@ -21,6 +21,8 @@ import java.util.Iterator;
 import org.krakenapps.api.PrimitiveParseCallback;
 
 public interface ConfigIterator extends Iterator<Config> {
+	void setParser(ConfigParser parser);
+
 	Collection<Object> getDocuments();
 
 	<T> Collection<T> getDocuments(Class<T> cls);

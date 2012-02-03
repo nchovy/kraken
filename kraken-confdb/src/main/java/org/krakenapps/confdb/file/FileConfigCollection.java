@@ -30,6 +30,7 @@ import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.Predicate;
@@ -322,6 +323,10 @@ public class FileConfigCollection implements ConfigCollection {
 
 		@Override
 		public void remove() {
+		}
+
+		@Override
+		public void setParser(ConfigParser parser) {
 		}
 
 		@Override

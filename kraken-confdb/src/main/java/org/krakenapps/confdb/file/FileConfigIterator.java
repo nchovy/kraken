@@ -29,6 +29,7 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.Predicate;
 
 /**
@@ -47,6 +48,7 @@ class FileConfigIterator implements ConfigIterator {
 	private Config prefetch;
 	private boolean loaded;
 	private boolean closed;
+	private ConfigParser parser;
 
 	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot, Predicate pred) {
 		this.db = db;
@@ -116,12 +118,17 @@ class FileConfigIterator implements ConfigIterator {
 		byte[] b = reader.readDoc(log.getDocOffset(), log.getDocLength());
 		Object doc = EncodingRule.decode(ByteBuffer.wrap(b));
 
-		return new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc);
+		return new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
 	}
 
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void setParser(ConfigParser parser) {
+		this.parser = parser;
 	}
 
 	@Override
