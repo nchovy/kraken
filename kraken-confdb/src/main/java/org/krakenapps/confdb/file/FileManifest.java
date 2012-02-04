@@ -22,9 +22,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
@@ -34,17 +34,11 @@ import org.krakenapps.confdb.Manifest;
 class FileManifest implements Manifest {
 	private int id;
 
-	@CollectionTypeHint(CollectionEntry.class)
+	@FieldOption(skip = true)
 	private List<CollectionEntry> cols = new ArrayList<CollectionEntry>();
 
-	@CollectionTypeHint(ConfigEntry.class)
-	private List<ConfigEntry> configs = new ArrayList<ConfigEntry>();
-
-	/**
-	 * just for existence test. we cannot change configs type (need ordering)
-	 */
 	@FieldOption(skip = true)
-	private Map<ConfigMatchKey, Long> tester = new HashMap<ConfigMatchKey, Long>();
+	private Map<ConfigMatchKey, ConfigEntry> configs = new TreeMap<ConfigMatchKey, ConfigEntry>();
 
 	public FileManifest() {
 	}
@@ -72,15 +66,12 @@ class FileManifest implements Manifest {
 
 	@Override
 	public void add(ConfigEntry e) {
-		configs.remove(e); // remove duplicates
-		configs.add(e);
-		tester.put(new ConfigMatchKey(e), e.getRev());
+		configs.put(new ConfigMatchKey(e), e);
 	}
 
 	@Override
 	public void remove(ConfigEntry e) {
-		configs.remove(e);
-		tester.remove(new ConfigMatchKey(e));
+		configs.remove(new ConfigMatchKey(e));
 	}
 
 	@Override
@@ -106,7 +97,7 @@ class FileManifest implements Manifest {
 		int colId = getCollectionId(colName);
 
 		List<ConfigEntry> entries = new LinkedList<ConfigEntry>();
-		for (ConfigEntry e : configs)
+		for (ConfigEntry e : configs.values())
 			if (e.getColId() == colId)
 				entries.add(e);
 		return entries;
@@ -124,8 +115,8 @@ class FileManifest implements Manifest {
 	public boolean containsDoc(String colName, int docId, long rev) {
 		CollectionEntry col = getCollectionEntry(colName);
 		ConfigMatchKey key = new ConfigMatchKey(col.getId(), docId);
-		Long r = tester.get(key);
-		return r != null && r == rev;
+		ConfigEntry e = configs.get(key);
+		return e != null && e.getRev() == rev;
 	}
 
 	@Override
@@ -148,12 +139,16 @@ class FileManifest implements Manifest {
 
 	private List<Object> serializeConfigs() {
 		List<Object> l = new ArrayList<Object>(configs.size());
-		for (ConfigEntry e : configs)
+		for (ConfigEntry e : configs.values())
 			l.add(new Object[] { e.getColId(), e.getDocId(), e.getRev() });
 		return l;
 	}
 
 	public static FileManifest deserialize(byte[] b) {
+		return deserialize(b, false);
+	}
+
+	public static FileManifest deserialize(byte[] b, boolean noConfigs) {
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
 		FileManifest manifest = new FileManifest();
@@ -170,6 +165,10 @@ class FileManifest implements Manifest {
 				manifest.add(new CollectionEntry((Integer) arr[0], (String) arr[1]));
 			}
 		}
+
+		// for ensureCollection() acceleration
+		if (noConfigs)
+			return manifest;
 
 		for (Object o : (Object[]) m.get("configs")) {
 			if (o instanceof Map) {
@@ -194,7 +193,7 @@ class FileManifest implements Manifest {
 		return names;
 	}
 
-	private static class ConfigMatchKey {
+	private static class ConfigMatchKey implements Comparable<ConfigMatchKey> {
 		private int colId;
 		private int docId;
 
@@ -205,6 +204,22 @@ class FileManifest implements Manifest {
 		public ConfigMatchKey(int colId, int docId) {
 			this.colId = colId;
 			this.docId = docId;
+		}
+
+		@Override
+		public int compareTo(ConfigMatchKey o) {
+			if (o == null)
+				return -1;
+
+			int value = colId - o.colId;
+			if (value != 0)
+				return value;
+
+			value = docId - o.docId;
+			if (value != 0)
+				return value;
+
+			return 0;
 		}
 
 		@Override

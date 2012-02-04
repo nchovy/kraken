@@ -117,7 +117,6 @@ class FileConfigIterator implements ConfigIterator {
 		// fetch doc binary and decode it
 		byte[] b = reader.readDoc(log.getDocOffset(), log.getDocLength());
 		Object doc = EncodingRule.decode(ByteBuffer.wrap(b));
-
 		return new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
 	}
 

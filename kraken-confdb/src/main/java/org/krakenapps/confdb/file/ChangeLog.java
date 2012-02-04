@@ -148,6 +148,29 @@ class ChangeLog implements CommitLog {
 		return m;
 	}
 
+	/**
+	 * get manifest id from change log binary. manual parsing for speed-up
+	 */
+	public static int getManifest(byte[] b) {
+		ByteBuffer bb = ByteBuffer.wrap(b);
+		bb.get(); // type (9)
+		EncodingRule.decodeRawNumber(bb); // skip map length part
+
+		// enumerate keys of map
+		while (true) {
+			// parse map key
+			String s = EncodingRule.decodeString(bb);
+			if (s.equals("manifest_id")) {
+				return EncodingRule.decodeInt(bb);
+			} else {
+				// parse map value
+				bb.get();
+				long l = EncodingRule.decodeRawNumber(bb);
+				bb.position((int) (bb.position() + l));
+			}
+		}
+	}
+
 	public static ChangeLog deserialize(byte[] b) {
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		Map<String, Object> m = EncodingRule.decodeMap(bb);

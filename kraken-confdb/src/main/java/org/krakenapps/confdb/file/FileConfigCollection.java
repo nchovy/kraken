@@ -135,7 +135,6 @@ public class FileConfigCollection implements ConfigCollection {
 	private List<RevLog> getSnapshot(RevLogReader reader) throws IOException {
 		Manifest manifest = db.getManifest(changeset);
 		List<RevLog> snapshot = new ArrayList<RevLog>();
-
 		long count = reader.count();
 		for (long index = 0; index < count; index++) {
 			RevLog log = reader.read(index);
@@ -144,7 +143,6 @@ public class FileConfigCollection implements ConfigCollection {
 					&& manifest.containsDoc(col.getName(), log.getDocId(), log.getRev()))
 				snapshot.add(log);
 		}
-
 		return snapshot;
 	}
 
@@ -176,7 +174,6 @@ public class FileConfigCollection implements ConfigCollection {
 
 			// write collection log
 			int docId = writer.write(revlog);
-			writer.sync();
 
 			// write db changelog
 			xact.log(CommitOp.CreateDoc, col.getName(), docId, revlog.getRev());

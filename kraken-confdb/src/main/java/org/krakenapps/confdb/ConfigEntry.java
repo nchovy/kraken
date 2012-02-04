@@ -35,34 +35,6 @@ public class ConfigEntry {
 		this.rev = rev;
 	}
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + colId;
-		result = prime * result + docId;
-		return result;
-	}
-
-	/**
-	 * the key is composition of collection id and doc id
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ConfigEntry other = (ConfigEntry) obj;
-		if (colId != other.colId)
-			return false;
-		if (docId != other.docId)
-			return false;
-		return true;
-	}
-
 	public int getColId() {
 		return colId;
 	}
@@ -91,5 +63,4 @@ public class ConfigEntry {
 	public String toString() {
 		return "col=" + colId + ", doc=" + docId + ", rev=" + rev;
 	}
-
 }

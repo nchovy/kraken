@@ -224,7 +224,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public ConfigCollection getCollection(String name) {
 		try {
-			Manifest manifest = getManifest(changeset);
+			Manifest manifest = getManifest(changeset, true);
 			CollectionEntry col = manifest.getCollectionEntry(name);
 			if (col == null)
 				return null;
@@ -259,11 +259,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public ConfigCollection ensureCollection(ConfigTransaction xact, String name) {
 		try {
 			Manifest manifest = null;
-			if (xact == null)
-				manifest = getManifest(changeset);
-			else
+			if (xact == null) {
+				manifest = getManifest(changeset, true);
+			} else
 				manifest = xact.getManifest();
-
 			CollectionEntry col = manifest.getCollectionEntry(name);
 
 			// create new collection if not exists
@@ -330,6 +329,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Manifest getManifest(Integer rev) {
+		return getManifest(rev, false);
+	}
+
+	public Manifest getManifest(Integer rev, boolean noConfigs) {
 		// read last changelog and get manifest doc id
 		int manifestId = 0;
 		RevLogReader reader = null;
@@ -344,10 +347,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 			} else {
 				revlog = reader.findDoc(rev);
 			}
-
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
-			ChangeLog change = ChangeLog.deserialize(doc);
-			manifestId = change.getManifestId();
+			manifestId = ChangeLog.getManifest(doc);
 		} catch (FileNotFoundException e) {
 			// changeset can be empty
 			return new FileManifest();
@@ -365,11 +366,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 			reader = new RevLogReader(manifestLogFile, manifestDatFile);
 			RevLog revlog = reader.findDoc(manifestId);
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
-
 			// manifest id should be set here (id = revlog id)
-			FileManifest manifest = FileManifest.deserialize(doc);
+			FileManifest manifest = FileManifest.deserialize(doc, noConfigs);
 			manifest.setId(manifestId);
-
 			return manifest;
 		} catch (FileNotFoundException e) {
 			return new FileManifest();
