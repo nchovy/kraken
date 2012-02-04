@@ -1,69 +1,103 @@
 package org.krakenapps.sslscan;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.Socket;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
+import javax.net.SocketFactory;
+import javax.net.ssl.HandshakeCompletedEvent;
+import javax.net.ssl.HandshakeCompletedListener;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import sun.security.validator.ValidatorException;
+
+@SuppressWarnings("restriction")
 public class SslScanner {
+	private SSLContext ctx;
+
 	public static void main(String[] args) throws Exception {
-		HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
-			@Override
-			public boolean verify(String hostname, SSLSession session) {
-				System.out.println(hostname);
-				System.out.println(session);
-				System.out.println("CIPHER SUITE: " + session.getCipherSuite());
-				return true;
-			}
-		});
-		
-		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-			@Override
-			public X509Certificate[] getAcceptedIssuers() {
-				return null;
-			}
+		new SslScanner().run(args);
+	}
 
-			@Override
-			public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-			}
-
-			@Override
-			public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-			}
-		} };
-
-		SSLContext sc = SSLContext.getInstance("SSL");
-		sc.init(null, trustAllCerts, new SecureRandom());
-		HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-		URLConnection con = new URL("https://xtm8000").openConnection();
-		byte[] b = new byte[8096];
-
-		StringBuilder sb = new StringBuilder();
-		InputStream is = con.getInputStream();
-		while (true) {
-			int readBytes = is.read(b);
-			if (readBytes <= 0)
-				break;
-
-			sb.append(new String(b, 0, readBytes));
+	public void run(String[] args) throws Exception {
+		if (args.length < 2) {
+			System.out.println("SSL Cipher Suite Scanner, xeraph@nchovy.com");
+			System.out.println("Usage: java -jar kraken-sslscan.jar [hostname] [port]");
+			return;
 		}
 
-		System.out.println("read " + sb.toString().length() + " chars");
+		ctx = SSLContext.getDefault();
+		String hostname = args[0];
+		Integer port = Integer.valueOf(args[1]);
+
+		checkCertificate(hostname, port);
+		checkAllCipherSuites(ctx, hostname, port);
 	}
+
+	private void checkCertificate(String hostname, int port) throws Exception {
+		try {
+			checkCipherSuite(hostname, port, null);
+		} catch (SSLHandshakeException e) {
+			if (e.getCause() instanceof ValidatorException) {
+				System.out.println("Warning: Invalid Certificate, Ignoring..");
+				System.out.println(">> " + e.getCause().getMessage());
+
+				ctx = SSLContext.getInstance("SSL");
+				ctx.init(null, trustAllCerts, new SecureRandom());
+			}
+		}
+	}
+
+	private void checkAllCipherSuites(SSLContext ctx, String hostname, Integer port) throws NoSuchAlgorithmException {
+		SSLParameters sslParams = ctx.getSupportedSSLParameters();
+		for (String cipher : sslParams.getCipherSuites()) {
+			try {
+				checkCipherSuite(hostname, port, cipher);
+				System.out.println("PASS " + cipher);
+			} catch (IOException e) {
+				System.out.println("FAIL " + cipher);
+			}
+		}
+	}
+
+	public void checkCipherSuite(String hostname, int port, String cipher) throws IOException {
+		SocketFactory socketFactory = ctx.getSocketFactory();
+		Socket socket = socketFactory.createSocket(hostname, port);
+		SSLSocket sslSocket = (SSLSocket) socket;
+
+		if (cipher != null)
+			sslSocket.setEnabledCipherSuites(new String[] { cipher });
+
+		sslSocket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
+			@Override
+			public void handshakeCompleted(HandshakeCompletedEvent e) {
+			}
+		});
+
+		sslSocket.startHandshake();
+	}
+
+	TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+		@Override
+		public X509Certificate[] getAcceptedIssuers() {
+			return null;
+		}
+
+		@Override
+		public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+		}
+
+		@Override
+		public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+		}
+	} };
+
 }
