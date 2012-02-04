@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-confdb</artifactId>
-	<version>0.7.1</version>
+	<version>0.7.2</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Config Database</name>
 
