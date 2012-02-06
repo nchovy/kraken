@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ScriptArgumentParser {
-
 	public static String[] tokenize(String line) {
 		StringBuilder sb = new StringBuilder();
 		List<String> args = new ArrayList<String>();
@@ -35,8 +34,13 @@ public class ScriptArgumentParser {
 				if (escape) {
 					escape = false;
 					sb.append(c);
-				} else
+				} else {
 					quoteOpen = !quoteOpen;
+					if (!quoteOpen) {
+						args.add(sb.toString());
+						sb = new StringBuilder();
+					}
+				}
 				continue;
 			}
 
@@ -60,10 +64,6 @@ public class ScriptArgumentParser {
 		if (!parsed.trim().isEmpty())
 			args.add(sb.toString());
 
-		String[] s = new String[args.size()];
-		i = 0;
-		for (String arg : args)
-			s[i++] = arg;
-		return s;
+		return args.toArray(new String[0]);
 	}
 }

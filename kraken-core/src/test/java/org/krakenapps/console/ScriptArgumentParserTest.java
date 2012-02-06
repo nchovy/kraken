@@ -43,5 +43,13 @@ public class ScriptArgumentParserTest {
 		
 		assertEquals(1, tokenized.length);
 		assertEquals("  space world   ", tokenized[0]);
+		
+		String haystack5 = "\" \"";
+		System.out.println("test5: " + haystack5);
+		tokenized = ScriptArgumentParser.tokenize(haystack5);
+		
+		assertEquals(1, tokenized.length);
+		assertEquals(" ", tokenized[0]);
+		
 	}
 }
