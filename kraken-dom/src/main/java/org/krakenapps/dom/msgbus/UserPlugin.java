@@ -17,6 +17,7 @@ package org.krakenapps.dom.msgbus;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -57,6 +58,25 @@ public class UserPlugin {
 			users = userApi.getUsers(req.getOrgDomain(), orgUnitGuid, includeChildren);
 		}
 
+		// search name or login_name
+		if (req.has("filter_name") || req.has("filter_login_name")) {
+			String name = req.getString("filter_name");
+			String loginName = req.getString("filter_login_name");
+
+			Iterator<User> it = users.iterator();
+			while (it.hasNext()) {
+				boolean remove = true;
+				User user = it.next();
+				if (name != null && user.getName().contains(name))
+					remove = false;
+				if (loginName != null && user.getLoginName().contains(loginName))
+					remove = false;
+				if (remove)
+					it.remove();
+			}
+		}
+
+		// paging
 		int offset = 0;
 		int limit = users.size();
 
