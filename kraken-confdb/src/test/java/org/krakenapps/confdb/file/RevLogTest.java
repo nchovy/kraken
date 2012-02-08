@@ -44,8 +44,8 @@ public class RevLogTest {
 		db = new FileConfigDatabase(workingDir, "testdb");
 		col = (FileConfigCollection) db.ensureCollection("testcol");
 
-		logFile = new File(db.getDbDirectory(), "col1.log");
-		datFile = new File(db.getDbDirectory(), "col1.dat");
+		logFile = new File(db.getDbDirectory(), "test.log");
+		datFile = new File(db.getDbDirectory(), "test.dat");
 
 		logFile.delete();
 		datFile.delete();
@@ -140,12 +140,14 @@ public class RevLogTest {
 
 	@Test
 	public void testFindRev() throws IOException {
+		assertEquals(0, writer.count());
 		RevLog log1 = newLog(1, 0, "hello world");
 		RevLog log2 = newLog(2, 1, "goodbye world");
 
 		int doc1 = writer.write(log1);
 		int doc2 = writer.write(log2);
 		writer.sync();
+		assertEquals(2, writer.count());
 
 		RevLog read1 = reader.findRev(1);
 		RevLog read2 = reader.findRev(2);

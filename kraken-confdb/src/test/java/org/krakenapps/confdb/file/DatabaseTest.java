@@ -192,6 +192,7 @@ public class DatabaseTest {
 
 	@Test
 	public void testUpdate() {
+		assertEquals(0, col.count());
 		List<CommitLog> logs = db.getCommitLogs();
 		assertEquals(1, logs.size());
 
@@ -212,6 +213,7 @@ public class DatabaseTest {
 		assertEquals("added missing comma", log2.getMessage());
 
 		// test doc content
+		assertEquals(1, col.count());
 		ConfigIterator it = col.findAll();
 		Config c1 = it.next();
 

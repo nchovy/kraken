@@ -158,6 +158,10 @@ public class RevLogWriter {
 		return log.getDocId();
 	}
 
+	public int count() {
+		return (int) ((logFileLength - logHeaderLength) / COL_LOG_SIZE);
+	}
+
 	public void sync() throws IOException {
 		datOutput.flush();
 		logOutput.flush();

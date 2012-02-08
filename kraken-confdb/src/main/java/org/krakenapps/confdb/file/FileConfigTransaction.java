@@ -88,7 +88,7 @@ public class FileConfigTransaction implements ConfigTransaction {
 	 * log all transaction
 	 */
 	@Override
-	public void log(CommitOp op, String colName, int docId, long rev) {
+	public void log(CommitOp op, String colName, int docId, long rev, int index) {
 		CollectionEntry col = null;
 
 		if (op == CommitOp.CreateCol) {
@@ -96,7 +96,7 @@ public class FileConfigTransaction implements ConfigTransaction {
 		} else
 			col = manifest.getCollectionEntry(colName);
 
-		ConfigEntry entry = new ConfigEntry(col.getId(), docId, rev);
+		ConfigEntry entry = new ConfigEntry(col.getId(), docId, rev, index);
 
 		if (op == CommitOp.CreateDoc || op == CommitOp.UpdateDoc)
 			manifest.add(entry);

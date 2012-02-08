@@ -24,7 +24,7 @@ public interface ConfigTransaction {
 
 	void begin(int timeout);
 
-	void log(CommitOp operation, String colName, int docId, long rev);
+	void log(CommitOp operation, String colName, int docId, long rev, int index);
 
 	void commit(String committer, String log);
 

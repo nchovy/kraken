@@ -25,22 +25,31 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.krakenapps.api.FieldOption;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.Manifest;
 
 class FileManifest implements Manifest {
+	private int version;
+
 	private int id;
 
-	@FieldOption(skip = true)
-	private List<CollectionEntry> cols = new ArrayList<CollectionEntry>();
+	private Map<Integer, CollectionEntry> colMap = new TreeMap<Integer, CollectionEntry>();
 
-	@FieldOption(skip = true)
-	private Map<ConfigMatchKey, ConfigEntry> configs = new TreeMap<ConfigMatchKey, ConfigEntry>();
+	// col id -> (doc id -> entry) map
+	private Map<Integer, Map<Integer, ConfigEntry>> configMap = new TreeMap<Integer, Map<Integer, ConfigEntry>>();
 
 	public FileManifest() {
+	}
+
+	@Override
+	public int getVersion() {
+		return version;
+	}
+
+	public void setVersion(int version) {
+		this.version = version;
 	}
 
 	@Override
@@ -55,23 +64,32 @@ class FileManifest implements Manifest {
 
 	@Override
 	public void add(CollectionEntry e) {
-		cols.remove(e); // remove duplicates
-		cols.add(e);
+		colMap.put(e.getId(), e);
+		configMap.put(e.getId(), new TreeMap<Integer, ConfigEntry>());
 	}
 
 	@Override
 	public void remove(CollectionEntry e) {
-		cols.remove(e);
+		colMap.remove(e.getId());
+		configMap.remove(e.getId());
 	}
 
 	@Override
 	public void add(ConfigEntry e) {
-		configs.put(new ConfigMatchKey(e), e);
+		Map<Integer, ConfigEntry> m = configMap.get(e.getColId());
+		if (m == null)
+			throw new IllegalStateException("col not found: " + e.getColId());
+
+		m.put(e.getDocId(), e);
 	}
 
 	@Override
 	public void remove(ConfigEntry e) {
-		configs.remove(new ConfigMatchKey(e));
+		Map<Integer, ConfigEntry> m = configMap.get(e.getColId());
+		if (m == null)
+			throw new IllegalStateException("col not found: " + e.getColId());
+
+		m.remove(e.getDocId());
 	}
 
 	@Override
@@ -85,7 +103,7 @@ class FileManifest implements Manifest {
 
 	@Override
 	public CollectionEntry getCollectionEntry(String name) {
-		for (CollectionEntry e : cols)
+		for (CollectionEntry e : colMap.values())
 			if (e.getName().equals(name))
 				return e;
 
@@ -95,35 +113,36 @@ class FileManifest implements Manifest {
 	@Override
 	public List<ConfigEntry> getConfigEntries(String colName) {
 		int colId = getCollectionId(colName);
+		Map<Integer, ConfigEntry> m = configMap.get(colId);
+		if (m == null)
+			throw new IllegalStateException("col not found: " + colName);
 
-		List<ConfigEntry> entries = new LinkedList<ConfigEntry>();
-		for (ConfigEntry e : configs.values())
-			if (e.getColId() == colId)
-				entries.add(e);
-		return entries;
+		return new ArrayList<ConfigEntry>(m.values());
 	}
 
 	public String getCollectionName(int id) {
-		for (CollectionEntry e : cols)
-			if (e.getId() == id)
-				return e.getName();
-
-		return null;
+		CollectionEntry e = colMap.get(id);
+		if (e == null)
+			return null;
+		return e.getName();
 	}
 
 	@Override
 	public boolean containsDoc(String colName, int docId, long rev) {
 		CollectionEntry col = getCollectionEntry(colName);
-		ConfigMatchKey key = new ConfigMatchKey(col.getId(), docId);
-		ConfigEntry e = configs.get(key);
-		return e != null && e.getRev() == rev;
+		Map<Integer, ConfigEntry> m = configMap.get(col.getId());
+		if (m == null)
+			throw new IllegalStateException("col not found: " + colName);
+
+		ConfigEntry ce = m.get(docId);
+		return ce != null && ce.getRev() == rev;
 	}
 
 	@Override
 	public byte[] serialize() {
 		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("ver", 2);
 		m.put("cols", serializeCols());
-		m.put("configs", serializeConfigs());
 
 		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOfMap(m));
 		EncodingRule.encodeMap(bb, m);
@@ -131,17 +150,16 @@ class FileManifest implements Manifest {
 	}
 
 	private List<Object> serializeCols() {
-		List<Object> l = new ArrayList<Object>(cols.size());
-		for (CollectionEntry e : cols)
-			l.add(new Object[] { e.getId(), e.getName() });
-		return l;
-	}
-
-	private List<Object> serializeConfigs() {
-		List<Object> l = new ArrayList<Object>(configs.size());
-		for (ConfigEntry e : configs.values())
-			l.add(new Object[] { e.getColId(), e.getDocId(), e.getRev() });
-		return l;
+		List<Object> cols = new ArrayList<Object>(colMap.size());
+		for (CollectionEntry col : colMap.values()) {
+			List<Object> configs = new LinkedList<Object>();
+			Map<Integer, ConfigEntry> m = configMap.get(col.getId());
+			for (ConfigEntry c : m.values()) {
+				configs.add(new Object[] { c.getDocId(), c.getRev(), c.getIndex() });
+			}
+			cols.add(new Object[] { col.getId(), col.getName(), configs });
+		}
+		return cols;
 	}
 
 	public static FileManifest deserialize(byte[] b) {
@@ -152,6 +170,10 @@ class FileManifest implements Manifest {
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
 		FileManifest manifest = new FileManifest();
+		if (m.containsKey("ver"))
+			manifest.setVersion((Integer) m.get("ver"));
+		else
+			manifest.setVersion(1);
 
 		// manual coding instead of primitive converter for performance
 		for (Object o : (Object[]) m.get("cols")) {
@@ -162,7 +184,17 @@ class FileManifest implements Manifest {
 				manifest.add(new CollectionEntry((Integer) col.get("id"), (String) col.get("name")));
 			} else {
 				Object[] arr = (Object[]) o;
-				manifest.add(new CollectionEntry((Integer) arr[0], (String) arr[1]));
+
+				if (manifest.getVersion() == 1) {
+					manifest.add(new CollectionEntry((Integer) arr[0], (String) arr[1]));
+				} else if (manifest.getVersion() == 2) {
+					int colId = (Integer) arr[0];
+					manifest.add(new CollectionEntry(colId, (String) arr[1]));
+					for (Object o2 : (Object[]) arr[2]) {
+						Object[] config = (Object[]) o2;
+						manifest.add(new ConfigEntry(colId, (Integer) config[0], (Long) config[1], (Integer) config[2]));
+					}
+				}
 			}
 		}
 
@@ -170,15 +202,17 @@ class FileManifest implements Manifest {
 		if (noConfigs)
 			return manifest;
 
-		for (Object o : (Object[]) m.get("configs")) {
-			if (o instanceof Map) {
-				// legacy format support
-				@SuppressWarnings("unchecked")
-				Map<String, Object> c = (Map<String, Object>) o;
-				manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
-			} else {
-				Object[] arr = (Object[]) o;
-				manifest.add(new ConfigEntry((Integer) arr[0], (Integer) arr[1], (Long) arr[2]));
+		if (manifest.getVersion() == 1) {
+			for (Object o : (Object[]) m.get("configs")) {
+				if (o instanceof Map) {
+					// legacy format support
+					@SuppressWarnings("unchecked")
+					Map<String, Object> c = (Map<String, Object>) o;
+					manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
+				} else {
+					Object[] arr = (Object[]) o;
+					manifest.add(new ConfigEntry((Integer) arr[0], (Integer) arr[1], (Long) arr[2]));
+				}
 			}
 		}
 
@@ -188,68 +222,8 @@ class FileManifest implements Manifest {
 	@Override
 	public Set<String> getCollectionNames() {
 		Set<String> names = new TreeSet<String>();
-		for (CollectionEntry e : cols)
+		for (CollectionEntry e : colMap.values())
 			names.add(e.getName());
 		return names;
-	}
-
-	private static class ConfigMatchKey implements Comparable<ConfigMatchKey> {
-		private int colId;
-		private int docId;
-
-		public ConfigMatchKey(ConfigEntry e) {
-			this(e.getColId(), e.getDocId());
-		}
-
-		public ConfigMatchKey(int colId, int docId) {
-			this.colId = colId;
-			this.docId = docId;
-		}
-
-		@Override
-		public int compareTo(ConfigMatchKey o) {
-			if (o == null)
-				return -1;
-
-			int value = colId - o.colId;
-			if (value != 0)
-				return value;
-
-			value = docId - o.docId;
-			if (value != 0)
-				return value;
-
-			return 0;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + colId;
-			result = prime * result + docId;
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ConfigMatchKey other = (ConfigMatchKey) obj;
-			if (colId != other.colId)
-				return false;
-			if (docId != other.docId)
-				return false;
-			return true;
-		}
-
-		@Override
-		public String toString() {
-			return "col=" + colId + ", doc=" + docId;
-		}
 	}
 }

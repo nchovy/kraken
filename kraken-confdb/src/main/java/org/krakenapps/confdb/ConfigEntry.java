@@ -26,13 +26,22 @@ public class ConfigEntry {
 	private int docId;
 	private long rev;
 
+	// index of revision log file for direct access
+	private int index;
+
 	public ConfigEntry() {
 	}
 
+	// legacy format support
 	public ConfigEntry(int colId, int docId, long rev) {
+		this(colId, docId, rev, 0);
+	}
+
+	public ConfigEntry(int colId, int docId, long rev, int index) {
 		this.colId = colId;
 		this.docId = docId;
 		this.rev = rev;
+		this.index = index;
 	}
 
 	public int getColId() {
@@ -59,8 +68,16 @@ public class ConfigEntry {
 		this.rev = rev;
 	}
 
+	public int getIndex() {
+		return index;
+	}
+
+	public void setIndex(int index) {
+		this.index = index;
+	}
+
 	@Override
 	public String toString() {
-		return "col=" + colId + ", doc=" + docId + ", rev=" + rev;
+		return "col=" + colId + ", doc=" + docId + ", rev=" + rev + ", index=" + index;
 	}
 }
