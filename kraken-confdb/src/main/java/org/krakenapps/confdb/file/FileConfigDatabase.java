@@ -289,7 +289,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			xact = beginTransaction();
 
 		try {
-			xact.log(CommitOp.CreateCol, name, 0, 0);
+			xact.log(CommitOp.CreateCol, name, 0, 0, 0);
 			if (implicitTransact) {
 				xact.commit(null, null);
 			}
@@ -312,7 +312,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ConfigTransaction xact = beginTransaction();
 		try {
 			xact.getManifest();
-			xact.log(CommitOp.DropCol, name, 0, 0);
+			xact.log(CommitOp.DropCol, name, 0, 0, 0);
 			xact.commit(null, null);
 		} catch (Throwable e) {
 			xact.rollback();
