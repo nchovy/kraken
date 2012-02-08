@@ -92,6 +92,13 @@ public class FileUploadPlugin {
 		fileUploadApi.deleteFile(req.getOrgDomain(), req.getAdminLoginName(), guid);
 	}
 
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void deleteFiles(Request req, Response resp) {
+		Collection<String> guids = (Collection<String>) req.get("guids");
+		fileUploadApi.deleteFiles(req.getOrgDomain(), req.getAdminLoginName(), guids);
+	}
+
 	@MsgbusMethod(type = CallbackType.SessionClosed)
 	public void removeDownloadTokens(Session session) {
 		if (session == null)
