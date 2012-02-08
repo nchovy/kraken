@@ -218,17 +218,17 @@ public class FileConfigCollection implements ConfigCollection {
 		ConfigIterator it = null;
 		try {
 			RevLogWriter writer = getWriter(xact);
-			it = getIterator(null);
+			RevLogReader reader = new RevLogReader(logFile, datFile);
+			List<RevLog> snapshot = getSnapshot(reader);
 
 			// find any conflict (if common parent exists)
 			long lastRev = c.getRevision();
-			while (it.hasNext()) {
-				Config o = it.next();
-				if (o.getId() == c.getId() && o.getPrevRevision() == lastRev) {
+			for (RevLog log : snapshot) {
+				if (log.getDocId() == c.getId() && log.getPrevRev() == lastRev) {
 					if (checkConflict)
-						throw new IllegalStateException("conflict with " + o.getRevision());
+						throw new IllegalStateException("conflict with " + log.getRev());
 
-					lastRev = o.getRevision();
+					lastRev = log.getRev();
 				}
 			}
 
