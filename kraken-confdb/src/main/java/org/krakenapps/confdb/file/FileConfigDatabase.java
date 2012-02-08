@@ -131,6 +131,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 					throw new WriteLockTimeoutException();
 
 				processLock = channel.tryLock();
+				if (processLock != null)
+					break;
 				Thread.sleep(100);
 			}
 		} catch (IOException e) {
