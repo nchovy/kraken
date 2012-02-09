@@ -23,10 +23,10 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.dhcp</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.dhcp,
-							org.krakenapps.dhcp.options,
-							org.krakenapps.dhcp.model,
-							org.krakenapps.dhcp.msgbus
+							org.krakenapps.dhcp;version=${project.version},
+							org.krakenapps.dhcp.options;version=${project.version},
+							org.krakenapps.dhcp.model;version=${project.version},
+							org.krakenapps.dhcp.msgbus;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.dhcp.server</Private-Package>
 						<Import-Package>

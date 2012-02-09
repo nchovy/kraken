@@ -24,9 +24,9 @@
 						<Bundle-SymbolicName>org.krakenapps.syslog
 						</Bundle-SymbolicName>
 						<Import-Package>*</Import-Package>
-						<Export-Package>org.krakenapps.syslog;version=1.3.0
+						<Export-Package>org.krakenapps.syslog;version=${project.version}
 						</Export-Package>
-						<Private-Package>org.krakenapps.syslog.impl;version=1.3.0
+						<Private-Package>org.krakenapps.syslog.impl
 						</Private-Package>
 					</instructions>
 				</configuration>

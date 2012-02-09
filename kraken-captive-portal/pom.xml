@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.captiveportal</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.captiveportal</Export-Package>
+						<Export-Package>org.krakenapps.captiveportal;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.captiveportal.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

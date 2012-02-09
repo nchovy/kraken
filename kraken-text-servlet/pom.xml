@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.servlet.text
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.servlet.text
+						<Export-Package>org.krakenapps.servlet.text;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.servlet.text.impl
 						</Private-Package>

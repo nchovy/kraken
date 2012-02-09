@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logdb.cmd</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logdb.cmd</Export-Package>
+						<Export-Package>org.krakenapps.logdb.cmd;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

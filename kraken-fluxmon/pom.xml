@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.fluxmon
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.fluxmon
+						<Export-Package>org.krakenapps.fluxmon;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.fluxmon.impl
 						</Private-Package>

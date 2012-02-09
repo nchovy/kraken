@@ -31,7 +31,7 @@
 							2008";
 							processor=x86_64
 						</Bundle-NativeCode>
-						<Export-Package>org.krakenapps.winapi</Export-Package>
+						<Export-Package>org.krakenapps.winapi;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.winapi.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

@@ -23,10 +23,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 						<Bundle-SymbolicName>org.krakenapps.syslog.parser
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.syslog.parser.fortigate,
-							org.krakenapps.syslog.parser.juniper,
-							org.krakenapps.syslog.parser.snort,
-							org.krakenapps.syslog.parser.futuresystems
+							org.krakenapps.syslog.parser.fortigate;version=${project.version},
+							org.krakenapps.syslog.parser.juniper;version=${project.version},
+							org.krakenapps.syslog.parser.snort;version=${project.version},
+							org.krakenapps.syslog.parser.futuresystems;version=${project.version}
 						</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>

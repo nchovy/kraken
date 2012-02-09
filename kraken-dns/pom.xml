@@ -22,7 +22,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.dns
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.dns
+						<Export-Package>org.krakenapps.dns;version=${project.version}
 						</Export-Package>
 						<Import-Package>*</Import-Package>
 						<Private-Package>org.krakenapps.dns.impl

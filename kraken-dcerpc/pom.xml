@@ -20,8 +20,8 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>kraken-dcerpc</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.pcap.decoder.dcerpc</Export-Package>
+						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.dcerpc</Bundle-SymbolicName>
+						<Export-Package>org.krakenapps.pcap.decoder.dcerpc;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

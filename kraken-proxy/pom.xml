@@ -22,7 +22,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.proxy
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.proxy
+						<Export-Package>org.krakenapps.proxy;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.proxy.impl
 						</Private-Package>

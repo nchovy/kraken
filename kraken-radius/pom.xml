@@ -23,13 +23,13 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.radius</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.radius.client,
-							org.krakenapps.radius.client.auth,
-							org.krakenapps.radius.server,
-							org.krakenapps.radius.server.auth,
-							org.krakenapps.radius.server.userdatabase,
-							org.krakenapps.radius.protocol,
-							org.krakenapps.radius.script
+							org.krakenapps.radius.client;version=${project.version},
+							org.krakenapps.radius.client.auth;version=${project.version},
+							org.krakenapps.radius.server;version=${project.version},
+							org.krakenapps.radius.server.auth;version=${project.version},
+							org.krakenapps.radius.server.userdatabase;version=${project.version},
+							org.krakenapps.radius.protocol;version=${project.version},
+							org.krakenapps.radius.script;version=${project.version}
 						</Export-Package>
 						<Import-Package>
 							org.krakenapps.ldap;resolution:=optional,

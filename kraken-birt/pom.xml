@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.report.birt</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.report,org.eclipse.birt.report.model.api</Export-Package>
+						<Export-Package>org.krakenapps.report,org.eclipse.birt.report.model.api;version=${project.version}</Export-Package>
 						<Import-Package> org.krakenapps.api,
 							!javax.servlet,
 							!javax.sql.rowset.serial,

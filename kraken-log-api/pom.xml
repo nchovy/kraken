@@ -24,8 +24,8 @@
 						<Bundle-SymbolicName>org.krakenapps.log.api
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.log.api;version="1.4.0",
-							org.krakenapps.log.api.msgbus;version="1.4.0"
+							org.krakenapps.log.api;version=${project.version},
+							org.krakenapps.log.api.msgbus;version=${project.version}
 						</Export-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,

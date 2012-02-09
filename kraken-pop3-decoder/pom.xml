@@ -22,7 +22,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.pop3</Bundle-SymbolicName>
 						<Import-Package>*</Import-Package>
-						<Export-Package>org.krakenapps.pcap.decoder.pop3</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.pop3;version=${project.version}</Export-Package>
 					</instructions>
 				</configuration>
 			</plugin>

@@ -23,9 +23,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.siem</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.siem,
-							org.krakenapps.siem.model,
-							org.krakenapps.siem.response
+							org.krakenapps.siem;version=${project.version},
+							org.krakenapps.siem.model;version=${project.version},
+							org.krakenapps.siem.response;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.siem.engine,

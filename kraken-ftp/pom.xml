@@ -23,9 +23,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ftp</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.ftp,
-							org.krakenapps.ftp.msgbus,
-							org.krakenapps.ftp.script</Export-Package>
+							org.krakenapps.ftp;version=${project.version},
+							org.krakenapps.ftp.msgbus;version=${project.version},
+							org.krakenapps.ftp.script;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.ftp.impl</Private-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,

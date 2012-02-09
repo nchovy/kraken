@@ -23,9 +23,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.filter
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.filter;version=1.2.0,
-							org.krakenapps.filter.exception;version=1.2.0</Export-Package>
-						<Private-Package>org.krakenapps.filter.impl;version=1.2.0
+						<Export-Package>org.krakenapps.filter;version=${project.version},
+							org.krakenapps.filter.exception;version=${project.version}</Export-Package>
+						<Private-Package>org.krakenapps.filter.impl
 						</Private-Package>
 						<Import-Package>!org.junit,*
 						</Import-Package>

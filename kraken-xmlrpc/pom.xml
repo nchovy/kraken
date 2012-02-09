@@ -22,8 +22,10 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.xmlrpc</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.xmlrpc,
-							org.krakenapps.xmlrpc.script</Export-Package>
+						<Export-Package>
+							org.krakenapps.xmlrpc;version=${project.version},
+							org.krakenapps.xmlrpc.script;version=${project.version}
+						</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>
 				</configuration>

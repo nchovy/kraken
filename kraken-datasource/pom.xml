@@ -23,8 +23,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.datasource</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.datasource,
-							org.krakenapps.datasource.msgbus</Export-Package>
+							org.krakenapps.datasource;version=${project.version},
+							org.krakenapps.datasource.msgbus;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.datasource.impl</Private-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,

@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.malwaredomains</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.malwaredomains</Export-Package>
+						<Export-Package>org.krakenapps.malwaredomains;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.malwaredomains.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

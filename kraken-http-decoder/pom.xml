@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.http</Bundle-SymbolicName>
 						<Import-Package>*</Import-Package>
-						<Export-Package>org.krakenapps.pcap.decoder.http</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.http;version=${project.version}</Export-Package>
 					</instructions>
 				</configuration>
 			</plugin>

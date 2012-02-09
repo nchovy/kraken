@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.sentry.windows</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.sentry.windows</Export-Package>
+						<Export-Package>org.krakenapps.sentry.windows;version=${project.version}</Export-Package>
 						<Private-Package>
 							org.krakenapps.sentry.windows.impl,
 							org.krakenapps.sentry.windows.logger

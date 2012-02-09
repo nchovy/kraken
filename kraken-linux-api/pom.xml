@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.linux.api
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.linux.api
+						<Export-Package>org.krakenapps.linux.api;version=${project.version}
 						</Export-Package>
 						<Import-Package>org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,

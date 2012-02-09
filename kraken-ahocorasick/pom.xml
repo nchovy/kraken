@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ahocorasick
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.ahocorasick</Export-Package>
+						<Export-Package>org.krakenapps.ahocorasick;version=${project.version}</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>
 				</configuration>

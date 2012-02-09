@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.opencsv</Bundle-SymbolicName>
-						<Export-Package>au.com.bytecode.opencsv</Export-Package>
+						<Export-Package>au.com.bytecode.opencsv;version=${project.version}</Export-Package>
 						<Private-Package></Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

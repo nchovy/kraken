@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ipojo</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.ipojo</Export-Package>
+						<Export-Package>org.krakenapps.ipojo;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.ipojo.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

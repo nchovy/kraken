@@ -22,7 +22,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.portmon
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.portmon
+						<Export-Package>org.krakenapps.portmon;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.portmon.impl
 						</Private-Package>

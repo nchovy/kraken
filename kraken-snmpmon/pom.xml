@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.snmpmon</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.snmpmon</Export-Package>
+						<Export-Package>org.krakenapps.snmpmon;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

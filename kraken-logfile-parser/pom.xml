@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logfile.parser</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logfile</Export-Package>
+						<Export-Package>org.krakenapps.logfile;version=${project.version}</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>
 				</configuration>

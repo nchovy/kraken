@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logdb</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logdb</Export-Package>
+						<Export-Package>org.krakenapps.logdb;version=${project.version}</Export-Package>
 						<Private-Package>
 							org.krakenapps.logdb.impl,
 							org.krakenapps.logdb.query,

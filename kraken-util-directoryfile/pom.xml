@@ -21,8 +21,10 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>kraken-util-directoryfile</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.util.directoryfile,
-							org.krakenapps.util.directoryfile.exceptions</Export-Package>
+						<Export-Package>
+						org.krakenapps.util.directoryfile;version=${project.version},
+							org.krakenapps.util.directoryfile.exceptions;version=${project.version}
+						</Export-Package>
 						<Private-Package></Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

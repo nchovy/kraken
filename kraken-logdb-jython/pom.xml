@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logdb.jython</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logdb.jython</Export-Package>
+						<Export-Package>org.krakenapps.logdb.jython;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.logdb.jython.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

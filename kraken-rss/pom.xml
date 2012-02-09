@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.rss
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.rss
+						<Export-Package>org.krakenapps.rss;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.rss.impl
 						</Private-Package>

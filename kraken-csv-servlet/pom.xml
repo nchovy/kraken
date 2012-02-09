@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.servlet.csv
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.servlet.csv
+						<Export-Package>org.krakenapps.servlet.csv;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.servlet.csv.impl
 						</Private-Package>

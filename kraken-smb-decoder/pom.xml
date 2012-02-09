@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>kraken-samba-decoder
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.pcap.decoder.samba</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.samba;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

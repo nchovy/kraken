@@ -23,7 +23,9 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.confdb</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.confdb, org.krakenapps.confdb.file</Export-Package>
+						<Export-Package>
+							org.krakenapps.confdb;version=${project.version}, 
+							org.krakenapps.confdb.file;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

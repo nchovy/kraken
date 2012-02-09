@@ -30,7 +30,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.servlet.api</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.servlet.api;version="3.0.0",
+							org.krakenapps.servlet.api;version=${project.version},
 							javax.servlet;version="3.0.0",
 							javax.servlet.annotation;version="3.0.0",
 							javax.servlet.descriptor;version="3.0.0",

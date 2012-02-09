@@ -23,9 +23,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.dhcp</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.pcap.decoder.dhcp,
-							org.krakenapps.pcap.decoder.dhcp.options,
-							org.krakenapps.pcap.decoder.dhcp.fingerprint
+							org.krakenapps.pcap.decoder.dhcp;version=${project.version},
+							org.krakenapps.pcap.decoder.dhcp.options;version=${project.version},
+							org.krakenapps.pcap.decoder.dhcp.fingerprint;version=${project.version}
 						</Export-Package>
 						<Import-Package>
 							*

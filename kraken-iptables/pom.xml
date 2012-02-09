@@ -22,10 +22,10 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.iptables</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.iptables,
-							org.krakenapps.iptables.match,
-							org.krakenapps.iptables.msgbus,
-							org.krakenapps.iptables.target
+							org.krakenapps.iptables;version=${project.version},
+							org.krakenapps.iptables.match;version=${project.version},
+							org.krakenapps.iptables.msgbus;version=${project.version},
+							org.krakenapps.iptables.target;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.iptables.impl</Private-Package>
 						<Import-Package>!org.junit,

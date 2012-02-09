@@ -24,9 +24,9 @@
 						<Bundle-SymbolicName>org.krakenapps.http
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.http,
-							org.krakenapps.http.msgbus,
-							org.krakenapps.http.internal.service
+							org.krakenapps.http;version=${project.version},
+							org.krakenapps.http.msgbus;version=${project.version},
+							org.krakenapps.http.internal.service;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.http.internal,

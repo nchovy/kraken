@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.rule.http</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.rule.http</Export-Package>
+						<Export-Package>org.krakenapps.rule.http;version=${project.version}</Export-Package>
 						<Import-Package>
 							!org.junit,
 							org.krakenapps.msgbus;resolution:=optional,

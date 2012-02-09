@@ -23,10 +23,10 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.snmp</Bundle-SymbolicName>
 						<Import-Package>*</Import-Package>
-						<Export-Package>org.krakenapps.pcap.decoder.snmp,
-							org.krakenapps.pcap.decoder.snmp.types,
-							org.krakenapps.pcap.decoder.snmp.v1,
-							org.krakenapps.pcap.decoder.snmp.v2</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.snmp;version=${project.version},
+							org.krakenapps.pcap.decoder.snmp.types;version=${project.version},
+							org.krakenapps.pcap.decoder.snmp.v1;version=${project.version},
+							org.krakenapps.pcap.decoder.snmp.v2;version=${project.version}</Export-Package>
 					</instructions>
 				</configuration>
 			</plugin>

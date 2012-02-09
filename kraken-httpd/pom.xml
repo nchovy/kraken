@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.httpd</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.httpd</Export-Package>
+						<Export-Package>org.krakenapps.httpd;version=${project.version}</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>
 				</configuration>

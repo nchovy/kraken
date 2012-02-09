@@ -23,8 +23,8 @@
 						<Bundle-SymbolicName>kraken-sql-parser
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.sqlparser,
-							org.krakenapps.sqlparser.ast
+							org.krakenapps.sqlparser;version=${project.version},
+							org.krakenapps.sqlparser.ast;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.sqlparser.syntax,

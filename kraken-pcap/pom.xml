@@ -34,21 +34,21 @@
 							lib/linux_x86_64/libkpcap.so; osname=linux;
 							processor=x86_64
 						</Bundle-NativeCode>
-						<Export-Package>org.krakenapps.pcap,
-							org.krakenapps.pcap.decoder.ethernet,
-							org.krakenapps.pcap.decoder.arp,
-							org.krakenapps.pcap.decoder.ip,
-							org.krakenapps.pcap.decoder.ipv6,
-							org.krakenapps.pcap.decoder.icmp,
-							org.krakenapps.pcap.decoder.icmpv6,
-							org.krakenapps.pcap.decoder.tcp,
-							org.krakenapps.pcap.decoder.udp,
-							org.krakenapps.pcap.file,
-							org.krakenapps.pcap.live,
-							org.krakenapps.pcap.routing,
-							org.krakenapps.pcap.packet,
-							org.krakenapps.pcap.script,
-							org.krakenapps.pcap.util</Export-Package>
+						<Export-Package>org.krakenapps.pcap;version=${project.version},
+							org.krakenapps.pcap.decoder.ethernet;version=${project.version},
+							org.krakenapps.pcap.decoder.arp;version=${project.version},
+							org.krakenapps.pcap.decoder.ip;version=${project.version},
+							org.krakenapps.pcap.decoder.ipv6;version=${project.version},
+							org.krakenapps.pcap.decoder.icmp;version=${project.version},
+							org.krakenapps.pcap.decoder.icmpv6;version=${project.version},
+							org.krakenapps.pcap.decoder.tcp;version=${project.version},
+							org.krakenapps.pcap.decoder.udp;version=${project.version},
+							org.krakenapps.pcap.file;version=${project.version},
+							org.krakenapps.pcap.live;version=${project.version},
+							org.krakenapps.pcap.routing;version=${project.version},
+							org.krakenapps.pcap.packet;version=${project.version},
+							org.krakenapps.pcap.script;version=${project.version},
+							org.krakenapps.pcap.util;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 						<Private-Package>
 							org.krakenapps.pcap.live.impl</Private-Package>

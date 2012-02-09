@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logdb.pcap
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logdb.pcap</Export-Package>
+						<Export-Package>org.krakenapps.logdb.pcap;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.logdb.pcap.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

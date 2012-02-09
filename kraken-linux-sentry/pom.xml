@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.sentry.linux</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.sentry.linux</Export-Package>
+						<Export-Package>org.krakenapps.sentry.linux;version=${project.version}</Export-Package>
 						<Private-Package>
 							org.krakenapps.sentry.linux.logger,
 							org.krakenapps.sentry.linux.impl,

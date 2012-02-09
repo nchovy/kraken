@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.msn</Bundle-SymbolicName>
 						<Import-Package>*</Import-Package>
-						<Export-Package>org.krakenapps.pcap.decoder.msn</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.msn;version=${project.version}</Export-Package>
 					</instructions>
 				</configuration>
 			</plugin>

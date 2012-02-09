@@ -22,7 +22,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.bloomfilter
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.bloomfilter
+						<Export-Package>org.krakenapps.bloomfilter;version=${project.version}
 						</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>

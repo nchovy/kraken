@@ -22,8 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>kraken-word</Bundle-SymbolicName>
-						<Export-Package>YOUR_EXPORT_PACKAGES</Export-Package>
-						<Private-Package>YOUR_PRIVATE_PACKAGES</Private-Package>
+						<Export-Package>org.krakenapps.word;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

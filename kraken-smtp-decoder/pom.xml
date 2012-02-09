@@ -28,7 +28,7 @@
 							javax.mail.internet;version="1.4.1",
 							javax.mail.search;version="1.4.1",
 							javax.mail.util;version="1.4.1" ,*</Import-Package>
-						<Export-Package>org.krakenapps.pcap.decoder.smtp</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.smtp;version=${project.version}</Export-Package>
 					</instructions>
 				</configuration>
 			</plugin>

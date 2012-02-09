@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.rrd</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.rrd</Export-Package>
+						<Export-Package>org.krakenapps.rrd;version=${project.version}</Export-Package>
 						<!-- >Private-Package>org.krakenapps.rrd.impl</Private-Package-->
 						<Import-Package>*</Import-Package>
 					</instructions>

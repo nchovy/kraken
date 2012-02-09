@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.codec</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.codec</Export-Package>
+						<Export-Package>org.krakenapps.codec;version=${project.version}</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>
 				</configuration>

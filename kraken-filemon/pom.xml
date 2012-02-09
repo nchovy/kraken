@@ -34,7 +34,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.filemon</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.filemon</Export-Package>
+						<Export-Package>org.krakenapps.filemon;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.filemon.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.org.json</Bundle-SymbolicName>
-						<Export-Package>org.json</Export-Package>
+						<Export-Package>org.json;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

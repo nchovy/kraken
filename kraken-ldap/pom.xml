@@ -23,8 +23,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ldap</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.ldap,
-							org.krakenapps.ldap.msgbus
+							org.krakenapps.ldap;version=${project.version},
+							org.krakenapps.ldap.msgbus;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.ldap.impl</Private-Package>
 						<Import-Package>

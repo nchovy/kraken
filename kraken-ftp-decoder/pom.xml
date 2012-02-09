@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.ftp</Bundle-SymbolicName>
 						<Import-Package>*</Import-Package>
-						<Export-Package>org.krakenapps.pcap.decoder.ftp</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.ftp;version=${project.version}</Export-Package>
 					</instructions>
 				</configuration>
 			</plugin>

@@ -22,8 +22,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.cron
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.cron,
-						org.krakenapps.cron.msgbus
+						<Export-Package>org.krakenapps.cron;version=${project.version},
+						org.krakenapps.cron.msgbus;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.cron.impl
 						</Private-Package>

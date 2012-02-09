@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.util</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.util</Export-Package>
+						<Export-Package>org.krakenapps.util;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

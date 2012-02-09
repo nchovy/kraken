@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.firewall.api</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.firewall.api</Export-Package>
+						<Export-Package>org.krakenapps.firewall.api;version=${project.version}</Export-Package>
 						<Private-Package>
 							org.krakenapps.firewall.api.impl,
 							org.krakenapps.firewall.api.msgbus

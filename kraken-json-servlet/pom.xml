@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.servlet.json
 						</Bundle-SymbolicName>
-						<Export-Package>org.json,org.krakenapps.servlet.json
+						<Export-Package>org.json,org.krakenapps.servlet.json;version=${project.version}
 						</Export-Package>
 						<Private-Package>org.krakenapps.servlet.json.impl
 						</Private-Package>

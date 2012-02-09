@@ -22,8 +22,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.netbios</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.pcap.decoder.netbios,
-							org.krakenapps.pcap.decoder.netbios.rr</Export-Package>
+							org.krakenapps.pcap.decoder.netbios;version=${project.version},
+							org.krakenapps.pcap.decoder.netbios.rr;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

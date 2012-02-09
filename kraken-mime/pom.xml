@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.mime</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.mime</Export-Package>
+						<Export-Package>org.krakenapps.mime;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

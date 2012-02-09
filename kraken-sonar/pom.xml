@@ -25,8 +25,8 @@
 							org.krakenapps.sonar
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.sonar,
-							org.krakenapps.sonar.metabase.model
+							org.krakenapps.sonar;version=${project.version},
+							org.krakenapps.sonar.metabase.model;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.sonar.active,

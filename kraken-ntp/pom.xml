@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ntp</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.ntp
+							org.krakenapps.ntp;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.ntp.impl,

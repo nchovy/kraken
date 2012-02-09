@@ -22,9 +22,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.rule</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.rule,
-							org.krakenapps.rule.parser,
-							org.krakenapps.rule.plugin</Export-Package>
+							org.krakenapps.rule;version=${project.version},
+							org.krakenapps.rule.parser;version=${project.version},
+							org.krakenapps.rule.plugin;version=${project.version}</Export-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,

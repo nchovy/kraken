@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.snmp</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.snmp</Export-Package>
+						<Export-Package>org.krakenapps.snmp;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.snmp.impl</Private-Package>
 						<Import-Package>
 							org.krakenapps.filter;resolution:=optional,

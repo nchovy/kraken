@@ -23,9 +23,9 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ca</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.ca;version=2.0.0,
-							org.krakenapps.ca.util;version=2.0.0,
-							org.krakenapps.ca.msgbus;version=2.0.0
+							org.krakenapps.ca;version=${project.version},
+							org.krakenapps.ca.util;version=${project.version},
+							org.krakenapps.ca.msgbus;version=${project.version}
 						</Export-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,

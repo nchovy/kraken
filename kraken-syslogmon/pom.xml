@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.syslogmon</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.syslogmon</Export-Package>
+						<Export-Package>org.krakenapps.syslogmon;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

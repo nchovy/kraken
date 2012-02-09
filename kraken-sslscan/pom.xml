@@ -23,7 +23,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.sslscan</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.sslscan</Export-Package>
+						<Export-Package>org.krakenapps.sslscan;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 						<Main-Class>org.krakenapps.sslscan.SslScanner</Main-Class>
 					</instructions>

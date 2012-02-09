@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.arpwatch</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.arpwatch</Export-Package>
+						<Export-Package>org.krakenapps.arpwatch;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.arpwatch.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

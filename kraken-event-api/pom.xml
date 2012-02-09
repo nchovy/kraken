@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.event.api</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.event.api</Export-Package>
+						<Export-Package>org.krakenapps.event.api;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.event.api.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>

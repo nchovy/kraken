@@ -27,7 +27,7 @@
 						<Bundle-ClassPath>.,{maven-dependencies}
 						</Bundle-ClassPath>
 						<Export-Package>
-							org.krakenapps.jython,
+							org.krakenapps.jython;version=${project.version},
 							org.python.core,
 							org.python.util
 						</Export-Package>

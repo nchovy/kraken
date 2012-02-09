@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.geoip</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.geoip</Export-Package>
+						<Export-Package>org.krakenapps.geoip;version=${project.version}</Export-Package>
 						<Private-Package>
 							org.krakenapps.geoip.impl,
 							org.krakenapps.geoip.msgbus

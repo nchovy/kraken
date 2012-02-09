@@ -24,8 +24,8 @@
 						<Embed-Dependency>*;artifactId=!kraken-api|kraken-confdb|org.apache.felix.ipojo|org.apache.felix.ipojo.annotations|slf4j-api</Embed-Dependency>
 						<Bundle-SymbolicName>org.krakenapps.mail</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.mail,
-							org.krakenapps.mail.msgbus,
+							org.krakenapps.mail;version=${project.version},
+							org.krakenapps.mail.msgbus;version=${project.version},
 							javax.mail;version=1.4.1,
 							javax.mail.event;version=1.4.1,
 							javax.mail.search;version=1.4.1,

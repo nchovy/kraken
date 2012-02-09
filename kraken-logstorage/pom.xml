@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.logstorage</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.logstorage</Export-Package>
+						<Export-Package>org.krakenapps.logstorage;version=${project.version}</Export-Package>
 						<Private-Package>
 							org.krakenapps.logstorage.engine,
 							org.krakenapps.logstorage.engine.v1,

@@ -23,8 +23,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.tftp</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.tftp,
-							org.krakenapps.tftp.script
+							org.krakenapps.tftp;version=${project.version},
+							org.krakenapps.tftp.script;version=${project.version}
 						</Export-Package>
 					</instructions>
 				</configuration>

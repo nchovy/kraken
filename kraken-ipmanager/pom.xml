@@ -23,8 +23,8 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.ipmanager</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.ipmanager,
-							org.krakenapps.ipmanager.model
+							org.krakenapps.ipmanager;version=${project.version},
+							org.krakenapps.ipmanager.model;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.ipmanager.impl,

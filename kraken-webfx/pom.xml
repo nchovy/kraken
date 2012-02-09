@@ -22,7 +22,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.webfx</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.webfx</Export-Package>
+						<Export-Package>org.krakenapps.webfx;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

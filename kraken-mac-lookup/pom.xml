@@ -23,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.lookup.mac
 						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.lookup.mac
+						<Export-Package>org.krakenapps.lookup.mac;version=${project.version}
 						</Export-Package>
 						<Import-Package>*</Import-Package>
 						<Private-Package>org.krakenapps.lookup.mac.impl

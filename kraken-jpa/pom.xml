@@ -50,8 +50,8 @@
 						<Export-Package>
 							javax.annotations;version=1.0.0;-split-package:=merge-first,
 							javax.persistence;version=2.0.0;-split-package:=merge-first,
-							org.krakenapps.jpa;version=1.4.0,
-							org.krakenapps.jpa.handler;version=1.4.0,
+							org.krakenapps.jpa;version=${project.version},
+							org.krakenapps.jpa.handler;version=${project.version},
 							antlr.*;-split-package:=merge-first,
 							javassist.*;-split-package:=merge-first,
 							javax.transaction.*;version=2;-split-package:=merge-first,

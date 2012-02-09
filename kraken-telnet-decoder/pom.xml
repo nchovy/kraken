@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.pcap.decoder.telnet</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.pcap.decoder.telnet</Export-Package>
+						<Export-Package>org.krakenapps.pcap.decoder.telnet;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>

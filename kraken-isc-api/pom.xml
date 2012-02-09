@@ -21,7 +21,7 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.isc.api</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.isc.api</Export-Package>
+						<Export-Package>org.krakenapps.isc.api;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
