@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -380,70 +379,14 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	private class ParseCallback implements PrimitiveParseCallback {
 		private String domain;
-		private Map<Key, Object> cache = new WeakHashMap<Key, Object>();
 
 		public ParseCallback(String domain) {
 			this.domain = domain;
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		public <T> T onParse(Class<T> cls, Map<String, Object> referenceKey) {
-			Key key = new Key(cls, referenceKey);
-			Object value = cache.get(key);
-			if (value == null) {
-				value = find(domain, cls, Predicates.field(referenceKey));
-				cache.put(key, value);
-			}
-			return (T) value;
-		}
-
-		private class Key {
-			private Class<?> cls;
-			private Map<String, Object> refkey;
-
-			public Key(Class<?> cls, Map<String, Object> refkey) {
-				this.cls = cls;
-				this.refkey = refkey;
-			}
-
-			@Override
-			public int hashCode() {
-				final int prime = 31;
-				int result = 1;
-				result = prime * result + getOuterType().hashCode();
-				result = prime * result + ((cls == null) ? 0 : cls.hashCode());
-				result = prime * result + ((refkey == null) ? 0 : refkey.hashCode());
-				return result;
-			}
-
-			@Override
-			public boolean equals(Object obj) {
-				if (this == obj)
-					return true;
-				if (obj == null)
-					return false;
-				if (getClass() != obj.getClass())
-					return false;
-				Key other = (Key) obj;
-				if (!getOuterType().equals(other.getOuterType()))
-					return false;
-				if (cls == null) {
-					if (other.cls != null)
-						return false;
-				} else if (!cls.equals(other.cls))
-					return false;
-				if (refkey == null) {
-					if (other.refkey != null)
-						return false;
-				} else if (!refkey.equals(other.refkey))
-					return false;
-				return true;
-			}
-
-			private ParseCallback getOuterType() {
-				return ParseCallback.this;
-			}
+			return find(domain, cls, Predicates.field(referenceKey));
 		}
 	}
 }
