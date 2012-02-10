@@ -375,7 +375,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 			// legacy format upgrade
 			if (manifest.getVersion() == 1)
-				upgradeConfigFormat(manifest);
+				upgradeManifest(manifest);
 
 			manifest.setId(manifestId);
 			return manifest;
@@ -389,11 +389,15 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	private void upgradeConfigFormat(FileManifest manifest) {
+	private void upgradeManifest(FileManifest manifest) {
 		for (String name : manifest.getCollectionNames()) {
 			CollectionEntry col = manifest.getCollectionEntry(name);
 			File logFile = new File(dbDir, "col" + col.getId() + ".log");
 			File datFile = new File(dbDir, "col" + col.getId() + ".dat");
+
+			if (!logFile.exists() || !datFile.exists())
+				continue;
+
 			RevLogReader reader = null;
 			try {
 				reader = new RevLogReader(logFile, datFile);
