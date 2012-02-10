@@ -23,6 +23,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
@@ -370,6 +372,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
 			// manifest id should be set here (id = revlog id)
 			FileManifest manifest = FileManifest.deserialize(doc, noConfigs);
+
+			// legacy format upgrade
+			if (manifest.getVersion() == 1)
+				upgradeConfigFormat(manifest);
+
 			manifest.setId(manifestId);
 			return manifest;
 		} catch (FileNotFoundException e) {
@@ -379,6 +386,39 @@ public class FileConfigDatabase implements ConfigDatabase {
 		} finally {
 			if (reader != null)
 				reader.close();
+		}
+	}
+
+	private void upgradeConfigFormat(FileManifest manifest) {
+		for (String name : manifest.getCollectionNames()) {
+			CollectionEntry col = manifest.getCollectionEntry(name);
+			File logFile = new File(dbDir, "col" + col.getId() + ".log");
+			File datFile = new File(dbDir, "col" + col.getId() + ".dat");
+			RevLogReader reader = null;
+			try {
+				reader = new RevLogReader(logFile, datFile);
+				// build map
+				Map<ConfigEntry, Long> indexMap = new HashMap<ConfigEntry, Long>();
+				long count = reader.count();
+				for (long i = 0; i < count; i++) {
+					RevLog revLog = reader.read(i);
+					indexMap.put(new ConfigEntry(col.getId(), revLog.getDocId(), revLog.getRev()), i);
+				}
+
+				for (ConfigEntry c : manifest.getConfigEntries(col.getName())) {
+					Long index = indexMap.get(c);
+					if (index != null) {
+						c.setIndex(index.intValue());
+						logger.debug("kraken confdb: set index for " + c);
+					} else
+						logger.warn("kraken confdb: cannot find index for " + c);
+				}
+			} catch (IOException e) {
+				logger.error("kraken confdb: cannot upgrade format", e);
+			} finally {
+				if (reader != null)
+					reader.close();
+			}
 		}
 	}
 
