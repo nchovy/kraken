@@ -19,7 +19,6 @@ JNIEXPORT jobject JNICALL Java_org_krakenapps_winapi_EventLogReader_readAllEvent
 	LPTSTR lpLogName;
 	HANDLE hEventLog;
 
-	//jLogName의 경우 null의 경우 에러가 발생하며, Application, System, Security 3가지 경우에만 가능.
 	if ( jLogName == (jstring)NULL )
 	{
 		jclass exceptionClass = (*env)->FindClass(env, "java/lang/NullPointerException");
@@ -94,7 +93,7 @@ JNIEXPORT jobject JNICALL Java_org_krakenapps_winapi_EventLogReader_readEventLog
 	LPTSTR lpLogName;
 	HANDLE hEventLog;	
 
-	//jLogName의 경우 null의 경우 에러가 발생하며, Application, System, Security 3가지 경우에만 가능.
+
 	if ( jLogName == (jstring)NULL )
 	{
 		jclass exceptionClass = (*env)->FindClass(env, "java/lang/NullPointerException");
@@ -102,8 +101,8 @@ JNIEXPORT jobject JNICALL Java_org_krakenapps_winapi_EventLogReader_readEventLog
 		return 0;
 	}
 
-	lpLogName = (LPTSTR)(*env)->GetStringChars(env, jLogName, JNI_FALSE);//Error Ocurred
-	hEventLog = OpenEventLog(NULL, lpLogName);//OpenEventLog의 경우 LogName이 정확하지 않은 경우 Application을 오픈하고 별도의 메세지나 에러는 없음.
+	lpLogName = (LPTSTR)(*env)->GetStringChars(env, jLogName, JNI_FALSE);
+	hEventLog = OpenEventLog(NULL, lpLogName);
 
 	if(lpLogName == NULL)
 	{
@@ -299,7 +298,7 @@ LPCVOID getResource(LPTSTR lpLogName, LPTSTR lpSourceName, LPTSTR lpValueName) {
 	lpSubKey = (LPTSTR)malloc(nSubKeySize);
 	StringCbPrintf(lpSubKey, nSubKeySize, L"SYSTEM\\CurrentControlSet\\services\\eventlog\\%s\\%s", lpLogName, lpSourceName);
 
-	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, lpSubKey, 0, KEY_READ, &hKey) != 0 )//Message가 없는 경우 NULL처리
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, lpSubKey, 0, KEY_READ, &hKey) != 0 )
 		return NULL;
 
 	RegQueryValueEx(hKey, lpValueName, NULL, NULL, NULL, &lpcbData);
