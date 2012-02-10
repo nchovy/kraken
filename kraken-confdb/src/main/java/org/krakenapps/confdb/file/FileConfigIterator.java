@@ -108,6 +108,10 @@ class FileConfigIterator implements ConfigIterator {
 		}
 
 		loaded = (matched != null);
+
+		if (loaded == false)
+			close();
+
 		return matched;
 	}
 
@@ -163,7 +167,9 @@ class FileConfigIterator implements ConfigIterator {
 
 	@Override
 	public void close() {
-		reader.close();
-		closed = true;
+		if (!closed) {
+			reader.close();
+			closed = true;
+		}
 	}
 }
