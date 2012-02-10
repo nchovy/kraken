@@ -121,7 +121,8 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void adds(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage, Object state) {
+	public <T> void adds(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
+			Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -207,7 +208,8 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage, Object state) {
+	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
+			Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -291,14 +293,14 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> Collection<T> removes(Transaction xact, String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
-			DefaultEntityEventProvider<T> provider) {
+	public <T> Collection<T> removes(Transaction xact, String domain, Class<T> cls, List<Predicate> preds,
+			String notFoundMessage, DefaultEntityEventProvider<T> provider) {
 		return removes(xact, domain, cls, preds, notFoundMessage, provider, null, null);
 	}
 
 	@Override
-	public <T> Collection<T> removes(Transaction xact, String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
-			DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
+	public <T> Collection<T> removes(Transaction xact, String domain, Class<T> cls, List<Predicate> preds,
+			String notFoundMessage, DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
 		if (preds.isEmpty())
 			return new ArrayList<T>();
 
@@ -311,25 +313,30 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		Collection<T> docs = new ArrayList<T>();
 		ConfigIterator it = db.find(cls, pred);
-		it.setParser(parsers.get(cls));
-		while (it.hasNext()) {
-			Config c = it.next();
-			T doc = c.getDocument(cls, getCallback(domain));
-			docs.add(doc);
-			xact.remove(c, doc, removingState, removedState);
+		try {
+			it.setParser(parsers.get(cls));
+			while (it.hasNext()) {
+				Config c = it.next();
+				T doc = c.getDocument(cls, getCallback(domain));
+				docs.add(doc);
+				xact.remove(c, doc, removingState, removedState);
+			}
+		} finally {
+			it.close();
 		}
 
 		return docs;
 	}
 
 	@Override
-	public <T> T remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider) {
+	public <T> T remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider) {
 		return remove(domain, cls, pred, notFoundMessage, provider, null, null);
 	}
 
 	@Override
-	public <T> T remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage, DefaultEntityEventProvider<T> provider,
-			Object removingState, Object removedState) {
+	public <T> T remove(String domain, Class<T> cls, Predicate pred, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
 		ConfigDatabase db = getDatabase(domain);
 		Transaction xact = new Transaction(domain, db);
 
