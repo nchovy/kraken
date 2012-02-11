@@ -2,6 +2,8 @@ package org.krakenapps.webconsole.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -65,7 +67,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	public void start() {
 		doStop = false;
 		HttpContext ctx = httpd.ensureContext("webconsole");
-		ctx.addServlet("msgbus", this, "/msgbus");
+		ctx.addServlet("msgbus", this, "/msgbus/*");
 
 		t = new Thread(this, "Msgbus Push");
 		t.start();
@@ -73,13 +75,16 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 	@Invalidate
 	public void stop() {
+		HttpContext ctx = httpd.ensureContext("webconsole");
+		ctx.removeServlet("msgbus");
+
 		doStop = true;
 		t.interrupt();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		Session session = ensureSession(req, resp);
+		Session session = ensureSession(req, resp, true);
 
 		if (req.getPathInfo().equals("/trap")) {
 			logger.trace("kraken webconsole: waiting msgbus response/trap [session={}]", session.getId());
@@ -90,9 +95,10 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		Session session = ensureSession(req, resp);
+		logger.info("kraken webconsole: msgbus post [{}]", req.getPathInfo());
 
 		if (req.getPathInfo().equals("/request")) {
+			Session session = ensureSession(req, resp, false);
 			ByteArrayOutputStream os = new ByteArrayOutputStream();
 			byte[] b = new byte[4096];
 
@@ -105,24 +111,27 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			}
 
 			String text = os.toString("utf-8");
-
 			Message msg = KrakenMessageDecoder.decode(session, text);
-			msgbus.dispatch(session, msg);
+			msgbus.execute(session, msg);
 		} else if (req.getPathInfo().equals("/trap")) {
+			Session session = ensureSession(req, resp, true);
 			logger.trace("kraken webconsole: waiting msgbus response/trap [session={}]", session.getId());
 			AsyncContext aCtx = req.startAsync();
 			contexts.put(session.getId(), aCtx);
 		}
 	}
 
-	private Session ensureSession(HttpServletRequest req, HttpServletResponse resp) {
+	private Session ensureSession(HttpServletRequest req, HttpServletResponse resp, boolean async) {
 		HttpSession httpSession = req.getSession();
 		logger.trace("kraken webconsole: using http session [{}, {}]", httpSession.getId(),
 				httpSession.getAttribute("msgbus_session"));
 
 		Session session = (Session) httpSession.getAttribute("msgbus_session");
 		if (session == null) {
-			session = new HttpMsgbusSession(req, resp);
+			if (async)
+				session = new HttpMsgbusAsyncSession(req, resp);
+			else
+				session = new HttpMsgbusSession(req, resp);
 			msgbus.openSession(session);
 			httpSession.setAttribute("msgbus_session", session);
 		}
@@ -136,7 +145,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			while (!doStop) {
 				try {
 					runOnce();
-					Thread.sleep(500);
+					Thread.sleep(100);
 				} catch (InterruptedException e) {
 					logger.info("kraken webconsole: msgbus push thread interrupted");
 				}
@@ -147,34 +156,88 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	}
 
 	private void runOnce() throws InterruptedException {
-		// TODO: introduce new blocking queue and do pending queue
-		// classification here
 		for (Integer sessionId : contexts.keySet()) {
-			AsyncContext ctx = contexts.get(sessionId);
 			Queue<String> frames = pendingQueues.get(sessionId);
-			if (frames == null)
+			if (frames == null || frames.size() == 0)
 				continue;
 
-			String frame = frames.poll();
-			if (frame == null)
-				continue;
+			flushTraps(sessionId, frames);
+		}
+	}
 
-			try {
-				logger.trace("kraken webconsole: trying to send pending frame [{}]", frame);
-				ctx.getResponse().getOutputStream().write(frame.getBytes("utf-8"));
-			} catch (IOException e) {
-				logger.error("kraken webconsole: cannot send pending msg", e);
-			} finally {
-				ctx.complete();
+	private void flushTraps(int sessionId, Queue<String> frames) {
+		AsyncContext ctx = contexts.get(sessionId);
+		if (ctx == null)
+			return;
+
+		try {
+			synchronized (ctx) {
+				ctx.getResponse().getOutputStream().write("[".getBytes());
+				int i = 0;
+				while (true) {
+					String frame = frames.poll();
+					if (frame == null)
+						break;
+
+					if (i != 0)
+						ctx.getResponse().getOutputStream().write(",".getBytes());
+
+					logger.trace("kraken webconsole: trying to send pending frame [{}]", frame);
+					ctx.getResponse().getOutputStream().write(frame.getBytes("utf-8"));
+					i++;
+				}
+				ctx.getResponse().getOutputStream().write("]".getBytes());
 			}
+		} catch (IOException e) {
+			logger.error("kraken webconsole: cannot send pending msg", e);
+		} finally {
+			ctx.complete();
+			contexts.remove(sessionId);
 		}
 	}
 
 	private class HttpMsgbusSession extends AbstractSession {
 		private int id;
+		private HttpServletRequest req;
+		private HttpServletResponse resp;
 
 		public HttpMsgbusSession(HttpServletRequest req, HttpServletResponse resp) {
 			this.id = new Random().nextInt(Integer.MAX_VALUE);
+			this.req = req;
+			this.resp = resp;
+		}
+
+		@Override
+		public int getId() {
+			return id;
+		}
+
+		@Override
+		public void send(Message msg) {
+			Session session = ensureSession(req, resp, false);
+			String payload = KrakenMessageEncoder.encode(session, msg);
+			try {
+				logger.trace("kraken webconsole: trying to send response [{}]", payload);
+				resp.getOutputStream().write(payload.getBytes("utf-8"));
+			} catch (IOException e) {
+				logger.error("kraken webconsole: cannot send response [{}]", payload);
+			}
+		}
+
+		@Override
+		public String toString() {
+			return "msgbus session=" + id + ", remote=" + req.getRemoteAddr() + ":" + req.getRemotePort()
+					+ formatSessionData(req.getSession());
+		}
+	}
+
+	private class HttpMsgbusAsyncSession extends AbstractSession {
+		private int id;
+		private HttpServletRequest req;
+
+		public HttpMsgbusAsyncSession(HttpServletRequest req, HttpServletResponse resp) {
+			this.id = new Random().nextInt(Integer.MAX_VALUE);
+			this.req = req;
 		}
 
 		@Override
@@ -186,12 +249,33 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 		public void send(Message msg) {
 			pendingQueues.putIfAbsent(msg.getSession(), new ConcurrentLinkedQueue<String>());
 			Queue<String> frames = pendingQueues.get(msg.getSession());
-
 			String payload = KrakenMessageEncoder.encode(this, msg);
 			frames.add(payload);
 
-			logger.debug("kraken webconsole: queue msgbus packet [session={}, payload={}]", msg.getSession(), payload);
+			if (contexts.containsKey(msg.getSession())) {
+				logger.debug("kraken webconsole: sending trap immediately [session={}, payload={}]", msg.getSession(), payload);
+				flushTraps(msg.getSession(), frames);
+			} else
+				logger.debug("kraken webconsole: queueing trap [session={}, payload={}]", msg.getSession(), payload);
 		}
+
+		@Override
+		public String toString() {
+			return "msgbus session=" + id + ", remote=" + req.getRemoteAddr() + ":" + req.getRemotePort()
+					+ formatSessionData(req.getSession());
+		}
+	}
+
+	private static String formatSessionData(HttpSession session) {
+		String sessiondata = "";
+		if (session != null) {
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			Date since = new Date(session.getCreationTime());
+			Date lastAccess = new Date(session.getLastAccessedTime());
+			sessiondata = String.format(", jsession=%s, since=%s, lastaccess=%s", session.getId(), dateFormat.format(since),
+					dateFormat.format(lastAccess));
+		}
+		return sessiondata;
 	}
 
 	@Override
