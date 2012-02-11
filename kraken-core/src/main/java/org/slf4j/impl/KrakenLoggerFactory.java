@@ -47,7 +47,7 @@ public class KrakenLoggerFactory implements ILoggerFactory, Runnable {
 	}
 
 	public void start() {
-		t = new Thread(this);
+		t = new Thread(this, "Kraken Log Monitor");
 		t.start();
 	}
 
