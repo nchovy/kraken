@@ -51,7 +51,8 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	private Set<SessionEventHandler> sessionEventListeners;
 	private ConcurrentMap<String, Set<MessageHandler>> messageHandlerMap;
 	private ConcurrentMap<String, PackageMetadataProvider> packageProviderMap;
-	private Set<PermissionChecker> permissionCheckers = Collections.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
+	private Set<PermissionChecker> permissionCheckers = Collections
+			.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
 	private final ExecutorService threadPool;
 
 	@Requires
@@ -165,6 +166,23 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 		return provider.getName(locale.getLanguage());
 	}
 
+	@Override
+	public Message execute(Session session, Message message) {
+		logger.trace("kraken msgbus: executing method [{}]", message.getMethod());
+
+		Set<MessageHandler> handlers = messageHandlerMap.get(message.getMethod());
+		if (handlers == null || handlers.size() == 0) {
+			session.send(Message.createError(session, message, "msgbus-handler-not-found", message.getMethod()));
+			logger.warn("kraken msgbus: handler not found. discarded [{}]", message.getMethod());
+			throw new IllegalStateException("msgbus-handler-not-found");
+		}
+
+		TaskRunner runner = new TaskRunner(session, message, handlers.iterator().next());
+		runner.run();
+		return runner.respondMessage;
+	}
+
+	@Override
 	public void dispatch(Session session, Message message) {
 		logger.trace("kraken msgbus: dispatching message [{}]", message.getMethod());
 
@@ -243,8 +261,8 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 		sessionMap.remove(session.getId());
 
-		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed", new Object[] { session,
-				session.getOrgDomain(), session.getAdminLoginName() });
+		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed",
+				new Object[] { session, session.getOrgDomain(), session.getAdminLoginName() });
 
 		for (SessionEventHandler handler : sessionEventListeners) {
 			handler.sessionClosed(session);
@@ -273,7 +291,6 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 			Set<MessageHandler> handlers = messageHandlerMap.get(messageType);
 			handlers.remove(handler);
 		}
-
 	}
 
 	public void register(SessionEventHandler hanlder) {
@@ -319,6 +336,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 		private Session session;
 		private Message message;
 		private MessageHandler handler;
+		private Message respondMessage;
 
 		public TaskRunner(Session session, Message message, MessageHandler handler) {
 			this.session = session;
@@ -333,7 +351,6 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 		@SuppressWarnings("unchecked")
 		private void invokeMessageHandler(Session session, Message message, MessageHandler handler) {
-			Message respondMessage = null;
 			try {
 				respondMessage = Message.createResponse(session, message);
 				Request request = new Request(session, message);
@@ -341,12 +358,13 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 				handler.handleMessage(request, response);
 				respondMessage.setParameters(response);
 			} catch (SecurityException e) {
-				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]",
-						new Object[] { session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
+				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]", new Object[] {
+						session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
 				logger.debug("kraken msgbus: security violation stacktrace", e);
 				respondMessage = Message.createError(session, message, "security", "Security Violation");
 			} catch (IllegalArgumentException e) {
-				respondMessage = Message.createError(session, message, "invalid-method-signature", "invalid msgbus method signature");
+				respondMessage = Message.createError(session, message, "invalid-method-signature",
+						"invalid msgbus method signature");
 				logger.error("kraken msgbus: illegal msgbus method signature", e);
 			} catch (IllegalAccessException e) {
 				respondMessage = Message.createError(session, message, "invalid-access", "invalid msgbus access");
@@ -378,7 +396,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 					respondMessage = Message.createError(session, message, "general-error", "invocation target exception");
 				}
 
-				// reduceStackTrace(e);
+				reduceStackTrace(e);
 
 				logger.error("kraken msgbus: message handler failed", e);
 			} catch (Exception e) {

@@ -110,7 +110,8 @@ public class MsgbusScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "send", arguments = { @ScriptArgument(name = "session id", type = "int", description = "session id"),
+	@ScriptUsage(description = "send", arguments = {
+			@ScriptArgument(name = "session id", type = "int", description = "session id"),
 			@ScriptArgument(name = "callback name", type = "string", description = "callback name"),
 			@ScriptArgument(name = "data string", type = "string", description = "data string") })
 	public void send(String[] args) {
@@ -126,6 +127,7 @@ public class MsgbusScript implements Script {
 
 		Message msg = new Message();
 		msg.setType(Type.Trap);
+		msg.setSession(session.getId());
 		msg.setMethod(args[1]);
 		msg.setParameters(params);
 		session.send(msg);
