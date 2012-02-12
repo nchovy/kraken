@@ -80,6 +80,11 @@ public class SnmpQueryLogger extends AbstractLogger {
 	}
 
 	private void parseConfig(Properties config) {
+		if (logger.isDebugEnabled()) {
+			for (Object key : config.keySet())
+				logger.debug("kraken snmpmon: logger option key [{}], value [{}]", key, config.get(key));
+		}
+
 		target = null;
 
 		String ip = (String) config.get(ConfigOption.AgentIP.getConfigKey());
@@ -536,7 +541,7 @@ public class SnmpQueryLogger extends AbstractLogger {
 			commTarget.setRetries(2);
 			commTarget.setTimeout(timeout);
 
-			transport = new DefaultUdpTransportMapping();
+			transport = new DefaultUdpTransportMapping(new UdpAddress());
 			transport.listen();
 
 			snmp = new Snmp(transport);
