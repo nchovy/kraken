@@ -257,7 +257,7 @@ public class LogApiScript implements Script {
 		context.print(type.getDisplayName(Locale.ENGLISH) + " " + directive + "? ");
 		String value = context.readLine();
 		if (!value.isEmpty())
-			config.put(type.getName(), type.parse(value));
+			config.put(type.getName(), value);
 
 		if (value.isEmpty() && type.isRequired()) {
 			setOption(config, type);
