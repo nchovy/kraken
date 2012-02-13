@@ -18,6 +18,7 @@ package org.krakenapps.logstorage.engine.v2;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Date;
@@ -53,7 +54,7 @@ public class LogFileReaderV2 extends LogFileReader {
 		this.indexFile = new RandomAccessFile(indexPath, "r");
 		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile);
 		if (indexFileHeader.version() != 2)
-			throw new InvalidLogFileHeaderException("version not match");
+			throw new InvalidLogFileHeaderException("version not match, index file " + indexPath.getAbsolutePath());
 
 		long length = indexFile.length() - 4;
 		long pos = indexFileHeader.size();
@@ -66,8 +67,8 @@ public class LogFileReaderV2 extends LogFileReader {
 			indexBlockHeaders.add(header);
 			pos += 4 + header.logCount * INDEX_ITEM_SIZE;
 		}
-		logger.trace("kraken logstorage: {} has {} blocks, {} logs.", new Object[] { indexPath.getName(), indexBlockHeaders.size(),
-				logCount });
+		logger.trace("kraken logstorage: {} has {} blocks, {} logs.",
+				new Object[] { indexPath.getName(), indexBlockHeaders.size(), logCount });
 
 		this.dataFile = new RandomAccessFile(dataPath, "r");
 		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile);
@@ -80,15 +81,25 @@ public class LogFileReaderV2 extends LogFileReader {
 		length = dataFile.length();
 		pos = dataFileHeader.size();
 		while (pos < length) {
-			dataFile.seek(pos);
-			DataBlockHeader header = new DataBlockHeader(dataFile);
-			header.fp = pos;
-			dataBlockHeaders.add(header);
-			pos += 24 + header.compressedLength;
+			if (pos < 0)
+				throw new IOException("negative seek offset " + pos + ", index file: " + indexPath.getAbsolutePath()
+						+ ", data file: " + dataPath.getAbsolutePath());
+
+			try {
+				dataFile.seek(pos);
+				DataBlockHeader header = new DataBlockHeader(dataFile);
+				header.fp = pos;
+				dataBlockHeaders.add(header);
+				pos += 24 + header.compressedLength;
+			} catch (BufferUnderflowException e) {
+				logger.error("kraken logstorage: buffer underflow at position {}, data file [{}]", pos,
+						dataPath.getAbsolutePath());
+				throw e;
+			}
 		}
 
 		if (indexBlockHeaders.size() != dataBlockHeaders.size())
-			throw new IOException("invalid log file");
+			throw new IOException("invalid log file, index file: " + indexPath + ", data file: " + dataPath);
 	}
 
 	private int getInt(byte[] extraData) {
@@ -138,7 +149,8 @@ public class LogFileReaderV2 extends LogFileReader {
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
+			InterruptedException {
 		for (int i = indexBlockHeaders.size() - 1; i >= 0; i--) {
 			IndexBlockHeader index = indexBlockHeaders.get(i);
 			if (index.logCount <= offset) {
