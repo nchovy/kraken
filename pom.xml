@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
 	<modelVersion>4.0.0</modelVersion>
 	<organization>
 		<name>Kraken Project</name>
@@ -100,32 +99,30 @@
 		<module>kraken-dhcp</module>
 		<module>kraken-captive-portal</module>
 		<module>kraken-radius</module>
-    <module>kraken-logdb-client</module>
-    <module>kraken-logdb</module>
-    <module>kraken-confdb</module>
-    <module>kraken-snmpmon</module>
-    <module>kraken-servlet-api</module>
-    <module>kraken-logdb-jython</module>
-    <module>kraken-logdb-pcap</module>
-    <module>kraken-syslogmon</module>
-    <module>kraken-logdb-geoip</module>
-    <module>kraken-logdb-cmd</module>
-    <module>kraken-word</module>
-    <module>kraken-webfx</module>
-    <module>kraken-httpd</module>
-    <module>kraken-slpolicy</module>
-    <module>kraken-sslscan</module>
-  </modules>
+		<module>kraken-logdb-client</module>
+		<module>kraken-logdb</module>
+		<module>kraken-confdb</module>
+		<module>kraken-snmpmon</module>
+		<module>kraken-servlet-api</module>
+		<module>kraken-logdb-jython</module>
+		<module>kraken-logdb-pcap</module>
+		<module>kraken-syslogmon</module>
+		<module>kraken-logdb-geoip</module>
+		<module>kraken-logdb-cmd</module>
+		<module>kraken-word</module>
+		<module>kraken-webfx</module>
+		<module>kraken-httpd</module>
+		<module>kraken-slpolicy</module>
+		<module>kraken-sslscan</module>
+	</modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>
 	<scm>
 		<connection>scm:svn:ssh://krakenapps.org/kraken</connection>
-		<developerConnection>
-    scm:svn:ssh://krakenapps.org/kraken</developerConnection>
+		<developerConnection>scm:svn:ssh://krakenapps.org/kraken</developerConnection>
 		<url>http://krakenapps.org/browser</url>
 	</scm>
-	<description>Kraken is a enterprise-class open source monitoring
-  framework.</description>
+	<description>Kraken is an opensource information security suite for java developers.</description>
 	<licenses>
 		<license>
 			<name>Apache Software License 2</name>
@@ -175,6 +172,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
 				<configuration>
 					<encoding>UTF-8</encoding>
 					<source>1.6</source>
@@ -187,6 +185,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
+				<version>2.1.2</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -196,7 +195,6 @@
 					</execution>
 				</executions>
 			</plugin>
-
 		</plugins>
 		<extensions>
 			<extension>

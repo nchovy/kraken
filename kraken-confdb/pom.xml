@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-confdb</artifactId>
-	<version>0.8.0</version>
+	<version>0.8.1</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Config Database</name>
 
@@ -27,6 +27,7 @@
 							org.krakenapps.confdb;version=${project.version}, 
 							org.krakenapps.confdb.file;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
+						<Main-Class>org.krakenapps.confdb.file.Console</Main-Class>
 					</instructions>
 				</configuration>
 			</plugin>

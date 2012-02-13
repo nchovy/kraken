@@ -77,6 +77,34 @@ public class ConfigEntry {
 	}
 
 	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + colId;
+		result = prime * result + docId;
+		result = prime * result + (int) (rev ^ (rev >>> 32));
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ConfigEntry other = (ConfigEntry) obj;
+		if (colId != other.colId)
+			return false;
+		if (docId != other.docId)
+			return false;
+		if (rev != other.rev)
+			return false;
+		return true;
+	}
+
+	@Override
 	public String toString() {
 		return "col=" + colId + ", doc=" + docId + ", rev=" + rev + ", index=" + index;
 	}

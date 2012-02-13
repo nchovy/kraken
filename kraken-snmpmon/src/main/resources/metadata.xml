@@ -2,4 +2,5 @@
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
 	<instance component="snmpmon-query-logger-factory" />
+	<instance component="snmptrap-logger-factory" />
 </ipojo>

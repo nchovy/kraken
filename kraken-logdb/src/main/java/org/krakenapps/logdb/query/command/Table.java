@@ -131,10 +131,17 @@ public class Table extends LogQueryCommand {
 			m.put("_table", log.getTableName());
 			m.put("_id", log.getId());
 			m.put("_time", log.getDate());
-			if (parser != null)
-				m.putAll(parser.parse(log.getData()));
-			else
+
+			if (parser != null) {
+				Map<String, Object> parsed = parser.parse(log.getData());
+				if (parsed != null) {
+					m.putAll(parsed);
+				} else {
+					logger.debug("kraken logdb: cannot parse log [{}]", log.getData());
+				}
+			} else {
 				m.putAll(log.getData());
+			}
 			write(new LogMap(m));
 		}
 

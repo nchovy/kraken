@@ -9,14 +9,25 @@ JNIEXPORT jobject JNICALL Java_org_krakenapps_winapi_EventLogReader_readAllEvent
 	jmethodID listInit = (*env)->GetMethodID(env, clzList, "<init>", "()V");
 	jmethodID listAdd = (*env)->GetMethodID(env, clzList, "add", "(Ljava/lang/Object;)Z");
 	jobject list = (*env)->NewObject(env, clzList, listInit);
-
-	LPTSTR lpLogName = (LPTSTR)(*env)->GetStringChars(env, jLogName, JNI_FALSE);
-	HANDLE hEventLog = OpenEventLog(NULL, lpLogName);
+	
 	DWORD dwReadFlags = 0;
 	LPVOID lpBuffer = (LPVOID)malloc(MAX_RECORD_BUFFER_SIZE);
 	DWORD nNumberOfBytesToRead = MAX_RECORD_BUFFER_SIZE;
 	DWORD pnBytesRead = 0;
-	DWORD pnMinNumberOfBytesNeeded = 0;
+	DWORD pnMinNumberOfBytesNeeded = 0;	
+
+	LPTSTR lpLogName;
+	HANDLE hEventLog;
+
+	if ( jLogName == (jstring)NULL )
+	{
+		jclass exceptionClass = (*env)->FindClass(env, "java/lang/NullPointerException");
+		(*env)->ThrowNew(env, exceptionClass, "Should not input \"NULL\"");
+		return 0;
+	}
+
+	lpLogName = (LPTSTR)(*env)->GetStringChars(env, jLogName, JNI_FALSE);
+	hEventLog = OpenEventLog(NULL, lpLogName);
 
 	if(hEventLog == NULL) {
 		fwprintf(stderr, L"Error in OpenEventLog: 0x%x\n", GetLastError());
@@ -73,14 +84,31 @@ JNIEXPORT jobject JNICALL Java_org_krakenapps_winapi_EventLogReader_readAllEvent
 }
 
 JNIEXPORT jobject JNICALL Java_org_krakenapps_winapi_EventLogReader_readEventLog(JNIEnv *env, jobject obj, jstring jLogName, jint begin) {
-	jobject record = NULL;
-	LPTSTR lpLogName = (LPTSTR)(*env)->GetStringChars(env, jLogName, JNI_FALSE);
-	HANDLE hEventLog = OpenEventLog(NULL, lpLogName);
+	jobject record = NULL;		
 	DWORD dwReadFlags = EVENTLOG_SEEK_READ | EVENTLOG_FORWARDS_READ;
 	LPVOID lpBuffer = (LPVOID)malloc(MAX_RECORD_BUFFER_SIZE);
 	DWORD nNumberOfBytesToRead = MAX_RECORD_BUFFER_SIZE;
 	DWORD pnBytesRead = 0;
-	DWORD pnMinNumberOfBytesNeeded = 0;
+	DWORD pnMinNumberOfBytesNeeded = 0;	
+	LPTSTR lpLogName;
+	HANDLE hEventLog;	
+
+
+	if ( jLogName == (jstring)NULL )
+	{
+		jclass exceptionClass = (*env)->FindClass(env, "java/lang/NullPointerException");
+		(*env)->ThrowNew(env, exceptionClass, "Should not input \"NULL\"");
+		return 0;
+	}
+
+	lpLogName = (LPTSTR)(*env)->GetStringChars(env, jLogName, JNI_FALSE);
+	hEventLog = OpenEventLog(NULL, lpLogName);
+
+	if(lpLogName == NULL)
+	{
+		fwprintf(stderr, L"Error in OpenEventLog: 0x%x\n", GetLastError());		
+		return 0;
+	}
 
 	if(hEventLog == NULL) {
 		fwprintf(stderr, L"Error in OpenEventLog: 0x%x\n", GetLastError());
@@ -221,31 +249,35 @@ LPTSTR getEventType(WORD wEventType) {
 	return L"Information";
 }
 
-LPTSTR getMessageString(LPTSTR lpLogName, LPTSTR lpSourceName, LPTSTR lpValueName, DWORD dwMessageId, WORD NumStrings, LPTSTR pStrings) {
-	DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_MAX_WIDTH_MASK;
+LPTSTR getMessageString(LPTSTR lpLogName, LPTSTR lpSourceName, LPTSTR lpValueName, DWORD dwMessageId, WORD numStrings, LPTSTR pStrings) {
+	DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_MAX_WIDTH_MASK;// | FORMAT_MESSAGE_IGNORE_INSERTS;
 	LPCVOID lpSource = NULL;
 	DWORD dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_SYS_DEFAULT);
 	LPTSTR lpBuffer = NULL;
-	va_list *Arguments = NULL;
+	void **Arguments = NULL;
 	WORD i;
 
 	lpSource = getResource(lpLogName, lpSourceName, lpValueName);
 	if(!lpSource)
 		return NULL;
 
-	if(NumStrings > 0) {
-		Arguments = (va_list *)malloc(sizeof(va_list)*NumStrings);
-		for(i=0; i<NumStrings; i++) {
-			Arguments[i] = (va_list)pStrings;
+	if(numStrings > 0) {
+		Arguments = (void**)malloc(sizeof(void*)*numStrings * 2);
+		memset(Arguments, 0, sizeof(void*)*numStrings * 2);
+		for(i=0; i<numStrings; i++) {
+			*(Arguments + i) = (void*)pStrings;
 			pStrings += wcslen(pStrings) + 1;
-		}
+		}		
 	}
+	
+	if(!FormatMessage(dwFlags, lpSource, dwMessageId, dwLanguageId, (LPTSTR)&lpBuffer, 0, (va_list*)Arguments)) {
+		 //fwprintf(stderr, L"Error in FormatMessage: 0x%x, %s(%d)\n", GetLastError(), lpSourceName, dwMessageId);
+		 //return NULL;
+	}	
 
-	if(!FormatMessage(dwFlags, lpSource, dwMessageId, dwLanguageId, (LPTSTR)&lpBuffer, 0, Arguments)) {
-		// fwprintf(stderr, L"Error in FormatMessage: 0x%x, %s(%d)\n", GetLastError(), lpSourceName, dwMessageId);
-	}
 
 	FreeLibrary((HMODULE)lpSource);
+
 	if(Arguments)
 		free(Arguments);
 
@@ -266,7 +298,9 @@ LPCVOID getResource(LPTSTR lpLogName, LPTSTR lpSourceName, LPTSTR lpValueName) {
 	lpSubKey = (LPTSTR)malloc(nSubKeySize);
 	StringCbPrintf(lpSubKey, nSubKeySize, L"SYSTEM\\CurrentControlSet\\services\\eventlog\\%s\\%s", lpLogName, lpSourceName);
 
-	RegOpenKeyEx(HKEY_LOCAL_MACHINE, lpSubKey, 0, KEY_READ, &hKey);
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, lpSubKey, 0, KEY_READ, &hKey) != 0 )
+		return NULL;
+
 	RegQueryValueEx(hKey, lpValueName, NULL, NULL, NULL, &lpcbData);
 	if(lpcbData == 0)
 		return NULL;

@@ -20,6 +20,8 @@ public interface MessageBus {
 
 	boolean checkPermission(Session session, String group, String code);
 
+	Message execute(Session session, Message message);
+
 	void dispatch(Session session, Message msg);
 
 	void send(Message msg);

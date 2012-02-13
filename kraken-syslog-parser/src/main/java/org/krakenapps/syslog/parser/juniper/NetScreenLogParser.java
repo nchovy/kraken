@@ -32,9 +32,11 @@ public class NetScreenLogParser implements LogParser {
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Integer severity = (Integer) params.get("severity");
-		// Integer facility = (Integer) params.get("facility");
 
-		String line = (String) params.get("msg");
+		String line = (String) params.get("line");
+		// for legacy support
+		if (line == null)
+			line = (String) params.get("msg");
 		try {
 			Map<String, Object> map = sessionPattern.parse(line);
 			if (map == null && attackPattern != null) {

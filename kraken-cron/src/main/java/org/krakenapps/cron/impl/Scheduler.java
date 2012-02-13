@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 public class Scheduler {
 	private final Logger logger = LoggerFactory.getLogger(CronConfig.class.getName());
 	private PriorityQueue<Job> queue;
-	private final Thread loop = new Thread(new Loop());
+	private final Thread loop = new Thread(new Loop(), "Cron Scheduler");
 	private boolean running;
 
 	public void start(Map<Integer, Schedule> map) {
@@ -136,7 +136,7 @@ public class Scheduler {
 			synchronized (queue) {
 				if (itIsTime()) {
 					Job first = queue.poll();
-					Thread runner = new Thread(new Runner(first.clone()));
+					Thread runner = new Thread(new Runner(first.clone()), "Cron Runner");
 					runner.start();
 
 					// set base time as 1 min after current time

@@ -9,8 +9,6 @@ import org.junit.Test;
 
 public class JuniperSessionLogParserTest {
 
-	
-	
 	@Test
 	public void testParseIcmp() {
 		String line = "nsisg1000: NetScreen device_id=0133012007000002  [Root]system-notification-00257(traffic): start_time=\"2009-01-22 15:14:10\" duration=0 policy_id=45 service=icmp proto=1 src zone=Untrust dst zone=Trust action=Deny sent=0 rcvd=0 src=58.72.190.250 dst=210.99.53.197 icmp type=8 session_id=0";

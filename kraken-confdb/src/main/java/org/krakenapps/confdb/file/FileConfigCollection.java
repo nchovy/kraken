@@ -227,10 +227,10 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public Config update(ConfigTransaction xact, Config c, boolean checkConflict) {
-		ConfigIterator it = null;
+		RevLogReader reader = null;
 		try {
 			RevLogWriter writer = getWriter(xact);
-			RevLogReader reader = new RevLogReader(logFile, datFile);
+			reader = new RevLogReader(logFile, datFile);
 			List<RevLog> snapshot = getSnapshot(reader);
 
 			// find any conflict (if common parent exists)
@@ -255,8 +255,8 @@ public class FileConfigCollection implements ConfigCollection {
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);
 		} finally {
-			if (it != null)
-				it.close();
+			if (reader != null)
+				reader.close();
 		}
 	}
 
