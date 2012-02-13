@@ -289,12 +289,12 @@ public class EncodingRule {
 			throw new TypeMismatchException(ZINT64_TYPE, type, bb.position() - 1);
 
 		long zvalue = (long) decodeRawNumber(bb);
-		return (zvalue >> 1) ^ (zvalue << 63 >> 63);
+		return ((zvalue >> 1) & 0x7FFFFFFFFFFFFFFFL) ^ -(zvalue & 1);
 	}
 
 	public static void encodeInt(ByteBuffer bb, int value) {
 		bb.put(ZINT32_TYPE);
-		int zvalue = (value << 1) ^ (value >> 31);
+		long zvalue = ((long)value << 1) ^ ((long)value >> 31);
 		encodeRawNumber(bb, int.class, zvalue);
 	}
 
@@ -304,12 +304,12 @@ public class EncodingRule {
 			throw new TypeMismatchException(ZINT32_TYPE, type, bb.position() - 1);
 
 		int zvalue = (int) decodeRawNumber(bb);
-		return (zvalue >> 1) ^ (zvalue << 31 >> 31);
+		return (int) (((zvalue >> 1) & 0x7FFFFFFF) ^ -(zvalue & 1));
 	}
 
 	public static void encodeShort(ByteBuffer bb, short value) {
 		bb.put(ZINT16_TYPE);
-		short zvalue = (short) ((value << 1) ^ (value >> 15));
+		long zvalue = ((long)value << 1) ^ ((long)value >> 15);
 		encodeRawNumber(bb, short.class, zvalue);
 	}
 
@@ -318,8 +318,8 @@ public class EncodingRule {
 		if (type != ZINT16_TYPE)
 			throw new TypeMismatchException(ZINT16_TYPE, type, bb.position() - 1);
 
-		short zvalue = (short) decodeRawNumber(bb);
-		return (short) ((zvalue >> 1) ^ -(zvalue & 1));
+		long zvalue = decodeRawNumber(bb);
+		return (short) (((zvalue >> 1) & 0x7FFF) ^ -(zvalue & 1));
 	}
 
 	public static void encodeString(ByteBuffer bb, String value) {

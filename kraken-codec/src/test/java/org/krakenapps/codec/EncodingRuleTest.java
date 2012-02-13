@@ -131,6 +131,83 @@ public class EncodingRuleTest {
 		assertEquals(2, bb.remaining());
 		assertEquals(-10, EncodingRule.decode(bb));
 	}
+	
+	@Test
+	public void encodeDecodeZigzagNumber() {
+		ByteBuffer bb = ByteBuffer.allocate(100);
+		
+		bb.clear();
+		EncodingRule.encode(bb, (int)0);
+		bb.flip();
+		bb.get();
+		assertEquals(0, EncodingRule.decodeRawNumber(bb));
+	
+		bb.clear();
+		EncodingRule.encode(bb, (int)-1);
+		bb.flip();
+		bb.get();
+		assertEquals(1, EncodingRule.decodeRawNumber(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, (int)1);
+		bb.flip();
+		bb.get();
+		assertEquals(2, EncodingRule.decodeRawNumber(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, (int)-2);
+		bb.flip();
+		bb.get();
+		assertEquals(3, EncodingRule.decodeRawNumber(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, Integer.MAX_VALUE);
+		bb.flip();
+		bb.get();
+		assertEquals(0xFFFFFFFFL-1, EncodingRule.decodeRawNumber(bb));
+	
+		bb.clear();
+		EncodingRule.encode(bb, (int)Integer.MIN_VALUE);
+		bb.flip();
+		bb.get();
+		assertEquals(0xFFFFFFFFL, EncodingRule.decodeRawNumber(bb));
+	}
+	
+	@Test
+	public void encodeDecodeNumberBoundary() {
+		ByteBuffer bb = ByteBuffer.allocate(100);
+		
+		bb.clear();
+		EncodingRule.encode(bb, Short.MAX_VALUE);
+		bb.flip();
+		assertEquals(Short.MAX_VALUE, EncodingRule.decode(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, Integer.MAX_VALUE);
+		bb.flip();
+		assertEquals(Integer.MAX_VALUE, EncodingRule.decode(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, Long.MAX_VALUE);
+		bb.flip();
+		assertEquals(Long.MAX_VALUE, EncodingRule.decode(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, Short.MIN_VALUE);
+		bb.flip();
+		assertEquals(Short.MIN_VALUE, EncodingRule.decode(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, Integer.MIN_VALUE);
+		bb.flip();
+		assertEquals(Integer.MIN_VALUE, EncodingRule.decode(bb));
+
+		bb.clear();
+		EncodingRule.encode(bb, Long.MIN_VALUE);
+		bb.flip();
+		assertEquals(Long.MIN_VALUE, EncodingRule.decode(bb));
+
+	}
 
 	@Test
 	public void encodeDecodeNumber() {
