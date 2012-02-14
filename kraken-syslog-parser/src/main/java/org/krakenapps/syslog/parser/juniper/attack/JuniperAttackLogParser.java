@@ -23,8 +23,11 @@ import java.util.Map;
 import java.util.Set;
 
 import org.krakenapps.syslog.parser.internal.PatternFinder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JuniperAttackLogParser {
+	private final Logger logger = LoggerFactory.getLogger(JuniperAttackLogParser.class.getName());
 	private PatternFinder<JuniperAttackLogPattern> patternMap;
 
 	public JuniperAttackLogParser() throws IOException {
@@ -76,9 +79,14 @@ public class JuniperAttackLogParser {
 	public Map<String, Object> parse(String line) {
 		Set<JuniperAttackLogPattern> patterns = patternMap.find(line);
 		for (JuniperAttackLogPattern pattern : patterns) {
-			Map<String, Object> result = pattern.parse(line);
-			if (result != null)
-				return result;
+			Map<String, Object> result = null;
+			try {
+				result = pattern.parse(line);
+				if (result != null)
+					return result;
+			} catch (Throwable t) {
+				logger.warn("kraken syslog parser: cannot parse juniper attack log", t);
+			}
 		}
 
 		return null;
