@@ -46,8 +46,9 @@ public class PushPlugin {
 		String orgDomain = session.getOrgDomain();
 
 		// for backward compatibility
-		if (orgDomain == null && session.getOrgId() != null)
-			orgDomain = session.getOrgId().toString();
+		Integer orgId = session.getOrgId();
+		if (orgDomain == null && orgId != null)
+			orgDomain = orgId.toString();
 
 		return orgDomain;
 	}
