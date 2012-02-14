@@ -98,7 +98,7 @@ public class LogFileReaderV2 extends LogFileReader {
 			}
 		}
 
-		if (indexBlockHeaders.size() != dataBlockHeaders.size())
+		if (indexBlockHeaders.size() > dataBlockHeaders.size())
 			throw new IOException("invalid log file, index file: " + indexPath + ", data file: " + dataPath);
 	}
 

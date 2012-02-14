@@ -68,8 +68,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 		this(indexPath, dataPath, DEFAULT_BLOCK_SIZE);
 	}
 
-	public LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException,
-			InvalidLogFileHeaderException {
+	public LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException, InvalidLogFileHeaderException {
 		this(indexPath, dataPath, blockSize, DEFAULT_LEVEL);
 	}
 
@@ -157,8 +156,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 		if (newKey <= lastKey)
 			throw new IllegalArgumentException("invalid key: " + newKey + ", last key was " + lastKey);
 
-		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime())
-				|| indexBuffer.remaining() < INDEX_ITEM_SIZE
+		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime()) || indexBuffer.remaining() < INDEX_ITEM_SIZE
 				|| dataBuffer.remaining() < 20 + data.getData().remaining())
 			flush();
 
@@ -221,16 +219,6 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 		logger.trace("kraken logstorage: flush");
 
-		// write log count
-		prepareInt(blockLogCount, intbuf);
-		indexFile.write(intbuf);
-
-		// write log indexes
-		indexBuffer.flip();
-		indexFile.write(indexBuffer.array(), 0, indexBuffer.limit());
-		indexBuffer.clear();
-		indexFile.getFD().sync();
-
 		// write start date
 		prepareLong(blockStartLogTime, longbuf);
 		dataFile.write(longbuf);
@@ -259,6 +247,16 @@ public class LogFileWriterV2 extends LogFileWriter {
 		dataBuffer.clear();
 		compresser.reset();
 		dataFile.getFD().sync();
+
+		// write log count
+		prepareInt(blockLogCount, intbuf);
+		indexFile.write(intbuf);
+
+		// write log indexes
+		indexBuffer.flip();
+		indexFile.write(indexBuffer.array(), 0, indexBuffer.limit());
+		indexBuffer.clear();
+		indexFile.getFD().sync();
 
 		blockStartLogTime = null;
 		blockEndLogTime = null;
