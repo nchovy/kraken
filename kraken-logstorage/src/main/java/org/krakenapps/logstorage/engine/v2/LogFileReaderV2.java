@@ -67,8 +67,8 @@ public class LogFileReaderV2 extends LogFileReader {
 			indexBlockHeaders.add(header);
 			pos += 4 + header.logCount * INDEX_ITEM_SIZE;
 		}
-		logger.trace("kraken logstorage: {} has {} blocks, {} logs.",
-				new Object[] { indexPath.getName(), indexBlockHeaders.size(), logCount });
+		logger.trace("kraken logstorage: {} has {} blocks, {} logs.", new Object[] { indexPath.getName(), indexBlockHeaders.size(),
+				logCount });
 
 		this.dataFile = new RandomAccessFile(dataPath, "r");
 		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile);
@@ -82,8 +82,8 @@ public class LogFileReaderV2 extends LogFileReader {
 		pos = dataFileHeader.size();
 		while (pos < length) {
 			if (pos < 0)
-				throw new IOException("negative seek offset " + pos + ", index file: " + indexPath.getAbsolutePath()
-						+ ", data file: " + dataPath.getAbsolutePath());
+				throw new IOException("negative seek offset " + pos + ", index file: " + indexPath.getAbsolutePath() + ", data file: "
+						+ dataPath.getAbsolutePath());
 
 			try {
 				dataFile.seek(pos);
@@ -92,8 +92,7 @@ public class LogFileReaderV2 extends LogFileReader {
 				dataBlockHeaders.add(header);
 				pos += 24 + header.compressedLength;
 			} catch (BufferUnderflowException e) {
-				logger.error("kraken logstorage: buffer underflow at position {}, data file [{}]", pos,
-						dataPath.getAbsolutePath());
+				logger.error("kraken logstorage: buffer underflow at position {}, data file [{}]", pos, dataPath.getAbsolutePath());
 				throw e;
 			}
 		}
@@ -149,8 +148,7 @@ public class LogFileReaderV2 extends LogFileReader {
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
-			InterruptedException {
+	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		for (int i = indexBlockHeaders.size() - 1; i >= 0; i--) {
 			IndexBlockHeader index = indexBlockHeaders.get(i);
 			if (index.logCount <= offset) {
@@ -255,21 +253,23 @@ public class LogFileReaderV2 extends LogFileReader {
 		dataFile.close();
 	}
 
-	private static class IndexBlockHeader {
-		private static Integer NEXT_ID = 1;
+	private Integer indexBlockNextId = 1;
+
+	private class IndexBlockHeader {
 		private long fp;
 		private int firstId;
 		private int logCount;
 
 		private IndexBlockHeader(RandomAccessFile f) throws IOException {
 			this.logCount = f.readInt();
-			this.firstId = NEXT_ID;
-			NEXT_ID += logCount;
+			this.firstId = indexBlockNextId;
+			indexBlockNextId += logCount;
 		}
 	}
 
-	private static class DataBlockHeader {
-		private static ByteBuffer buf = ByteBuffer.allocate(24);
+	private ByteBuffer dataBlockHeader = ByteBuffer.allocate(24);
+
+	private class DataBlockHeader {
 		private long fp;
 		private long startDate;
 		private long endDate;
@@ -277,12 +277,12 @@ public class LogFileReaderV2 extends LogFileReader {
 		private int compressedLength;
 
 		private DataBlockHeader(RandomAccessFile f) throws IOException {
-			f.readFully(buf.array());
-			buf.position(0);
-			this.startDate = buf.getLong();
-			this.endDate = buf.getLong();
-			this.origLength = buf.getInt();
-			this.compressedLength = buf.getInt();
+			f.readFully(dataBlockHeader.array());
+			dataBlockHeader.position(0);
+			this.startDate = dataBlockHeader.getLong();
+			this.endDate = dataBlockHeader.getLong();
+			this.origLength = dataBlockHeader.getInt();
+			this.compressedLength = dataBlockHeader.getInt();
 		}
 	}
 }
