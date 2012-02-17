@@ -63,9 +63,10 @@ public class LogQueryImpl implements LogQuery {
 			throw new IllegalArgumentException("empty query");
 
 		boolean setReducer = false;
-		for (int i = 0; i < commands.size() - 1; i++) {
+		for (int i = 0; i < commands.size(); i++) {
 			LogQueryCommand command = commands.get(i);
-			command.setNextCommand(commands.get(i + 1));
+			if (i < commands.size() - 1)
+				command.setNextCommand(commands.get(i + 1));
 			if (command.isReducer() && !setReducer && i > 0) {
 				setReducer = true;
 				commands.get(i - 1).setCallbackTimeline(true);

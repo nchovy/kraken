@@ -120,8 +120,8 @@ public class LogDBScript implements Script {
 
 			if (query.getCommands() != null) {
 				for (LogQueryCommand cmd : query.getCommands()) {
-					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
-							cmd.getQueryString(), cmd.getPushCount()));
+					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(), cmd.getQueryString(),
+							cmd.getPushCount()));
 				}
 			} else
 				context.println("    null");
