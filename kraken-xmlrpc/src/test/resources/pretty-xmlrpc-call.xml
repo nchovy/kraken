@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?><methodCall><methodName>device.generateTokens</methodName><params>
+<param>
+ <value>
+  <struct>
+   <member>
+    <name>apikey</name>
+    <value>
+     <string>futuresystem-sslplus</string>
+    </value>
+   </member>
+   <member>
+    <name>login_name</name>
+    <value>
+     <string>admin</string>
+    </value>
+   </member>
+   <member>
+    <name>count</name>
+    <value>
+     <string/>
+    </value>
+   </member>
+   <member>
+    <name>expiry</name>
+    <value>
+     <string>2012-12-31 00:00:00</string>
+    </value>
+   </member>
+  </struct>
+ </value>
+</param>
+</params></methodCall>

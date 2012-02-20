@@ -31,29 +31,43 @@ public class XmlRpcParameterParser {
 		List<Object> params = new ArrayList<Object>();
 		for (int i = 0; i < paramNodeList.getLength(); ++i) {
 			Node paramNode = paramNodeList.item(i);
-			params.add(parse(paramNode));
+			if (paramNode.getNodeType() != 3)
+				params.add(parse(paramNode));
 		}
 		return params;
 	}
 
 	public static Object parse(Node paramNode) {
-		NodeList childNodes = paramNode.getChildNodes();
-		if (childNodes.getLength() != 1)
+		List<Node> childNodes = filtTextChildren(paramNode);
+
+		if (childNodes.size() != 1)
 			throw new XmlRpcParseException();
 
-		Node valueNode = childNodes.item(0);
+		Node valueNode = childNodes.get(0);
 		return parseValueNode(valueNode);
 	}
 
+	private static List<Node> filtTextChildren(Node param) {
+		List<Node> children = new ArrayList<Node>();
+		int len = param.getChildNodes().getLength();
+		for (int i = 0; i < len; i++) {
+			Node child = param.getChildNodes().item(i);
+			if (child.getNodeType() != 3)
+				children.add(child);
+		}
+
+		return children;
+	}
+
 	private static Object parseValueNode(Node valueNode) {
-		NodeList childNodes = valueNode.getChildNodes();
-		if (childNodes.getLength() == 0)
+		List<Node> childNodes = filtTextChildren(valueNode);
+		if (childNodes.size() == 0)
 			return null;
 
-		if (childNodes.getLength() != 1)
+		if (childNodes.size() != 1)
 			throw new XmlRpcParseException();
 
-		Node typeNode = childNodes.item(0);
+		Node typeNode = childNodes.get(0);
 		String nodeName = typeNode.getNodeName();
 
 		if (nodeName.equals("i4"))
@@ -119,38 +133,40 @@ public class XmlRpcParameterParser {
 		NodeList memberNodeList = structNode.getChildNodes();
 		for (int i = 0; i < memberNodeList.getLength(); ++i) {
 			Node memberNode = memberNodeList.item(i);
-			parseMember(map, memberNode);
+			if (memberNode.getNodeType() != 3)
+				parseMember(map, memberNode);
 		}
 		return map;
 	}
 
 	private static void parseMember(Map<String, Object> map, Node memberNode) {
-		NodeList childNodes = memberNode.getChildNodes();
-		if (childNodes.getLength() != 2)
+		List<Node> childNodes = filtTextChildren(memberNode);
+		if (childNodes.size() != 2)
 			throw new XmlRpcParseException();
 
 		String name = null;
 		Object parameter = null;
-		if (childNodes.item(0).getNodeName().equals("name")) {
-			name = childNodes.item(0).getTextContent();
-			parameter = parseValueNode(childNodes.item(1));
+		if (childNodes.get(0).getNodeName().equals("name")) {
+			name = childNodes.get(0).getTextContent();
+			parameter = parseValueNode(childNodes.get(1));
 		} else {
-			name = childNodes.item(1).getTextContent();
-			parameter = parseValueNode(childNodes.item(0));
+			name = childNodes.get(1).getTextContent();
+			parameter = parseValueNode(childNodes.get(0));
 		}
 
 		map.put(name, parameter);
 	}
 
 	private static Object parseArray(Node arrayNode) {
-		if (arrayNode.getChildNodes().getLength() != 1)
+		List<Node> childNodes = filtTextChildren(arrayNode);
+		if (childNodes.size() != 1)
 			throw new XmlRpcParseException();
 
 		List<Object> objectList = new ArrayList<Object>();
-		Node dataNode = arrayNode.getChildNodes().item(0);
+		Node dataNode = childNodes.get(0);
 
-		for (int i = 0; i < dataNode.getChildNodes().getLength(); ++i) {
-			Node valueNode = dataNode.getChildNodes().item(i);
+		List<Node> dataChildren = filtTextChildren(dataNode);
+		for (Node valueNode : dataChildren) {
 			if (valueNode.getNodeName().equals("value") == false)
 				throw new XmlRpcParseException();
 
