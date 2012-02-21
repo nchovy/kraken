@@ -115,11 +115,8 @@ public class BundleScript implements Script {
 			String alias = args[0];
 			manager.addRemoteRepository(alias, new URL(args[1]));
 			if (args.length > 2) {
-				Preferences prefs = getRepositoryPreferences(Kraken.getContext());
-				int newPriority = Integer.parseInt(args[2]);
-				Preferences repo = prefs.node(alias);
-				repo.putInt("priority", newPriority);
-				sync(repo);
+				int newPriority = Integer.parseInt(args[2]);		
+				setRepositoryPriority(alias, newPriority);
 			}
 			context.println(args[1] + " added.");
 		} catch (Exception e) {
@@ -127,11 +124,19 @@ public class BundleScript implements Script {
 		}
 	}
 
+	private void setRepositoryPriority(String alias, int priority) {
+		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
+		Preferences repo = prefs.node(alias);
+		repo.putInt("priority", priority);
+		sync(repo);
+	}
+
 	@ScriptUsage(description = "add secure bundle repository", arguments = {
 			@ScriptArgument(name = "alias", type = "string", description = "the alias of bundle repository"),
 			@ScriptArgument(name = "url", type = "string", description = "the url of bundle repository"),
 			@ScriptArgument(name = "trust store alias", type = "string", description = "the alias of truststore"),
-			@ScriptArgument(name = "key store alias", type = "string", description = "the alias of keystore. if provided, client authentication will be used", optional = true) })
+			@ScriptArgument(name = "key store alias", type = "string", description = "the alias of keystore. if provided, client authentication will be used", optional = true),
+			@ScriptArgument(name = "priority", type = "integer", description = "priority of the repository", optional = true) })
 	public void addSecureRepository(String[] args) {
 		try {
 			String alias = args[0];
@@ -140,8 +145,11 @@ public class BundleScript implements Script {
 			String keyStoreAlias = null;
 			if (args.length >= 4)
 				keyStoreAlias = args[3];
-
 			manager.addSecureRemoteRepository(alias, url, trustStoreAlias, keyStoreAlias);
+			if (args.length >= 5) {
+				int newPriority = Integer.parseInt(args[4]);		
+				setRepositoryPriority(alias, newPriority);
+			}
 			context.printf("secure repository [%s] added\n", alias);
 		} catch (MalformedURLException e) {
 			context.println("invalid url format");
@@ -194,12 +202,9 @@ public class BundleScript implements Script {
 			@ScriptArgument(name = "alias", type = "string", description = "alias of the maven repository"),
 			@ScriptArgument(name = "new priority", type = "integer", description = "new priority of the repository") })
 	public void setRepositoryPriority(String[] args) {
-		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
 		String alias = args[0];
 		int newPriority = Integer.parseInt(args[1]);
-		Preferences repo = prefs.node(alias);
-		repo.putInt("priority", newPriority);
-		sync(repo);
+		setRepositoryPriority(alias, newPriority);
 	}
 
 	private void sync(Preferences repo) {
