@@ -218,13 +218,21 @@ public class ConfigManagerImpl implements ConfigManager {
 		ConfigDatabase db = xact.getConfigDatabase();
 
 		Predicate pred = Predicates.or(preds.toArray(new Predicate[0]));
-		if (db.findOne(cls, pred) == null)
-			throw new DOMException(notFoundMessage);
+		ConfigIterator confIt = null;
+		try {
+			confIt = db.find(cls, pred);
 
-		Iterator<T> docIterator = docs.iterator();
-		while (docIterator.hasNext()) {
-			Config c = db.findOne(cls, pred);
-			xact.update(c, docIterator.next(), state);
+			Iterator<T> docIterator = docs.iterator();
+			while (docIterator.hasNext()) {
+				if (!confIt.hasNext())
+					throw new DOMException(notFoundMessage);
+				Config c = confIt.next();
+				xact.update(c, docIterator.next(), state);
+			}
+		} finally {
+			if(confIt != null) {
+				confIt.close();
+			}
 		}
 	}
 
