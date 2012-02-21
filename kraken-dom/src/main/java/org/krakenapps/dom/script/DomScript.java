@@ -266,6 +266,14 @@ public class DomScript implements Script {
 		context.println("set");
 	}
 
+	@ScriptUsage(description = "remove organization parameter", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "organization domain"),
+			@ScriptArgument(name = "name", type = "string", description = "organization parameter name") })
+	public void unsetOrgParam(String[] args) {
+		orgApi.unsetOrganizationParameter(args[0], args[1]);
+		context.println("unset");
+	}
+
 	@ScriptUsage(description = "set organization parameter", arguments = { @ScriptArgument(name = "domain", type = "string", description = "organization domain") })
 	public void orgParams(String[] args) {
 		Map<String, Object> m = orgApi.getOrganizationParameters(args[0]);
