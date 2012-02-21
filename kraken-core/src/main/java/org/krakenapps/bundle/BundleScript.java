@@ -108,10 +108,19 @@ public class BundleScript implements Script {
 
 	@ScriptUsage(description = "Add maven repository", arguments = {
 			@ScriptArgument(name = "alias", type = "string", description = "alias of the maven repository"),
-			@ScriptArgument(name = "url", type = "string", description = "url of the maven repository") })
+			@ScriptArgument(name = "url", type = "string", description = "url of the maven repository"),
+			@ScriptArgument(name = "priority", type = "integer", description = "priority of the repository", optional = true) })
 	public void addRepository(String[] args) {
 		try {
-			manager.addRemoteRepository(args[0], new URL(args[1]));
+			String alias = args[0];
+			manager.addRemoteRepository(alias, new URL(args[1]));
+			if (args.length > 2) {
+				Preferences prefs = getRepositoryPreferences(Kraken.getContext());
+				int newPriority = Integer.parseInt(args[2]);
+				Preferences repo = prefs.node(alias);
+				repo.putInt("priority", newPriority);
+				sync(repo);
+			}
 			context.println(args[1] + " added.");
 		} catch (Exception e) {
 			context.println("error: " + e.getMessage());
