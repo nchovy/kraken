@@ -1,15 +1,19 @@
 package org.krakenapps.dom.msgbus;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.api.PrimitiveParseCallback;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.HostApi;
+import org.krakenapps.dom.api.HostUpdateApi;
+import org.krakenapps.dom.model.Host;
+import org.krakenapps.dom.model.HostType;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
+import org.krakenapps.msgbus.handler.AllowGuestAccess;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.slf4j.Logger;
@@ -17,63 +21,33 @@ import org.slf4j.LoggerFactory;
 
 @MsgbusPlugin
 @Component(name = "dom-host-update-plugin")
-public class HostUpdatePlugin implements Runnable {
-	private final Logger logger = LoggerFactory.getLogger(HostUpdatePlugin.class.getName());
-
+public class HostUpdatePlugin {
+	@Requires
+	private HostUpdateApi hostUpdate;
 	@Requires
 	private HostApi hostApi;
+	@Requires
+	private ConfigManager conf;
 
-	// for fast queue counting
-	private AtomicInteger counter = new AtomicInteger();
-
-	private ConcurrentLinkedQueue<Request> queue = new ConcurrentLinkedQueue<Request>();
-
-	private Thread t;
-	private volatile boolean doStop;
-
-	@Validate
-	public void start() {
-		doStop = false;
-		t = new Thread();
-		t.start();
-	}
-
-	@Invalidate
-	public void stop() {
-		doStop = true;
-		t.interrupt();
-	}
+	private final Logger logger = LoggerFactory.getLogger(HostUpdatePlugin.class.getName());
 
 	@MsgbusMethod
+	@AllowGuestAccess
 	public void update(Request req, Response resp) {
-		// data cleansing
 
-		// queueing
-		counter.incrementAndGet();
-		queue.add(req);
-	}
+		Host oldHost = hostApi.findHost("localhost", req.getString("guid"));
 
-	/**
-	 * batch update using
-	 */
-	@Override
-	public void run() {
-		try {
-			logger.info("kraken dom: starting host updater thread");
-			while (!doStop) {
-				runOnce();
+		if (oldHost == null)
+			oldHost = new Host();
+
+		Host host = (Host) PrimitiveConverter.overwrite(oldHost, req.getParams(), new PrimitiveParseCallback() {
+			@SuppressWarnings("unchecked")
+			@Override
+			public <T> T onParse(Class<T> clazz, Map<String, Object> referenceKey) {
+				return (T) PrimitiveConverter.overwrite(new HostType(), referenceKey);
 			}
-		} finally {
-			logger.info("kraken dom: host updater thread stopped");
-		}
+		});
+
+		hostUpdate.update(host);
 	}
-
-	private void runOnce() {
-		// find diff
-
-		// update
-
-		// descrease counter
-	}
-
 }
