@@ -20,6 +20,7 @@ import java.util.Collection;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.msgbus.Request;
@@ -31,6 +32,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-org-unit-plugin")
 @MsgbusPlugin
 public class OrganizationUnitPlugin {
+	@Requires
+	private ConfigManager conf;
+
 	@Requires
 	private OrganizationUnitApi orgUnitApi;
 
@@ -50,7 +54,8 @@ public class OrganizationUnitPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void createOrganizationUnit(Request req, Response resp) {
-		OrganizationUnit orgUnit = (OrganizationUnit) PrimitiveConverter.overwrite(new OrganizationUnit(), req.getParams());
+		OrganizationUnit orgUnit = (OrganizationUnit) PrimitiveConverter.overwrite(new OrganizationUnit(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		orgUnitApi.createOrganizationUnit(req.getOrgDomain(), orgUnit);
 		resp.put("guid", orgUnit.getGuid());
 	}
@@ -58,7 +63,8 @@ public class OrganizationUnitPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "admin_grant")
 	public void updateOrganizationUnit(Request req, Response resp) {
-		OrganizationUnit orgUnit = (OrganizationUnit) PrimitiveConverter.overwrite(new OrganizationUnit(), req.getParams());
+		OrganizationUnit orgUnit = (OrganizationUnit) PrimitiveConverter.overwrite(new OrganizationUnit(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		orgUnitApi.updateOrganizationUnit(req.getOrgDomain(), orgUnit);
 	}
 

@@ -18,6 +18,7 @@ package org.krakenapps.dom.msgbus;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.TimetableApi;
 import org.krakenapps.dom.model.Timetable;
 import org.krakenapps.msgbus.Request;
@@ -28,6 +29,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-timetable-plugin")
 @MsgbusPlugin
 public class TimetablePlugin {
+	@Requires
+	private ConfigManager conf;
+
 	@Requires
 	private TimetableApi timetableApi;
 
@@ -45,7 +49,8 @@ public class TimetablePlugin {
 
 	@MsgbusMethod
 	public void createTimetable(Request req, Response resp) {
-		Timetable timetable = (Timetable) PrimitiveConverter.overwrite(new Timetable(), req.getParams());
+		Timetable timetable = (Timetable) PrimitiveConverter.overwrite(new Timetable(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		timetableApi.createTimetable(req.getOrgDomain(), timetable);
 		resp.put("guid", timetable.getGuid());
 	}
@@ -53,7 +58,7 @@ public class TimetablePlugin {
 	@MsgbusMethod
 	public void updateTimetable(Request req, Response resp) {
 		Timetable before = timetableApi.getTimetable(req.getOrgDomain(), req.getString("guid"));
-		Timetable timetable = (Timetable) PrimitiveConverter.overwrite(before, req.getParams());
+		Timetable timetable = (Timetable) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		timetableApi.updateTimetable(req.getOrgDomain(), timetable);
 	}
 

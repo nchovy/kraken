@@ -6,6 +6,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.api.PrimitiveConverter.SerializeOption;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.UploadToken;
 import org.krakenapps.dom.api.UserApi;
@@ -23,6 +24,9 @@ import org.slf4j.LoggerFactory;
 @MsgbusPlugin
 public class FileUploadPlugin {
 	private final Logger logger = LoggerFactory.getLogger(FileUploadPlugin.class);
+
+	@Requires
+	private ConfigManager conf;
 
 	@Requires
 	private FileUploadApi fileUploadApi;
@@ -45,7 +49,8 @@ public class FileUploadPlugin {
 
 	@MsgbusMethod
 	public void createFileSpace(Request req, Response resp) {
-		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(new FileSpace(), req.getParams());
+		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(new FileSpace(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		space.setOwner(userApi.getUser(req.getOrgDomain(), req.getAdminLoginName()));
 		fileUploadApi.createFileSpace(req.getOrgDomain(), space);
 		resp.put("guid", space.getGuid());
@@ -54,7 +59,7 @@ public class FileUploadPlugin {
 	@MsgbusMethod
 	public void updateFileSpace(Request req, Response resp) {
 		FileSpace before = fileUploadApi.getFileSpace(req.getOrgDomain(), req.getString("guid"));
-		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(before, req.getParams());
+		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		fileUploadApi.updateFileSpace(req.getOrgDomain(), req.getAdminLoginName(), space);
 	}
 

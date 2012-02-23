@@ -54,7 +54,7 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createVendor(Request req, Response resp) {
-		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(new Vendor(), req.getParams());
+		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(new Vendor(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		appApi.createVendor(req.getOrgDomain(), vendor);
 		resp.put("guid", vendor.getGuid());
 	}
@@ -62,7 +62,7 @@ public class ApplicationPlugin {
 	@MsgbusMethod
 	public void updateVendor(Request req, Response resp) {
 		Vendor before = appApi.getVendor(req.getOrgDomain(), req.getString("guid"));
-		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(before, req.getParams());
+		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		appApi.updateVendor(req.getOrgDomain(), vendor);
 	}
 
@@ -122,7 +122,8 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createApplicationGroup(Request req, Response resp) {
-		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(new ApplicationGroup(), req.getParams());
+		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(new ApplicationGroup(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		appApi.createApplicationGroup(req.getOrgDomain(), group);
 		resp.put("guid", group.getGuid());
 	}
@@ -130,7 +131,8 @@ public class ApplicationPlugin {
 	@MsgbusMethod
 	public void updateApplicationGroup(Request req, Response resp) {
 		ApplicationGroup before = appApi.getApplicationGroup(req.getOrgDomain(), req.getString("guid"));
-		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(before, req.getParams());
+		ApplicationGroup group = (ApplicationGroup) PrimitiveConverter.overwrite(before, req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		appApi.updateApplicationGroup(req.getOrgDomain(), group);
 	}
 
