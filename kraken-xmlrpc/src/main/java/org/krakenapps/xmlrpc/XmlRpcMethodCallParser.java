@@ -15,6 +15,7 @@
  */
 package org.krakenapps.xmlrpc;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.xpath.XPathConstants;
@@ -28,31 +29,44 @@ import org.w3c.dom.NodeList;
 public class XmlRpcMethodCallParser {
 	private XmlRpcMethodCallParser() {
 	}
-	
+
 	public static XmlRpcMessage parse(Document document) {
 		XmlRpcMessage message = new XmlRpcMessage(MessageType.MethodCall);
 		XPathExpression expression = XmlUtil.compileXPath("//methodCall");
 		try {
-			Node node = (Node)expression.evaluate(document, XPathConstants.NODE);
-			NodeList childNodes = node.getChildNodes();
-			if (childNodes.getLength() != 2)
+			Node node = (Node) expression.evaluate(document, XPathConstants.NODE);
+			List<Node> childNodes = filtTextChildren(node);
+			if (childNodes.size() != 2)
 				throw new XmlRpcParseException();
-			
+
 			List<Object> parameters = null;
-			if (childNodes.item(0).getNodeName().equals("methodName")) {
-				message.setMethodName(childNodes.item(0).getTextContent());
-				NodeList paramNodeList = childNodes.item(1).getChildNodes();
+			if (childNodes.get(0).getNodeName().equals("methodName")) {
+				message.setMethodName(childNodes.get(0).getTextContent());
+				NodeList paramNodeList = childNodes.get(1).getChildNodes();
 				parameters = XmlRpcParameterParser.parse(paramNodeList);
 			} else {
-				message.setMethodName(childNodes.item(1).getTextContent());
-				NodeList paramNodeList = childNodes.item(0).getChildNodes();
-				parameters = XmlRpcParameterParser.parse(paramNodeList);				
+				message.setMethodName(childNodes.get(1).getTextContent());
+				NodeList paramNodeList = childNodes.get(0).getChildNodes();
+				parameters = XmlRpcParameterParser.parse(paramNodeList);
 			}
-			
+
 			message.setParameters(parameters);
 			return message;
 		} catch (XPathExpressionException e) {
 			throw new XmlRpcParseException();
 		}
 	}
+
+	private static List<Node> filtTextChildren(Node param) {
+		List<Node> children = new ArrayList<Node>();
+		int len = param.getChildNodes().getLength();
+		for (int i = 0; i < len; i++) {
+			Node child = param.getChildNodes().item(i);
+			if (child.getNodeType() != 3)
+				children.add(child);
+		}
+
+		return children;
+	}
+
 }
