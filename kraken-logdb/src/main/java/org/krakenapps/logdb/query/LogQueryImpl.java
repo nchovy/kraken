@@ -79,25 +79,21 @@ public class LogQueryImpl implements LogQuery {
 	private static List<String> split(String query) {
 		List<String> l = new ArrayList<String>();
 		StringBuilder sb = new StringBuilder();
-		boolean quot = false;
+		char before = 0;
+		boolean b = false;
 
 		for (char c : query.toCharArray()) {
-			if (c == '\\' && !quot) {
-				quot = true;
-				continue;
-			}
-
-			if (quot) {
-				quot = false;
+			if (c == '"' && before != '\\') {
+				b = !b;
 				sb.append(c);
-				continue;
+			} else {
+				if (c == '|' && !b) {
+					l.add(sb.toString());
+					sb = new StringBuilder();
+				} else
+					sb.append(c);
 			}
-
-			if (c == '|') {
-				l.add(sb.toString());
-				sb = new StringBuilder();
-			} else
-				sb.append(c);
+			before = c;
 		}
 
 		if (sb.length() > 0)
