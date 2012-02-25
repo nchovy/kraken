@@ -49,7 +49,7 @@ public class LogQueryImpl implements LogQuery {
 	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString) {
 		this.queryString = queryString;
 
-		for (String q : queryString.split("\\|")) {
+		for (String q : split(queryString)) {
 			q = q.trim();
 			try {
 				LogQueryCommand cmd = syntaxProvider.eval(this, q);
@@ -74,6 +74,32 @@ public class LogQueryImpl implements LogQuery {
 		}
 		if (!setReducer)
 			commands.get(commands.size() - 1).setCallbackTimeline(true);
+	}
+
+	private static List<String> split(String query) {
+		List<String> l = new ArrayList<String>();
+		StringBuilder sb = new StringBuilder();
+		char before = 0;
+		boolean b = false;
+
+		for (char c : query.toCharArray()) {
+			if (c == '"' && before != '\\') {
+				b = !b;
+				sb.append(c);
+			} else {
+				if (c == '|' && !b) {
+					l.add(sb.toString());
+					sb = new StringBuilder();
+				} else
+					sb.append(c);
+			}
+			before = c;
+		}
+
+		if (sb.length() > 0)
+			l.add(sb.toString());
+
+		return l;
 	}
 
 	@Override

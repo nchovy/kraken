@@ -45,6 +45,14 @@ public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization
 	@Requires
 	private ConfigService confsvc;
 
+	public void setConfigManager(ConfigManager cfg) {
+		this.cfg = cfg;
+	}
+
+	public void setConfigService(ConfigService conf) {
+		this.confsvc = conf;
+	}
+
 	@Override
 	public Organization findOrganization(String domain) {
 		ConfigDatabase db = cfg.findDatabase(domain);

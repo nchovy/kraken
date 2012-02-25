@@ -5,6 +5,7 @@ import java.util.Collection;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.MapApi;
 import org.krakenapps.dom.model.MapInfo;
 import org.krakenapps.msgbus.Request;
@@ -15,6 +16,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-map-plugin")
 @MsgbusPlugin
 public class MapPlugin {
+	@Requires
+	private ConfigManager conf;
+
 	@Requires
 	private MapApi mapApi;
 
@@ -33,7 +37,7 @@ public class MapPlugin {
 
 	@MsgbusMethod
 	public void createMap(Request req, Response resp) {
-		MapInfo map = (MapInfo) PrimitiveConverter.overwrite(new MapInfo(), req.getParams());
+		MapInfo map = (MapInfo) PrimitiveConverter.overwrite(new MapInfo(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		mapApi.createMap(req.getOrgDomain(), map);
 		resp.put("guid", map.getGuid());
 	}
@@ -41,7 +45,7 @@ public class MapPlugin {
 	@MsgbusMethod
 	public void updateMap(Request req, Response resp) {
 		MapInfo before = mapApi.getMap(req.getOrgDomain(), req.getString("guid"));
-		MapInfo map = (MapInfo) PrimitiveConverter.overwrite(before, req.getParams());
+		MapInfo map = (MapInfo) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		mapApi.updateMap(req.getOrgDomain(), map);
 	}
 

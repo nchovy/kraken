@@ -39,10 +39,10 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @MsgbusPlugin
 public class UserPlugin {
 	@Requires
-	private UserApi userApi;
+	private ConfigManager conf;
 
 	@Requires
-	private ConfigManager conf;
+	private UserApi userApi;
 
 	@Requires
 	private AdminApi adminApi;

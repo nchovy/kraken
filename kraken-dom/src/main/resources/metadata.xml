@@ -26,6 +26,7 @@
 	<instance component="dom-localization-api" />
 	<instance component="dom-file-upload-api" />
 	<instance component="dom-map-api" />
+	<instance component="dom-host-update-api" />
 
 	<instance component="dom-org-plugin" />
 	<instance component="dom-admin-plugin" />

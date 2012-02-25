@@ -36,6 +36,10 @@ public class ConfigManagerImpl implements ConfigManager {
 	private ConcurrentMap<Class<?>, ConfigParser> parsers = new ConcurrentHashMap<Class<?>, ConfigParser>();
 	private ConcurrentMap<String, ParseCallback> callbacks = new ConcurrentHashMap<String, ParseCallback>();
 
+	public void setConfigService(ConfigService conf) {
+		this.confsvc = conf;
+	}
+
 	private PrimitiveParseCallback getCallback(String domain) {
 		callbacks.putIfAbsent(domain, new ParseCallback(domain));
 		return callbacks.get(domain);
@@ -120,8 +124,8 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void adds(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
-			Object state) {
+	public <T> void adds(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs,
+			String alreadyExistMessage, Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -176,6 +180,93 @@ public class ConfigManagerImpl implements ConfigManager {
 			throw new DOMException(alreadyExistMessage);
 		xact.add(doc, state);
 	}
+	
+	@Override
+	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs,
+			String notFoundMessage) {
+		updateForGuids(xact, cls, guids, docs, notFoundMessage, null);
+	}
+	
+	@Override
+	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs,
+			String notFoundMessage, DefaultEntityEventProvider<T> provider) {
+		updateForGuids(domain, cls, guids, docs, notFoundMessage, provider, null);
+	}
+
+	@Override
+	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs,
+			String notFoundMessage, DefaultEntityEventProvider<T> provider, Object state) {
+		ConfigDatabase db = getDatabase(domain);
+		Transaction xact = new Transaction(domain, db);
+		xact.addEventProvider(cls, provider);
+
+		try {
+			updateForGuids(xact, cls, guids, docs, notFoundMessage, state);
+			xact.commit(COMMITER, "updated " + docs.size() + " " + cls.getSimpleName() + "(s)");
+		} catch (Throwable e) {
+			xact.rollback();
+			if (e instanceof DOMException)
+				throw (DOMException) e;
+			throw new RuntimeException(e);
+		}
+	}
+	
+	@Override
+	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs,
+			String notFoundMessage, Object state) {
+		if (docs.isEmpty())
+			return;
+
+		if (guids.size() != docs.size())
+			throw new IllegalArgumentException("preds and docs must has equal size");
+
+		ConfigDatabase db = xact.getConfigDatabase();
+
+		ConfigIterator confIt = null;
+		try {
+			confIt = db.find(cls, in(guids));
+
+			Iterator<T> docIterator = docs.iterator();
+			Map<String, T> docMap = new HashMap<String, T>();
+			for (String guid : guids) {
+				T t = docIterator.next();
+				docMap.put(guid, t);
+			}
+
+			while (confIt.hasNext()) {
+				Config c = confIt.next();
+
+				@SuppressWarnings("unchecked")
+				Map<String, Object> config = (Map<String, Object>) c.getDocument();
+				String configGuid = (String) config.get("guid");
+				if (configGuid == null)
+					throw new DOMException(notFoundMessage);
+
+				T doc = docMap.get(configGuid);
+				if (doc == null)
+					throw new DOMException(notFoundMessage);
+
+				xact.update(c, doc, state);
+			}
+		} finally {
+			if (confIt != null) {
+				confIt.close();
+			}
+		}
+	}
+
+	private Predicate in(List<String> guids) {
+		Predicate[] preds = new Predicate[guids.size()];
+		int i = 0;
+		for (String guid : guids)
+			preds[i++] = Predicates.field("guid", guid);
+		return Predicates.or(preds);
+	}
+
+	@Override
+	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage) {
+		updates(xact, cls, preds, docs, notFoundMessage, null);
+	}
 
 	@Override
 	public <T> void updates(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
@@ -201,14 +292,10 @@ public class ConfigManagerImpl implements ConfigManager {
 		}
 	}
 
+	@Deprecated
 	@Override
-	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage) {
-		updates(xact, cls, preds, docs, notFoundMessage, null);
-	}
-
-	@Override
-	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
-			Object state) {
+	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs,
+			String notFoundMessage, Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -230,7 +317,7 @@ public class ConfigManagerImpl implements ConfigManager {
 				xact.update(c, docIterator.next(), state);
 			}
 		} finally {
-			if(confIt != null) {
+			if (confIt != null) {
 				confIt.close();
 			}
 		}

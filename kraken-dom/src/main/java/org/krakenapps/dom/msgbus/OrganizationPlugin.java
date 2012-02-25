@@ -20,6 +20,7 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.model.Organization;
 import org.krakenapps.msgbus.Request;
@@ -31,6 +32,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-org-plugin")
 @MsgbusPlugin
 public class OrganizationPlugin {
+	@Requires
+	private ConfigManager conf;
+
 	@Requires
 	private OrganizationApi orgApi;
 
@@ -44,7 +48,8 @@ public class OrganizationPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "manage")
 	public void createOrganization(Request req, Response resp) {
-		Organization organization = (Organization) PrimitiveConverter.overwrite(new Organization(), req.getParams());
+		Organization organization = (Organization) PrimitiveConverter.overwrite(new Organization(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		orgApi.createOrganization(organization);
 	}
 
@@ -62,7 +67,8 @@ public class OrganizationPlugin {
 	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void updateOrganization(Request req, Response resp) {
 		Organization before = orgApi.getOrganization(req.getOrgDomain());
-		Organization organization = (Organization) PrimitiveConverter.overwrite(before, req.getParams());
+		Organization organization = (Organization) PrimitiveConverter.overwrite(before, req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		orgApi.updateOrganization(organization);
 	}
 
