@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-dom</artifactId>
-	<version>2.6.3</version>
+	<version>2.7.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken DOM</name>
 	<build>
@@ -24,7 +24,8 @@
 						<Bundle-SymbolicName>org.krakenapps.dom</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.dom.api;version=${project.version},
-							org.krakenapps.dom.model;version=${project.version}
+							org.krakenapps.dom.model;version=${project.version},
+							org.krakenapps.dom.model.windows;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.dom.api.impl,

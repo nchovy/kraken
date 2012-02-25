@@ -57,13 +57,16 @@ public class HttpContext {
 		logger.trace("kraken httpd: request [{} {}]", request.getMethod(), request.getRequestURI());
 
 		try {
+			String servletPath = null;
 			ServletMatchResult r = servletContext.matches(request.getRequestURI());
 			if (r != null) {
 				servlet = (HttpServlet) r.getServlet();
 				pathInfo = r.getPathInfo();
+				servletPath = r.getServletPath();
 			} else if (webSocketManager.getPath().equals(request.getRequestURI())) {
 				servlet = webSocketManager.getServlet();
 				pathInfo = request.getRequestURI();
+				servletPath = webSocketManager.getPath();
 			} else {
 				request.setHttpContext(this);
 				request.setPathInfo(request.getRequestURI());
@@ -72,7 +75,7 @@ public class HttpContext {
 			}
 
 			request.setHttpContext(this);
-			request.setServletPath(r.getServletPath());
+			request.setServletPath(servletPath);
 			request.setPathInfo(pathInfo);
 
 			servlet.service(request, response);

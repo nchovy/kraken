@@ -17,7 +17,9 @@ package org.krakenapps.dom.model;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.krakenapps.api.CollectionTypeHint;
@@ -42,11 +44,18 @@ public class Host {
 
 	private String description;
 
+	/**
+	 * os specific data
+	 */
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * device type string key to device list
+	 */
+	private Map<String, Object> devices = new HashMap<String, Object>();
+
 	@CollectionTypeHint(HostExtension.class)
 	private List<HostExtension> extensions = new ArrayList<HostExtension>();
-
-	@CollectionTypeHint(NetworkInterface.class)
-	private List<NetworkInterface> networkInterfaces = new ArrayList<NetworkInterface>();
 
 	@FieldOption(nullable = false)
 	private Date created = new Date();
@@ -94,20 +103,28 @@ public class Host {
 		this.description = description;
 	}
 
+	public Map<String, Object> getData() {
+		return data;
+	}
+
+	public void setData(Map<String, Object> data) {
+		this.data = data;
+	}
+
+	public Map<String, Object> getDevices() {
+		return devices;
+	}
+
+	public void setDevices(Map<String, Object> devices) {
+		this.devices = devices;
+	}
+
 	public List<HostExtension> getExtensions() {
 		return extensions;
 	}
 
 	public void setExtensions(List<HostExtension> extensions) {
 		this.extensions = extensions;
-	}
-
-	public List<NetworkInterface> getNetworkInterfaces() {
-		return networkInterfaces;
-	}
-
-	public void setNetworkInterfaces(List<NetworkInterface> networkInterfaces) {
-		this.networkInterfaces = networkInterfaces;
 	}
 
 	public Date getCreated() {

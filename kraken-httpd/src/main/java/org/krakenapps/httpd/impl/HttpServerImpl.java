@@ -24,6 +24,7 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.krakenapps.api.KeyStoreManager;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.HttpServer;
 import org.krakenapps.httpd.HttpConfiguration;
@@ -41,20 +42,22 @@ public class HttpServerImpl implements HttpServer {
 	private HttpContextRegistry contextRegistry;
 	private KeyStoreManager keyStoreManager;
 	private Channel listener;
+	private ConfigService conf;
 
 	public HttpServerImpl(BundleContext bc, HttpConfiguration config, HttpContextRegistry contextRegistry,
-			KeyStoreManager keyStoreManager) {
+			KeyStoreManager keyStoreManager, ConfigService conf) {
 		this.bc = bc;
 		this.config = config;
 		this.contextRegistry = contextRegistry;
 		this.keyStoreManager = keyStoreManager;
+		this.conf = conf;
 	}
 
 	@Override
 	public void open() {
 		// Configure the server.
-		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
+				Executors.newCachedThreadPool()));
 
 		// Set up the event pipeline factory.
 		bootstrap.setPipelineFactory(new HttpPipelineFactory(bc, config, contextRegistry, keyStoreManager));
@@ -68,6 +71,7 @@ public class HttpServerImpl implements HttpServer {
 
 	@Override
 	public HttpConfiguration getConfiguration() {
+		config.setConfigService(conf);
 		return config;
 	}
 

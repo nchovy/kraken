@@ -81,7 +81,8 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	private EntityEventListener<Vendor> vendorEventListener = new DefaultEntityEventListener<Vendor>() {
 		@Override
 		public void entityRemoving(String domain, Vendor obj, ConfigTransaction xact, Object state) {
-			List<HostType> types = new ArrayList<HostType>(cfg.all(domain, type, Predicates.field("vendor/guid", obj.getGuid())));
+			List<HostType> types = new ArrayList<HostType>(cfg.all(domain, type,
+					Predicates.field("vendor/guid", obj.getGuid())));
 			for (HostType type : types)
 				type.setVendor(null);
 			Transaction x = Transaction.getInstance(xact);
@@ -105,6 +106,18 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Requires
 	private ApplicationApi appApi;
+
+	public void setConfigManager(ConfigManager cfg) {
+		this.cfg = cfg;
+	}
+
+	public void setAreaApi(AreaApi areaApi) {
+		this.areaApi = areaApi;
+	}
+
+	public void setApplicationApi(ApplicationApi appApi) {
+		this.appApi = appApi;
+	}
 
 	@Validate
 	public void validate() {
@@ -187,10 +200,14 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 
 	@Override
 	public void updateHosts(String domain, Collection<Host> hosts) {
+		List<String> hostGuids = new ArrayList<String>(hosts.size());
 		List<Host> hostList = new ArrayList<Host>(hosts);
-		for (Host host : hostList)
+		for (Host host : hostList) {
 			host.setUpdated(new Date());
-		cfg.updates(domain, host, getPreds(hostList), hostList, HOST_NOT_FOUND, this);
+			hostGuids.add(host.getGuid());
+		}
+
+		cfg.updateForGuids(domain, Host.class, hostGuids, hostList, HOST_NOT_FOUND, this);
 	}
 
 	@Override

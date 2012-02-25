@@ -17,6 +17,8 @@ package org.krakenapps.httpd.impl;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -24,17 +26,30 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.KeyStoreManager;
+import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.httpd.HttpConfiguration;
 import org.krakenapps.httpd.HttpContext;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.HttpServer;
 import org.krakenapps.httpd.HttpService;
+import org.krakenapps.httpd.VirtualHost;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "http-service")
 @Provides
 public class HttpServiceImpl implements HttpService {
+	private final Logger logger = LoggerFactory.getLogger(HttpServiceImpl.class.getName());
+
+	@Requires
+	private ConfigService conf;
 
 	@Requires
 	private KeyStoreManager keyStoreManager;
@@ -49,6 +64,28 @@ public class HttpServiceImpl implements HttpService {
 		this.bc = bc;
 		this.listeners = new ConcurrentHashMap<InetSocketAddress, HttpServer>();
 		this.httpContextRegistry = new HttpContextRegistryImpl();
+	}
+
+	@Validate
+	public void start() {
+		// load configured servers
+		ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
+		Collection<HttpConfiguration> configs = db.findAll(HttpConfiguration.class).getDocuments(HttpConfiguration.class);
+		for (HttpConfiguration c : configs) {
+			try {
+				logger.info("kraken httpd: opening http server [{}]", PrimitiveConverter.serialize(c));
+				HttpServer server = loadServer(c);
+				server.open();
+
+				// build regex patterns
+				for (VirtualHost v : server.getConfiguration().getVirtualHosts())
+					v.setHostNames(v.getHostNames());
+
+				logger.trace("kraken httpd: opened http server [{}]", server.getConfiguration().getListenAddress());
+			} catch (Throwable t) {
+				logger.error("kraken httpd: cannot open server", t);
+			}
+		}
 	}
 
 	@Invalidate
@@ -72,27 +109,6 @@ public class HttpServiceImpl implements HttpService {
 		return httpContextRegistry.findContext(name);
 	}
 
-	/*
-	 * public ServletRegistry findServletRegistry(int port) { HttpServer server
-	 * = getServer(new InetSocketAddress(port)); List<VirtualHost> hosts =
-	 * server.getConfiguration().getVirtualHosts(); String contextName =
-	 * hosts.get(0).getHttpContextName(); HttpContext ctx =
-	 * httpContextRegistry.findContext(contextName); if (ctx == null) throw new
-	 * IllegalStateException("cannot find context: " + contextName);
-	 * 
-	 * return ctx.getServletRegistry(); }
-	 */
-	/*
-	 * @Override public ServletRegistry findServletRegistry(String domain, int
-	 * port) { HttpServer server = getServer(new InetSocketAddress(port)); for
-	 * (VirtualHost host : server.getConfiguration().getVirtualHosts()) { if
-	 * (host.matches(domain)) { String contextName = host.getHttpContextName();
-	 * HttpContext ctx = httpContextRegistry.findContext(contextName); if (ctx
-	 * == null) throw new IllegalStateException("cannot find context: " +
-	 * contextName);
-	 * 
-	 * return ctx.getServletRegistry(); } } return null; }
-	 */
 	@Override
 	public Collection<InetSocketAddress> getListenAddresses() {
 		return listeners.keySet();
@@ -105,19 +121,34 @@ public class HttpServiceImpl implements HttpService {
 
 	@Override
 	public HttpServer createServer(HttpConfiguration config) {
-		HttpServer server = new HttpServerImpl(bc, config, httpContextRegistry, keyStoreManager);
+		HttpServer server = loadServer(config);
+		ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
+		db.add(config, "kraken-httpd", "opened server " + config.getListenAddress());
+
+		return server;
+	}
+
+	private HttpServer loadServer(HttpConfiguration config) {
+		HttpServer server = new HttpServerImpl(bc, config, httpContextRegistry, keyStoreManager, conf);
 		HttpServer old = listeners.putIfAbsent(config.getListenAddress(), server);
 		if (old != null)
 			throw new IllegalStateException("server already exists: " + config.getListenAddress());
-
 		return server;
 	}
 
 	@Override
 	public void removeServer(InetSocketAddress listen) {
 		HttpServer server = listeners.remove(listen);
-		if (server != null)
+		if (server != null) {
 			server.close();
-	}
 
+			ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
+			Map<String, Object> filter = new HashMap<String, Object>();
+			filter.put("listen_address", listen.getAddress().getHostAddress());
+			filter.put("listen_port", listen.getPort());
+			Config c = db.findOne(HttpConfiguration.class, Predicates.field(filter));
+			if (c != null)
+				db.remove(c, false, "kraken-httpd", "removed server " + listen);
+		}
+	}
 }

@@ -142,6 +142,7 @@ public class PushApiImpl implements PushApi {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void push(Session session, String callback, Map<String, Object> m) {
 		Set<Binding> bindings = pushBindingsMap.get(callback);
@@ -152,8 +153,9 @@ public class PushApiImpl implements PushApi {
 				String orgDomain = session.getOrgDomain();
 
 				// for backward compatibility
-				if (orgDomain == null)
-					orgDomain = session.getOrgId().toString();
+				Integer orgId = session.getOrgId();
+				if (orgDomain == null && orgId != null)
+					orgDomain = orgId.toString();
 
 				Message msg = createMessage(orgDomain, binding, callback, m);
 				if (logger.isTraceEnabled())

@@ -385,14 +385,6 @@ public class SiemScript implements Script {
 	public void configure(String[] args) {
 		final String orgDomain = "localhost";
 
-		ProgramApi programApi = getProgramApi();
-		if (programApi != null) {
-			if (programApi.getProgramPacks("localhost").size() == 1) {
-				createBaleenPack(programApi);
-				createStormcastPack(programApi);
-			}
-		}
-
 		LogFileScannerRegistry registry = getLogFileScannerRegistry();
 		if (registry == null) {
 			context.println("log file scanner registry not ready");
@@ -489,56 +481,6 @@ public class SiemScript implements Script {
 				}
 			}
 		}
-	}
-
-	private Program newProgram(int seq, String packName, String name, String type, boolean visible, String description) {
-		Program p = new Program();
-		p.setPackName(packName);
-		p.setName(name);
-		p.setTypeName(type);
-		p.setSeq(seq);
-		p.setDescription(description);
-		p.setVisible(visible);
-		return p;
-	}
-
-	private void createBaleenPack(ProgramApi programApi) {
-		ProgramPack pack = new ProgramPack();
-		pack.setName("Baleen");
-		pack.setDll("Nchovy.Baleen.dll");
-		pack.setSeq(2);
-		programApi.createProgramPack("localhost", pack);
-
-		Program wall = newProgram(1, "Baleen", "Wall", "Nchovy.Baleen.InfoWall.InfoWall", true, null);
-		Program logSearch = newProgram(2, "Baleen", "Log Search", "Nchovy.Baleen.LogSearch.LogSearch", true, null);
-		Program mapViewer = newProgram(3, "Baleen", "Map Viewer", "Nchovy.Baleen.MapEditor.MapViewer", true, null);
-		Program mapEditor = newProgram(4, "Baleen", "Map Editor", "Nchovy.Baleen.MapEditor.MapEditor", true, null);
-
-		programApi.createProgram("localhost", wall);
-		programApi.createProgram("localhost", logSearch);
-		programApi.createProgram("localhost", mapViewer);
-		programApi.createProgram("localhost", mapEditor);
-
-		ProgramProfile pp = programApi.getProgramProfile("localhost", "all");
-		pp.getPrograms().add(wall);
-		pp.getPrograms().add(logSearch);
-		pp.getPrograms().add(mapEditor);
-		pp.getPrograms().add(mapViewer);
-		programApi.updateProgramProfile("localhost", pp);
-	}
-
-	private void createStormcastPack(ProgramApi programApi) {
-		ProgramPack pack = new ProgramPack();
-		pack.setName("StormCast");
-		pack.setDll("FutureSystems.StormCast.dll");
-		pack.setSeq(3);
-		programApi.createProgramPack("localhost", pack);
-
-		Program storm = newProgram(1, "StormCast", "Wall", "Nchovy.Baleen.InfoWall.InfoWall", true, null);
-		programApi.createProgram("localhost", storm);
-		ProgramProfile pp = programApi.getProgramProfile("localhost", "all");
-		pp.getPrograms().add(storm);
-		programApi.updateProgramProfile("localhost", pp);
 	}
 
 	private Map<String, String> toMap(Properties p) {
