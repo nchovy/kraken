@@ -5,7 +5,7 @@ public class RpcBindingProperties {
 	private int port;
 	private String keyAlias;
 	private String trustAlias;
-	
+
 	public RpcBindingProperties() {
 	}
 
@@ -86,7 +86,7 @@ public class RpcBindingProperties {
 
 	@Override
 	public String toString() {
-		return "addr=" + addr + ", port=" + port + ", key=" + keyAlias + ", trust=" + trustAlias + "]";
+		return "addr=" + addr + ", port=" + port + ", key=" + keyAlias + ", trust=" + trustAlias;
 	}
 
 }
