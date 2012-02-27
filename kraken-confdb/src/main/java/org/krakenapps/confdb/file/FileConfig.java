@@ -97,6 +97,16 @@ class FileConfig implements Config {
 	}
 
 	@Override
+	public void update() {
+		col.update(this);
+	}
+
+	@Override
+	public void remove() {
+		col.remove(this);
+	}
+
+	@Override
 	public String toString() {
 		return "id=" + id + ", rev=" + rev + ", prev=" + prevRev + ", doc=" + doc;
 	}
