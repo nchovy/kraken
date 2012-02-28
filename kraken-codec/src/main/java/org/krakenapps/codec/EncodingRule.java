@@ -150,6 +150,63 @@ public class EncodingRule {
 		}
 	}
 
+	/*
+	 * Return single object byte length(include type byte). ByteBuffer's
+	 * position will not move.
+	 */
+	public static int getObjectLength(ByteBuffer bb) {
+		return getObjectLength(bb, null);
+	}
+
+	public static int getObjectLength(ByteBuffer bb, CustomCodec cc) {
+		ByteBuffer buf = bb.duplicate();
+		int typeByte = buf.get();
+		switch (typeByte) {
+		case NULL_TYPE:
+			return 1;
+		case STRING_TYPE:
+		case MAP_TYPE:
+		case ARRAY_TYPE:
+		case BLOB_TYPE: {
+			int pos = buf.position();
+			return 1 + (int) decodeRawNumber(buf) + (buf.position() - pos);
+		}
+		case INT32_TYPE:
+			throw new UnsupportedTypeException("deprecated number type");
+		case INT16_TYPE:
+			throw new UnsupportedTypeException("deprecated number type");
+		case INT64_TYPE:
+			throw new UnsupportedTypeException("deprecated number type");
+		case DATE_TYPE: {
+			int pos = buf.position();
+			buf.getLong();
+			return 1 + (buf.position() - pos);
+		}
+		case IP4_TYPE:
+			return 1 + 4;
+		case IP6_TYPE:
+			return 1 + 16;
+		case BOOLEAN_TYPE:
+			return 1 + 1;
+		case ZINT32_TYPE:
+		case ZINT16_TYPE:
+		case ZINT64_TYPE: {
+			int pos = buf.position();
+			decodeRawNumber(buf);
+			return 1 + (buf.position() - pos);
+		}
+		case FLOAT_TYPE:
+			return 1 + 4;
+		case DOUBLE_TYPE:
+			return 1 + 8;
+		}
+
+		if (cc != null)
+			return cc.getObjectLength(buf);
+		else
+			throw new UnsupportedTypeException("type: " + typeByte);
+	}
+
 	public static Object decode(ByteBuffer bb) {
 		return decode(bb, null);
 	}
