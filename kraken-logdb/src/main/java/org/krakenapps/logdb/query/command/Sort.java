@@ -48,8 +48,7 @@ public class Sort extends LogQueryCommand {
 	}
 
 	@Override
-	public void init() {
-		super.init();
+	protected void initProcess() {
 		try {
 			this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
 		} catch (IOException e) {
@@ -79,7 +78,7 @@ public class Sort extends LogQueryCommand {
 	}
 
 	@Override
-	public void eof() {
+	protected void eofProcess() {
 		if (limit == null) {
 			write(buf);
 		} else {
@@ -94,7 +93,6 @@ public class Sort extends LogQueryCommand {
 			}
 			buf = null;
 		}
-		super.eof();
 	}
 
 	private class DefaultComparator implements Comparator<Map<String, Object>> {

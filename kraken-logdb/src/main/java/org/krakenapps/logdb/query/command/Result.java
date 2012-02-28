@@ -135,9 +135,13 @@ public class Result extends LogQueryCommand {
 		return result.subList(offset, offset + limit);
 	}
 
+	public void closeResult() {
+		if (result != null)
+			result.close();
+	}
+
 	@Override
-	public void eof() {
-		super.eof();
+	protected void eofProcess() {
 		for (LogQueryCallback callback : callbacks)
 			callback.onEof();
 	}

@@ -1,15 +1,18 @@
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.repeat;
+import static org.krakenapps.bnf.Syntax.rule;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.LogScript;
 import org.krakenapps.logdb.LogScriptRegistry;
-import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.impl.ResourceManager;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Script;
 import org.osgi.framework.BundleContext;
@@ -18,9 +21,9 @@ public class ScriptParser implements LogQueryParser {
 	private BundleContext bc;
 	private LogScriptRegistry scriptRegistry;
 
-	public ScriptParser(BundleContext bc, LogScriptRegistry scriptRegistry) {
-		this.bc = bc;
-		this.scriptRegistry = scriptRegistry;
+	public ScriptParser(ResourceManager resman) {
+		this.bc = resman.get(BundleContext.class);
+		this.scriptRegistry = resman.get(LogScriptRegistry.class);
 	}
 
 	@Override

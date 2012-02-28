@@ -15,7 +15,7 @@
  */
 package org.krakenapps.logdb.query;
 
-import java.util.ArrayList;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -28,17 +28,14 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.log.api.LogParserFactoryRegistry;
-import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.EmptyLogQueryCallback;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryParser;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
-import org.krakenapps.logdb.LogScriptRegistry;
-import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.SyntaxProvider;
+import org.krakenapps.logdb.impl.ResourceManager;
 import org.krakenapps.logdb.query.parser.DatasourceParser;
 import org.krakenapps.logdb.query.parser.DropParser;
 import org.krakenapps.logdb.query.parser.EvalParser;
@@ -57,81 +54,46 @@ import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logdb.query.parser.TermParser;
 import org.krakenapps.logdb.query.parser.TextFileParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
-import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.logstorage.LogTableRegistry;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(name = "logdb-query")
+@Component(name = "logdb-query-service")
 @Provides
 public class LogQueryServiceImpl implements LogQueryService {
 	private final Logger logger = LoggerFactory.getLogger(LogQueryServiceImpl.class);
 
 	@Requires
-	private DataSourceRegistry dataSourceRegistry;
+	private ResourceManager resman;
 
-	@Requires
-	private LogStorage logStorage;
+	private ConcurrentMap<Integer, LogQuery> queries = new ConcurrentHashMap<Integer, LogQuery>();
+	private CopyOnWriteArraySet<LogQueryEventListener> callbacks = new CopyOnWriteArraySet<LogQueryEventListener>();
 
-	@Requires
-	private LogTableRegistry tableRegistry;
-
-	@Requires
-	private SyntaxProvider syntaxProvider;
-
-	@Requires
-	private LookupHandlerRegistry lookupRegistry;
-
-	@Requires
-	private LogScriptRegistry scriptRegistry;
-
-	@Requires
-	private LogParserFactoryRegistry parserFactoryRegistry;
-
-	private BundleContext bc;
-	private ConcurrentMap<Integer, LogQuery> queries;
-
-	private CopyOnWriteArraySet<LogQueryEventListener> callbacks;
-
-	public LogQueryServiceImpl(BundleContext bc) {
-		this.bc = bc;
-		this.queries = new ConcurrentHashMap<Integer, LogQuery>();
-		this.callbacks = new CopyOnWriteArraySet<LogQueryEventListener>();
-	}
-
+	@SuppressWarnings("unchecked")
 	@Validate
 	public void start() {
-		@SuppressWarnings("unchecked")
-		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, EvalParser.class, SearchParser.class,
-				FieldsParser.class, FunctionParser.class, OptionCheckerParser.class, OptionParser.class, RenameParser.class,
-				ReplaceParser.class, SortParser.class, StatsParser.class, TermParser.class, TimechartParser.class);
-
-		List<LogQueryParser> parsers = new ArrayList<LogQueryParser>();
-		for (Class<? extends LogQueryParser> clazz : parserClazzes) {
-			try {
-				parsers.add(clazz.newInstance());
-			} catch (Exception e) {
-				logger.error("kraken logstorage: failed to add syntax: " + clazz.getSimpleName(), e);
-			}
+		File buffer = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/buffer/");
+		buffer.mkdirs();
+		for (File f : buffer.listFiles()) {
+			String name = f.getName();
+			if (f.isFile() && (name.startsWith("fbl") || name.startsWith("fbm")) && name.endsWith(".buf"))
+				f.delete();
 		}
+		FileBufferList.setFileDir(buffer);
 
-		// add table and lookup (need some constructor injection)
-		parsers.add(new DatasourceParser(dataSourceRegistry, logStorage, tableRegistry, parserFactoryRegistry));
-		parsers.add(new TableParser(logStorage, tableRegistry, parserFactoryRegistry));
-		parsers.add(new LookupParser(lookupRegistry));
-		parsers.add(new ScriptParser(bc, scriptRegistry));
-		parsers.add(new TextFileParser(parserFactoryRegistry));
-
-		syntaxProvider.addParsers(parsers);
+		List<Class<? extends LogQueryParser>> parsers = Arrays.asList(DatasourceParser.class, DropParser.class, EvalParser.class,
+				SearchParser.class, FieldsParser.class, FunctionParser.class, LookupParser.class, OptionCheckerParser.class,
+				OptionParser.class, RenameParser.class, ReplaceParser.class, ScriptParser.class, SortParser.class, StatsParser.class,
+				TableParser.class, TermParser.class, TextFileParser.class, TimechartParser.class);
+		resman.get(SyntaxProvider.class).addParsers(parsers, resman);
 
 		// receive log table event and register it to data source registry
 	}
 
 	@Override
 	public LogQuery createQuery(String query) {
-		LogQuery lq = new LogQueryImpl(syntaxProvider, query);
+		LogQuery lq = new LogQueryImpl(resman, query);
 		queries.put(lq.getId(), lq);
+
 		lq.registerQueryCallback(new EofReceiver(lq));
 		invokeCallbacks(lq, LogQueryStatus.Created);
 
@@ -144,7 +106,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		if (lq == null)
 			throw new IllegalArgumentException("invalid log query id: " + id);
 
-		new Thread(lq, "Log Query " + id).start();
+		lq.start();
 		invokeCallbacks(lq, LogQueryStatus.Started);
 	}
 
@@ -153,16 +115,13 @@ public class LogQueryServiceImpl implements LogQueryService {
 		LogQuery lq = queries.get(id);
 		if (lq == null)
 			return;
-
-		if (!lq.isEnd())
-			lq.cancel();
+		lq.cancel();
 
 		FileBufferList<Map<String, Object>> fbl = (FileBufferList<Map<String, Object>>) lq.getResult();
 		if (fbl != null)
 			fbl.close();
 
 		queries.remove(id);
-
 		invokeCallbacks(lq, LogQueryStatus.Removed);
 	}
 

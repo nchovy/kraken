@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -18,7 +19,6 @@ import org.krakenapps.logdb.DataSourceEventListener;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableRegistry;
-import org.krakenapps.logstorage.TableMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,20 +42,12 @@ public class DataSourceRegistryImpl implements DataSourceRegistry, LogTableEvent
 
 		// add initial state
 		for (String name : tableRegistry.getTableNames()) {
-			int id = tableRegistry.getTableId(name);
-			TableMetadata metadata = tableRegistry.getTableMetadata(id);
-			update(new LogTableDataSource(name, toMap(metadata)));
+			Set<String> metadata = tableRegistry.getTableMetadataKeys(name);
+			Map<String, String> m = new HashMap<String, String>();
+			for (String key : metadata)
+				m.put(key, tableRegistry.getTableMetadata(name, key).toString());
+			update(new LogTableDataSource(name, m));
 		}
-	}
-
-	private Map<String, String> toMap(TableMetadata metadata) {
-		Map<String, String> m = new HashMap<String, String>();
-		for (String key : metadata.keySet()) {
-			String value = metadata.get(key);
-			m.put(key.toString(), value == null ? null : value.toString());
-		}
-
-		return m;
 	}
 
 	@Invalidate

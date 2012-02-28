@@ -23,9 +23,7 @@ public class Cmd extends LogQueryCommand {
 	}
 
 	@Override
-	public void start() {
-		status = Status.Running;
-
+	protected void startProcess() {
 		try {
 			int i = 0;
 			int count = 0;

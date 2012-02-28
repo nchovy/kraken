@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.query.ObjectComparator;
@@ -270,20 +271,20 @@ public abstract class Function {
 	}
 
 	protected static class Count extends Function {
-		private long result = 0;
+		private AtomicLong result = new AtomicLong();
 
 		@Override
 		protected void put(Object obj) {
-			result++;
+			result.incrementAndGet();
 		}
 
 		public void setResult(long result) {
-			this.result = result;
+			this.result.set(result);
 		}
 
 		@Override
 		public Object getResult() {
-			return result;
+			return result.get();
 		}
 
 		@Override

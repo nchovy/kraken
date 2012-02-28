@@ -185,7 +185,7 @@ public class LogRpcService extends SimpleRpcService {
 				query.registerTimelineCallback(tc);
 			}
 
-			new Thread(query, "Log Query " + id).start();
+			query.start();
 		}
 	}
 
@@ -220,8 +220,7 @@ public class LogRpcService extends SimpleRpcService {
 		@Override
 		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
 			try {
-				logger.info("kraken logdb: page loaded for query [{}], offset [{}], limit [{}]", new Object[] { query,
-						offset, limit });
+				logger.info("kraken logdb: page loaded for query [{}], offset [{}], limit [{}]", new Object[] { query, offset, limit });
 
 				Map<String, Object> params = getMetadata();
 				ClientContext ctx = contexts.get(session);
@@ -234,8 +233,7 @@ public class LogRpcService extends SimpleRpcService {
 		@Override
 		public void onEof() {
 			try {
-				logger.info("kraken logdb: eof for query [{}], offset [{}], limit [{}]", new Object[] { query, offset,
-						limit });
+				logger.info("kraken logdb: eof for query [{}], offset [{}], limit [{}]", new Object[] { query, offset, limit });
 
 				Map<String, Object> params = getMetadata();
 				ClientContext ctx = contexts.get(session);

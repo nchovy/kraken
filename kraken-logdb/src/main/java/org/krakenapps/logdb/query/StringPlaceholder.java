@@ -15,7 +15,6 @@
  */
 package org.krakenapps.logdb.query;
 
-import java.nio.BufferUnderflowException;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
@@ -50,7 +49,7 @@ public class StringPlaceholder implements Placeholder {
 		int begin = i;
 
 		if (text.length() <= begin)
-			throw new BufferUnderflowException();
+			throw new ParseException("underflow", text.length());
 
 		i = findEnd(sb, text, i);
 

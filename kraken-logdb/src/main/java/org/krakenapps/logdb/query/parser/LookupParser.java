@@ -15,29 +15,31 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.option;
+import static org.krakenapps.bnf.Syntax.ref;
 
 import org.krakenapps.bnf.Binding;
 import org.krakenapps.bnf.Parser;
 import org.krakenapps.bnf.Syntax;
-import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.LookupHandlerRegistry;
+import org.krakenapps.logdb.impl.ResourceManager;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Lookup;
 
 public class LookupParser implements LogQueryParser {
 	private LookupHandlerRegistry registry;
 
-	public LookupParser(LookupHandlerRegistry registry) {
-		this.registry = registry;
+	public LookupParser(ResourceManager resman) {
+		this.registry = resman.get(LookupHandlerRegistry.class);
 	}
 
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("lookup", this, k("lookup "), ref("option"), new StringPlaceholder(), ref("lookup_field"),
-				k("OUTPUT"), ref("lookup_field"));
-		syntax.add("lookup_field", new LookupFieldParser(), new StringPlaceholder(),
-				option(k("as "), new StringPlaceholder()));
+		syntax.add("lookup", this, k("lookup "), ref("option"), new StringPlaceholder(), ref("lookup_field"), k("OUTPUT"),
+				ref("lookup_field"));
+		syntax.add("lookup_field", new LookupFieldParser(), new StringPlaceholder(), option(k("as "), new StringPlaceholder()));
 		syntax.addRoot("lookup");
 	}
 

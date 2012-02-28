@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb-jython</artifactId>
-	<version>0.1.0</version>
+	<version>0.2.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken LogDB Jython Scripting</name>
 	<build>
@@ -51,7 +51,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-logdb</artifactId>
-			<version>0.4.0</version>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>

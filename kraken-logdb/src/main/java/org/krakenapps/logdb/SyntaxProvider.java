@@ -17,13 +17,27 @@ package org.krakenapps.logdb;
 
 import java.text.ParseException;
 import java.util.Collection;
+import java.util.Set;
 
 import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.impl.ResourceManager;
 
 public interface SyntaxProvider {
 	Syntax getSyntax();
+	
+	Set<String> getParserNames();
 
 	LogQueryCommand eval(LogQuery logQuery, String query) throws ParseException;
+
+	void addParser(Class<? extends LogQueryParser> cls, ResourceManager resman);
+
+	void addParser(LogQueryParser parser);
+
+	void removeParser(Class<? extends LogQueryParser> cls);
+
+	void removeParser(LogQueryParser parser);
+
+	void addParsers(Collection<Class<? extends LogQueryParser>> clzs, ResourceManager resman);
 
 	void addParsers(Collection<? extends LogQueryParser> parsers);
 
