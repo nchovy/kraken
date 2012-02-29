@@ -131,8 +131,12 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 							// prevent out-of-order execution per rpc session
 							worksheet.put(workKey, new WorkStatus());
 							executor.submit(new MessageHandler(workKey, list));
-						} else
-							logger.trace("kraken rpc: handler threadpool stopped, drop msg");
+						} else {
+							if (executor == null) {
+								logger.trace("kraken rpc: handler threadpool stopped, drop msg");
+								doStop = true;
+							}
+						}
 					}
 				}
 
@@ -323,6 +327,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		for (RpcService service : serviceMap.keySet()) {
 			String serviceName = serviceMap.get(service);
 			newConnection.bind(serviceName, service);
+			logger.debug("kraken rpc: binding service [{}] to new connection [{}]", serviceName, newConnection);
 		}
 
 		// at this moment, control session is opened
@@ -423,6 +428,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			if (binding == null && (type.equals("rpc-call") || type.equals("rpc-post"))) {
 				int newId = conn.nextMessageId();
 				String cause = "service not found: " + serviceName;
+				logger.debug("kraken rpc: service [{}] not found", serviceName);
 				RpcMessage error = RpcMessage.newException(newId, session.getId(), id, cause);
 				channel.write(error);
 				return;
