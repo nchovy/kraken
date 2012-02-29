@@ -16,7 +16,9 @@
 package org.krakenapps.httpd.impl;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -64,7 +66,7 @@ public class Response implements HttpServletResponse {
 		this.ctx = ctx;
 		this.req = req;
 		this.os = new ResponseOutputStream();
-		this.writer = new PrintWriter(os);
+		this.writer = new PrintWriter(new OutputStreamWriter(os, Charset.forName("utf-8")));
 	}
 
 	private class ResponseOutputStream extends ServletOutputStream {
@@ -226,14 +228,11 @@ public class Response implements HttpServletResponse {
 			msg = "";
 
 		String body = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n" //
-				+ "<html><head><title>" + sc + " "
-				+ status.getReasonPhrase()
+				+ "<html><head><title>" + sc + " " + status.getReasonPhrase()
 				+ "</title></head>\n" //
-				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>"
-				+ msg
+				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>" + msg
 				+ "</pre><hr/><address>Kraken HTTPd/"
-				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION)
-				+ "</address></body></html>";
+				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION) + "</address></body></html>";
 
 		writer.append(body);
 		writer.close();
