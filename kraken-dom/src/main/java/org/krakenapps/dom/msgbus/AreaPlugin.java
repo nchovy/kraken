@@ -21,6 +21,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.AreaApi;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.model.Area;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -30,6 +31,9 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-area-plugin")
 @MsgbusPlugin
 public class AreaPlugin {
+	@Requires
+	private ConfigManager conf;
+
 	@Requires
 	private AreaApi areaApi;
 
@@ -56,7 +60,7 @@ public class AreaPlugin {
 	@MsgbusMethod
 	public void updateArea(Request req, Response resp) {
 		Area before = areaApi.getArea(req.getOrgDomain(), req.getString("guid"));
-		Area area = (Area) PrimitiveConverter.overwrite(before, req.getParams());
+		Area area = (Area) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		areaApi.updateArea(req.getOrgDomain(), area);
 	}
 

@@ -30,7 +30,6 @@ import org.krakenapps.msgbus.handler.MsgbusPlugin;
 @Component(name = "dom-localization-plugin")
 @MsgbusPlugin
 public class LocalizationPlugin {
-
 	@Requires
 	private LocalizationApi localizationApi;
 

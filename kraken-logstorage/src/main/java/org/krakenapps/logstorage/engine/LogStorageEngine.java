@@ -492,12 +492,17 @@ public class LogStorageEngine implements LogStorage {
 			List<LogRecord> buffer = onlineWriter.getBuffer();
 			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 
-			if (buffer != null) {
+			if (buffer != null && !buffer.isEmpty()) {
 				logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
 				ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
 				while (li.hasPrevious()) {
 					LogRecord logData = li.previous();
 					if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
+						if (offset > 0) {
+							offset--;
+							continue;
+						}
+
 						if (c.onLog(logData)) {
 							if (--limit == 0)
 								return c.matched;

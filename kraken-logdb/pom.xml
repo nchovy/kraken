@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb</artifactId>
-	<version>0.5.2</version>
+	<version>1.0.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log DB</name>
 	<build>
@@ -53,7 +53,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.9.5</version>
+			<version>1.9.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -72,8 +72,13 @@
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-codec</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-logstorage</artifactId>
-			<version>1.8.1</version>
+			<version>1.9.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>

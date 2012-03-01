@@ -163,14 +163,14 @@ public class LogFileReaderV1 extends LogFileReader {
 			byte[] data = new byte[dataLen];
 			dataFile.readFully(data);
 
-			if (offset > 0) {
-				offset--;
+			if (offset > matched) {
+				matched++;
 				continue;
 			}
 
 			ByteBuffer bb = ByteBuffer.wrap(data, 0, dataLen);
 			if (callback.onLog(new LogRecord(dataDate, dataId, bb))) {
-				if (++matched == limit)
+				if (++matched == offset + limit)
 					return;
 			}
 		}

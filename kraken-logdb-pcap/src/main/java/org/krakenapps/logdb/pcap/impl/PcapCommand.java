@@ -3,8 +3,6 @@ package org.krakenapps.logdb.pcap.impl;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.pcap.decoder.ethernet.EthernetFrame;
@@ -22,7 +20,7 @@ public class PcapCommand extends LogQueryCommand {
 
 			@Override
 			public void process(EthernetFrame frame) {
-				Map<String, Object> m = new HashMap<String, Object>();
+				LogMap m = new LogMap();
 				PacketHeader h = frame.getPcapPacket().getPacketHeader();
 				Date date = new Date(h.getTsSec() * 1000L + h.getTsUsec());
 				m.put("_time", date);
@@ -37,8 +35,7 @@ public class PcapCommand extends LogQueryCommand {
 	}
 
 	@Override
-	public void start() {
-		status = Status.Running;
+	protected void startProcess() {
 		try {
 			runner.run();
 		} catch (IOException e) {
@@ -48,7 +45,7 @@ public class PcapCommand extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(Map<String, Object> m) {
+	public void push(LogMap m) {
 	}
 
 	@Override

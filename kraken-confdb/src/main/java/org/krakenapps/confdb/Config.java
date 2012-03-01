@@ -35,4 +35,8 @@ public interface Config {
 	<T> T getDocument(Class<T> cls, PrimitiveParseCallback callback);
 
 	void setDocument(Object doc);
+
+	void update();
+
+	void remove();
 }

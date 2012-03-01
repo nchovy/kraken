@@ -1,6 +1,7 @@
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.ref;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -16,6 +17,7 @@ import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.impl.ResourceManager;
 import org.krakenapps.logdb.query.command.Datasource;
 import org.krakenapps.logdb.query.command.OptionChecker;
 import org.krakenapps.logstorage.LogStorage;
@@ -27,12 +29,11 @@ public class DatasourceParser implements LogQueryParser {
 	private LogTableRegistry tableRegistry;
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
-	public DatasourceParser(DataSourceRegistry dataSourceRegistry, LogStorage logStorage, LogTableRegistry tableRegistry,
-			LogParserFactoryRegistry parserFactoryRegistry) {
-		this.dataSourceRegistry = dataSourceRegistry;
-		this.logStorage = logStorage;
-		this.tableRegistry = tableRegistry;
-		this.parserFactoryRegistry = parserFactoryRegistry;
+	public DatasourceParser(ResourceManager resman) {
+		this.dataSourceRegistry = resman.get(DataSourceRegistry.class);
+		this.logStorage = resman.get(LogStorage.class);
+		this.tableRegistry = resman.get(LogTableRegistry.class);
+		this.parserFactoryRegistry = resman.get(LogParserFactoryRegistry.class);
 	}
 
 	@Override

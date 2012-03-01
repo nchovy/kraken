@@ -14,6 +14,7 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogScript;
 import org.krakenapps.logdb.LogScriptInput;
 import org.krakenapps.logdb.LogScriptOutput;
@@ -89,8 +90,8 @@ public class JythonLogScript implements Script {
 
 	private class ConsoleOutput implements LogScriptOutput {
 		@Override
-		public void write(Map<String, Object> data) {
-			context.println(Primitive.stringify(data));
+		public void write(LogMap data) {
+			context.println(Primitive.stringify(data.map()));
 		}
 	}
 

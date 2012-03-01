@@ -21,11 +21,6 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.logdb.DataSourceRegistry;
-import org.krakenapps.logdb.LogQueryService;
-import org.krakenapps.logdb.LogScriptRegistry;
-import org.krakenapps.logdb.LookupHandlerRegistry;
-import org.krakenapps.logdb.mapreduce.MapReduceService;
 
 @Component(name = "logdb-script-factory")
 @Provides
@@ -35,23 +30,11 @@ public class LogDBScriptFactory implements ScriptFactory {
 	private String alias;
 
 	@Requires
-	private LogQueryService qs;
-
-	@Requires
-	private DataSourceRegistry dsr;
-
-	@Requires
-	private MapReduceService mapreduce;
-
-	@Requires
-	private LogScriptRegistry scriptRegistry;
-	
-	@Requires
-	private LookupHandlerRegistry lookup;
+	private ResourceManager resman;
 
 	@Override
 	public Script createScript() {
-		return new LogDBScript(qs, dsr, mapreduce, scriptRegistry, lookup);
+		return new LogDBScript(resman);
 	}
 
 }

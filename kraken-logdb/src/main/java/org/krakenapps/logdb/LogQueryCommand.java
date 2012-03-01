@@ -17,21 +17,38 @@ package org.krakenapps.logdb;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logdb.query.ResourceManagerImpl.CommandThread;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public abstract class LogQueryCommand {
+public abstract class LogQueryCommand implements Runnable {
 	public static enum Status {
 		Waiting, Running, End
 	}
 
+	private Logger logger = LoggerFactory.getLogger(LogQueryCommand.class);
+
+	protected ExecutorService exesvc;
+	private static final int BULK_SIZE = 1000;
+	private BlockingQueue<Object> cache = new LinkedBlockingQueue<Object>();
+	private AtomicInteger scheduled = new AtomicInteger();
+	private AtomicInteger running = new AtomicInteger();
+
 	private String queryString;
-	private int pushCount;
+	private AtomicInteger pushCount = new AtomicInteger();
 	protected LogQuery logQuery;
-	protected LogQueryCommand next;
+	private LogQueryCommand next;
 	private boolean callbackTimeline;
-	protected volatile Status status = Status.Waiting;
+	private volatile Status status = Status.Waiting;
 	protected Map<String, String> headerColumn = new HashMap<String, String>();
 
 	public LogQueryCommand() {
@@ -53,30 +70,109 @@ public abstract class LogQueryCommand {
 		this.logQuery = logQuery;
 	}
 
+	public void setExecutorService(ExecutorService exesvc) {
+		this.exesvc = exesvc;
+	}
+
 	public LogQueryCommand getNextCommand() {
 		return next;
 	}
 
 	public void setNextCommand(LogQueryCommand next) {
 		this.next = next;
+		this.next.cache = new LinkedBlockingQueue<Object>(getCacheSize());
 	}
 
 	public Status getStatus() {
 		return status;
 	}
 
-	public void init() {
+	public final void init() {
 		this.status = Status.Waiting;
 		if (next != null)
 			next.headerColumn = this.headerColumn;
+		initProcess();
 	}
 
-	public void start() {
+	protected void initProcess() {
+	}
+
+	@Override
+	public void run() {
+		CommandThread cmd = (CommandThread) Thread.currentThread();
+		cmd.set(logQuery, this);
+		scheduled.decrementAndGet();
+
+		try {
+			Queue<Object> q = new LinkedList<Object>();
+			cache.drainTo(q, BULK_SIZE);
+
+			try {
+				running.incrementAndGet();
+				pushCaches(q);
+			} finally {
+				running.decrementAndGet();
+			}
+		} catch (Throwable e) {
+			logger.error("kraken logdb: log query failed", e);
+			logQuery.cancel();
+		} finally {
+			cmd.unset();
+		}
+	}
+
+	public int getCacheSize() {
+		return Integer.MAX_VALUE;
+	}
+
+	private enum Token {
+		Start, Eof
+	}
+
+	public final void start() {
+		status = Status.Running;
+		try {
+			cache.put(Token.Start);
+			exesvc.execute(this);
+			scheduled.incrementAndGet();
+		} catch (InterruptedException e) {
+		}
+	}
+
+	protected void startProcess() {
 		throw new UnsupportedOperationException();
 	}
 
 	public int getPushCount() {
-		return pushCount;
+		return pushCount.get();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void pushCaches(Queue<Object> q) {
+		while (!q.isEmpty()) {
+			if (status == Status.End)
+				return;
+
+			Object poll = q.poll();
+			if (poll == Token.Start)
+				startProcess();
+			else if (poll instanceof LogMap)
+				push((LogMap) poll);
+			else if (poll instanceof FileBufferList)
+				push((FileBufferList<Map<String, Object>>) poll);
+			else if (poll == Token.Eof) {
+				if (running.get() == 1)
+					eof();
+				else {
+					try {
+						cache.put(Token.Eof);
+						exesvc.execute(this);
+						scheduled.incrementAndGet();
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+		}
 	}
 
 	public abstract void push(LogMap m);
@@ -90,22 +186,34 @@ public abstract class LogQueryCommand {
 	}
 
 	protected final void write(LogMap m) {
-		pushCount++;
+		int pc = pushCount.incrementAndGet();
 		if (next != null && next.status != Status.End) {
 			if (callbackTimeline) {
 				for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
 					callback.put((Date) m.get(headerColumn.get("date")));
 			}
 			next.status = Status.Running;
-			next.push(m);
+			try {
+				next.cache.put(m);
+				if (pc % BULK_SIZE == 0) {
+					exesvc.execute(next);
+					next.scheduled.incrementAndGet();
+				}
+			} catch (InterruptedException e) {
+			}
 		}
 	}
 
 	protected final void write(FileBufferList<Map<String, Object>> buf) {
-		pushCount += buf.size();
+		pushCount.addAndGet(buf.size());
 		if (next != null && next.status != Status.End) {
 			next.status = Status.Running;
-			next.push(buf);
+			try {
+				next.cache.put(buf);
+				exesvc.execute(next);
+				next.scheduled.incrementAndGet();
+			} catch (InterruptedException e) {
+			}
 		} else {
 			buf.close();
 		}
@@ -121,11 +229,23 @@ public abstract class LogQueryCommand {
 		this.callbackTimeline = callbackTimeline;
 	}
 
-	public void eof() {
-		status = Status.End;
+	public final void eof() {
+		if (status == Status.End)
+			return;
 
-		if (next != null && next.status != Status.End)
-			next.eof();
+		status = Status.End;
+		eofProcess();
+
+		if (next != null && next.status != Status.End) {
+			exesvc.execute(next);
+			next.scheduled.incrementAndGet();
+			try {
+				next.cache.put(Token.Eof);
+				exesvc.execute(next);
+				next.scheduled.incrementAndGet();
+			} catch (InterruptedException e) {
+			}
+		}
 
 		if (logQuery != null) {
 			if (callbackTimeline) {
@@ -136,6 +256,9 @@ public abstract class LogQueryCommand {
 			if (logQuery.getCommands().get(0).status != Status.End)
 				logQuery.getCommands().get(0).eof();
 		}
+	}
+
+	protected void eofProcess() {
 	}
 
 	public static class LogMap {
@@ -174,8 +297,12 @@ public abstract class LogQueryCommand {
 			map.put(key, value);
 		}
 
-		public void remove(String key) {
-			map.remove(key);
+		public void putAll(Map<? extends String, ? extends Object> m) {
+			map.putAll(m);
+		}
+
+		public Object remove(String key) {
+			return map.remove(key);
 		}
 
 		public boolean containsKey(String key) {

@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-rpc</artifactId>
-	<version>1.5.0</version>
+	<version>1.5.2</version>
 	<packaging>bundle</packaging>
 	<name>Kraken RPC</name>
 	<repositories>

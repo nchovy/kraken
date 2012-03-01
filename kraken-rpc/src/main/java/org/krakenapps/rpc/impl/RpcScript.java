@@ -53,14 +53,14 @@ public class RpcScript implements Script {
 	}
 
 	@ScriptUsage(description = "open rpc port", arguments = {
-			@ScriptArgument(name = "port", type = "int", description = "port"),
-			@ScriptArgument(name = "ip", type = "string", description = "bind address", optional = true) })
+			@ScriptArgument(name = "port", type = "int", description = "rpc port"),
+			@ScriptArgument(name = "ip", type = "string", description = "bind address. '0.0.0.0' by default", optional = true) })
 	public void open(String[] args) {
 		RpcBindingProperties props = null;
 		try {
 			props = inputBindingProps(args);
 			agent.open(props);
-			context.println("opened ");
+			context.println("opened rpc port: " + args[0]);
 		} catch (NumberFormatException e) {
 			context.println("invalid port number format");
 		} catch (Exception e) {
@@ -69,17 +69,19 @@ public class RpcScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "open rpc port", arguments = {
-			@ScriptArgument(name = "port", type = "int", description = "port"),
-			@ScriptArgument(name = "key alias", type = "string", description = "key alias"),
-			@ScriptArgument(name = "trust alias", type = "string", description = "trust alias"),
-			@ScriptArgument(name = "ip", type = "string", description = "bind address", optional = true) })
+	@ScriptUsage(description = "open rpc ssl port", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "rpc listening port for ssl"),
+			@ScriptArgument(name = "key alias", type = "string", description = "key alias. use 'keystore.list' command to list all registered key aliases. Keystore should contain public and private key pair. e.g. PKCS12 keystore"),
+			@ScriptArgument(name = "trust alias", type = "string", description = "trust alias. use 'keystore.list' command to list all registered key aliases. Trusted keystore should contain public key of certificate authority"),
+			@ScriptArgument(name = "ip", type = "string", description = "bind address. '0.0.0.0' by default", optional = true) })
 	public void openSsl(String[] args) {
 		RpcBindingProperties props = null;
 		try {
 			String keyAlias = args[1];
 			String trustAlias = args[2];
-			String ip = args[3];
+			String ip = "0.0.0.0";
+			if (args.length > 3)
+				ip = args[3];
 
 			args[1] = ip;
 			args[2] = keyAlias;
@@ -87,7 +89,7 @@ public class RpcScript implements Script {
 			props = inputBindingProps(args);
 
 			agent.open(props);
-			context.println("opened ");
+			context.println("opened rpc (ssl) port: " + args[0]);
 		} catch (NumberFormatException e) {
 			context.println("invalid port number format");
 		} catch (Exception e) {
@@ -96,15 +98,23 @@ public class RpcScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "close rpc port or rpc ssl port", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "rpc port or rpc ssl port"),
+			@ScriptArgument(name = "ip", type = "string", description = "bind address. '0.0.0.0' by default", optional = true) })
 	public void close(String[] args) {
 		try {
 			RpcBindingProperties props = inputBindingProps(args);
 			if (!agent.getBindings().contains(props)) {
-				context.println("not opened");
+				String endpoint = "0.0.0.0";
+				if (args.length > 1)
+					endpoint = args[1];
+				endpoint += ":" + args[0];
+				context.println(endpoint + " not opened");
 				return;
 			}
 
 			agent.close(props);
+			context.println("closed rpc port");
 		} catch (NumberFormatException e) {
 			context.println("invalid port number format");
 		} catch (Exception e) {
@@ -128,7 +138,7 @@ public class RpcScript implements Script {
 			keyAlias = args[2];
 			trustAlias = args[3];
 		}
-		
+
 		return new RpcBindingProperties(addr, port, keyAlias, trustAlias);
 	}
 

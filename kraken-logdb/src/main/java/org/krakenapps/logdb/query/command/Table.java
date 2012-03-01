@@ -19,16 +19,15 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.krakenapps.log.api.LogParser;
+import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.log.api.LogParser;
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.command.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Table extends LogQueryCommand {
+public class Table extends LogQueryCommand implements LogSearchCallback {
 	private Logger logger = LoggerFactory.getLogger(Table.class);
 	private LogStorage storage;
 	private String tableName;
@@ -37,6 +36,7 @@ public class Table extends LogQueryCommand {
 	private Date from;
 	private Date to;
 	private LogParser parser;
+	private TableParser parsePipe;
 
 	public Table(String tableName) {
 		this(tableName, 0);
@@ -65,6 +65,9 @@ public class Table extends LogQueryCommand {
 		this.from = from;
 		this.to = to;
 		this.parser = parser;
+
+		if (parser != null)
+			this.parsePipe = new TableParser();
 	}
 
 	public String getTableName() {
@@ -100,10 +103,21 @@ public class Table extends LogQueryCommand {
 	}
 
 	@Override
-	public void start() {
+	public int getCacheSize() {
+		return 5000;
+	}
+
+	@Override
+	protected void startProcess() {
+		if (parsePipe != null) {
+			parsePipe.setNextCommand(getNextCommand());
+			setNextCommand(parsePipe);
+			parsePipe.setLogQuery(logQuery);
+			parsePipe.setExecutorService(exesvc);
+		}
+
 		try {
-			status = Status.Running;
-			storage.search(tableName, from, to, offset, limit, new LogSearchCallbackImpl());
+			storage.search(tableName, from, to, offset, limit, this);
 		} catch (InterruptedException e) {
 			logger.trace("kraken logstorage: query interrupted");
 		} catch (Exception e) {
@@ -124,35 +138,40 @@ public class Table extends LogQueryCommand {
 		return false;
 	}
 
-	private class LogSearchCallbackImpl implements LogSearchCallback {
-		@Override
-		public void onLog(Log log) {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("_table", log.getTableName());
-			m.put("_id", log.getId());
-			m.put("_time", log.getDate());
+	@Override
+	public void onLog(Log log) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("_table", log.getTableName());
+		m.put("_id", log.getId());
+		m.put("_time", log.getDate());
+		m.putAll(log.getData());
+		write(new LogMap(m));
+	}
 
-			if (parser != null) {
-				Map<String, Object> parsed = parser.parse(log.getData());
-				if (parsed != null) {
-					m.putAll(parsed);
-				} else {
-					logger.debug("kraken logdb: cannot parse log [{}]", log.getData());
-				}
-			} else {
-				m.putAll(log.getData());
-			}
-			write(new LogMap(m));
+	@Override
+	public void interrupt() {
+		eof();
+	}
+
+	@Override
+	public boolean isInterrupted() {
+		return getStatus().equals(Status.End);
+	}
+
+	private class TableParser extends LogQueryCommand {
+		@Override
+		public void push(LogMap m) {
+			LogMap map = new LogMap();
+			map.put("_table", m.remove("_table"));
+			map.put("_id", m.remove("_id"));
+			map.put("_time", m.remove("_time"));
+			map.putAll(parser.parse(m.map()));
+			write(map);
 		}
 
 		@Override
-		public void interrupt() {
-			eof();
-		}
-
-		@Override
-		public boolean isInterrupted() {
-			return status.equals(Status.End);
+		public boolean isReducer() {
+			return false;
 		}
 	}
 }

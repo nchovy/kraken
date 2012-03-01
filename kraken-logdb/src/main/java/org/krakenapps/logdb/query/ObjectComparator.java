@@ -33,16 +33,16 @@ public class ObjectComparator implements Comparator<Object> {
 		if (o1.equals(o2))
 			return 0;
 		else {
+			if (o1 instanceof String)
+				return ((String) o1).compareTo((String) o2);
+			else if (o1 instanceof Date)
+				return ((Date) o1).compareTo((Date) o2);
+
 			if (NumberUtil.getClass(o1) != null && NumberUtil.getClass(o2) != null)
 				return NumberUtil.sub(o1, o2).intValue();
 
 			if (!o1.getClass().equals(o2.getClass()))
 				return o1.toString().compareTo(o2.toString());
-
-			if (o1 instanceof String)
-				return ((String) o1).compareTo((String) o2);
-			else if (o1 instanceof Date)
-				return ((Date) o1).compareTo((Date) o2);
 		}
 
 		return -1;

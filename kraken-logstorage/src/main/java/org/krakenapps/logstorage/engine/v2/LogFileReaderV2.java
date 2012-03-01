@@ -194,14 +194,13 @@ public class LogFileReaderV2 extends LogFileReader {
 			if (to != null && date > to)
 				continue;
 
-			if (offset > 0) {
-				offset--;
+			if (offset > matched) {
 				matched++;
 				continue;
 			}
 
 			if (callback.onLog(getLogRecord(data, offsets.get(i)))) {
-				if (++matched == limit)
+				if (++matched == offset + limit)
 					return matched;
 			}
 		}

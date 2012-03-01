@@ -20,12 +20,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public interface LogQuery extends Runnable {
+public interface LogQuery {
 	int getId();
 
 	String getQueryString();
 
 	boolean isEnd();
+
+	void start();
 
 	void cancel();
 
