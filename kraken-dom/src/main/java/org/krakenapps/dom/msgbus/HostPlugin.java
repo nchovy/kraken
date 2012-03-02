@@ -99,4 +99,11 @@ public class HostPlugin {
 		String guid = req.getString("guid");
 		hostApi.removeHost(req.getOrgDomain(), guid);
 	}
+
+	@MsgbusMethod
+	public void removeHosts(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
+		Collection<String> guids = (Collection<String>) req.get("guids");
+		hostApi.removeHosts(req.getOrgDomain(), guids);
+	}
 }

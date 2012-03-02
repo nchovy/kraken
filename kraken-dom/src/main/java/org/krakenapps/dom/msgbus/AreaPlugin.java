@@ -69,4 +69,11 @@ public class AreaPlugin {
 		String guid = req.getString("guid");
 		areaApi.removeArea(req.getOrgDomain(), guid);
 	}
+
+	@MsgbusMethod
+	public void removeAreas(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
+		Collection<String> guids = (Collection<String>) req.get("guids");
+		areaApi.removeAreas(req.getOrgDomain(), guids);
+	}
 }
