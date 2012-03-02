@@ -15,7 +15,9 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -46,8 +48,29 @@ public class HostPlugin {
 
 	@MsgbusMethod
 	public void getHosts(Request req, Response resp) {
-		Collection<Host> hosts = hostApi.getHosts(req.getOrgDomain());
-		resp.put("hosts", PrimitiveConverter.serialize(hosts));
+		String areaGuid = req.getString("area_guid");
+		Collection<Host> hosts = null;
+		if (areaGuid != null) {
+			boolean includeChildren = true;
+			if (req.has("include_children"))
+				includeChildren = req.getBoolean("include_children");
+
+			hosts = hostApi.getHosts(req.getOrgDomain(), areaGuid, includeChildren);
+		} else {
+			hosts = hostApi.getHosts(req.getOrgDomain());
+		}
+
+		if (req.has("filter_name")) {
+			List<Host> filtered = new ArrayList<Host>();
+			String filterName = req.getString("filter_name");
+			for (Host host : hosts) {
+				if (host.getName().contains(filterName))
+					filtered.add(host);
+			}
+			resp.put("hosts", PrimitiveConverter.serialize(filtered));
+		} else {
+			resp.put("hosts", PrimitiveConverter.serialize(hosts));
+		}
 	}
 
 	@MsgbusMethod
