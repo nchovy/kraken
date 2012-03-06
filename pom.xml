@@ -11,6 +11,7 @@
 	<name>Kraken Parent POM</name>
 	<packaging>pom</packaging>
 	<modules>
+		<module>pcap</module>
 		<module>fusioncharts-data-service</module>
 		<module>kraken-api</module>
 		<module>kraken-ahocorasick</module>
@@ -25,7 +26,6 @@
 		<module>kraken-json-servlet</module>
 		<module>kraken-json</module>
 		<module>kraken-mac-lookup</module>
-		<module>kraken-pcap</module>
 		<module>kraken-rrd</module>
 		<module>kraken-rss</module>
 		<module>kraken-snmp</module>
@@ -35,13 +35,6 @@
 		<module>kraken-xmlrpc-servlet</module>
 		<module>kraken-xmlrpc</module>
 		<module>kraken-bloomfilter</module>
-		<module>kraken-http-decoder</module>
-		<module>kraken-msn-decoder</module>
-		<module>kraken-pop3-decoder</module>
-		<module>kraken-smtp-decoder</module>
-		<module>kraken-snmp-decoder</module>
-		<module>kraken-ftp-decoder</module>
-		<module>kraken-telnet-decoder</module>
 		<module>kraken-mail</module>
 		<module>kraken-query-browser</module>
 		<module>kraken-sonar</module>
