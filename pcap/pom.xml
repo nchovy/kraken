@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken</artifactId>
+		<version>1.0.0</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<groupId>org.krakenapps</groupId>
+	<version>1.0.0</version>
+	<artifactId>kraken-pcap-pom</artifactId>
+	<name>Kraken PCAP POM</name>
+	<packaging>pom</packaging>
+	<modules>
+		<module>kraken-pcap</module>
+		<module>kraken-http-decoder</module>
+		<module>kraken-msn-decoder</module>
+		<module>kraken-pop3-decoder</module>
+		<module>kraken-smtp-decoder</module>
+		<module>kraken-snmp-decoder</module>
+		<module>kraken-ftp-decoder</module>
+		<module>kraken-telnet-decoder</module>
+		<module>kraken-netbios-decoder</module>
+		<module>kraken-smb-decoder</module>
+		<module>kraken-tftp-decoder</module>
+		<module>kraken-dhcp-decoder</module>
+		<module>kraken-dcerpc</module>
+	</modules>
+</project>

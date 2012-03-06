@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<parent>
+		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken-infra-pom</artifactId>
+		<version>1.0.0</version>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>kraken-api</artifactId>
+	<name>Kraken API</name>
+	<version>1.9.8</version>
+	<url>http://maven.apache.org</url>
+</project>
