@@ -15,7 +15,8 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.ca.util.CrlBuilder;
-import org.krakenapps.servlet.api.ServletRegistry;
+import org.krakenapps.httpd.HttpContext;
+import org.krakenapps.httpd.HttpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,20 +31,23 @@ public class CrlServlet extends HttpServlet {
 	private final Logger logger = LoggerFactory.getLogger(CrlServlet.class.getName());
 
 	@Requires
-	private ServletRegistry servletRegistry;
+	private HttpService httpd;
 
 	@Requires
 	private CertificateAuthorityService ca;
 
 	@Validate
 	public void start() {
-		servletRegistry.register("/ca/crl", this);
+		HttpContext ctx = httpd.ensureContext("frodo");
+		ctx.addServlet("crl", this, "/ca/crl/*");
 	}
 
 	@Invalidate
 	public void stop() {
-		if (servletRegistry != null)
-			servletRegistry.unregister("/ca/crl");
+		if (httpd != null) {
+			HttpContext ctx = httpd.ensureContext("frodo");
+			ctx.removeServlet("crl");
+		}
 	}
 
 	@Override
@@ -51,8 +55,8 @@ public class CrlServlet extends HttpServlet {
 		String authorityName = req.getPathInfo().substring(1); // remove slash
 
 		if (logger.isDebugEnabled())
-			logger.debug("kraken ca: crl [{}] request from [{}, {}]",
-					new Object[] { authorityName, req.getRequestURI(), req.getRemoteAddr() });
+			logger.debug("kraken ca: crl [{}] request from [{}, {}]", new Object[] { authorityName,
+					req.getRequestURI(), req.getRemoteAddr() });
 
 		CertificateAuthority authority = ca.getAuthority(authorityName);
 		if (authority == null) {

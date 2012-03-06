@@ -159,7 +159,7 @@ public class HttpdScript implements Script {
 
 	@ScriptUsage(description = "close port", arguments = {
 			@ScriptArgument(name = "listen port", type = "int", description = "bind port"),
-			@ScriptArgument(name = "listen addr", type = "string", description = "bind address") })
+			@ScriptArgument(name = "listen addr", type = "string", description = "bind address", optional=true) })
 	public void close(String[] args) {
 		try {
 			int port = Integer.valueOf(args[0]);
