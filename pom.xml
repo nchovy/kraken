@@ -11,102 +11,30 @@
 	<name>Kraken Parent POM</name>
 	<packaging>pom</packaging>
 	<modules>
+		<module>infra</module>
+		<module>siem</module>
 		<module>pcap</module>
-		<module>fusioncharts-data-service</module>
-		<module>kraken-api</module>
-		<module>kraken-ahocorasick</module>
-		<module>kraken-core</module>
-		<module>kraken-cron</module>
-		<module>kraken-csv-servlet</module>
-		<module>kraken-dns</module>
-		<module>kraken-filter</module>
-		<module>kraken-http</module>
-		<module>kraken-ipojo</module>
-		<module>kraken-jpa</module>
-		<module>kraken-json-servlet</module>
-		<module>kraken-json</module>
+		<module>detector</module>
+		<module>network</module>
+		<module>algorithm</module>
+		<module>format</module>
+		<module>compiler</module>
+		<module>reporting</module>
+		
 		<module>kraken-mac-lookup</module>
 		<module>kraken-rrd</module>
-		<module>kraken-rss</module>
-		<module>kraken-snmp</module>
-		<module>kraken-syslog</module>
-		<module>kraken-text-servlet</module>
-		<module>kraken-xml-servlet</module>
-		<module>kraken-xmlrpc-servlet</module>
-		<module>kraken-xmlrpc</module>
-		<module>kraken-bloomfilter</module>
-		<module>kraken-mail</module>
 		<module>kraken-query-browser</module>
-		<module>kraken-sonar</module>
-		<module>kraken-rpc</module>
-		<module>kraken-dhcp-decoder</module>
-		<module>kraken-codec</module>
-		<module>kraken-arpwatch</module>
 		<module>kraken-winapi</module>
-		<module>kraken-fluxmon</module>
+		<module>kraken-linux-api</module>
 		<module>kraken-geoip</module>
-		<module>kraken-mime</module>
-		<module>kraken-ca</module>
 		<module>kraken-jython</module>
-		<module>kraken-sentry</module>
-		<module>kraken-base</module>
 		<module>kraken-datasource</module>
 		<module>kraken-util</module>
-		<module>kraken-portmon</module>
-		<module>kraken-smb-decoder</module>
-		<module>kraken-windows-sentry</module>
-		<module>kraken-log-api</module>
-		<module>kraken-birt</module>
-		<module>kraken-netbios-decoder</module>
-		<module>kraken-sql-parser</module>
-		<module>kraken-bnf</module>
-		<module>kraken-syslog-parser</module>
-		<module>kraken-stormbringer</module>
 		<module>kraken-webconsole</module>
-		<module>kraken-msgbus</module>
-		<module>kraken-proxy</module>
-		<module>kraken-linux-api</module>
-		<module>kraken-opencsv</module>
-		<module>kraken-linux-sentry</module>
-		<module>kraken-maldomain</module>
-		<module>kraken-logfile-parser</module>
-		<module>kraken-logstorage</module>
-		<module>kraken-iptables</module>
-		<module>kraken-firewall-api</module>
-		<module>kraken-event-api</module>
-		<module>kraken-siem</module>
-		<module>kraken-dom</module>
-		<module>kraken-http-rule</module>
-		<module>kraken-rule</module>
 		<module>kraken-util-directoryfile</module>
-		<module>kraken-tftp</module>
 		<module>kraken-btree</module>
-		<module>kraken-dcerpc</module>
-		<module>kraken-tftp-decoder</module>
-		<module>kraken-ldap</module>
-		<module>kraken-filemon</module>
-		<module>kraken-ftp</module>
-		<module>kraken-isc-api</module>
-		<module>kraken-ntp</module>
 		<module>kraken-ipmanager</module>
-		<module>kraken-dhcp</module>
-		<module>kraken-captive-portal</module>
-		<module>kraken-radius</module>
-		<module>kraken-logdb-client</module>
-		<module>kraken-logdb</module>
-		<module>kraken-confdb</module>
-		<module>kraken-snmpmon</module>
-		<module>kraken-servlet-api</module>
-		<module>kraken-logdb-jython</module>
-		<module>kraken-logdb-pcap</module>
-		<module>kraken-syslogmon</module>
-		<module>kraken-logdb-geoip</module>
-		<module>kraken-logdb-cmd</module>
-		<module>kraken-word</module>
 		<module>kraken-webfx</module>
-		<module>kraken-httpd</module>
-		<module>kraken-slpolicy</module>
-		<module>kraken-sslscan</module>
 	</modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>
