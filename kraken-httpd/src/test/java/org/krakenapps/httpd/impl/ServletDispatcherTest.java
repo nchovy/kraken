@@ -67,6 +67,24 @@ public class ServletDispatcherTest {
 		assertEquals(4, id(r));
 	}
 
+	@Test
+	public void testPathInfo() {
+		ServletDispatcher d = new ServletDispatcher();
+		MockServlet s1 = new MockServlet(1);
+		ServletRegistration reg1 = d.addServlet("s1", s1);
+		reg1.addMapping("/foo/*");
+
+		ServletMatchResult r = d.matches("/foo/bar?login_name=test");
+		assertNotNull(r);
+		assertEquals("/foo", r.getServletPath());
+		assertEquals("/bar", r.getPathInfo());
+		
+		r = d.matches("/foo/bar");
+		assertNotNull(r);
+		assertEquals("/foo", r.getServletPath());
+		assertEquals("/bar", r.getPathInfo());
+	}
+
 	private int id(ServletMatchResult r) {
 		return ((MockServlet) r.getServlet()).getId();
 	}

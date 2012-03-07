@@ -78,7 +78,10 @@ public class ServletContextImpl implements ServletContext {
 
 	@Override
 	public String getContextPath() {
-		return contextPath;
+		if ( contextPath.equals("/") )
+			return "";
+		else
+			return contextPath;
 	}
 
 	@Override

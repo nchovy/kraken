@@ -50,31 +50,44 @@ public class HttpContext {
 		this.httpSessions = new ConcurrentHashMap<String, HttpSession>();
 	}
 
+	public HttpContext(String name, String contextPath) {
+		this.name = name;
+		this.servletContext = new ServletContextImpl(name, contextPath, "");
+		this.webSocketManager = new WebSocketManager();
+		this.httpSessions = new ConcurrentHashMap<String, HttpSession>();
+	}
+
 	public void handle(Request request, Response response) throws IOException {
+		request.setHttpContext(this);
 		HttpServlet servlet = null;
 		String pathInfo = null;
 
-		logger.trace("kraken httpd: request [{} {}]", request.getMethod(), request.getRequestURI());
+		String uri = request.getRequestURI();
+		logger.trace("kraken httpd: request [{} {}]", request.getMethod(), uri);
 
 		try {
 			String servletPath = null;
-			ServletMatchResult r = servletContext.matches(request.getRequestURI());
+			ServletMatchResult r = servletContext.matches(uri);
 			if (r != null) {
 				servlet = (HttpServlet) r.getServlet();
 				pathInfo = r.getPathInfo();
 				servletPath = r.getServletPath();
-			} else if (webSocketManager.getPath().equals(request.getRequestURI())) {
+			} else if (webSocketManager.getPath().equals(uri)) {
 				servlet = webSocketManager.getServlet();
-				pathInfo = request.getRequestURI();
 				servletPath = webSocketManager.getPath();
+				pathInfo = uri.substring(uri.indexOf(servletPath) + servletPath.length());
 			} else {
-				request.setHttpContext(this);
-				request.setPathInfo(request.getRequestURI());
+				String contextPath = request.getContextPath();
+				if (!contextPath.equals("")) {
+					request.setPathInfo(uri.substring(uri.indexOf(contextPath) + contextPath.length()));
+				} else {
+					request.setPathInfo(uri);
+				}
+
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
 
-			request.setHttpContext(this);
 			request.setServletPath(servletPath);
 			request.setPathInfo(pathInfo);
 
@@ -119,6 +132,7 @@ public class HttpContext {
 
 	@Override
 	public String toString() {
-		return "HTTP Context [" + name + ", sessions=" + httpSessions.size() + "]\n>>\n" + servletContext + webSocketManager;
+		return "HTTP Context [" + name + ", sessions=" + httpSessions.size() + "]\n>>\n" + servletContext
+				+ webSocketManager;
 	}
 }

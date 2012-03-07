@@ -159,7 +159,7 @@ public class HttpdScript implements Script {
 
 	@ScriptUsage(description = "close port", arguments = {
 			@ScriptArgument(name = "listen port", type = "int", description = "bind port"),
-			@ScriptArgument(name = "listen addr", type = "string", description = "bind address", optional=true) })
+			@ScriptArgument(name = "listen addr", type = "string", description = "bind address", optional = true) })
 	public void close(String[] args) {
 		try {
 			int port = Integer.valueOf(args[0]);
@@ -207,6 +207,24 @@ public class HttpdScript implements Script {
 		} catch (Throwable t) {
 			context.println("cannot attach filesystem path: " + t.getMessage());
 			logger.error("kraken httpd: cannot attach filesystem path", t);
+		}
+	}
+
+	@ScriptUsage(description = "remove servlet", arguments = {
+			@ScriptArgument(name = "context", type = "string", description = "context name"),
+			@ScriptArgument(name = "servlet", type = "string", description = "servlet name") })
+	public void removeServlet(String[] args) {
+		String contextName = args[0];
+		String servletName = args[1];
+
+		if (httpd != null) {
+			HttpContext ctx = httpd.ensureContext(contextName);
+			if (ctx == null) {
+				context.println("Context name" + contextName + "not Exist");
+				return;
+			}
+
+			ctx.removeServlet(servletName);
 		}
 	}
 }

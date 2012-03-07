@@ -96,6 +96,9 @@ public class ServletDispatcher {
 			// remove from registrations
 			regs.remove(servletName);
 
+			// remove from url pattern
+			urlMappings.remove(servletName);
+
 			// remove from exact mappings
 			List<String> evicts = new ArrayList<String>();
 			for (String path : exactMappings.keySet()) {
@@ -113,7 +116,7 @@ public class ServletDispatcher {
 
 	/**
 	 * @param path
-	 *            the url path excluding servlet context path
+	 *            the url path excluding servlet context path and query string.
 	 * @return the match result. null if no servlet found
 	 */
 	public ServletMatchResult matches(String path) {
@@ -132,7 +135,11 @@ public class ServletDispatcher {
 			if (servletPath != null) {
 				if (longest == null || (longest.length() < servletPath.length())) {
 					Servlet servlet = servlets.get(reg.getName());
-					String pathInfo = path.substring(servletPath.length());
+					String pathInfo = null;
+					if (!path.contains("?"))
+						pathInfo = path.substring(servletPath.length());
+					else
+						pathInfo = path.substring(servletPath.length(), path.indexOf("?"));
 					r = new ServletMatchResult(servlet, reg, servletPath, pathInfo);
 					longest = servletPath;
 				}

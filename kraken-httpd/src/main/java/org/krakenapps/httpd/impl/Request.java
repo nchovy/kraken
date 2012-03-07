@@ -62,7 +62,6 @@ import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class Request implements HttpServletRequest {
-	private final String contextPath = "";
 	private ChannelHandlerContext ctx;
 	private boolean secure;
 	private boolean asyncStarted;
@@ -101,6 +100,7 @@ public class Request implements HttpServletRequest {
 
 		parseCookies(req);
 		parseLocales(req);
+		parseParameters();
 
 		setSslAttributes(ctx);
 		setChannel(ctx);
@@ -133,11 +133,10 @@ public class Request implements HttpServletRequest {
 			}
 		}
 
-		if (pathInfo.contains("?")) {
-			this.queryString = pathInfo.substring(pathInfo.indexOf("?") + 1);
-			this.pathInfo = pathInfo.substring(0, pathInfo.indexOf("?"));
-			String params = pathInfo.substring(pathInfo.indexOf("?") + 1);
-			setParams(params);
+		if (req.getUri().contains("?")) {
+			int p = req.getUri().indexOf("?");
+			this.queryString = req.getUri().substring(p + 1);
+			setParams(this.queryString);
 		}
 	}
 
@@ -481,27 +480,11 @@ public class Request implements HttpServletRequest {
 		return null;
 	}
 
-	@Override
-	public String getRequestURI() {
-		return req.getUri();
-	}
-
-	@Override
-	public String getRequestedSessionId() {
-		// TODO: support session id from url
-		String key = null;
-		for (Cookie c : getCookies())
-			if (c.getName().equals("JSESSIONID"))
-				key = c.getValue();
-
-		return key;
-	}
-
 	/**
 	 * requested path except query string, protocol scheme and domain
 	 */
 	@Override
-	public StringBuffer getRequestURL() {
+	public String getRequestURI() {
 		String path = req.getUri();
 
 		// cut protocol scheme and domain
@@ -519,12 +502,36 @@ public class Request implements HttpServletRequest {
 		if (p > 0)
 			path = path.substring(0, p);
 
-		return new StringBuffer(path);
+		return path;
+	}
+
+	@Override
+	public String getRequestedSessionId() {
+		// TODO: support session id from url
+		String key = null;
+		for (Cookie c : getCookies())
+			if (c.getName().equals("JSESSIONID"))
+				key = c.getValue();
+
+		return key;
+	}
+
+	@Override
+	public StringBuffer getRequestURL() {
+		String uri = req.getUri();
+		int p = uri.indexOf('?');
+		if (p < 0)
+			return new StringBuffer(uri);
+		else
+			return new StringBuffer(uri.substring(0, p));
 	}
 
 	@Override
 	public String getContextPath() {
-		return contextPath;
+		if (httpContext != null)
+			return httpContext.getServletContext().getContextPath();
+
+		return null;
 	}
 
 	@Override
@@ -543,7 +550,6 @@ public class Request implements HttpServletRequest {
 
 	public void setPathInfo(String pathInfo) {
 		this.pathInfo = pathInfo;
-		parseParameters();
 	}
 
 	@Override
