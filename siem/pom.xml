@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken</artifactId>
+		<version>1.0.0</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<groupId>org.krakenapps</groupId>
+	<version>1.0.0</version>
+	<artifactId>kraken-siem-pom</artifactId>
+	<name>Kraken SIEM POM</name>
+	<packaging>pom</packaging>
+	<modules>
+		<module>kraken-isc-api</module>
+		<module>kraken-log-api</module>
+		<module>kraken-event-api</module>
+		<module>kraken-siem</module>
+		<module>kraken-base</module>
+		<module>kraken-sentry</module>
+		<module>kraken-windows-sentry</module>
+		<module>kraken-linux-sentry</module>
+		<module>kraken-syslog-parser</module>
+		<module>kraken-logfile-parser</module>
+		<module>kraken-logstorage</module>
+		<module>kraken-logdb</module>
+		<module>kraken-logdb-client</module>
+		<module>kraken-logdb-jython</module>
+		<module>kraken-logdb-pcap</module>
+		<module>kraken-logdb-geoip</module>
+		<module>kraken-logdb-cmd</module>
+		<module>kraken-syslogmon</module>
+		<module>kraken-snmpmon</module>		
+		<module>kraken-filemon</module>
+		<module>kraken-portmon</module>
+		<module>kraken-firewall-api</module>
+		<module>kraken-iptables</module>
+		<module>kraken-rule</module>
+		<module>kraken-http-rule</module>
+	</modules>
+</project>

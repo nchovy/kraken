@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken</artifactId>
+		<version>1.0.0</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<groupId>org.krakenapps</groupId>
+	<version>1.0.0</version>
+	<artifactId>kraken-network-pom</artifactId>
+	<name>Kraken Network POM</name>
+	<packaging>pom</packaging>
+	<modules>		
+		<module>kraken-mail</module>
+		<module>kraken-http</module>
+		<module>kraken-servlet-api</module>
+		<module>fusioncharts-data-service</module>
+		<module>kraken-csv-servlet</module>
+		<module>kraken-json-servlet</module>
+		<module>kraken-text-servlet</module>
+		<module>kraken-xml-servlet</module>
+		<module>kraken-xmlrpc-servlet</module>
+		<module>kraken-xmlrpc</module>
+		<module>kraken-proxy</module>
+		<module>kraken-captive-portal</module>
+		<module>kraken-snmp</module>
+		<module>kraken-syslog</module>
+		<module>kraken-radius</module>
+		<module>kraken-dhcp</module>
+		<module>kraken-dns</module>
+		<module>kraken-ntp</module>
+		<module>kraken-ftp</module>
+		<module>kraken-tftp</module>
+		<module>kraken-ldap</module>
+		<module>kraken-slpolicy</module>
+		<module>kraken-httpd</module>
+		<module>kraken-rpc</module>
+	</modules>
+</project>
