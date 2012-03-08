@@ -141,13 +141,14 @@ public class LogStorageScript implements Script {
 		context.println("--------");
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		for (String tableName : tableRegistry.getTableNames()) {
+			int tableId = tableRegistry.getTableId(tableName);
 			Iterator<Date> it = storage.getLogDates(tableName).iterator();
 			Date lastDay = null;
 			if (it.hasNext())
 				lastDay = it.next();
 
 			String lastRecord = lastDay != null ? dateFormat.format(lastDay) : "none";
-			context.println(tableName + ": " + lastRecord);
+			context.println("[" + tableId + "] " + tableName + ": " + lastRecord);
 		}
 	}
 
