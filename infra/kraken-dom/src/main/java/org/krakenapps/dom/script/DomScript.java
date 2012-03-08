@@ -14,6 +14,7 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
 import org.krakenapps.dom.model.Program;
@@ -86,6 +87,20 @@ public class DomScript implements Script {
 			for (HostExtension ext : t.getDefaultExtensions()) {
 				context.println("\t" + ext);
 			}
+		}
+	}
+
+	@ScriptUsage(description = "print all hosts in org domain", arguments = { @ScriptArgument(name = "org domain", type = "string", description = "org domain name. 'localhost' by default", optional = true) })
+	public void hosts(String[] args) {
+		String orgDomain = "localhost";
+		if (args.length > 0)
+			orgDomain = args[0];
+
+		context.println("Hosts");
+		context.println("--------");
+
+		for (Host h : hostApi.getHosts(orgDomain)) {
+			context.println(h);
 		}
 	}
 

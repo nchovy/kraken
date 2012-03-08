@@ -165,7 +165,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 				processLock = null;
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
 			throw new IllegalStateException("cannot release write lock", e);
 		}
 

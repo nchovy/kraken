@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.api.DateFormat;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.ReferenceKey;
 import org.krakenapps.confdb.CollectionName;
@@ -142,4 +143,12 @@ public class Host {
 	public void setUpdated(Date updated) {
 		this.updated = updated;
 	}
+
+	@Override
+	public String toString() {
+		return "guid=" + guid + ", type=" + type + ", area=" + area + ", name=" + name + ", created="
+				+ DateFormat.format("yyyy-MM-dd HH:mm:ss", created) + ", updated="
+				+ DateFormat.format("yyyy-MM-dd HH:mm:ss", created);
+	}
+
 }

@@ -24,11 +24,14 @@ import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-config-manager")
 @Provides
 public class ConfigManagerImpl implements ConfigManager {
 	private static final String COMMITER = "kraken-dom";
+	private final Logger logger = LoggerFactory.getLogger(ConfigManagerImpl.class.getName());
 
 	@Requires
 	private ConfigService confsvc;
@@ -111,10 +114,12 @@ public class ConfigManagerImpl implements ConfigManager {
 		try {
 			adds(xact, cls, preds, docs, alreadyExistMessage, state);
 			xact.commit(COMMITER, "added " + docs.size() + " " + cls.getSimpleName() + "(s)");
-		} catch (Throwable e) {
-			if (e instanceof DOMException)
-				throw (DOMException) e;
+		} catch (Throwable t) {
 			xact.rollback();
+			if (t instanceof DOMException) {
+				throw (DOMException) t;
+			}
+			throw new RuntimeException(t);
 		}
 	}
 
@@ -139,8 +144,12 @@ public class ConfigManagerImpl implements ConfigManager {
 			throw new DOMException(alreadyExistMessage);
 
 		Iterator<T> docIterator = docs.iterator();
-		while (docIterator.hasNext())
-			xact.add(docIterator.next(), state);
+		while (docIterator.hasNext()) {
+			T doc = docIterator.next();
+			if (logger.isDebugEnabled())
+				logger.debug("kraken dom: adding doc [{}]", doc);
+			xact.add(doc, state);
+		}
 	}
 
 	@Override
@@ -180,13 +189,13 @@ public class ConfigManagerImpl implements ConfigManager {
 			throw new DOMException(alreadyExistMessage);
 		xact.add(doc, state);
 	}
-	
+
 	@Override
 	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs,
 			String notFoundMessage) {
 		updateForGuids(xact, cls, guids, docs, notFoundMessage, null);
 	}
-	
+
 	@Override
 	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs,
 			String notFoundMessage, DefaultEntityEventProvider<T> provider) {
@@ -210,7 +219,7 @@ public class ConfigManagerImpl implements ConfigManager {
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 	@Override
 	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs,
 			String notFoundMessage, Object state) {

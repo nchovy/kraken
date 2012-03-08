@@ -1,4 +1,4 @@
-package org.krakenapps.webconsole.impl;
+package org.krakenapps.webconsole.servlet;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,6 +27,8 @@ import org.krakenapps.msgbus.AbstractSession;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.Session;
+import org.krakenapps.webconsole.impl.KrakenMessageDecoder;
+import org.krakenapps.webconsole.impl.KrakenMessageEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,14 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	public MsgbusServlet() {
 		contexts = new ConcurrentHashMap<Integer, AsyncContext>();
 		pendingQueues = new ConcurrentHashMap<Integer, Queue<String>>();
+	}
+
+	public void setMessageBus(MessageBus msgbus) {
+		this.msgbus = msgbus;
+	}
+
+	public void setHttpService(HttpService httpd) {
+		this.httpd = httpd;
 	}
 
 	@Validate
@@ -109,7 +119,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 				os.write(b, 0, readBytes);
 			}
-
+			
 			String text = os.toString("utf-8");
 			Message msg = KrakenMessageDecoder.decode(session, text);
 			msgbus.execute(session, msg);
@@ -253,7 +263,8 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			frames.add(payload);
 
 			if (contexts.containsKey(msg.getSession())) {
-				logger.debug("kraken webconsole: sending trap immediately [session={}, payload={}]", msg.getSession(), payload);
+				logger.debug("kraken webconsole: sending trap immediately [session={}, payload={}]", msg.getSession(),
+						payload);
 				flushTraps(msg.getSession(), frames);
 			} else
 				logger.debug("kraken webconsole: queueing trap [session={}, payload={}]", msg.getSession(), payload);
@@ -272,8 +283,8 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			Date since = new Date(session.getCreationTime());
 			Date lastAccess = new Date(session.getLastAccessedTime());
-			sessiondata = String.format(", jsession=%s, since=%s, lastaccess=%s", session.getId(), dateFormat.format(since),
-					dateFormat.format(lastAccess));
+			sessiondata = String.format(", jsession=%s, since=%s, lastaccess=%s", session.getId(),
+					dateFormat.format(since), dateFormat.format(lastAccess));
 		}
 		return sessiondata;
 	}
@@ -282,4 +293,5 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	public String toString() {
 		return "async contexts=" + contexts;
 	}
+
 }

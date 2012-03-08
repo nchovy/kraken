@@ -1,5 +1,6 @@
 package org.krakenapps.dom.api.impl;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -114,14 +115,16 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			}
 		}
 
+		long begin = new Date().getTime();
 		if (!addHosts.isEmpty()) {
 			hostApi.createHosts("localhost", addHosts.values());
 		}
 		if (!updateHosts.isEmpty()) {
 			hostApi.updateHosts("localhost", updateHosts.values());
 		}
+		long end = new Date().getTime();
 
-		int count = addHosts.size() + updateHosts.size();
-		logger.trace("kraken dom: processed host count [{}], remained host count [{}]", count, queue.size());
+		logger.trace("kraken dom: added [{}] hosts, updated [{}] hosts, remained [{}] hosts, [{}]ms elapsed",
+				new Object[] { addHosts.size(), updateHosts.size(), queue.size(), end - begin });
 	}
 }

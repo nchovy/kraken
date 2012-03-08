@@ -16,7 +16,6 @@
 package org.krakenapps.httpd;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -63,18 +62,13 @@ public class HttpConfiguration {
 	}
 
 	public HttpConfiguration(InetSocketAddress listen) {
-		this(listen, new ArrayList<VirtualHost>());
-	}
-
-	public HttpConfiguration(InetSocketAddress listen, List<VirtualHost> virtualHosts) {
-		this(listen, virtualHosts, null, null);
+		this(listen, null, null);
 		isSsl = false;
 	}
 
-	public HttpConfiguration(InetSocketAddress listen, List<VirtualHost> virtualHosts, String keyAlias, String trustAlias) {
+	public HttpConfiguration(InetSocketAddress listen, String keyAlias, String trustAlias) {
 		this.listenAddress = listen.getAddress().getHostAddress();
 		this.listenPort = listen.getPort();
-		this.virtualHosts = virtualHosts;
 		this.keyAlias = keyAlias;
 		this.trustAlias = trustAlias;
 		this.isSsl = true;

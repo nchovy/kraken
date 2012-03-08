@@ -107,7 +107,8 @@ public class HttpdScript implements Script {
 
 			InetSocketAddress listen = new InetSocketAddress(port);
 
-			HttpConfiguration config = new HttpConfiguration(listen, new ArrayList<VirtualHost>(), keyAlias, trustAlias);
+			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);
+			config.addVirtualHost(new VirtualHost());
 			HttpServer server = httpd.createServer(config);
 			server.open();
 			context.println("opened https server");

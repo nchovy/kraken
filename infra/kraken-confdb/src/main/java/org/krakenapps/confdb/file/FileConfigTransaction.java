@@ -115,11 +115,13 @@ public class FileConfigTransaction implements ConfigTransaction {
 		try {
 			Manifest manifest = writeManifestLog();
 			ChangeSetWriter.log(changeLogFile, changeDatFile, changeSet, manifest.getId(), committer, log);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
-		} finally {
+
+			// do not move this code to finally block. rollback should be called
+			// after exception throwing
 			closeWriters();
 			db.unlock();
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
 		}
 	}
 
