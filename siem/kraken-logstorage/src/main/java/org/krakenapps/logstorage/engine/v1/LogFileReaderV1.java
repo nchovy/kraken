@@ -43,7 +43,7 @@ public class LogFileReaderV1 extends LogFileReader {
 
 	public LogFileReaderV1(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this.indexFile = new BufferedRandomAccessFileReader(indexPath);
-		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile);
+		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile, indexPath);
 		if (indexFileHeader.version() != 1)
 			throw new InvalidLogFileHeaderException("version not match");
 
@@ -63,7 +63,7 @@ public class LogFileReaderV1 extends LogFileReader {
 		logger.trace("kraken logstorage: {} has {} blocks.", indexPath.getName(), blockHeaders.size());
 
 		this.dataFile = new BufferedRandomAccessFileReader(dataPath);
-		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile);
+		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile, dataPath);
 		if (dataFileHeader.version() != 1)
 			throw new InvalidLogFileHeaderException("version not match");
 	}

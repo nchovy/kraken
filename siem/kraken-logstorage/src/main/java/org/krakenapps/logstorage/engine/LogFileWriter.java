@@ -32,7 +32,7 @@ public abstract class LogFileWriter {
 
 		if (indexPath.exists() && dataPath.exists()) {
 			RandomAccessFile headerReader = new RandomAccessFile(indexPath, "r");
-			LogFileHeader header = LogFileHeader.extractHeader(headerReader);
+			LogFileHeader header = LogFileHeader.extractHeader(headerReader, indexPath);
 			headerReader.close();
 
 			if (header.version() == 1)

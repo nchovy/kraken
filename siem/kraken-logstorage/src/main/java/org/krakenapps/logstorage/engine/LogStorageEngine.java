@@ -47,6 +47,8 @@ import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.engine.v2.LogFileFixReport;
+import org.krakenapps.logstorage.engine.v2.LogFileTruncator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,6 +141,8 @@ public class LogStorageEngine implements LogStorage {
 
 		status = LogStorageStatus.Starting;
 
+		checkAllLogFiles();
+
 		writerSweeperThread = new Thread(writerSweeper, "LogStorage Sweeper");
 		writerSweeperThread.start();
 
@@ -179,6 +183,41 @@ public class LogStorageEngine implements LogStorage {
 		onlineWriters.clear();
 
 		status = LogStorageStatus.Closed;
+	}
+
+	private void checkAllLogFiles() {
+		logger.info("kraken logstorage: verifying all log tables");
+		for (String tableName : tableRegistry.getTableNames()) {
+			File dir = getTableDirectory(tableName);
+			if (dir == null) {
+				logger.error("kraken logstorage: table [{}] directory not found", tableName);
+				continue;
+			}
+
+			logger.trace("kraken logstorage: checking for [{}] table", tableName);
+
+			File[] files = dir.listFiles();
+			if (files == null)
+				continue;
+
+			for (File f : files) {
+				if (f.getName().endsWith(".idx")) {
+					String datFileName = f.getName().replace(".idx", ".dat");
+					File indexPath = f;
+					File dataPath = new File(dir, datFileName);
+
+					try {
+						LogFileFixReport report = new LogFileTruncator().fix(indexPath, dataPath);
+						if (report != null)
+							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
+					} catch (IOException e) {
+						logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
+								+ dataPath.getAbsolutePath() + "]", e);
+					}
+				}
+			}
+		}
+		logger.info("kraken logstorage: all table verifications are completed");
 	}
 
 	@Override
@@ -445,7 +484,8 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException {
+	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback)
+			throws InterruptedException {
 		verify();
 
 		Collection<Date> days = getLogDates(tableName);
@@ -478,8 +518,8 @@ public class LogStorageEngine implements LogStorage {
 		return found;
 	}
 
-	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit, final LogSearchCallback callback)
-			throws InterruptedException {
+	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit,
+			final LogSearchCallback callback) throws InterruptedException {
 		int tableId = tableRegistry.getTableId(tableName);
 
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);

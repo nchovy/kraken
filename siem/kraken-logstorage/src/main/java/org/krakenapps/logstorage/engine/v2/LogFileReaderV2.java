@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 
 public class LogFileReaderV2 extends LogFileReader {
 	private Logger logger = LoggerFactory.getLogger(LogFileReaderV2.class);
-	private static final int INDEX_ITEM_SIZE = 4;
+	public static final int INDEX_ITEM_SIZE = 4;
 
 	private RandomAccessFile indexFile;
 	private RandomAccessFile dataFile;
@@ -52,7 +52,7 @@ public class LogFileReaderV2 extends LogFileReader {
 
 	public LogFileReaderV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this.indexFile = new RandomAccessFile(indexPath, "r");
-		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile);
+		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile, indexPath);
 		if (indexFileHeader.version() != 2)
 			throw new InvalidLogFileHeaderException("version not match, index file " + indexPath.getAbsolutePath());
 
@@ -67,11 +67,11 @@ public class LogFileReaderV2 extends LogFileReader {
 			indexBlockHeaders.add(header);
 			pos += 4 + header.logCount * INDEX_ITEM_SIZE;
 		}
-		logger.trace("kraken logstorage: {} has {} blocks, {} logs.", new Object[] { indexPath.getName(), indexBlockHeaders.size(),
-				logCount });
+		logger.trace("kraken logstorage: {} has {} blocks, {} logs.",
+				new Object[] { indexPath.getName(), indexBlockHeaders.size(), logCount });
 
 		this.dataFile = new RandomAccessFile(dataPath, "r");
-		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile);
+		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile, dataPath);
 		if (dataFileHeader.version() != 2)
 			throw new InvalidLogFileHeaderException("version not match");
 		int dataBlockSize = getInt(dataFileHeader.getExtraData());
@@ -82,8 +82,8 @@ public class LogFileReaderV2 extends LogFileReader {
 		pos = dataFileHeader.size();
 		while (pos < length) {
 			if (pos < 0)
-				throw new IOException("negative seek offset " + pos + ", index file: " + indexPath.getAbsolutePath() + ", data file: "
-						+ dataPath.getAbsolutePath());
+				throw new IOException("negative seek offset " + pos + ", index file: " + indexPath.getAbsolutePath()
+						+ ", data file: " + dataPath.getAbsolutePath());
 
 			try {
 				dataFile.seek(pos);
@@ -92,7 +92,8 @@ public class LogFileReaderV2 extends LogFileReader {
 				dataBlockHeaders.add(header);
 				pos += 24 + header.compressedLength;
 			} catch (BufferUnderflowException e) {
-				logger.error("kraken logstorage: buffer underflow at position {}, data file [{}]", pos, dataPath.getAbsolutePath());
+				logger.error("kraken logstorage: buffer underflow at position {}, data file [{}]", pos,
+						dataPath.getAbsolutePath());
 				throw e;
 			}
 		}
@@ -148,7 +149,8 @@ public class LogFileReaderV2 extends LogFileReader {
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
+			InterruptedException {
 		for (int i = indexBlockHeaders.size() - 1; i >= 0; i--) {
 			IndexBlockHeader index = indexBlockHeaders.get(i);
 			if (index.logCount <= offset) {

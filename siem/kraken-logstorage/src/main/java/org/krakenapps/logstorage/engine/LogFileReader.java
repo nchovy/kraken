@@ -32,8 +32,8 @@ public abstract class LogFileReader {
 		try {
 			indexHeaderReader = new RandomAccessFile(indexPath, "r");
 			dataHeaderReader = new RandomAccessFile(dataPath, "r");
-			LogFileHeader indexHeader = LogFileHeader.extractHeader(indexHeaderReader);
-			LogFileHeader dataHeader = LogFileHeader.extractHeader(dataHeaderReader);
+			LogFileHeader indexHeader = LogFileHeader.extractHeader(indexHeaderReader, indexPath);
+			LogFileHeader dataHeader = LogFileHeader.extractHeader(dataHeaderReader, dataPath);
 
 			if (indexHeader.version() != dataHeader.version())
 				throw new InvalidLogFileHeaderException("different log version index and data file");
@@ -60,7 +60,8 @@ public abstract class LogFileReader {
 
 	public abstract void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException;
 
-	public abstract void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException;
+	public abstract void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException,
+			InterruptedException;
 
 	public abstract void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
 			InterruptedException;
