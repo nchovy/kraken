@@ -44,9 +44,11 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 
 	@Invalidate
 	public void stop() {
-		HttpContextRegistry contextRegistry = httpd.getContextRegistry();
-		HttpContext ctx = contextRegistry.ensureContext("webconsole");
-		ctx.getWebSocketManager().removeListener(this);
+		if (httpd != null) {
+			HttpContextRegistry contextRegistry = httpd.getContextRegistry();
+			HttpContext ctx = contextRegistry.ensureContext("webconsole");
+			ctx.getWebSocketManager().removeListener(this);
+		}
 	}
 
 	@Override

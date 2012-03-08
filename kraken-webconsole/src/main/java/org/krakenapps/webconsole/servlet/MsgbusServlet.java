@@ -85,9 +85,10 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 	@Invalidate
 	public void stop() {
-		HttpContext ctx = httpd.ensureContext("webconsole");
-		ctx.removeServlet("msgbus");
-
+		if (httpd != null) {
+			HttpContext ctx = httpd.ensureContext("webconsole");
+			ctx.removeServlet("msgbus");
+		}
 		doStop = true;
 		t.interrupt();
 	}
@@ -119,7 +120,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 				os.write(b, 0, readBytes);
 			}
-			
+
 			String text = os.toString("utf-8");
 			Message msg = KrakenMessageDecoder.decode(session, text);
 			msgbus.execute(session, msg);

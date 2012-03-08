@@ -61,6 +61,10 @@ public class FileUploadServlet extends HttpServlet {
 	@Override
 	public void log(String message, Throwable t) {
 		logger.warn("kraken webconsole: upload servlet error", t);
+	}	
+
+	public void setFileUploadApi(FileUploadApi upload) {
+		this.upload = upload;
 	}
 
 	@Override
