@@ -78,7 +78,8 @@ public class HttpServiceImpl implements HttpService {
 				server.open();
 
 				// build regex patterns
-				for (VirtualHost v : server.getConfiguration().getVirtualHosts())
+				HttpConfiguration sc = server.getConfiguration();
+				for (VirtualHost v : sc.getVirtualHosts())
 					v.setHostNames(v.getHostNames());
 
 				logger.trace("kraken httpd: opened http server [{}]", server.getConfiguration().getListenAddress());

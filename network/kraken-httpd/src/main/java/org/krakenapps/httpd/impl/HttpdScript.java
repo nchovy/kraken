@@ -107,9 +107,9 @@ public class HttpdScript implements Script {
 
 			InetSocketAddress listen = new InetSocketAddress(port);
 
-			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);
-			config.addVirtualHost(new VirtualHost());
+			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);			
 			HttpServer server = httpd.createServer(config);
+			server.addVirtualHost(new VirtualHost());
 			server.open();
 			context.println("opened https server");
 		} catch (Exception e) {
@@ -138,7 +138,7 @@ public class HttpdScript implements Script {
 		VirtualHost v = new VirtualHost();
 		v.setHttpContextName(args[1]);
 		v.setHostNames(Arrays.asList(hostNamePattern));
-		server.getConfiguration().addVirtualHost(v);
+		server.addVirtualHost(v);
 		context.println("added");
 	}
 
@@ -154,7 +154,7 @@ public class HttpdScript implements Script {
 			return;
 		}
 
-		server.getConfiguration().removeVirtualHost(args[1]);
+		server.removeVirtualHost(args[1]);
 		context.println("removed");
 	}
 

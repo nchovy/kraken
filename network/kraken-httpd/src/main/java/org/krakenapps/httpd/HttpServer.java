@@ -20,5 +20,9 @@ public interface HttpServer {
 
 	void open();
 
+	void addVirtualHost(VirtualHost vhost);
+
+	void removeVirtualHost(String httpContextName);
+
 	void close();
 }

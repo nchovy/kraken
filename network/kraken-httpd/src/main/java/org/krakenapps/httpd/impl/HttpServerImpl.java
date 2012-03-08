@@ -16,6 +16,11 @@
 package org.krakenapps.httpd.impl;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -24,10 +29,14 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.krakenapps.api.KeyStoreManager;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.HttpServer;
 import org.krakenapps.httpd.HttpConfiguration;
+import org.krakenapps.httpd.VirtualHost;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,8 +65,8 @@ public class HttpServerImpl implements HttpServer {
 	@Override
 	public void open() {
 		// Configure the server.
-		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
-				Executors.newCachedThreadPool()));
+		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
+				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
 		// Set up the event pipeline factory.
 		bootstrap.setPipelineFactory(new HttpPipelineFactory(bc, config, contextRegistry, keyStoreManager));
@@ -73,6 +82,59 @@ public class HttpServerImpl implements HttpServer {
 	public HttpConfiguration getConfiguration() {
 		config.setConfigService(conf);
 		return config;
+	}
+
+	@Override
+	public void addVirtualHost(VirtualHost vhost) {
+		VirtualHost target = findVirtualHost(vhost.getHttpContextName());
+		if (target != null)
+			throw new IllegalStateException("duplicated http context exists: " + vhost.getHttpContextName());
+
+		config.getVirtualHosts().add(vhost);
+		Map<String, Object> filter = getFilter();
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
+		Config c = db.findOne(HttpConfiguration.class, Predicates.field(filter));
+		if (c != null) {
+			db.update(c, this.config);
+		} else {
+			logger.error("kraken httpd: cannot find configuration for " + config.getListenAddress());
+		}
+	}
+
+	@Override
+	public void removeVirtualHost(String httpContextName) {
+		VirtualHost target = findVirtualHost(httpContextName);
+		if (target != null) {
+			config.getVirtualHosts().remove(target);
+
+			// update confdb
+			ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
+			Map<String, Object> filter = getFilter();
+			Config c = db.findOne(HttpConfiguration.class, Predicates.field(filter));
+			if (c != null) {
+				db.update(c, this.config);
+			} else {
+				logger.error("kraken httpd: cannot find configuration for " + config.getListenAddress());
+			}
+		}
+	}
+
+	private VirtualHost findVirtualHost(String httpContextName) {
+		VirtualHost target = null;
+
+		for (VirtualHost h : config.getVirtualHosts())
+			if (h.getHttpContextName().equals(httpContextName))
+				target = h;
+		return target;
+	}
+
+	private Map<String, Object> getFilter() {
+		Map<String, Object> filter = new HashMap<String, Object>();
+		InetSocketAddress listen = config.getListenAddress();
+		filter.put("listen_address", listen.getAddress().getHostAddress());
+		filter.put("listen_port", listen.getPort());
+		return filter;
 	}
 
 	@Override

@@ -16,18 +16,13 @@
 package org.krakenapps.httpd;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.confdb.CollectionName;
-import org.krakenapps.confdb.Config;
-import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
-import org.krakenapps.confdb.Predicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +67,7 @@ public class HttpConfiguration {
 		this.keyAlias = keyAlias;
 		this.trustAlias = trustAlias;
 		this.isSsl = true;
+		this.virtualHosts = new ArrayList<VirtualHost>();
 	}
 
 	public void setConfigService(ConfigService conf) {
@@ -86,58 +82,8 @@ public class HttpConfiguration {
 		return isSsl;
 	}
 
-	public void addVirtualHost(VirtualHost host) {
-		VirtualHost target = findVirtualHost(host.getHttpContextName());
-		if (target != null)
-			throw new IllegalStateException("duplicated http context exists: " + host.getHttpContextName());
-
-		virtualHosts.add(host);
-
-		// update confdb
-		ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
-		Map<String, Object> filter = getFilter();
-		Config c = db.findOne(HttpConfiguration.class, Predicates.field(filter));
-		if (c != null) {
-			db.update(c, this);
-		} else {
-			logger.error("kraken httpd: cannot find configuration for " + getListenAddress());
-		}
-	}
-
-	public void removeVirtualHost(String httpContextName) {
-		VirtualHost target = findVirtualHost(httpContextName);
-		if (target != null) {
-			virtualHosts.remove(target);
-
-			// update confdb
-			ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
-			Map<String, Object> filter = getFilter();
-			Config c = db.findOne(HttpConfiguration.class, Predicates.field(filter));
-			if (c != null) {
-				HttpConfiguration conf = c.getDocument(HttpConfiguration.class);
-				conf.removeVirtualHost(httpContextName);
-				db.update(c, conf);
-			}
-		}
-	}
-
-	private Map<String, Object> getFilter() {
-		Map<String, Object> filter = new HashMap<String, Object>();
-		filter.put("listen_address", listenAddress);
-		filter.put("listen_port", listenPort);
-		return filter;
-	}
-
-	private VirtualHost findVirtualHost(String httpContextName) {
-		VirtualHost target = null;
-		for (VirtualHost h : virtualHosts)
-			if (h.getHttpContextName().equals(httpContextName))
-				target = h;
-		return target;
-	}
-
 	public List<VirtualHost> getVirtualHosts() {
-		return Collections.unmodifiableList(virtualHosts);
+		return virtualHosts;
 	}
 
 	public String getKeyAlias() {
