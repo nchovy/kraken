@@ -106,7 +106,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		logger.info("kraken webconsole: msgbus post [{}]", req.getPathInfo());
+		logger.debug("kraken webconsole: msgbus post [{}]", req.getPathInfo());
 
 		if (req.getPathInfo().equals("/request")) {
 			Session session = ensureSession(req, resp, false);
@@ -122,6 +122,13 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			}
 
 			String text = os.toString("utf-8");
+			if (text != null && text.trim().isEmpty()) {
+				logger.debug("kraken webconsole: empty text from [{}], request [{}]", req.getRemoteAddr(),
+						req.getRequestURI());
+				resp.sendError(500);
+				return;
+			}
+
 			Message msg = KrakenMessageDecoder.decode(session, text);
 			msgbus.execute(session, msg);
 		} else if (req.getPathInfo().equals("/trap")) {

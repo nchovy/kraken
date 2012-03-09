@@ -86,6 +86,9 @@ public class HttpServerImpl implements HttpServer {
 
 	@Override
 	public void addVirtualHost(VirtualHost vhost) {
+		if ( vhost.getHttpContextName() == null )
+			throw new IllegalArgumentException("kraken httpd: http context name shoud not null");
+		
 		VirtualHost target = findVirtualHost(vhost.getHttpContextName());
 		if (target != null)
 			throw new IllegalStateException("duplicated http context exists: " + vhost.getHttpContextName());

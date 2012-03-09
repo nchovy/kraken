@@ -106,10 +106,8 @@ public class HttpdScript implements Script {
 			String trustAlias = args[2];
 
 			InetSocketAddress listen = new InetSocketAddress(port);
-
 			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);			
 			HttpServer server = httpd.createServer(config);
-			server.addVirtualHost(new VirtualHost());
 			server.open();
 			context.println("opened https server");
 		} catch (Exception e) {
