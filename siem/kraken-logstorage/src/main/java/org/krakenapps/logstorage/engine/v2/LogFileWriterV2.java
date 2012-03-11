@@ -68,18 +68,22 @@ public class LogFileWriterV2 extends LogFileWriter {
 		this(indexPath, dataPath, DEFAULT_BLOCK_SIZE);
 	}
 
-	public LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException, InvalidLogFileHeaderException {
+	// TODO: block size modification does not work
+	private LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException, InvalidLogFileHeaderException {
 		this(indexPath, dataPath, blockSize, DEFAULT_LEVEL);
 	}
 
-	public LogFileWriterV2(File indexPath, File dataPath, int blockSize, int level) throws IOException,
+	private LogFileWriterV2(File indexPath, File dataPath, int blockSize, int level) throws IOException,
 			InvalidLogFileHeaderException {
 		boolean indexExists = indexPath.exists();
 		boolean dataExists = dataPath.exists();
 		this.indexFile = new RandomAccessFile(indexPath, "rw");
 		this.dataFile = new RandomAccessFile(dataPath, "rw");
-		this.indexBuffer = ByteBuffer.allocate(blockSize);
+
+		// 1/64 alloc, if block size = 640KB, index can contain 10240 items
+		this.indexBuffer = ByteBuffer.allocate(blockSize >> 6);
 		this.dataBuffer = ByteBuffer.allocate(blockSize);
+
 		this.compressed = new byte[blockSize];
 		this.compresser = new Deflater(level);
 
@@ -149,7 +153,9 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 	@Override
 	public void write(LogRecord data) throws IOException {
-		logger.trace("kraken logstorage: write new log: id {}, time {}", data.getId(), data.getDate().toString());
+		// do not remove this condition (date.toString() takes many CPU time)
+		if (logger.isDebugEnabled())
+			logger.debug("kraken logstorage: write new log id {}, time {}", data.getId(), data.getDate().toString());
 
 		// check validity
 		long newKey = data.getId();

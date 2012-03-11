@@ -17,9 +17,10 @@ package org.krakenapps.logstorage.engine;
 
 public enum Constants {
 	LogStorageDirectory("log_storage_dir"),
+	LogCheckInterval("log_check_interval"),
 	LogMaxIdleTime("log_max_idle_time"), 
 	LogFlushInterval("log_flush_interval"), 
-	LogMaxBuffering("log_max_buffering"),
+	LogBlockSize("log_block_size"),
 	MinFreeDiskSpaceType("min_free_disk_space_type", "string"),
 	MinFreeDiskSpaceValue("min_free_disk_space_value"),
 	DiskLackAction("disk_lack_action", "string");

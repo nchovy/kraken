@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.StringTokenizer;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -39,6 +40,7 @@ import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.LogWriterStatus;
 import org.krakenapps.logstorage.engine.ConfigUtil;
 import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.LogTableSchema;
@@ -108,7 +110,7 @@ public class LogStorageScript implements Script {
 			context.println("Table " + args[0]);
 			context.println();
 			context.println("Table Metadata");
-			context.println("----------");
+			context.println("----------------");
 			for (String key : tableRegistry.getTableMetadataKeys(tableName)) {
 				String value = tableRegistry.getTableMetadata(tableName, key);
 				context.println(key + "=" + value);
@@ -337,9 +339,9 @@ public class LogStorageScript implements Script {
 					continue;
 				}
 
-				String[] tokens = line.split(" ");
+				StringTokenizer t = new StringTokenizer(line, " ");
 
-				Date date = dateFormat.parse(tokens[0] + " " + tokens[1]);
+				Date date = dateFormat.parse(t.nextToken() + " " + t.nextToken());
 				Map<String, Object> m = new HashMap<String, Object>();
 				m.put("line", line);
 
@@ -412,6 +414,15 @@ public class LogStorageScript implements Script {
 
 		@Override
 		public void interrupt() {
+		}
+	}
+
+	@ScriptUsage(description = "print all online writer statuses")
+	public void writers(String[] args) {
+		context.println("Online Writers");
+		context.println("-----------------");
+		for (LogWriterStatus s : storage.getWriterStatuses()) {
+			context.println(s);
 		}
 	}
 
@@ -491,7 +502,12 @@ public class LogStorageScript implements Script {
 		public void onLog(Log log) {
 			if (log.getData().containsKey("_data")) {
 				String line = (String) log.getData().get("_data");
-				line.split(" ");
+
+				// simulate same condition (compares to map write condition)
+				StringTokenizer t = new StringTokenizer(line, " ");
+				while (t.hasMoreTokens()) {
+					t.nextToken();
+				}
 			}
 		}
 
