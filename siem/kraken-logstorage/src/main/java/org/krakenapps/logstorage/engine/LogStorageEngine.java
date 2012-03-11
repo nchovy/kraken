@@ -527,24 +527,28 @@ public class LogStorageEngine implements LogStorage {
 		TraverseCallback c = new TraverseCallback(tableName, from, to, callback);
 
 		try {
-			OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
-			List<LogRecord> buffer = onlineWriter.getBuffer();
-			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
+			// do NOT use getOnlineWriter() here (it loads empty writer on cache
+			// automatically if writer not found)
+			OnlineWriter onlineWriter = onlineWriters.get(new OnlineWriterKey(tableName, day));
+			if (onlineWriter != null) {
+				List<LogRecord> buffer = onlineWriter.getBuffer();
+				reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 
-			if (buffer != null && !buffer.isEmpty()) {
-				logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
-				ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
-				while (li.hasPrevious()) {
-					LogRecord logData = li.previous();
-					if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
-						if (offset > 0) {
-							offset--;
-							continue;
-						}
+				if (buffer != null && !buffer.isEmpty()) {
+					logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
+					ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
+					while (li.hasPrevious()) {
+						LogRecord logData = li.previous();
+						if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
+							if (offset > 0) {
+								offset--;
+								continue;
+							}
 
-						if (c.onLog(logData)) {
-							if (--limit == 0)
-								return c.matched;
+							if (c.onLog(logData)) {
+								if (--limit == 0)
+									return c.matched;
+							}
 						}
 					}
 				}
