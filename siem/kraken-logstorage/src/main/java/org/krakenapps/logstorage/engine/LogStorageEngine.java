@@ -532,7 +532,6 @@ public class LogStorageEngine implements LogStorage {
 			OnlineWriter onlineWriter = onlineWriters.get(new OnlineWriterKey(tableName, day));
 			if (onlineWriter != null) {
 				List<LogRecord> buffer = onlineWriter.getBuffer();
-				reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 
 				if (buffer != null && !buffer.isEmpty()) {
 					logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
@@ -554,6 +553,7 @@ public class LogStorageEngine implements LogStorage {
 				}
 			}
 
+			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 			reader.traverse(from, to, offset, limit, c);
 		} catch (InterruptedException e) {
 			throw e;
