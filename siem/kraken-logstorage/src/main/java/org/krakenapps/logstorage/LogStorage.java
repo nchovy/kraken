@@ -18,6 +18,7 @@ package org.krakenapps.logstorage;
 import java.io.File;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 public interface LogStorage {
@@ -48,7 +49,7 @@ public interface LogStorage {
 	void stop();
 
 	void createTable(String tableName);
-	
+
 	void createTable(String tableName, Map<String, String> tableMetadata);
 
 	void dropTable(String tableName);
@@ -87,4 +88,5 @@ public interface LogStorage {
 
 	void removeLogListener(LogCallback callback);
 
+	List<LogWriterStatus> getWriterStatuses();
 }

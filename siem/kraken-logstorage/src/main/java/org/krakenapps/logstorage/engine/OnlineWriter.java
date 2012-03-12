@@ -29,18 +29,37 @@ import org.slf4j.LoggerFactory;
 public class OnlineWriter {
 	private final Logger logger = LoggerFactory.getLogger(OnlineWriter.class.getName());
 
+	/**
+	 * table id
+	 */
 	private int tableId;
+
+	/**
+	 * is in closing state?
+	 */
 	private boolean closing;
+
+	/**
+	 * only yyyy-MM-dd (excluding hour, min, sec, milli)
+	 */
 	private Date day;
+
+	/**
+	 * maintain last write access time. idle writer should be evicted
+	 */
 	private Date lastAccess = new Date();
 	private AtomicLong nextId;
+
+	/**
+	 * binary log file writer
+	 */
 	private LogFileWriter writer;
 
-	public OnlineWriter(int tableId, Date day, int maxLogBuffering) throws IOException {
-		this(tableId, day, maxLogBuffering, null);
+	public OnlineWriter(int tableId, Date day, int blockSize) throws IOException {
+		this(tableId, day, blockSize, null);
 	}
 
-	public OnlineWriter(int tableId, Date day, int maxLogBuffering, String defaultLogVersion) throws IOException {
+	public OnlineWriter(int tableId, Date day, int blockSize, String defaultLogVersion) throws IOException {
 		this.tableId = tableId;
 		this.day = day;
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);
@@ -86,6 +105,7 @@ public class OnlineWriter {
 			long nid = nextId();
 			record.setId(nid);
 			writer.write(record);
+			lastAccess = new Date();
 		}
 	}
 
@@ -99,6 +119,7 @@ public class OnlineWriter {
 
 		synchronized (this) {
 			writer.write(logs);
+			lastAccess = new Date();
 		}
 	}
 

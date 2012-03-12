@@ -75,7 +75,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 
 		LogFileHeader indexFileHeader = null;
 		if (indexExists && indexFile.length() > 0) {
-			indexFileHeader = LogFileHeader.extractHeader(indexFile);
+			indexFileHeader = LogFileHeader.extractHeader(indexFile, indexPath);
 		} else {
 			indexFileHeader = new LogFileHeader((short) 1, LogFileHeader.MAGIC_STRING_INDEX);
 			indexFile.write(indexFileHeader.serialize());
@@ -83,7 +83,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 
 		LogFileHeader dataFileHeader = null;
 		if (dataExists && dataFile.length() > 0) {
-			dataFileHeader = LogFileHeader.extractHeader(dataFile);
+			dataFileHeader = LogFileHeader.extractHeader(dataFile, dataPath);
 		} else {
 			dataFileHeader = new LogFileHeader((short) 1, LogFileHeader.MAGIC_STRING_DATA);
 			dataFile.write(dataFileHeader.serialize());

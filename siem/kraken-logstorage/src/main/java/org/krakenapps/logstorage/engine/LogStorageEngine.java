@@ -47,6 +47,9 @@ import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.LogWriterStatus;
+import org.krakenapps.logstorage.engine.v2.LogFileFixReport;
+import org.krakenapps.logstorage.engine.v2.LogFileTruncator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,12 +57,11 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class LogStorageEngine implements LogStorage {
 	private final Logger logger = LoggerFactory.getLogger(LogStorageEngine.class.getName());
-	private final Logger debuglogger = LoggerFactory.getLogger("OnlineWriterDebugLogger");
-	private boolean isDebugloggerTraceEnabled = debuglogger.isTraceEnabled();
 
-	private static final int DEFAULT_MAX_IDLE_TIME = 10000;
-	private static final int DEFAULT_MAX_LOG_BUFFERING = 10000;
-	private static final int DEFAULT_LOG_FLUSH_INTERVAL = 3600000;
+	private static final int DEFAULT_LOG_CHECK_INTERVAL = 1000;
+	private static final int DEFAULT_MAX_IDLE_TIME = 600000; // 10min
+	private static final int DEFAULT_LOG_FLUSH_INTERVAL = 60000; // 60sec
+	private static final int DEFAULT_BLOCK_SIZE = 640 * 1024; // 640KB
 
 	private LogStorageStatus status = LogStorageStatus.Closed;
 
@@ -81,11 +83,12 @@ public class LogStorageEngine implements LogStorage {
 	private File logDir;
 
 	public LogStorageEngine() {
+		int checkInterval = getIntParameter(Constants.LogCheckInterval, DEFAULT_LOG_CHECK_INTERVAL);
 		int maxIdleTime = getIntParameter(Constants.LogMaxIdleTime, DEFAULT_MAX_IDLE_TIME);
 		int flushInterval = getIntParameter(Constants.LogFlushInterval, DEFAULT_LOG_FLUSH_INTERVAL);
 
 		onlineWriters = new ConcurrentHashMap<OnlineWriterKey, OnlineWriter>();
-		writerSweeper = new WriterSweeper(maxIdleTime, flushInterval);
+		writerSweeper = new WriterSweeper(checkInterval, maxIdleTime, flushInterval);
 		callbacks = new CopyOnWriteArraySet<LogCallback>();
 
 		logDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/log");
@@ -139,12 +142,12 @@ public class LogStorageEngine implements LogStorage {
 
 		status = LogStorageStatus.Starting;
 
+		checkAllLogFiles();
+
 		writerSweeperThread = new Thread(writerSweeper, "LogStorage Sweeper");
 		writerSweeperThread.start();
 
 		status = LogStorageStatus.Open;
-
-		isDebugloggerTraceEnabled = debuglogger.isTraceEnabled();
 	}
 
 	@Invalidate
@@ -181,6 +184,41 @@ public class LogStorageEngine implements LogStorage {
 		status = LogStorageStatus.Closed;
 	}
 
+	private void checkAllLogFiles() {
+		logger.info("kraken logstorage: verifying all log tables");
+		for (String tableName : tableRegistry.getTableNames()) {
+			File dir = getTableDirectory(tableName);
+			if (dir == null) {
+				logger.error("kraken logstorage: table [{}] directory not found", tableName);
+				continue;
+			}
+
+			logger.trace("kraken logstorage: checking for [{}] table", tableName);
+
+			File[] files = dir.listFiles();
+			if (files == null)
+				continue;
+
+			for (File f : files) {
+				if (f.getName().endsWith(".idx")) {
+					String datFileName = f.getName().replace(".idx", ".dat");
+					File indexPath = f;
+					File dataPath = new File(dir, datFileName);
+
+					try {
+						LogFileFixReport report = new LogFileTruncator().fix(indexPath, dataPath);
+						if (report != null)
+							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
+					} catch (IOException e) {
+						logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
+								+ dataPath.getAbsolutePath() + "]", e);
+					}
+				}
+			}
+		}
+		logger.info("kraken logstorage: all table verifications are completed");
+	}
+
 	@Override
 	public void createTable(String tableName) {
 		createTable(tableName, null);
@@ -205,8 +243,7 @@ public class LogStorageEngine implements LogStorage {
 			OnlineWriter writer = onlineWriters.get(key);
 			if (writer != null) {
 				writer.close();
-				if (isDebugloggerTraceEnabled)
-					debuglogger.trace("loggerRemoving: {}", key);
+				logger.trace("kraken logstorage: removing logger [{}] according to table drop", key);
 				onlineWriters.remove(key);
 			}
 		}
@@ -220,13 +257,13 @@ public class LogStorageEngine implements LogStorage {
 		for (File f : tableDir.listFiles()) {
 			if (f.isFile() && (f.getName().endsWith(".idx") || f.getName().endsWith(".dat"))) {
 				if (!f.delete())
-					logger.info("log storage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
+					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
 			}
 		}
 
 		// delete directory if empty
 		if (tableDir.listFiles().length == 0) {
-			logger.info("log storage: deleted table {} directory", tableName);
+			logger.info("kraken logstorage: deleted table {} directory", tableName);
 			tableDir.delete();
 		}
 	}
@@ -383,7 +420,8 @@ public class LogStorageEngine implements LogStorage {
 			if (logdata == null) {
 				if (logger.isTraceEnabled()) {
 					String dayText = DateUtil.getDayText(day);
-					logger.trace("log storage: log [table={}, date={}, id={}] not found", new Object[] { tableName, dayText, id });
+					logger.trace("kraken logstorage: log [table={}, date={}, id={}] not found", new Object[] { tableName,
+							dayText, id });
 				}
 				return null;
 			}
@@ -395,7 +433,7 @@ public class LogStorageEngine implements LogStorage {
 				try {
 					reader.close();
 				} catch (IOException e) {
-					logger.error("log storage: cannot close logfile reader", e);
+					logger.error("kraken logstorage: cannot close logfile reader", e);
 				}
 		}
 	}
@@ -445,18 +483,19 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException {
+	public int search(String tableName, Date from, Date to, int offset, int limit, LogSearchCallback callback)
+			throws InterruptedException {
 		verify();
 
 		Collection<Date> days = getLogDates(tableName);
 
 		int found = 0;
 		List<Date> filtered = DateUtil.filt(days, from, to);
-		logger.trace("log storage: searching {} tablets of table [{}]", filtered.size(), tableName);
+		logger.trace("kraken logstorage: searching {} tablets of table [{}]", filtered.size(), tableName);
 
 		for (Date day : filtered) {
 			if (logger.isTraceEnabled())
-				logger.trace("log storage: searching table {}, date={}", tableName, DateUtil.getDayText(day));
+				logger.trace("kraken logstorage: searching table {}, date={}", tableName, DateUtil.getDayText(day));
 
 			int needed = limit - found;
 			if (limit != 0 && needed <= 0)
@@ -478,8 +517,8 @@ public class LogStorageEngine implements LogStorage {
 		return found;
 	}
 
-	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit, final LogSearchCallback callback)
-			throws InterruptedException {
+	private int searchTablet(String tableName, Date day, Date from, Date to, int offset, int limit,
+			final LogSearchCallback callback) throws InterruptedException {
 		int tableId = tableRegistry.getTableId(tableName);
 
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);
@@ -488,40 +527,44 @@ public class LogStorageEngine implements LogStorage {
 		TraverseCallback c = new TraverseCallback(tableName, from, to, callback);
 
 		try {
-			OnlineWriter onlineWriter = getOnlineWriter(tableName, day);
-			List<LogRecord> buffer = onlineWriter.getBuffer();
-			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
+			// do NOT use getOnlineWriter() here (it loads empty writer on cache
+			// automatically if writer not found)
+			OnlineWriter onlineWriter = onlineWriters.get(new OnlineWriterKey(tableName, day));
+			if (onlineWriter != null) {
+				List<LogRecord> buffer = onlineWriter.getBuffer();
 
-			if (buffer != null && !buffer.isEmpty()) {
-				logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
-				ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
-				while (li.hasPrevious()) {
-					LogRecord logData = li.previous();
-					if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
-						if (offset > 0) {
-							offset--;
-							continue;
-						}
+				if (buffer != null && !buffer.isEmpty()) {
+					logger.trace("kraken logstorage: {} logs in writer buffer.", buffer.size());
+					ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
+					while (li.hasPrevious()) {
+						LogRecord logData = li.previous();
+						if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
+							if (offset > 0) {
+								offset--;
+								continue;
+							}
 
-						if (c.onLog(logData)) {
-							if (--limit == 0)
-								return c.matched;
+							if (c.onLog(logData)) {
+								if (--limit == 0)
+									return c.matched;
+							}
 						}
 					}
 				}
 			}
 
+			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
 			reader.traverse(from, to, offset, limit, c);
 		} catch (InterruptedException e) {
 			throw e;
 		} catch (Exception e) {
-			logger.error("log storage: search tablet failed", e);
+			logger.error("kraken logstorage: search tablet failed", e);
 		} finally {
 			if (reader != null)
 				try {
 					reader.close();
 				} catch (IOException e) {
-					logger.error("log storage: search tablet close failed", e);
+					logger.error("kraken logstorage: search tablet close failed", e);
 				}
 		}
 
@@ -583,7 +626,7 @@ public class LogStorageEngine implements LogStorage {
 			return online;
 
 		try {
-			int maxBuffering = getIntParameter(Constants.LogMaxBuffering, DEFAULT_MAX_LOG_BUFFERING);
+			int blockSize = getIntParameter(Constants.LogBlockSize, DEFAULT_BLOCK_SIZE);
 			OnlineWriter oldWriter = onlineWriters.get(key);
 			String defaultLogVersion = tableRegistry.getTableMetadata(tableName, "logversion");
 
@@ -599,7 +642,7 @@ public class LogStorageEngine implements LogStorage {
 						while (onlineWriters.get(key) == oldWriter) {
 							Thread.yield();
 						}
-						OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering, defaultLogVersion);
+						OnlineWriter newWriter = new OnlineWriter(tableId, day, blockSize, defaultLogVersion);
 						OnlineWriter consensus = onlineWriters.putIfAbsent(key, newWriter);
 						if (consensus == null)
 							online = newWriter;
@@ -612,7 +655,7 @@ public class LogStorageEngine implements LogStorage {
 						while (onlineWriters.get(key) == oldWriter) {
 							Thread.yield();
 						}
-						OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering, defaultLogVersion);
+						OnlineWriter newWriter = new OnlineWriter(tableId, day, blockSize, defaultLogVersion);
 						OnlineWriter consensus = onlineWriters.putIfAbsent(key, newWriter);
 						if (consensus == null)
 							online = newWriter;
@@ -626,7 +669,7 @@ public class LogStorageEngine implements LogStorage {
 					}
 				}
 			} else {
-				OnlineWriter newWriter = new OnlineWriter(tableId, day, maxBuffering, defaultLogVersion);
+				OnlineWriter newWriter = new OnlineWriter(tableId, day, blockSize, defaultLogVersion);
 				OnlineWriter consensus = onlineWriters.putIfAbsent(key, newWriter);
 				if (consensus == null)
 					online = newWriter;
@@ -672,8 +715,24 @@ public class LogStorageEngine implements LogStorage {
 			throw new IllegalStateException("archive not opened");
 	}
 
+	@Override
+	public List<LogWriterStatus> getWriterStatuses() {
+		List<LogWriterStatus> writers = new ArrayList<LogWriterStatus>(onlineWriters.size());
+		for (OnlineWriterKey key : onlineWriters.keySet()) {
+			OnlineWriter writer = onlineWriters.get(key);
+			LogWriterStatus s = new LogWriterStatus();
+			s.setTableName(key.getTableName());
+			s.setDay(key.getDay());
+			s.setLastWrite(writer.getLastAccess());
+			writers.add(s);
+		}
+
+		return writers;
+	}
+
 	private class WriterSweeper implements Runnable {
 		private final Logger logger = LoggerFactory.getLogger(WriterSweeper.class.getName());
+		private volatile int checkInterval;
 		private volatile int maxIdleTime;
 		private volatile int flushInterval;
 
@@ -681,7 +740,10 @@ public class LogStorageEngine implements LogStorage {
 		private volatile boolean isStopped = true;
 		private volatile boolean forceFlush = false;
 
-		public WriterSweeper(int maxIdleTime, int flushInterval) {
+		private Date lastFlushTime = new Date();
+
+		public WriterSweeper(int checkInterval, int maxIdleTime, int flushInterval) {
+			this.checkInterval = checkInterval;
 			this.maxIdleTime = maxIdleTime;
 			this.flushInterval = flushInterval;
 		}
@@ -708,16 +770,16 @@ public class LogStorageEngine implements LogStorage {
 						if (doStop)
 							break;
 
-						Thread.sleep(flushInterval);
+						Thread.sleep(checkInterval);
 						sweep();
 					} catch (InterruptedException e) {
 						if (forceFlush) {
 							sweep();
 							forceFlush = false;
 						}
-						logger.trace("log storage: sweeper interrupted");
+						logger.trace("kraken logstorage: sweeper interrupted");
 					} catch (Exception e) {
-						logger.error("log storage: sweeper error", e);
+						logger.error("krakne logstorage: sweeper error", e);
 					}
 				}
 			} finally {
@@ -725,20 +787,25 @@ public class LogStorageEngine implements LogStorage {
 				isStopped = true;
 			}
 
-			logger.info("log storage: writer sweeper stopped");
+			logger.info("kraken logstorage: writer sweeper stopped");
 		}
 
 		private void sweep() {
+			// check flush
+			boolean doFlush = new Date().getTime() - lastFlushTime.getTime() > flushInterval;
+
 			List<OnlineWriterKey> evicts = new ArrayList<OnlineWriterKey>();
 			try {
 				// periodic log flush
 				for (OnlineWriterKey key : onlineWriters.keySet()) {
 					OnlineWriter writer = onlineWriters.get(key);
-					try {
-						logger.trace("log storage: flushing writer [{}]", key);
-						writer.flush();
-					} catch (IOException e) {
-						logger.error("log storage: log flush failed", e);
+					if (doFlush) {
+						try {
+							logger.trace("kraken logstorage: flushing writer [{}]", key);
+							writer.flush();
+						} catch (IOException e) {
+							logger.error("kraken logstorage: log flush failed", e);
+						}
 					}
 
 					// close file if writer is in idle state
@@ -753,8 +820,7 @@ public class LogStorageEngine implements LogStorage {
 				OnlineWriter evictee = onlineWriters.get(key);
 				if (evictee != null) {
 					evictee.close();
-					if (isDebugloggerTraceEnabled)
-						debuglogger.trace("loggerRemoving: {}", key);
+					logger.trace("kraken logstorage: evict logger [{}]", key);
 					onlineWriters.remove(key);
 				}
 			}

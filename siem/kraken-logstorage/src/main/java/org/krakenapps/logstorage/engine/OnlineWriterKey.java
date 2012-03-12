@@ -27,6 +27,14 @@ public class OnlineWriterKey {
 		this.day = day;
 	}
 
+	public String getTableName() {
+		return tableName;
+	}
+
+	public Date getDay() {
+		return day;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logstorage.engine;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
@@ -25,14 +26,14 @@ import java.util.Arrays;
 public class LogFileHeader {
 	public static final String MAGIC_STRING_DATA = "NCHOVY_BEAST_DAT";
 	public static final String MAGIC_STRING_INDEX = "NCHOVY_BEAST_IDX";
+	public static final short ALIGNED_HEADER_SIZE_BASE = 22;
+	public static final short ALIGNED_HEADER_SIZE_POS = 20;
 
 	private String magicString;
 	private short bom = (short) 0xFEFF;
 	private short version;
 	private short headerSize;
 	private byte[] extraData;
-	private static final short ALIGNED_HEADER_SIZE_BASE = 22;
-	private static final short ALIGNED_HEADER_SIZE_POS = 20;
 
 	public LogFileHeader(short version, String magicString) {
 		this.version = version;
@@ -96,14 +97,14 @@ public class LogFileHeader {
 		return Arrays.copyOfRange(buf.array(), 0, getAlignedHeaderSize());
 	}
 
-	public static LogFileHeader extractHeader(RandomAccessFile f) throws IOException, InvalidLogFileHeaderException {
+	public static LogFileHeader extractHeader(RandomAccessFile f, File path) throws IOException, InvalidLogFileHeaderException {
 		if (f.length() < ALIGNED_HEADER_SIZE_BASE) {
-			throw new InvalidLogFileHeaderException("File size is too small.");
+			throw new InvalidLogFileHeaderException("File size is too small: " + path.getAbsolutePath());
 		}
 		f.seek(ALIGNED_HEADER_SIZE_POS);
 		short hdrSize = f.readShort();
 		if (hdrSize > 65536) {
-			throw new InvalidLogFileHeaderException("Invalid header size");
+			throw new InvalidLogFileHeaderException("Invalid header size: " + path.getAbsolutePath());
 		}
 		f.seek(0);
 		byte[] hdr = new byte[hdrSize];
@@ -111,15 +112,15 @@ public class LogFileHeader {
 		return unserialize(hdr);
 	}
 
-	public static LogFileHeader extractHeader(BufferedRandomAccessFileReader f) throws IOException,
+	public static LogFileHeader extractHeader(BufferedRandomAccessFileReader f, File path) throws IOException,
 			InvalidLogFileHeaderException {
 		if (f.length() < ALIGNED_HEADER_SIZE_BASE) {
-			throw new InvalidLogFileHeaderException("File size is too small.");
+			throw new InvalidLogFileHeaderException("File size is too small: " + path.getAbsolutePath());
 		}
 		f.seek(ALIGNED_HEADER_SIZE_POS);
 		short hdrSize = f.readShort();
 		if (hdrSize > 65536) {
-			throw new InvalidLogFileHeaderException("Invalid header size");
+			throw new InvalidLogFileHeaderException("Invalid header size: " + path.getAbsolutePath());
 		}
 		f.seek(0);
 		byte[] hdr = new byte[hdrSize];
