@@ -1,6 +1,7 @@
 package org.krakenapps.dom.script;
 
 import java.util.Map;
+import java.util.Random;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -299,8 +300,32 @@ public class DomScript implements Script {
 		for (String key : m.keySet())
 			context.println(key + "=" + m.get(key));
 	}
+
 	@ScriptUsage(description = "current waiting host count")
-	public void pendingUpdates(String[] args){
+	public void pendingUpdates(String[] args) {
 		context.println("Waiting host count: " + updateApi.getPendingCount());
+	}
+
+	@ScriptUsage(description = "update hosts", arguments = { @ScriptArgument(name = "count", type = "string", description = "host count") })
+	public void updateHosts(String[] args) {
+		int count = Integer.parseInt(args[0]);
+		if ( count <= 0 ){
+			context.println("host count should be larger than 0");
+			return;
+		}
+		
+		Random random = new Random();		
+		while ( count > 0 ){
+			Host host = new Host();		
+			int id = random.nextInt(20000);
+			host.setGuid(String.valueOf(id));
+			host.setName(String.valueOf(id));
+			HostType type = new HostType();
+			type.setGuid("0dd73318-6db5-49fd-aae4-7deff285da6b");
+			host.setType(type);
+			
+			updateApi.update(host);
+			count--;
+		}
 	}
 }
