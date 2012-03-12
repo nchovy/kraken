@@ -10,6 +10,7 @@ import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.api.GlobalConfigApi;
 import org.krakenapps.dom.api.HostApi;
+import org.krakenapps.dom.api.HostUpdateApi;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
@@ -34,9 +35,10 @@ public class DomScript implements Script {
 	private AreaApi areaApi;
 	private HostApi hostApi;
 	private ApplicationApi appApi;
+	private HostUpdateApi updateApi;
 
 	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
-			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi) {
+			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi, HostUpdateApi updateApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.userApi = userApi;
@@ -45,6 +47,7 @@ public class DomScript implements Script {
 		this.areaApi = areaApi;
 		this.hostApi = hostApi;
 		this.appApi = appApi;
+		this.updateApi = updateApi;
 	}
 
 	@Override
@@ -295,5 +298,9 @@ public class DomScript implements Script {
 		context.println("Organization Parameters");
 		for (String key : m.keySet())
 			context.println(key + "=" + m.get(key));
+	}
+	@ScriptUsage(description = "current waiting host count")
+	public void pendingUpdates(String[] args){
+		context.println("Waiting host count: " + updateApi.getPendingCount());
 	}
 }

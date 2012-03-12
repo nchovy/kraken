@@ -24,6 +24,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.HostApi;
+import org.krakenapps.dom.model.Area;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostType;
 import org.krakenapps.msgbus.Request;
@@ -44,6 +45,10 @@ public class HostPlugin {
 	public void getHostTypes(Request req, Response resp) {
 		Collection<HostType> hostTypes = hostApi.getHostTypes(req.getOrgDomain());
 		resp.put("types", PrimitiveConverter.serialize(hostTypes));
+	}
+
+	@MsgbusMethod
+	public void getHostNames(Request req, Response resp) {
 	}
 
 	@MsgbusMethod
@@ -82,7 +87,8 @@ public class HostPlugin {
 
 	@MsgbusMethod
 	public void createHost(Request req, Response resp) {
-		Host host = (Host) PrimitiveConverter.overwrite(new Host(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		Host host = (Host) PrimitiveConverter.overwrite(new Host(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		hostApi.createHost(req.getOrgDomain(), host);
 		resp.put("guid", host.getGuid());
 	}
@@ -90,7 +96,8 @@ public class HostPlugin {
 	@MsgbusMethod
 	public void updateHost(Request req, Response resp) {
 		Host before = hostApi.getHost(req.getOrgDomain(), req.getString("guid"));
-		Host host = (Host) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		Host host = (Host) PrimitiveConverter.overwrite(before, req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		hostApi.updateHost(req.getOrgDomain(), host);
 	}
 

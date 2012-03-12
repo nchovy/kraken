@@ -182,6 +182,20 @@ public class HostApiImpl extends DefaultEntityEventProvider<Host> implements Hos
 	}
 
 	@Override
+	public Collection<Host> findHosts(String domain, Collection<String> guids) {
+		// TODO Auto-generated method stub
+		List<String> guidList = new ArrayList<String>(guids);
+		
+		Predicate[] preds = new Predicate[guidList.size()];
+		int i = 0;
+		for (String guid : guidList)
+			preds[i++] = Predicates.field("guid", guid);
+		Predicate pred = Predicates.or(preds);
+		
+		return cfg.all(domain, host, pred);
+	}
+
+	@Override
 	public Host getHost(String domain, String guid) {
 		return cfg.get(domain, host, getPred(guid), HOST_NOT_FOUND);
 	}

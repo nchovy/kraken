@@ -25,6 +25,8 @@ public interface HostApi extends EntityEventProvider<Host> {
 	Collection<Host> getHosts(String domain);
 
 	Collection<Host> getHosts(String domain, String areaGuid, boolean includeChildren);
+	
+	Collection<Host> findHosts(String domain, Collection<String> guids);
 
 	Host findHost(String domain, String guid);
 

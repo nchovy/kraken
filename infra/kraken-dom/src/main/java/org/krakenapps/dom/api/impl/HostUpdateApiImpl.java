@@ -1,9 +1,11 @@
 package org.krakenapps.dom.api.impl;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
@@ -54,7 +56,7 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			while (!doStop) {
 				try {
 					runOnce();
-					Thread.sleep(2000);
+					Thread.sleep(10000);
 				} catch (InterruptedException e) {
 					logger.debug("kraken dom: host batch update interrupted");
 				}
@@ -98,33 +100,52 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 	}
 
 	private void runOnce() {
+		Map<String, Host> hosts = new HashMap<String, Host>();
+		Map<String, Host> recordedHosts = new HashMap<String, Host>();
 		Map<String, Host> addHosts = new HashMap<String, Host>();
 		Map<String, Host> updateHosts = new HashMap<String, Host>();
 
+		AtomicInteger aleadyExist = new AtomicInteger(0);
 		while (true) {
 			Host host = queue.poll();
 			if (host == null)
 				break;
-
-			Host old = hostApi.findHost("localhost", host.getGuid());
-
-			if (old == null)
-				addHosts.put(host.getGuid(), host);
-			else {
-				updateHosts.put(host.getGuid(), host);
-			}
+			if ( hosts.get(host.getGuid()) != null )
+				aleadyExist.incrementAndGet();
+			hosts.put(host.getGuid(), host);
 		}
 
 		long begin = new Date().getTime();
-		if (!addHosts.isEmpty()) {
-			hostApi.createHosts("localhost", addHosts.values());
+
+		Collection<Host> existedHost = hostApi.findHosts("localhost", hosts.keySet());
+
+		for (Host h : existedHost)
+			recordedHosts.put(h.getGuid(), h);
+
+		for (String guid : hosts.keySet()) {
+			Host h = recordedHosts.get(guid);
+			if (h == null)
+				addHosts.put(guid, hosts.get(guid));
+			else
+				updateHosts.put(guid, h);
 		}
-		if (!updateHosts.isEmpty()) {
-			hostApi.updateHosts("localhost", updateHosts.values());
-		}
+
+		long lockBegin = new Date().getTime();
+		hostApi.createHosts("localhost", addHosts.values());
+		hostApi.updateHosts("localhost", updateHosts.values());
+		long lockEnd = new Date().getTime();
+
 		long end = new Date().getTime();
 
-		logger.trace("kraken dom: added [{}] hosts, updated [{}] hosts, remained [{}] hosts, [{}]ms elapsed",
-				new Object[] { addHosts.size(), updateHosts.size(), queue.size(), end - begin });
+		if (hosts.size() > 0)
+			logger.trace(
+					"kraken dom: added [{}] hosts, updated [{}] hosts, remained [{}] hosts, [{}]ms elapsed, [{}]ms lock, [{}] exist host",
+					new Object[] { hosts.size() - existedHost.size(), existedHost.size(), queue.size(), end - begin,
+							lockEnd - lockBegin, aleadyExist });
+	}
+
+	@Override
+	public int getPendingCount() {
+		return queue.size();
 	}
 }
