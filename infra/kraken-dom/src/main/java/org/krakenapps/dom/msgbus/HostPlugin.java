@@ -17,7 +17,9 @@ package org.krakenapps.dom.msgbus;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -49,6 +51,29 @@ public class HostPlugin {
 
 	@MsgbusMethod
 	public void getHostNames(Request req, Response resp) {
+		String areaGuid = req.getString("area_guid");
+		Collection<Host> hosts = null;
+		if (areaGuid != null) {
+			boolean includeChildren = true;
+			if (req.has("include_children"))
+				includeChildren = req.getBoolean("include_children");
+
+			hosts = hostApi.getHosts(req.getOrgDomain(), areaGuid, includeChildren);
+		} else {
+			hosts = hostApi.getHosts(req.getOrgDomain());
+		}
+
+		if (req.has("filter_name")) {
+			List<Host> filtered = new ArrayList<Host>();
+			String filterName = req.getString("filter_name");
+			for (Host host : hosts) {
+				if (host.getName().contains(filterName))
+					filtered.add(host);
+			}
+			resp.put("hosts", hostSimplification(filtered));
+		} else {
+			resp.put("hosts", hostSimplification(hosts));
+		}
 	}
 
 	@MsgbusMethod
@@ -76,6 +101,34 @@ public class HostPlugin {
 		} else {
 			resp.put("hosts", PrimitiveConverter.serialize(hosts));
 		}
+	}
+
+	private List<Object> hostSimplification(Collection<Host> detailedHost) {
+		List<Object> hosts = new ArrayList<Object>();
+		Map<String, Object> m = new HashMap<String, Object>();
+
+		for (Host h : detailedHost) {
+			m.put("guid", h.getGuid());
+			m.put("name", h.getName());
+			if (h.getArea() != null) {
+				Map<String, Object> area = new HashMap<String, Object>();
+				area.put("guid", h.getArea().getGuid());
+				m.put("area", area);
+			} else
+				m.put("area", null);
+
+			if (h.getType() != null) {
+				Map<String, Object> type = new HashMap<String, Object>();
+				type.put("guid", h.getType().getGuid());
+				type.put("name", h.getType().getName());
+				m.put("type", type);
+			} else
+				m.put("type", null);
+
+			hosts.add(m);
+		}
+
+		return hosts;
 	}
 
 	@MsgbusMethod
