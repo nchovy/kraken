@@ -16,10 +16,7 @@
 package org.krakenapps.httpd.impl;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
@@ -33,6 +30,7 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.httpd.HttpConfigurationListener;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.krakenapps.httpd.HttpServer;
 import org.krakenapps.httpd.HttpConfiguration;
@@ -43,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "http-server")
 @Provides
-public class HttpServerImpl implements HttpServer {
+public class HttpServerImpl implements HttpServer, HttpConfigurationListener {
 	private final Logger logger = LoggerFactory.getLogger(HttpServerImpl.class.getName());
 
 	private BundleContext bc;
@@ -60,6 +58,9 @@ public class HttpServerImpl implements HttpServer {
 		this.contextRegistry = contextRegistry;
 		this.keyStoreManager = keyStoreManager;
 		this.conf = conf;
+
+		// set configuration set listener
+		config.getListeners().add(this);
 	}
 
 	@Override
@@ -80,20 +81,32 @@ public class HttpServerImpl implements HttpServer {
 
 	@Override
 	public HttpConfiguration getConfiguration() {
-		config.setConfigService(conf);
 		return config;
 	}
 
 	@Override
 	public void addVirtualHost(VirtualHost vhost) {
-		if ( vhost.getHttpContextName() == null )
+		if (vhost.getHttpContextName() == null)
 			throw new IllegalArgumentException("kraken httpd: http context name shoud not null");
-		
+
 		VirtualHost target = findVirtualHost(vhost.getHttpContextName());
 		if (target != null)
 			throw new IllegalStateException("duplicated http context exists: " + vhost.getHttpContextName());
 
 		config.getVirtualHosts().add(vhost);
+		saveConfig();
+	}
+
+	@Override
+	public void removeVirtualHost(String httpContextName) {
+		VirtualHost target = findVirtualHost(httpContextName);
+		if (target != null) {
+			config.getVirtualHosts().remove(target);
+			saveConfig();
+		}
+	}
+
+	private void saveConfig() {
 		Map<String, Object> filter = getFilter();
 
 		ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
@@ -105,22 +118,12 @@ public class HttpServerImpl implements HttpServer {
 		}
 	}
 
-	@Override
-	public void removeVirtualHost(String httpContextName) {
-		VirtualHost target = findVirtualHost(httpContextName);
-		if (target != null) {
-			config.getVirtualHosts().remove(target);
-
-			// update confdb
-			ConfigDatabase db = conf.ensureDatabase("kraken-httpd");
-			Map<String, Object> filter = getFilter();
-			Config c = db.findOne(HttpConfiguration.class, Predicates.field(filter));
-			if (c != null) {
-				db.update(c, this.config);
-			} else {
-				logger.error("kraken httpd: cannot find configuration for " + config.getListenAddress());
-			}
-		}
+	private Map<String, Object> getFilter() {
+		Map<String, Object> filter = new HashMap<String, Object>();
+		InetSocketAddress listen = config.getListenAddress();
+		filter.put("listen_address", listen.getAddress().getHostAddress());
+		filter.put("listen_port", listen.getPort());
+		return filter;
 	}
 
 	private VirtualHost findVirtualHost(String httpContextName) {
@@ -132,16 +135,16 @@ public class HttpServerImpl implements HttpServer {
 		return target;
 	}
 
-	private Map<String, Object> getFilter() {
-		Map<String, Object> filter = new HashMap<String, Object>();
-		InetSocketAddress listen = config.getListenAddress();
-		filter.put("listen_address", listen.getAddress().getHostAddress());
-		filter.put("listen_port", listen.getPort());
-		return filter;
+	@Override
+	public void onSet(String field, Object value) {
+		saveConfig();
 	}
 
 	@Override
 	public void close() {
+		// remove reference
+		config.getListeners().remove(this);
+
 		try {
 			if (listener != null) {
 				logger.info("kraken httpd: {} closed", listener.getLocalAddress());

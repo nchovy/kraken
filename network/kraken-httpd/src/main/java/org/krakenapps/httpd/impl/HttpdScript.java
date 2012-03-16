@@ -16,8 +16,9 @@
 package org.krakenapps.httpd.impl;
 
 import java.io.File;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import javax.servlet.ServletContext;
@@ -106,7 +107,7 @@ public class HttpdScript implements Script {
 			String trustAlias = args[2];
 
 			InetSocketAddress listen = new InetSocketAddress(port);
-			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);			
+			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);
 			HttpServer server = httpd.createServer(config);
 			server.open();
 			context.println("opened https server");
@@ -224,6 +225,32 @@ public class HttpdScript implements Script {
 			}
 
 			ctx.removeServlet(servletName);
+		}
+	}
+
+	@ScriptUsage(description = "set idle timeout", arguments = {
+			@ScriptArgument(name = "listen address", type = "string", description = "listen ip address"),
+			@ScriptArgument(name = "listen port", type = "int", description = "listen port number (0-65535)"),
+			@ScriptArgument(name = "idle timeout", type = "int", description = "idle time out in seconds") })
+	public void setIdleTimeout(String[] args) {
+		try {
+			InetAddress addr = InetAddress.getByName(args[0]);
+			int port = Integer.valueOf(args[1]);
+			int idleTimeout = Integer.valueOf(args[2]);
+
+			InetSocketAddress listenAddr = new InetSocketAddress(addr, port);
+			HttpServer server = httpd.getServer(listenAddr);
+			if (server == null) {
+				context.println("http server not found");
+				return;
+			}
+
+			HttpConfiguration config = server.getConfiguration();
+			config.setIdleTimeout(idleTimeout);
+			context.println("set " + idleTimeout + " seconds");
+		} catch (UnknownHostException e) {
+			context.println("invalid listen ip format");
+			logger.error("kraken httpd: invalid listen ip format", e);
 		}
 	}
 }

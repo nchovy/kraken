@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-httpd</artifactId>
-	<version>1.0.4</version>
+	<version>1.0.5</version>
 	<packaging>bundle</packaging>
 	<name>Kraken HTTP Daemon</name>
 	<build>

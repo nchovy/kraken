@@ -31,16 +31,25 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.timeout.IdleStateHandler;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.httpd.HttpConfiguration;
+import org.krakenapps.httpd.HttpConfigurationListener;
 import org.krakenapps.httpd.HttpContextRegistry;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class HttpPipelineFactory implements ChannelPipelineFactory {
+public class HttpPipelineFactory implements ChannelPipelineFactory, HttpConfigurationListener {
+	private final Logger logger = LoggerFactory.getLogger(HttpPipelineFactory.class.getName());
 	private BundleContext bc;
 	private HttpConfiguration config;
 	private HttpContextRegistry contextRegistry;
 	private KeyStoreManager keyStoreManager;
+	private Timer timer;
+	private IdleStateHandler idleStateHandler;
 
 	public HttpPipelineFactory(BundleContext bc, HttpConfiguration config, HttpContextRegistry contextRegistry,
 			KeyStoreManager keyStoreManager) {
@@ -48,11 +57,23 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
 		this.config = config;
 		this.contextRegistry = contextRegistry;
 		this.keyStoreManager = keyStoreManager;
+		this.timer = new HashedWheelTimer();
+		this.idleStateHandler = new IdleStateHandler(timer, 0, 0, config.getIdleTimeout());
+		config.getListeners().add(this);
+	}
+
+	@Override
+	public void onSet(String fieldName, Object value) {
+		if (fieldName.equals("idleTimeout")) {
+			logger.debug("kraken httpd: http config field [{}] changed to [{}]", fieldName, value);
+			this.idleStateHandler = new IdleStateHandler(timer, 0, 0, config.getIdleTimeout());
+		}
 	}
 
 	@Override
 	public ChannelPipeline getPipeline() throws Exception {
-		ChannelPipeline pipeline = Channels.pipeline();
+		ChannelPipeline pipeline = Channels.pipeline(idleStateHandler);
+
 		SSLContext sslContext = newSslContext(config.getKeyAlias(), config.getTrustAlias());
 		if (config.isSsl()) {
 			SSLEngine engine = sslContext.createSSLEngine();

@@ -17,18 +17,18 @@ package org.krakenapps.httpd;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArraySet;
+
 import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.confdb.CollectionName;
-import org.krakenapps.confdb.ConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @CollectionName("http_configs")
 public class HttpConfiguration {
-	@FieldOption(skip = true)
+	public static final int IDLE_TIMEOUT_DEFAULT = 120;
 	private final Logger logger = LoggerFactory.getLogger(HttpConfiguration.class.getName());
 
 	private String listenAddress;
@@ -46,14 +46,17 @@ public class HttpConfiguration {
 	@FieldOption(nullable = false)
 	private int maxContentLength = Integer.MAX_VALUE >> 1; // default 1G
 
+	private int idleTimeout;
+
 	@CollectionTypeHint(VirtualHost.class)
 	private List<VirtualHost> virtualHosts;
 
 	@FieldOption(skip = true)
-	private ConfigService conf;
+	private CopyOnWriteArraySet<HttpConfigurationListener> listeners = new CopyOnWriteArraySet<HttpConfigurationListener>();
 
 	// nullary constructor for confdb
 	public HttpConfiguration() {
+		this.idleTimeout = IDLE_TIMEOUT_DEFAULT;
 	}
 
 	public HttpConfiguration(InetSocketAddress listen) {
@@ -68,10 +71,6 @@ public class HttpConfiguration {
 		this.trustAlias = trustAlias;
 		this.isSsl = true;
 		this.virtualHosts = new ArrayList<VirtualHost>();
-	}
-
-	public void setConfigService(ConfigService conf) {
-		this.conf = conf;
 	}
 
 	public InetSocketAddress getListenAddress() {
@@ -100,14 +99,42 @@ public class HttpConfiguration {
 
 	public void setMaxContentLength(int maxContentLength) {
 		this.maxContentLength = maxContentLength;
+		notifyChange("maxContentLength", maxContentLength);
+	}
+
+	public int getIdleTimeout() {
+		return idleTimeout;
+	}
+
+	public void setIdleTimeout(int idleTimeout) {
+		this.idleTimeout = idleTimeout;
+		notifyChange("idleTimeout", idleTimeout);
+	}
+
+	public CopyOnWriteArraySet<HttpConfigurationListener> getListeners() {
+		return listeners;
+	}
+
+	public void setListeners(CopyOnWriteArraySet<HttpConfigurationListener> listeners) {
+		this.listeners = listeners;
+	}
+
+	private void notifyChange(String fieldName, Object value) {
+		for (HttpConfigurationListener listener : listeners) {
+			try {
+				listener.onSet(fieldName, value);
+			} catch (Throwable t) {
+				logger.error("kraken httpd: http config listener should not throw any exception", t);
+			}
+		}
 	}
 
 	@Override
 	public String toString() {
-		String ssl = isSsl ? "(ssl: key " + keyAlias + ", trust " + trustAlias : "";
+		String ssl = isSsl ? "(ssl: key " + keyAlias + ", trust " + trustAlias + ")" : "";
 		String hosts = "\n";
 		for (VirtualHost h : virtualHosts)
-			hosts += "  " + h + "\n";
+			hosts += "  " + h + ", idle timeout: " + this.idleTimeout + "seconds\n";
 		return getListenAddress() + " " + ssl + hosts;
 	}
 }
