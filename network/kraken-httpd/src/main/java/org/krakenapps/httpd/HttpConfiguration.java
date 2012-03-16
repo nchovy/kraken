@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 @CollectionName("http_configs")
 public class HttpConfiguration {
 	public static final int IDLE_TIMEOUT_DEFAULT = 120;
+
+	@FieldOption(skip = true)
 	private final Logger logger = LoggerFactory.getLogger(HttpConfiguration.class.getName());
 
 	private String listenAddress;
