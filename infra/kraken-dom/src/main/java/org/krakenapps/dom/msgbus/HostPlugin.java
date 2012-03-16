@@ -123,7 +123,6 @@ public class HostPlugin {
 		}
 
 		int offset = 0;
-		;
 		int limit = hosts.size();
 
 		if (req.has("offset")) {
@@ -140,6 +139,17 @@ public class HostPlugin {
 				if (host.getName().contains(filterName))
 					filtered.add(host);
 			}
+
+			limit = filtered.size();
+
+			if (req.has("offset")) {
+				offset = range(0, filtered.size(), req.getInteger("offset"));
+				limit -= offset;
+			}
+			if (req.has("limit")) {
+				limit = range(0, filtered.size() - offset, req.getInteger("limit"));
+			}
+
 			resp.put("hosts",
 					PrimitiveConverter.serialize(new ArrayList<Host>(filtered).subList(offset, offset + limit)));
 			resp.put("total", filtered.size());
