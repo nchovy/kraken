@@ -80,8 +80,10 @@ public class UserPlugin {
 		int offset = 0;
 		int limit = users.size();
 
-		if (req.has("offset"))
+		if (req.has("offset")){
 			offset = range(0, users.size(), req.getInteger("offset"));
+			limit -= offset;
+		}
 		if (req.has("limit"))
 			limit = range(0, users.size() - offset, req.getInteger("limit"));
 

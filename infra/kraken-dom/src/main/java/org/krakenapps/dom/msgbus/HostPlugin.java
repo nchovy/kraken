@@ -26,7 +26,6 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.HostApi;
-import org.krakenapps.dom.model.Area;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostType;
 import org.krakenapps.msgbus.Request;
@@ -63,6 +62,16 @@ public class HostPlugin {
 			hosts = hostApi.getHosts(req.getOrgDomain());
 		}
 
+		int offset = 0;
+		int limit = hosts.size();
+
+		if (req.has("offset")) {
+			offset = range(0, hosts.size(), req.getInteger("offset"));
+			limit -= offset;
+		}
+		if (req.has("limit"))
+			limit = range(0, hosts.size() - offset, req.getInteger("limit"));
+
 		if (req.has("filter_name")) {
 			List<Host> filtered = new ArrayList<Host>();
 			String filterName = req.getString("filter_name");
@@ -70,9 +79,11 @@ public class HostPlugin {
 				if (host.getName().contains(filterName))
 					filtered.add(host);
 			}
-			resp.put("hosts", hostSimplification(filtered));
+			resp.put("hosts", hostSimplification(new ArrayList<Host>(filtered).subList(offset, offset + limit)));
+			resp.put("total", filtered.size());
 		} else {
-			resp.put("hosts", hostSimplification(hosts));
+			resp.put("hosts", hostSimplification(new ArrayList<Host>(hosts).subList(offset, offset + limit)));
+			resp.put("total", hosts.size());
 		}
 	}
 
@@ -90,6 +101,17 @@ public class HostPlugin {
 			hosts = hostApi.getHosts(req.getOrgDomain());
 		}
 
+		int offset = 0;
+		;
+		int limit = hosts.size();
+
+		if (req.has("offset")) {
+			offset = range(0, hosts.size(), req.getInteger("offset"));
+			limit -= offset;
+		}
+		if (req.has("limit"))
+			limit = range(0, hosts.size() - offset, req.getInteger("limit"));
+
 		if (req.has("filter_name")) {
 			List<Host> filtered = new ArrayList<Host>();
 			String filterName = req.getString("filter_name");
@@ -97,10 +119,21 @@ public class HostPlugin {
 				if (host.getName().contains(filterName))
 					filtered.add(host);
 			}
-			resp.put("hosts", PrimitiveConverter.serialize(filtered));
+			resp.put("hosts",
+					PrimitiveConverter.serialize(new ArrayList<Host>(filtered).subList(offset, offset + limit)));
+			resp.put("total", filtered.size());
 		} else {
-			resp.put("hosts", PrimitiveConverter.serialize(hosts));
+			resp.put("hosts", PrimitiveConverter.serialize(new ArrayList<Host>(hosts).subList(offset, offset + limit)));
+			resp.put("total", hosts.size());
 		}
+	}
+
+	private int range(int min, int max, int value) {
+		if (value < min)
+			return min;
+		if (value > max)
+			return max;
+		return value;
 	}
 
 	private List<Object> hostSimplification(Collection<Host> detailedHost) {
