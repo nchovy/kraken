@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.model.Area;
@@ -41,7 +42,26 @@ public class HostPlugin {
 	private ConfigManager conf;
 
 	@Requires
+	private AreaApi areaApi;
+
+	@Requires
 	private HostApi hostApi;
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void moveHosts(Request req, Response resp) {
+		Collection<Host> hosts = null;
+		if (req.has("area_guid")) {
+			Area area = areaApi.findArea(req.getOrgDomain(), req.getString("area_guid"));
+			if (area != null) {
+				hosts = hostApi.findHosts(req.getOrgDomain(), (Collection<String>) req.get("host_guids"));
+				for (Host h : hosts)
+					h.setArea(area);
+
+				hostApi.updateHosts(req.getOrgDomain(), hosts);
+			}
+		}
+	}
 
 	@MsgbusMethod
 	public void getHostTypes(Request req, Response resp) {
@@ -63,6 +83,16 @@ public class HostPlugin {
 			hosts = hostApi.getHosts(req.getOrgDomain());
 		}
 
+		int offset = 0;
+		int limit = hosts.size();
+
+		if (req.has("offset")) {
+			offset = range(0, hosts.size(), req.getInteger("offset"));
+			limit -= offset;
+		}
+		if (req.has("limit"))
+			limit = range(0, hosts.size() - offset, req.getInteger("limit"));
+
 		if (req.has("filter_name")) {
 			List<Host> filtered = new ArrayList<Host>();
 			String filterName = req.getString("filter_name");
@@ -70,9 +100,11 @@ public class HostPlugin {
 				if (host.getName().contains(filterName))
 					filtered.add(host);
 			}
-			resp.put("hosts", hostSimplification(filtered));
+			resp.put("hosts", hostSimplification(new ArrayList<Host>(filtered).subList(offset, offset + limit)));
+			resp.put("total", filtered.size());
 		} else {
-			resp.put("hosts", hostSimplification(hosts));
+			resp.put("hosts", hostSimplification(new ArrayList<Host>(hosts).subList(offset, offset + limit)));
+			resp.put("total", hosts.size());
 		}
 	}
 
@@ -90,6 +122,17 @@ public class HostPlugin {
 			hosts = hostApi.getHosts(req.getOrgDomain());
 		}
 
+		int offset = 0;
+		;
+		int limit = hosts.size();
+
+		if (req.has("offset")) {
+			offset = range(0, hosts.size(), req.getInteger("offset"));
+			limit -= offset;
+		}
+		if (req.has("limit"))
+			limit = range(0, hosts.size() - offset, req.getInteger("limit"));
+
 		if (req.has("filter_name")) {
 			List<Host> filtered = new ArrayList<Host>();
 			String filterName = req.getString("filter_name");
@@ -97,17 +140,28 @@ public class HostPlugin {
 				if (host.getName().contains(filterName))
 					filtered.add(host);
 			}
-			resp.put("hosts", PrimitiveConverter.serialize(filtered));
+			resp.put("hosts",
+					PrimitiveConverter.serialize(new ArrayList<Host>(filtered).subList(offset, offset + limit)));
+			resp.put("total", filtered.size());
 		} else {
-			resp.put("hosts", PrimitiveConverter.serialize(hosts));
+			resp.put("hosts", PrimitiveConverter.serialize(new ArrayList<Host>(hosts).subList(offset, offset + limit)));
+			resp.put("total", hosts.size());
 		}
+	}
+
+	private int range(int min, int max, int value) {
+		if (value < min)
+			return min;
+		if (value > max)
+			return max;
+		return value;
 	}
 
 	private List<Object> hostSimplification(Collection<Host> detailedHost) {
 		List<Object> hosts = new ArrayList<Object>();
-		Map<String, Object> m = new HashMap<String, Object>();
 
 		for (Host h : detailedHost) {
+			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("guid", h.getGuid());
 			m.put("name", h.getName());
 			if (h.getArea() != null) {
