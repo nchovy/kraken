@@ -24,8 +24,10 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.dom.api.AreaApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.HostApi;
+import org.krakenapps.dom.model.Area;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostType;
 import org.krakenapps.msgbus.Request;
@@ -40,7 +42,26 @@ public class HostPlugin {
 	private ConfigManager conf;
 
 	@Requires
+	private AreaApi areaApi;
+
+	@Requires
 	private HostApi hostApi;
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void moveHosts(Request req, Response resp) {
+		Collection<Host> hosts = null;
+		if (req.has("area_guid")) {
+			Area area = areaApi.findArea(req.getOrgDomain(), req.getString("area_guid"));
+			if (area != null) {
+				hosts = hostApi.findHosts(req.getOrgDomain(), (Collection<String>) req.get("host_guids"));
+				for (Host h : hosts)
+					h.setArea(area);
+
+				hostApi.updateHosts(req.getOrgDomain(), hosts);
+			}
+		}
+	}
 
 	@MsgbusMethod
 	public void getHostTypes(Request req, Response resp) {
@@ -138,9 +159,9 @@ public class HostPlugin {
 
 	private List<Object> hostSimplification(Collection<Host> detailedHost) {
 		List<Object> hosts = new ArrayList<Object>();
-		Map<String, Object> m = new HashMap<String, Object>();
 
 		for (Host h : detailedHost) {
+			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("guid", h.getGuid());
 			m.put("name", h.getName());
 			if (h.getArea() != null) {
