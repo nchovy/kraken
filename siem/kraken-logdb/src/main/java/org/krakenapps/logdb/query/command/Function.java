@@ -589,7 +589,7 @@ public abstract class Function {
 	}
 
 	protected static class Sum extends Function {
-		private Number sum;
+		private Number sum = 0L;
 
 		@Override
 		protected void put(Object obj) {
@@ -616,7 +616,7 @@ public abstract class Function {
 	}
 
 	protected static class SumSquare extends Function {
-		private Number sum;
+		private Number sum = 0L;
 
 		@Override
 		protected void put(Object obj) {
