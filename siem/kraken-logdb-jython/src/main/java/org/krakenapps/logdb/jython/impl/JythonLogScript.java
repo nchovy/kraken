@@ -91,7 +91,7 @@ public class JythonLogScript implements Script {
 	private class ConsoleOutput implements LogScriptOutput {
 		@Override
 		public void write(LogMap data) {
-			context.println(Primitive.stringify(data.map()));
+			context.println(Primitive.stringify(data));
 		}
 	}
 

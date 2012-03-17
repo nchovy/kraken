@@ -19,54 +19,24 @@ public class NumberUtil {
 	public static Class<? extends Number> getClass(Object obj) {
 		if (obj == null)
 			return null;
-
-		if (parseLong(obj.toString()) != null)
+		try {
+			Long.parseLong(obj.toString());
 			return Long.class;
-
+		} catch (NumberFormatException e) {
+		}
 		try {
 			Double.parseDouble(obj.toString());
 			return Double.class;
 		} catch (NumberFormatException e) {
 		}
-
+		if (obj.toString().startsWith("0x")) {
+			try {
+				Long.parseLong(obj.toString().substring(2), 16);
+				return Long.class;
+			} catch (NumberFormatException e) {
+			}
+		}
 		return null;
-	}
-
-	private static Long parseLong(String str) {
-		char[] c = str.toCharArray();
-		int i = 0;
-		boolean negative = false;
-		long value = 0;
-
-		if (c.length == 0)
-			return null;
-
-		if (c[0] == '+')
-			i = 1;
-		if (c[0] == '-') {
-			i = 1;
-			negative = true;
-		}
-
-		if (c[i] == '0' && (c[i + 1] == 'x' || c[i + 1] == 'X')) {
-			// hex
-			for (i += 2; i < c.length; i++) {
-				int digit = Character.digit(c[i], 16);
-				if (digit == -1)
-					return null;
-				value = value * 16 + digit;
-			}
-		} else {
-			// dec
-			for (; i < c.length; i++) {
-				int digit = Character.digit(c[i], 10);
-				if (digit == -1)
-					return null;
-				value = value * 10 + digit;
-			}
-		}
-
-		return !negative ? value : -value;
 	}
 
 	public static Number getValue(Object obj) {
@@ -76,16 +46,20 @@ public class NumberUtil {
 	public static Number getValue(Object obj, Number defaultValue) {
 		if (obj == null)
 			return defaultValue;
-
-		Long l = parseLong(obj.toString());
-		if (l != null)
-			return l.longValue();
-
+		try {
+			return Long.parseLong(obj.toString());
+		} catch (NumberFormatException e) {
+		}
 		try {
 			return Double.parseDouble(obj.toString());
 		} catch (NumberFormatException e) {
 		}
-
+		if (obj.toString().startsWith("0x")) {
+			try {
+				return Long.parseLong(obj.toString().substring(2), 16);
+			} catch (NumberFormatException e) {
+			}
+		}
 		return defaultValue;
 	}
 

@@ -34,7 +34,8 @@ public class Search extends LogQueryCommand {
 	}
 
 	@Override
-	protected void initProcess() {
+	public void init() {
+		super.init();
 		count = 0;
 	}
 

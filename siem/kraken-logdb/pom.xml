@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb</artifactId>
-	<version>0.6.0</version>
+	<version>0.5.4</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log DB</name>
 	<build>
@@ -78,7 +78,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-logstorage</artifactId>
-			<version>1.9.3</version>
+			<version>1.9.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>

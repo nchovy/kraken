@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb-pcap</artifactId>
-	<version>0.2.0</version>
+	<version>0.1.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken LogDB PCAP</name>
 	<build>
@@ -52,7 +52,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-logdb</artifactId>
-			<version>0.6.0</version>
+			<version>0.5.4</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>

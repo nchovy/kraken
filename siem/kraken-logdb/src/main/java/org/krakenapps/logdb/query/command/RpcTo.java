@@ -63,7 +63,7 @@ public class RpcTo extends LogQueryCommand {
 	}
 
 	@Override
-	protected void eofProcess() {
+	public void eof() {
 		if (datasession != null) {
 			try {
 				datasession.call("eof", guid);
@@ -80,6 +80,7 @@ public class RpcTo extends LogQueryCommand {
 		}
 
 		logger.info("kraken logdb: closed rpc mapper stream for query guid [{}]", guid);
+		super.eof();
 	}
 
 	@Override

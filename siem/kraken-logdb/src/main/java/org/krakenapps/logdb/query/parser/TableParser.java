@@ -32,7 +32,6 @@ import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.log.api.LoggerConfigOption;
 import org.krakenapps.logdb.LogQueryParser;
-import org.krakenapps.logdb.impl.ResourceManager;
 import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Table;
 import org.krakenapps.logstorage.LogStorage;
@@ -43,10 +42,10 @@ public class TableParser implements LogQueryParser {
 	private LogTableRegistry tableRegistry;
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
-	public TableParser(ResourceManager resman) {
-		this.logStorage = resman.get(LogStorage.class);
-		this.tableRegistry = resman.get(LogTableRegistry.class);
-		this.parserFactoryRegistry = resman.get(LogParserFactoryRegistry.class);
+	public TableParser(LogStorage logStorage, LogTableRegistry tableRegistry, LogParserFactoryRegistry parserFactoryRegistry) {
+		this.logStorage = logStorage;
+		this.tableRegistry = tableRegistry;
+		this.parserFactoryRegistry = parserFactoryRegistry;
 	}
 
 	@Override

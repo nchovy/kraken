@@ -39,8 +39,9 @@ public class Script extends LogQueryCommand {
 	}
 
 	@Override
-	protected void eofProcess() {
+	public void eof() {
 		script.eof();
+		super.eof();
 	}
 
 	private void out(LogMap data) {
