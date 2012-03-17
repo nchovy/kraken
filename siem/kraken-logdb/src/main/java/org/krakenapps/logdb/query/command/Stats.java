@@ -49,8 +49,13 @@ public class Stats extends LogQueryCommand {
 	@Override
 	public void push(LogMap m) {
 		List<Object> key = new ArrayList<Object>();
-		for (String clause : clauses)
-			key.add(m.get(clause));
+		for (String clause : clauses) {
+			Object keyValue = m.get(clause);
+			if (keyValue == null)
+				return;
+
+			key.add(keyValue);
+		}
 
 		if (!result.containsKey(key)) {
 			Function[] fs = new Function[values.length];

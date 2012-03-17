@@ -184,9 +184,9 @@ public class FunctionCodec implements CustomCodec {
 			((Function.Range) func).setMax((Number) EncodingRule.decode(bb));
 			((Function.Range) func).setMin((Number) EncodingRule.decode(bb));
 		} else if (code == (byte) 138) {
-			((Function.Sum) func).setSum((Double) EncodingRule.decode(bb));
+			((Function.Sum) func).setSum((Number) EncodingRule.decode(bb));
 		} else if (code == (byte) 139) {
-			((Function.SumSquare) func).setSum((Double) EncodingRule.decode(bb));
+			((Function.SumSquare) func).setSum((Number) EncodingRule.decode(bb));
 		} else if (code == (byte) 140) {
 			((Function.Values) func).setObjs((List<Object>) EncodingRule.decode(bb));
 		} else if (code == (byte) 141 || code == (byte) 142 || code == (byte) 143 || code == (byte) 144) {
