@@ -95,9 +95,7 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public V get(Object key) {
-		if (cache.containsKey(key))
-			return cache.get(key);
-		else if (fp.containsKey(key)) {
+		if (!cache.containsKey(key) && fp.containsKey(key)) {
 			try {
 				Block b = fp.get(key);
 				raf.seek(b.fp);
@@ -105,21 +103,21 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 				Object obj = EncodingRule.decode(bb, cc);
 				bb.clear();
 				if (!classinfo.getClass().isArray())
-					return (V) obj;
+					cache.put((K) key, (V) obj);
 				else {
 					Class<?> component = classinfo.getClass().getComponentType();
 					int length = Array.getLength(obj);
 					Object r = Array.newInstance(component, length);
 					for (int i = 0; i < length; i++)
 						Array.set(r, i, component.cast(Array.get(obj, i)));
-					return (V) r;
+					cache.put((K) key, (V) r);
 				}
 			} catch (IOException e) {
 				logger.error("kraken logstorage: get error", e);
 			}
 		}
 
-		return null;
+		return cache.get(key);
 	}
 
 	@Override
