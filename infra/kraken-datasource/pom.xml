@@ -4,8 +4,8 @@
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<artifactId>kraken</artifactId>
 		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken-infra-pom</artifactId>
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-datasource</artifactId>

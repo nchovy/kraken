@@ -9,24 +9,14 @@
 	</parent>
 	<groupId>org.krakenapps</groupId>
 	<version>1.0.0</version>
-	<artifactId>kraken-infra-pom</artifactId>
-	<name>Kraken Infra POM</name>
+	<artifactId>kraken-utility-pom</artifactId>
+	<name>Kraken Utility POM</name>
 	<packaging>pom</packaging>
 	<modules>		
-		<module>kraken-api</module>
-		<module>kraken-codec</module>
-		<module>kraken-confdb</module>
-		<module>kraken-core</module>
-		<module>kraken-cron</module>
-		<module>kraken-filter</module>
-		<module>kraken-ipojo</module>
-		<module>kraken-jpa</module>
-		<module>kraken-dom</module>
-		<module>kraken-msgbus</module>
-		<module>kraken-ca</module>
-		<module>kraken-datasource</module>
-		<module>kraken-rrd</module>
-		<module>kraken-webconsole</module>
-		<module>kraken-webfx</module>
+		<module>kraken-geoip</module>
+		<module>kraken-mac-lookup</module>
+		<module>kraken-query-browser</module>
+		<module>kraken-util</module>
+		<module>kraken-util-directoryfile</module>
 	</modules>
 </project>

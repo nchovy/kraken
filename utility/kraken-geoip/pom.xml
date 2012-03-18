@@ -1,17 +1,17 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<artifactId>kraken</artifactId>
 		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken-utility-pom</artifactId>
 		<version>1.0.0</version>
 	</parent>
-	<artifactId>kraken-webfx</artifactId>
-	<version>0.1.0</version>
+	<artifactId>kraken-geoip</artifactId>
+	<version>1.2.0</version>
 	<packaging>bundle</packaging>
-	<name>Kraken Web Framework</name>
+	<name>Kraken GeoIP</name>
 	<build>
 		<plugins>
 			<plugin>
@@ -21,9 +21,17 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>org.krakenapps.webfx</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.webfx;version=${project.version}</Export-Package>
-						<Import-Package>*</Import-Package>
+						<Bundle-SymbolicName>org.krakenapps.geoip</Bundle-SymbolicName>
+						<Export-Package>org.krakenapps.geoip;version=${project.version}</Export-Package>
+						<Private-Package>
+							org.krakenapps.geoip.impl,
+							org.krakenapps.geoip.msgbus
+						</Private-Package>
+						<Import-Package>
+							org.krakenapps.msgbus;resolution:=optional,
+							org.krakenapps.msgbus.handler;resolution:=optional,
+							*
+						</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -43,9 +51,14 @@
 	</build>
 	<dependencies>
 		<dependency>
-			<groupId>org.codehaus.groovy</groupId>
-			<artifactId>groovy</artifactId>
-			<version>1.8.5</version>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-api</artifactId>
+			<version>1.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.5.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -54,8 +67,9 @@
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-httpd</artifactId>
+			<artifactId>kraken-msgbus</artifactId>
 			<version>1.0.0</version>
+			<optional>true</optional>
 		</dependency>
 	</dependencies>
 </project>

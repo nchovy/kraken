@@ -21,20 +21,12 @@
 		<module>compiler</module>
 		<module>reporting</module>
 		
-		<module>kraken-mac-lookup</module>
-		<module>kraken-rrd</module>
-		<module>kraken-query-browser</module>
 		<module>kraken-winapi</module>
 		<module>kraken-linux-api</module>
-		<module>kraken-geoip</module>
 		<module>kraken-jython</module>
-		<module>kraken-datasource</module>
-		<module>kraken-util</module>
-		<module>kraken-webconsole</module>
-		<module>kraken-util-directoryfile</module>
 		<module>kraken-btree</module>
 		<module>kraken-ipmanager</module>
-		<module>kraken-webfx</module>
+		
 	</modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>

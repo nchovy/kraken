@@ -4,26 +4,28 @@
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<artifactId>kraken</artifactId>
 		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken-utility-pom</artifactId>
 		<version>1.0.0</version>
 	</parent>
-	<artifactId>kraken-rrd</artifactId>
-	<version>1.2.0</version>
+	<artifactId>kraken-util-directoryfile</artifactId>
 	<packaging>bundle</packaging>
-	<name>Kraken RRD</name>
+	<name>Kraken DirectoryFile</name>
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-bundle-plugin</artifactId>
-				<version>1.4.3</version>
+				<version>2.0.1</version>
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>org.krakenapps.rrd</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.rrd;version=${project.version}</Export-Package>
-						<!-- >Private-Package>org.krakenapps.rrd.impl</Private-Package-->
+						<Bundle-SymbolicName>kraken-util-directoryfile</Bundle-SymbolicName>
+						<Export-Package>
+						org.krakenapps.util.directoryfile;version=${project.version},
+							org.krakenapps.util.directoryfile.exceptions;version=${project.version}
+						</Export-Package>
+						<Private-Package></Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
@@ -31,7 +33,7 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-ipojo-plugin</artifactId>
-				<version>1.2.0</version>
+				<version>1.4.0</version>
 				<executions>
 					<execution>
 						<goals>
@@ -44,26 +46,25 @@
 	</build>
 	<dependencies>
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.5.10</version>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-api</artifactId>
+			<version>1.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
+			<artifactId>kraken-util</artifactId>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
-			<groupId>commons-lang</groupId>
-			<artifactId>commons-lang</artifactId>
-			<version>2.4</version>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.5.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
-			<version>1.5.10</version>
+			<version>1.5.6</version>
 			<scope>test</scope>
 		</dependency>
-
 	</dependencies>
 </project>
