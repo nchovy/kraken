@@ -15,5 +15,6 @@
 	<modules>		
 		<module>kraken-bnf</module>
 		<module>kraken-sql-parser</module>
+		<module>kraken-jython</module>
 	</modules>
 </project>

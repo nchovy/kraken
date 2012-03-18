@@ -20,13 +20,6 @@
 		<module>format</module>
 		<module>compiler</module>
 		<module>reporting</module>
-		
-		<module>kraken-winapi</module>
-		<module>kraken-linux-api</module>
-		<module>kraken-jython</module>
-		<module>kraken-btree</module>
-		<module>kraken-ipmanager</module>
-		
 	</modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>

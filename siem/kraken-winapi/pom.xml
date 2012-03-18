@@ -4,15 +4,13 @@
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<artifactId>kraken</artifactId>
+		<artifactId>kraken-siem-pom</artifactId>
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
-	<artifactId>kraken-ice</artifactId>
-	<version>3.4.1</version>
+	<artifactId>kraken-winapi</artifactId>
 	<packaging>bundle</packaging>
-	<name>Kraken ICE</name>
+	<name>Kraken WinApi</name>
 	<build>
 		<plugins>
 			<plugin>
@@ -22,17 +20,19 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>org.krakenapps.ice</Bundle-SymbolicName>
-						<Export-Package>
-							Glacier2,
-							Ice,
-							IceBox,
-							IceInternal,
-							IceSSL,
-							IceUtil,
-							IceUtilInternal,
-							org.krakenapps.ice
-						</Export-Package>
+						<Bundle-SymbolicName>org.krakenapps.winapi</Bundle-SymbolicName>
+						<Bundle-NativeCode>
+							lib/win32_x86/winapi.dll;
+							osname=win32;
+							osname="windows server 2008";
+							processor=x86,
+							lib/win32_x86_64/winapi.dll;
+							osname=win32; osname="windows server
+							2008";
+							processor=x86_64
+						</Bundle-NativeCode>
+						<Export-Package>org.krakenapps.winapi;version=${project.version}</Export-Package>
+						<Private-Package>org.krakenapps.winapi.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
@@ -51,11 +51,4 @@
 			</plugin>
 		</plugins>
 	</build>
-	<dependencies>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-api</artifactId>
-			<version>1.7.0</version>
-		</dependency>
-	</dependencies>
 </project>

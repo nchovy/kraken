@@ -4,14 +4,15 @@
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<artifactId>kraken</artifactId>
 		<groupId>org.krakenapps</groupId>
+		<artifactId>kraken-network-pom</artifactId>
 		<version>1.0.0</version>
 	</parent>
-	<artifactId>kraken-btree</artifactId>
-	<version>0.1.0</version>
+	<groupId>org.krakenapps</groupId>
+	<artifactId>kraken-ice</artifactId>
+	<version>3.4.1</version>
 	<packaging>bundle</packaging>
-	<name>Kraken B+tree</name>
+	<name>Kraken ICE</name>
 	<build>
 		<plugins>
 			<plugin>
@@ -21,8 +22,17 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>org.krakenapps.btree</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.btree;version=${project.version}</Export-Package>
+						<Bundle-SymbolicName>org.krakenapps.ice</Bundle-SymbolicName>
+						<Export-Package>
+							Glacier2,
+							Ice,
+							IceBox,
+							IceInternal,
+							IceSSL,
+							IceUtil,
+							IceUtilInternal,
+							org.krakenapps.ice
+						</Export-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
@@ -46,17 +56,6 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
 			<version>1.7.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.5.6</version>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-simple</artifactId>
-			<version>1.5.6</version>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

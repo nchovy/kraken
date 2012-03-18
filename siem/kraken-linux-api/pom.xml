@@ -4,14 +4,14 @@
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<artifactId>kraken</artifactId>
+		<artifactId>kraken-siem-pom</artifactId>
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<artifactId>kraken-jython</artifactId>
-	<version>1.1.0</version>
+	<artifactId>kraken-linux-api</artifactId>
+	<version>1.0.2</version>
 	<packaging>bundle</packaging>
-	<name>Kraken Jython</name>
+	<name>Kraken Linux Api</name>
 	<build>
 		<plugins>
 			<plugin>
@@ -21,22 +21,13 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Embed-Dependency>jython</Embed-Dependency>
-						<Bundle-SymbolicName>org.krakenapps.jython
+						<Bundle-SymbolicName>org.krakenapps.linux.api
 						</Bundle-SymbolicName>
-						<Bundle-ClassPath>.,{maven-dependencies}
-						</Bundle-ClassPath>
-						<Export-Package>
-							org.krakenapps.jython;version=${project.version},
-							org.python.core,
-							org.python.util
+						<Export-Package>org.krakenapps.linux.api;version=${project.version}
 						</Export-Package>
-						<Private-Package>org.krakenapps.jython.impl
-						</Private-Package>
-						<Import-Package>org.osgi.framework;version="1.3.0",
-							org.krakenapps.api
-						</Import-Package>
-						<DynamicImport-Package>*</DynamicImport-Package>
+						<Import-Package>org.krakenapps.msgbus;resolution:=optional,
+							org.krakenapps.msgbus.handler;resolution:=optional,
+							*</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -58,24 +49,23 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
-		</dependency>
-		<dependency>
-			<groupId>jython</groupId>
-			<artifactId>jython</artifactId>
-			<version>2.5.1</version>
+			<version>1.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
-			<artifactId>org.apache.felix.ipojo</artifactId>
+			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
 			<version>1.4.0</version>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.felix</groupId>
-			<artifactId>org.apache.felix.ipojo.annotations
-			</artifactId>
-			<version>1.4.0</version>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.5.6</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-msgbus</artifactId>
+			<version>1.0.0</version>
+			<optional>true</optional>
+		</dependency>
 	</dependencies>
 </project>
