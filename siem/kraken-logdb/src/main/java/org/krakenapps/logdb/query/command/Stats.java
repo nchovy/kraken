@@ -76,6 +76,8 @@ public class Stats extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		result.flush();
+		
 		for (List<Object> key : result.keySet()) {
 			Map<String, Object> m = new HashMap<String, Object>();
 

@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public class FileBufferList<E> implements List<E> {
 	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
 	private static int BYTEBUFFER_CAPACITY = 655360; // 640KB
-	private Logger logger = LoggerFactory.getLogger(FileBufferList.class);
+	private final Logger logger = LoggerFactory.getLogger(FileBufferList.class);
 	private List<ObjectWrapper> cache = new ArrayList<ObjectWrapper>();
 	private int cacheSize;
 	private boolean needFlip = false;
@@ -446,6 +446,10 @@ public class FileBufferList<E> implements List<E> {
 						} catch (IllegalArgumentException e) {
 							read(fp);
 							return decode(0);
+						} catch (RuntimeException e) {
+							logger.error("kraken logdb: cannot decode fp [{}], read index [{}] from file [{}]", new Object[] {
+									fp, readBufferIndex, file.getAbsolutePath() });
+							throw e;
 						}
 					}
 				} else
@@ -471,6 +475,9 @@ public class FileBufferList<E> implements List<E> {
 				readBufferIndex = fp;
 			} catch (IOException e) {
 				logger.error("kraken logstorage: invalid access file {}, fp {}", file.getName(), fp);
+			} catch (RuntimeException e) {
+				logger.error("kraken logdb: cannot read offset [{}] from file [{}]", fp, file.getAbsolutePath());
+				throw e;
 			}
 		}
 
