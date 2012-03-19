@@ -17,6 +17,8 @@ package org.krakenapps.httpd;
 
 public interface HttpServer {
 	HttpConfiguration getConfiguration();
+	
+	boolean isOpened();
 
 	void open();
 

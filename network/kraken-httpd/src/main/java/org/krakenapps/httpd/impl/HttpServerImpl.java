@@ -154,4 +154,10 @@ public class HttpServerImpl implements HttpServer, HttpConfigurationListener {
 			logger.error("kraken httpd: cannot close " + listener.getLocalAddress(), t);
 		}
 	}
+
+	@Override
+	public boolean isOpened() {
+		// TODO Auto-generated method stub
+		return  listener == null ? false : listener.isOpen();
+	}
 }
