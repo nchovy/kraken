@@ -15,59 +15,60 @@
  */
 package org.krakenapps.logdb.query;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 import org.krakenapps.codec.CustomCodec;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.UnsupportedTypeException;
+import org.krakenapps.logdb.query.FileBufferList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FileBufferList<E> implements List<E> {
-	private static File BASE_DIR = new File(".");
-	private static int BYTEBUFFER_CAPACITY = 1048576; // 1MB
-	private Logger logger = LoggerFactory.getLogger(FileBufferList.class);
-
-	private Queue<E> cache = new ConcurrentLinkedQueue<E>();
-	private int cacheLimit;
-	private List<FlipedObject> fliped;
-	private AtomicInteger size = new AtomicInteger();
-	private int flushed = 0;
+	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
+	private static int BYTEBUFFER_CAPACITY = 655360; // 640KB
+	private final Logger logger = LoggerFactory.getLogger(FileBufferList.class);
+	private List<ObjectWrapper> cache = new ArrayList<ObjectWrapper>();
+	private int cacheSize;
+	private boolean needFlip = false;
+	private int fliped = 0;
+	private Object cacheLock = new Object();
 
 	private File file;
 	private RandomAccessFile raf;
 	private Object fileLock = new Object();
-	private List<ReadBuffer> readBuffers = new ArrayList<ReadBuffer>();
-
 	private Comparator<E> comparator;
+	private Comparator<ObjectWrapper> wrapperComparator;
+	private volatile int size = 0;
+	private ByteBuffer writeBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
+	private ByteBuffer readBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
+	private Long readBufferIndex;
 	private CustomCodec cc;
 
-	public static void setFileDir(File dir) {
-		BASE_DIR = dir;
-	}
+	private List<ObjectWrapper> objs = new ArrayList<ObjectWrapper>();
 
 	public FileBufferList() throws IOException {
 		this(50000, null);
 	}
 
-	public FileBufferList(int cacheLimit) throws IOException {
-		this(cacheLimit, null);
+	public FileBufferList(int cacheSize) throws IOException {
+		this(cacheSize, null);
 	}
 
 	public FileBufferList(Comparator<E> comparator) throws IOException {
@@ -78,52 +79,53 @@ public class FileBufferList<E> implements List<E> {
 		this(50000, null, cc);
 	}
 
-	public FileBufferList(int cacheLimit, Comparator<E> comparator) throws IOException {
-		this(cacheLimit, comparator, null);
+	public FileBufferList(int cacheSize, Comparator<E> comparator) throws IOException {
+		this(cacheSize, comparator, null);
 	}
 
 	public FileBufferList(Comparator<E> comparator, CustomCodec cc) throws IOException {
 		this(50000, comparator, cc);
 	}
 
-	public FileBufferList(int cacheLimit, Comparator<E> comparator, CustomCodec cc) throws IOException {
+	public FileBufferList(int cacheSize, Comparator<E> comparator, CustomCodec cc) throws IOException {
 		if (!BASE_DIR.exists())
 			BASE_DIR.mkdirs();
-
-		this.cacheLimit = cacheLimit;
-		this.fliped = new ArrayList<FlipedObject>(cacheLimit);
-
 		this.file = File.createTempFile("fbl", ".buf", BASE_DIR);
 		this.file.deleteOnExit();
-		this.raf = new RandomAccessFile(file, "rw");
-
 		this.comparator = comparator;
+		if (comparator != null)
+			this.wrapperComparator = new ObjectWrapperComparator(comparator);
+		this.raf = new RandomAccessFile(file, "rw");
+		this.cacheSize = cacheSize;
 		this.cc = cc;
 	}
 
 	@Override
 	public boolean add(E obj) {
-		cache.add(obj);
-
-		if (size.incrementAndGet() % cacheLimit == 0) {
+		synchronized (cacheLock) {
+			cache.add(new ObjectWrapper(obj));
+		}
+		needFlip = true;
+		if (cache.size() >= cacheSize) {
 			try {
 				flush();
 			} catch (IOException e) {
 				return false;
 			}
 		}
+		size++;
 
 		return true;
 	}
 
 	@Override
 	public int size() {
-		return size.get();
+		return size;
 	}
 
 	@Override
 	public boolean isEmpty() {
-		return (size.get() == 0);
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -187,44 +189,20 @@ public class FileBufferList<E> implements List<E> {
 
 	@Override
 	public E get(int index) {
-		if (index < 0 || index >= size())
+		if (index < 0 || index >= size)
 			throw new IndexOutOfBoundsException();
 
-		try {
-			flip();
-		} catch (IOException e) {
+		if (needFlip) {
+			try {
+				flip();
+			} catch (IOException e) {
+			}
+		}
+
+		ObjectWrapper op = this.objs.get(index);
+		if (op == null)
 			return null;
-		}
-
-		int l = 0;
-		int r = fliped.size();
-		while (l < r) {
-			int m = (l + r) / 2;
-			FlipedObject fo = fliped.get(m);
-			if (fo.index == index)
-				return fo.obj;
-			else if (fo.index < index)
-				l = m + 1;
-			else
-				r = m;
-		}
-
-		index -= l;
-		ReadBuffer buf = null;
-
-		l = 0;
-		r = readBuffers.size();
-		while (l < r) {
-			int m = (l + r) / 2;
-			buf = readBuffers.get(m);
-			if (index < buf.offset)
-				r = m;
-			else if (index >= buf.offset + buf.count)
-				l = m + 1;
-			else
-				break;
-		}
-		return buf.get(index - buf.offset);
+		return op.get();
 	}
 
 	@Override
@@ -264,350 +242,268 @@ public class FileBufferList<E> implements List<E> {
 
 	@Override
 	public List<E> subList(int fromIndex, int toIndex) {
-		int size = size();
 		if (fromIndex < 0 || fromIndex > size)
 			throw new IndexOutOfBoundsException();
 		if (toIndex < fromIndex || toIndex > size)
 			throw new IndexOutOfBoundsException();
 
-		try {
-			flip();
-		} catch (IOException e) {
-			return null;
+		if (needFlip) {
+			try {
+				flip();
+			} catch (IOException e) {
+			}
 		}
 
 		List<E> sub = new ArrayList<E>();
 		for (int i = fromIndex; i < toIndex; i++)
-			sub.add(get(i));
+			sub.add(objs.get(i).get());
 		return sub;
 	}
 
-	public synchronized void flush() throws IOException {
-		flip();
-		if (fliped.isEmpty())
-			return;
-
-		ByteBuffer bb = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
-		int count = 0;
-		int bufsize = 0;
-		if (comparator == null) {
-			for (FlipedObject fo : fliped) {
-				try {
-					EncodingRule.encode(bb, fo.obj, cc);
-					bufsize = bb.position();
-				} catch (BufferOverflowException e) {
-					write(readBuffers, bb, count, bufsize, null);
-					count = 0;
-					EncodingRule.encode(bb, fo.obj, cc);
-					bufsize = bb.position();
-				}
-				count++;
-			}
-			write(readBuffers, bb, count, bufsize, null);
-		} else {
-			E last = null;
-			List<ReadBuffer> newBuffers = new ArrayList<ReadBuffer>();
-			ListIterator<ReadBuffer> bufit = readBuffers.listIterator();
-			ReadBuffer bnext = (bufit.hasNext()) ? bufit.next() : null;
-			int bnextIndex = 0;
-
-			Queue<byte[]> byteQueue = new LinkedList<byte[]>();
-
-			Iterator<FlipedObject> flipit = fliped.iterator();
-			FlipedObject fnext = flipit.next();
-			int idx = 0;
-			while (bnext != null) {
-				idx = bnext.offset;
-				if (bnext.offset <= fnext.index && fnext.index < bnext.offset + bnext.count)
-					break;
-
-				newBuffers.add(bnext);
-				bnext = (bufit.hasNext()) ? bufit.next() : null;
-			}
-
-			for (; idx < flushed + fliped.size(); idx++) {
-				if (fnext != null && idx == fnext.index) {
-					try {
-						EncodingRule.encode(bb, fnext.obj);
-						bufsize = bb.position();
-					} catch (BufferOverflowException e) {
-						if (!byteQueue.isEmpty() || (bnext != null && bufit.nextIndex() - 1 <= newBuffers.size())) {
-							byteQueue.add(Arrays.copyOf(bb.array(), BYTEBUFFER_CAPACITY));
-							bb.clear();
-							newBuffers.add(new ReadBuffer(newBuffers, count, bufsize, last));
-						} else
-							write(newBuffers, bb, count, bufsize, last);
-						count = 0;
-						EncodingRule.encode(bb, fnext.obj);
-						bufsize = bb.position();
-					}
-					last = fnext.obj;
-					count++;
-
-					fnext = (flipit.hasNext()) ? flipit.next() : null;
-				} else if (bnext != null) {
-					int limit = Math.min((bnext.count - bnextIndex), (fnext != null) ? (fnext.index - idx) : Integer.MAX_VALUE);
-
-					while (limit > 0) {
-						int copied = bnext.getBytes(bb, bnextIndex, limit);
-						bnextIndex += copied;
-						count += copied;
-						bufsize = bb.position();
-						limit -= copied;
-						idx += copied;
-						if (copied > 0)
-							last = bnext.get(bnextIndex - 1);
-
-						if (limit > 0) {
-							if (!byteQueue.isEmpty() || (bnext != null && bufit.nextIndex() - 1 <= newBuffers.size())) {
-								byteQueue.add(Arrays.copyOf(bb.array(), BYTEBUFFER_CAPACITY));
-								bb.clear();
-								newBuffers.add(new ReadBuffer(newBuffers, count, bufsize, last));
-							} else
-								write(newBuffers, bb, count, bufsize, last);
-							count = 0;
-						}
-					}
-					idx--;
-
-					if (bnextIndex == bnext.count) {
-						bnextIndex = 0;
-						if (bufit.hasNext()) {
-							bnext = bufit.next();
-							synchronized (fileLock) {
-								while (bufit.nextIndex() - 1 > newBuffers.size() - byteQueue.size()) {
-									raf.seek((long) (newBuffers.size() - byteQueue.size()) * (long) BYTEBUFFER_CAPACITY);
-									raf.write(byteQueue.poll());
-								}
-							}
-						} else {
-							bnext = null;
-							synchronized (fileLock) {
-								while (!byteQueue.isEmpty()) {
-									raf.seek((long) (newBuffers.size() - byteQueue.size()) * (long) BYTEBUFFER_CAPACITY);
-									raf.write(byteQueue.poll());
-								}
-							}
-						}
-					}
-				}
-			}
-
-			write(newBuffers, bb, count, bufsize, last);
-			readBuffers = newBuffers;
-		}
-		flushed += fliped.size();
-		fliped.clear();
-	}
-
-	private void write(List<ReadBuffer> buffers, ByteBuffer bb, int count, int bufsize, E last) throws IOException {
-		synchronized (fileLock) {
-			raf.seek((long) (buffers.size()) * (long) (BYTEBUFFER_CAPACITY));
-			raf.write(bb.array());
-		}
-		bb.clear();
-		buffers.add(new ReadBuffer(buffers, count, bufsize, last));
-	}
-
-	private synchronized void flip() throws IOException {
+	private void flush() throws IOException {
 		if (cache.isEmpty())
 			return;
 
-		int index = flushed;
-		while (!cache.isEmpty())
-			fliped.add(new FlipedObject(index++, cache.poll()));
+		if (needFlip)
+			flip();
 
-		if (comparator != null) {
-			Collections.sort(fliped, new Comparator<FlipedObject>() {
-				@Override
-				public int compare(FlipedObject o1, FlipedObject o2) {
-					return comparator.compare(o1.obj, o2.obj);
+		List<ObjectWrapper> c = cache;
+		cache = new ArrayList<ObjectWrapper>();
+		fliped = 0;
+
+		int beforeSize = c.size();
+		if (wrapperComparator != null)
+			beforeSize = sort(c);
+
+		long startFp = raf.length();
+		synchronized (fileLock) {
+			raf.seek(startFp);
+			raf.write(getBytes(0));
+		}
+
+		long currentFp = startFp + 4;
+		int length = 0;
+		int objectSize = 0;
+		Iterator<ObjectWrapper> it = c.iterator();
+		Map<ObjectWrapper, Long> flush = new HashMap<ObjectWrapper, Long>();
+		for (int i = 0; i < beforeSize; i++) {
+			ObjectWrapper ow = it.next();
+			Object obj = ow.get();
+			flush.put(ow, currentFp);
+
+			int pos = writeBuffer.position();
+			try {
+				EncodingRule.encode(writeBuffer, obj, cc);
+				objectSize = writeBuffer.position() - pos;
+			} catch (BufferOverflowException e) {
+				length += pos;
+				synchronized (fileLock) {
+					raf.seek(raf.length());
+					raf.write(writeBuffer.array(), 0, pos);
 				}
-			});
+				writeBuffer.clear();
+				EncodingRule.encode(writeBuffer, obj, cc);
+				objectSize = writeBuffer.position();
+			}
+			currentFp += objectSize;
+		}
 
-			Iterator<ReadBuffer> it = readBuffers.iterator();
-			ReadBuffer buf = (it.hasNext()) ? it.next() : null;
-			int offset = 0;
-			int d = 0;
-			for (FlipedObject fo : fliped) {
-				E e = fo.obj;
+		synchronized (fileLock) {
+			raf.seek(raf.length());
+			raf.write(writeBuffer.array(), 0, writeBuffer.position());
 
-				// find block
-				while (buf != null) {
-					E blockLast = buf.getLast();
+			raf.seek(startFp);
+			raf.write(getBytes(length));
+			raf.seek(raf.length());
+		}
+		length += writeBuffer.position();
+		writeBuffer.clear();
+		for (ObjectWrapper ow : flush.keySet())
+			ow.flush(flush.get(ow));
 
-					if (comparator.compare(e, blockLast) > 0) {
-						if (it.hasNext()) {
-							buf = it.next();
-							offset = buf.offset;
-						} else {
-							offset = buf.offset + buf.count;
-							buf = null;
-						}
-					} else
+		ListIterator<ObjectWrapper> li = c.listIterator(beforeSize);
+		synchronized (cacheLock) {
+			while (li.hasNext())
+				cache.add(li.next());
+		}
+	}
+
+	private int sort(List<ObjectWrapper> list) {
+		return sort(list, 0);
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private int sort(List<ObjectWrapper> list, int offset) {
+		Object[] a = list.toArray();
+		Arrays.sort(a, offset, a.length, (Comparator) wrapperComparator);
+		ListIterator i = list.listIterator(offset);
+		for (int j = offset; j < a.length; j++) {
+			i.next();
+			i.set(a[j]);
+		}
+		return a.length;
+	}
+
+	private byte[] getBytes(int value) {
+		byte[] b = new byte[4];
+		for (int i = 3; i >= 0; i--) {
+			b[i] = (byte) (value & 0xff);
+			value >>= 8;
+		}
+		return b;
+	}
+
+	private void flip() throws IOException {
+		needFlip = false;
+
+		if (wrapperComparator == null) {
+			synchronized (cacheLock) {
+				Iterator<ObjectWrapper> it = cache.listIterator(fliped);
+				while (it.hasNext()) {
+					ObjectWrapper ow = it.next();
+					objs.add(ow);
+					fliped++;
+				}
+			}
+		} else {
+			int sorted = sort(cache, fliped);
+			ListIterator<ObjectWrapper> li = cache.listIterator(fliped);
+			int m = 0;
+			List<ObjectWrapper> newObjs = new ArrayList<ObjectWrapper>(objs.size() + (sorted - fliped));
+			int lastIndex = 0;
+			for (int i = fliped; i < sorted; i++) {
+				ObjectWrapper ow = li.next();
+				E e1 = ow.get();
+				int l = m;
+				int r = objs.size();
+				while (l < r) {
+					m = (l + r) / 2;
+					E e2 = objs.get(m).get();
+					int comp = comparator.compare(e1, e2);
+					if (comp < 0)
+						r = m;
+					else if (comp > 0)
+						l = m + 1;
+					else
 						break;
 				}
-
-				// find index
-				if (buf != null) {
-					int r = buf.offset + buf.count;
-					while (offset < r) {
-						int m = (offset + r) / 2;
-						E blockObj = buf.get(m - buf.offset);
-						int cmp = comparator.compare(e, blockObj);
-						if (cmp > 0)
-							offset = m + 1;
-						else if (cmp < 0)
-							r = m;
-						else
-							offset = r = m;
-					}
-				}
-
-				fo.index = offset + (d++);
+				for (; lastIndex < m; lastIndex++)
+					newObjs.add(objs.get(lastIndex));
+				newObjs.add(ow);
 			}
+			for (; lastIndex < objs.size(); lastIndex++)
+				newObjs.add(objs.get(lastIndex));
+			fliped += sorted;
+			objs = newObjs;
 		}
 	}
 
 	public void close() {
 		try {
 			cache = null;
-			readBuffers = null;
+			writeBuffer = null;
+			readBuffer = null;
+			objs = null;
 			raf.close();
 			file.delete();
 		} catch (IOException e) {
 		}
 	}
 
-	private class FlipedObject {
-		private int index;
+	private class ObjectWrapper {
+		private boolean isFlushed;
+		private long fp;
+		private SoftReference<E> cache;
 		private E obj;
+		private Object readLock = new Object();
 
-		public FlipedObject(int index, E obj) {
-			this.index = index;
+		public ObjectWrapper(E obj) {
+			this.isFlushed = false;
 			this.obj = obj;
 		}
-	}
 
-	private class ReadBuffer {
-		private int index;
-		private int offset;
-		private int count;
-		private int bufsize;
-		private WeakReference<ByteBuffer> buf;
-		private WeakReference<int[]> pos;
-		private int lastPos;
-		private E last;
-
-		public ReadBuffer(List<ReadBuffer> list, int count, int bufsize, E last) {
-			this.index = list.size();
-			this.offset = 0;
-			if (!list.isEmpty()) {
-				ReadBuffer lastbuf = list.get(list.size() - 1);
-				offset = lastbuf.offset + lastbuf.count;
-			}
-			this.count = count;
-			this.bufsize = bufsize;
-			this.last = last;
+		public void flush(long fp) {
+			this.isFlushed = true;
+			this.fp = fp;
+			this.obj = null;
 		}
 
-		public synchronized E get(int index) {
-			if (index < 0 || count <= index)
-				throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + count);
-			return decode(getBuffer(index));
-		}
+		public E get() {
+			if (isFlushed) {
+				E element = (cache != null) ? cache.get() : null;
+				if (element == null) {
+					synchronized (readLock) {
+						if (readBufferIndex == null || readBufferIndex > fp || readBufferIndex + readBuffer.limit() <= fp)
+							read(fp);
 
-		public E getLast() {
-			return last;
-		}
-
-		public synchronized int getBytes(ByteBuffer bb, int from, int limit) {
-			if (from < 0 || count <= from || limit < 0 || count < from + limit)
-				throw new IndexOutOfBoundsException();
-
-			ByteBuffer buf = getBuffer(from);
-			int pos = buf.position();
-			int[] ps = setPosition(buf, from);
-
-			int i;
-			int copylen = 0;
-			for (i = 0; i < limit; i++) {
-				int idx = from + i;
-
-				int len;
-				if (idx == count - 1)
-					len = bufsize - ps[idx];
-				else {
-					if (ps[idx + 1] == 0) {
-						buf.position(ps[idx]);
-						ps[idx + 1] = ps[idx] + EncodingRule.getObjectLength(buf, cc);
-						lastPos++;
-						buf.position(ps[idx + 1]);
+						try {
+							return decode((int) (fp - readBufferIndex));
+						} catch (UnsupportedTypeException e) {
+							logger.error("kraken logstorage: unsupported decode type, {}", e.getMessage());
+						} catch (BufferUnderflowException e) {
+							read(fp);
+							return decode(0);
+						} catch (IllegalArgumentException e) {
+							read(fp);
+							return decode(0);
+						} catch (RuntimeException e) {
+							logger.error("kraken logdb: cannot decode fp [{}], read index [{}] from file [{}]", new Object[] {
+									fp, readBufferIndex, file.getAbsolutePath() });
+							throw e;
+						}
 					}
-					len = ps[idx + 1] - ps[idx];
-				}
-
-				if (bb.remaining() < copylen + len)
-					break;
-				copylen += len;
+				} else
+					return element;
+			} else {
+				return obj;
 			}
 
-			System.arraycopy(buf.array(), pos, bb.array(), bb.position(), copylen);
-			bb.position(bb.position() + copylen);
-
-			return i;
+			return null;
 		}
 
-		private ByteBuffer getBuffer(int index) {
-			ByteBuffer readBuffer = (buf != null) ? buf.get() : null;
-			if (readBuffer == null) {
-				readBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
-				try {
-					synchronized (fileLock) {
-						raf.seek((long) (this.index) * (long) (BYTEBUFFER_CAPACITY));
-						raf.readFully(readBuffer.array());
-					}
-				} catch (IOException e) {
-					logger.error("kraken logdb: object read fail", e);
-					return null;
+		private void read(long fp) {
+			try {
+				int readed = 0;
+				synchronized (fileLock) {
+					raf.seek(fp);
+					readed = raf.read(readBuffer.array());
 				}
-				buf = new WeakReference<ByteBuffer>(readBuffer);
-			}
-
-			if (index == 0)
+				if (readed == -1)
+					throw new EOFException();
 				readBuffer.position(0);
-			else
-				setPosition(readBuffer, index);
-
-			return readBuffer;
-		}
-
-		private int[] setPosition(ByteBuffer readBuffer, int index) {
-			int[] ps = (pos != null) ? pos.get() : null;
-			if (ps == null) {
-				lastPos = 0;
-				ps = new int[count];
-				pos = new WeakReference<int[]>(ps);
+				readBuffer.limit(readed);
+				readBufferIndex = fp;
+			} catch (IOException e) {
+				logger.error("kraken logstorage: invalid access file {}, fp {}", file.getName(), fp);
+			} catch (RuntimeException e) {
+				logger.error("kraken logdb: cannot read offset [{}] from file [{}]", fp, file.getAbsolutePath());
+				throw e;
 			}
-
-			readBuffer.position(ps[lastPos]);
-			while (lastPos < index) {
-				int p = readBuffer.position() + EncodingRule.getObjectLength(readBuffer, cc);
-				ps[++lastPos] = p;
-				readBuffer.position(p);
-			}
-			readBuffer.position(ps[index]);
-
-			return ps;
 		}
 
 		@SuppressWarnings("unchecked")
-		private E decode(ByteBuffer readBuffer) {
-			return (E) EncodingRule.decode(readBuffer, cc);
+		private E decode(int pos) {
+			readBuffer.position(pos);
+			E element = (E) EncodingRule.decode(readBuffer, cc);
+			cache = new SoftReference<E>(element);
+			return element;
 		}
 	}
 
-	private class FileBufferListIterator implements ListIterator<E> {
+	private class ObjectWrapperComparator implements Comparator<ObjectWrapper> {
+		private Comparator<E> comparator;
+
+		private ObjectWrapperComparator(Comparator<E> comparator) {
+			this.comparator = comparator;
+		}
+
+		@Override
+		public int compare(ObjectWrapper o1, ObjectWrapper o2) {
+			return comparator.compare(o1.get(), o2.get());
+		}
+	}
+
+	public class FileBufferListIterator implements ListIterator<E> {
 		private int index;
 
 		private FileBufferListIterator() {
@@ -620,7 +516,7 @@ public class FileBufferList<E> implements List<E> {
 
 		@Override
 		public boolean hasNext() {
-			return (index < size.get());
+			return (index < size);
 		}
 
 		@Override
@@ -662,19 +558,5 @@ public class FileBufferList<E> implements List<E> {
 		public void add(E e) {
 			throw new UnsupportedOperationException();
 		}
-	}
-
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("[");
-		Iterator<E> it = iterator();
-		while (it.hasNext()) {
-			sb.append(it.next().toString());
-			if (it.hasNext())
-				sb.append(", ");
-		}
-		sb.append("]");
-		return sb.toString();
 	}
 }

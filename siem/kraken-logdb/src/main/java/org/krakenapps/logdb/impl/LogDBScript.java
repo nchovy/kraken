@@ -38,28 +38,29 @@ import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogScript;
 import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
-import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
 import org.krakenapps.logdb.query.FileBufferList;
-import org.krakenapps.logdb.query.ResourceManagerImpl.CommandThread;
 import org.krakenapps.logdb.query.command.RpcFrom;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
 
 public class LogDBScript implements Script {
-	private ResourceManager resman;
 	private LogQueryService qs;
 	private DataSourceRegistry dsr;
 	private MapReduceService mapreduce;
+	private LogScriptRegistry scriptRegistry;
 	private ScriptContext context;
+	private LookupHandlerRegistry lookup;
 
-	public LogDBScript(ResourceManager resman) {
-		this.resman = resman;
-		this.qs = resman.get(LogQueryService.class);
-		this.dsr = resman.get(DataSourceRegistry.class);
-		this.mapreduce = resman.get(MapReduceService.class);
+	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter, LogScriptRegistry scriptRegistry,
+			LookupHandlerRegistry lookup) {
+		this.qs = qs;
+		this.dsr = dsr;
+		this.mapreduce = arbiter;
+		this.scriptRegistry = scriptRegistry;
+		this.lookup = lookup;
 	}
 
 	@Override
@@ -67,27 +68,10 @@ public class LogDBScript implements Script {
 		this.context = context;
 	}
 
-	public void threads(String[] args) {
-		List<CommandThread> threads = resman.getThreads();
-		if (threads == null || threads.isEmpty()) {
-			context.println("thread not found");
-			return;
-		}
-
-		int id = 1;
-		for (CommandThread thread : threads) {
-			context.printf("Thread #%d (tid %d): ", id++, thread.getId());
-			if (thread.getQuery() != null && thread.getCommand() != null)
-				context.printf("Query %d - %s\n", thread.getQuery().getId(), thread.getCommand().getClass().getSimpleName());
-			else
-				context.printf("Waiting\n");
-		}
-	}
-
 	public void scripts(String[] args) {
 		context.println("Log Scripts");
 		context.println("--------------");
-		for (LogScript script : resman.get(LogScriptRegistry.class).getScripts())
+		for (LogScript script : scriptRegistry.getScripts())
 			context.println(script);
 	}
 
@@ -342,14 +326,7 @@ public class LogDBScript implements Script {
 	public void lookuphandlers(String[] args) {
 		context.println("Lookup Handlers");
 		context.println("---------------------");
-		for (String name : resman.get(LookupHandlerRegistry.class).getLookupHandlerNames())
-			context.println(name);
-	}
-
-	public void commandparsers(String[] args) {
-		context.println("Query Command Parsers");
-		context.println("---------------------------");
-		for (String name : resman.get(SyntaxProvider.class).getParserNames())
+		for (String name : lookup.getLookupHandlerNames())
 			context.println(name);
 	}
 }

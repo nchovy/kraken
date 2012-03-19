@@ -35,7 +35,8 @@ public class PcapCommand extends LogQueryCommand {
 	}
 
 	@Override
-	protected void startProcess() {
+	public void start() {
+		status = Status.Running;
 		try {
 			runner.run();
 		} catch (IOException e) {
@@ -45,12 +46,12 @@ public class PcapCommand extends LogQueryCommand {
 	}
 
 	@Override
-	public void push(LogMap m) {
+	public boolean isReducer() {
+		return false;
 	}
 
 	@Override
-	public boolean isReducer() {
-		return false;
+	public void push(LogMap m) {
 	}
 
 }

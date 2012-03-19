@@ -15,5 +15,6 @@
 	<modules>		
 		<module>kraken-ahocorasick</module>
 		<module>kraken-bloomfilter</module>
+		<module>kraken-btree</module>
 	</modules>
 </project>

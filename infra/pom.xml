@@ -24,5 +24,9 @@
 		<module>kraken-dom</module>
 		<module>kraken-msgbus</module>
 		<module>kraken-ca</module>
+		<module>kraken-datasource</module>
+		<module>kraken-rrd</module>
+		<module>kraken-webconsole</module>
+		<module>kraken-webfx</module>
 	</modules>
 </project>

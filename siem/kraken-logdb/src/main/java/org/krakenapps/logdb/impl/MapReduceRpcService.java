@@ -61,11 +61,10 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class MapReduceRpcService extends SimpleRpcService implements MapReduceService, LogQueryEventListener, DataSourceEventListener {
 	private final Logger logger = LoggerFactory.getLogger(MapReduceRpcService.class.getName());
-
 	private ConcurrentMap<String, MapReduceQueryStatus> queries;
 
 	@Requires
-	private ResourceManager resman;
+	private RpcAgent agent;
 
 	@Requires
 	private SyntaxProvider syntaxProvider;
@@ -75,9 +74,6 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 
 	@Requires
 	private LogQueryService queryService;
-
-	@Requires
-	private RpcAgent agent;
 
 	@SuppressWarnings("unused")
 	@ServiceProperty(name = "rpc.name", value = "logdb-mapreduce")
@@ -134,6 +130,9 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	 * remote map query to mapreduce query guid relation
 	 */
 	private ConcurrentMap<RemoteQueryKey, String> remoteQueryMappings;
+
+	public MapReduceRpcService() {
+	}
 
 	@Validate
 	public void start() {
@@ -343,7 +342,7 @@ public class MapReduceRpcService extends SimpleRpcService implements MapReduceSe
 	@Override
 	public MapReduceQueryStatus createQuery(String queryString) {
 		String queryGuid = UUID.randomUUID().toString();
-		LogQuery lq = new LogQueryImpl(resman, queryString);
+		LogQuery lq = new LogQueryImpl(syntaxProvider, queryString);
 
 		boolean foundReducer = false;
 		List<LogQueryCommand> mapCommands = new ArrayList<LogQueryCommand>();

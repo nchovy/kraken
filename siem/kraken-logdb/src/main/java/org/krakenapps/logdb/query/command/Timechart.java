@@ -16,38 +16,41 @@
 package org.krakenapps.logdb.query.command;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TimeZone;
 
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logdb.query.FileBufferMap;
 import org.krakenapps.logdb.query.command.Function.Sum;
+import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.query.command.Function;
+import org.krakenapps.logdb.query.command.FunctionCodec;
 
 public class Timechart extends LogQueryCommand {
 	public static enum Span {
-		Second(1000L), Minute(60000L), Hour(3600000L), Day(86400000L), Week(604800000L), Month(0L), Year(0L);
+		Second(Calendar.SECOND, 1000L), Minute(Calendar.MINUTE, 60 * 1000L), Hour(Calendar.HOUR_OF_DAY, 60 * 60 * 1000L), Day(
+				Calendar.DAY_OF_MONTH, 24 * 60 * 60 * 1000L), Week(Calendar.WEEK_OF_YEAR, 7 * 24 * 60 * 60 * 1000L), Month(Calendar.MONTH,
+				0L), Year(Calendar.YEAR, 0L);
 
+		private int calendarField;
 		private long millis;
 
-		private Span(long millis) {
+		private Span(int calendarField, long millis) {
+			this.calendarField = calendarField;
 			this.millis = millis;
 		}
 	}
 
-	private FileBufferList<Map<String, Object>> data;
+	private FileBufferMap<Date, Object[]> data;
+	private Map<Date, Long> amount;
 	private Span spanField;
 	private int spanAmount;
 	private Function[] values;
 	private String keyField;
-	private String dateColumn;
-	private Set<String> keyFilter = new HashSet<String>();
 
 	public Timechart(Function[] values, String keyField) {
 		this(Span.Day, 1, values, keyField);
@@ -58,42 +61,56 @@ public class Timechart extends LogQueryCommand {
 		this.spanAmount = spanAmount;
 		this.values = values;
 		this.keyField = keyField;
-		this.dateColumn = headerColumn.get("date");
-
-		for (Function func : values) {
-			if (func.getTarget() != null)
-				keyFilter.add(func.getTarget());
-		}
-		if (keyField != null)
-			keyFilter.add(keyField);
-		keyFilter.add(dateColumn);
 	}
 
 	@Override
-	protected void initProcess() {
+	public void init() {
+		super.init();
 		try {
-			this.data = new FileBufferList<Map<String, Object>>(new Comparator<Map<String, Object>>() {
-				@Override
-				public int compare(Map<String, Object> o1, Map<String, Object> o2) {
-					Date d1 = (Date) o1.get(dateColumn);
-					Date d2 = (Date) o2.get(dateColumn);
-					return d1.compareTo(d2);
-				}
-			});
+			this.data = new FileBufferMap<Date, Object[]>(FunctionCodec.instance);
 		} catch (IOException e) {
 		}
+		this.amount = new HashMap<Date, Long>();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void push(LogMap m) {
-		Object time = m.get(dateColumn);
-		if (time != null && time.getClass().equals(Date.class)) {
-			Map<String, Object> map = new HashMap<String, Object>();
-			for (Entry<String, Object> e : m.map().entrySet()) {
-				if (keyFilter.contains(e.getKey()))
-					map.put(e.getKey(), e.getValue());
+		Date row = getKey((Date) m.get("_time"));
+		if (!data.containsKey(row)) {
+			Object[] v = new Object[values.length];
+			for (int i = 0; i < values.length; i++)
+				v[i] = new HashMap<String, Function>();
+			data.put(row, v);
+
+			Calendar c = Calendar.getInstance();
+			c.setTime(row);
+			c.add(spanField.calendarField, spanAmount);
+			amount.put(row, c.getTimeInMillis() - row.getTime());
+		}
+
+		String key = null;
+		if (keyField != null) {
+			if (m.get(keyField) == null)
+				return;
+			key = m.get(keyField).toString();
+		}
+
+		Object[] blocks = data.get(row);
+		for (int i = 0; i < blocks.length; i++) {
+			Map<String, Function> block = (Map<String, Function>) blocks[i];
+
+			String k = (key != null) ? key : values[i].toString();
+			if (!block.containsKey(k)) {
+				Function f = values[i].clone();
+				if (f instanceof PerTime)
+					((PerTime) f).amount = amount.get(row);
+				block.put(k, f);
 			}
-			data.add(map);
+
+			Function func = block.get(k);
+			m.get(func.getTarget());
+			func.put(m);
 		}
 	}
 
@@ -102,87 +119,49 @@ public class Timechart extends LogQueryCommand {
 		return true;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	protected void eofProcess() {
-		Map<Object, Function[]> funcs = new HashMap<Object, Function[]>();
-		Date currentDate = null;
-		Date nextDate = null;
+	public void eof() {
+		List<Date> sortedKey = new ArrayList<Date>(data.keySet());
+		Collections.sort(sortedKey);
+		for (Date key : sortedKey) {
+			Object[] values = data.get(key);
 
-		for (Map<String, Object> m : data) {
-			Date d = (Date) m.get(headerColumn.get("date"));
-			if (nextDate == null || !nextDate.after(d)) {
-				if (nextDate != null) {
-					if (currentDate == null) {
-						if (spanField.ordinal() <= Span.Week.ordinal())
-							currentDate = new Date(nextDate.getTime() - spanField.millis * spanAmount);
-						else if (spanField == Span.Month) {
-							Calendar c = Calendar.getInstance();
-							c.setTime(nextDate);
-							c.add(Calendar.MONTH, -spanAmount);
-							currentDate = c.getTime();
-						} else if (spanField == Span.Year) {
-							Calendar c = Calendar.getInstance();
-							c.setTime(nextDate);
-							c.add(Calendar.YEAR, -spanAmount);
-							currentDate = c.getTime();
-						}
-					}
-					writeData(currentDate, funcs);
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("_time", key);
+			if (values.length == 1) {
+				for (String k : ((Map<String, Function>) values[0]).keySet()) {
+					Function v = ((Map<String, Function>) values[0]).get(k);
+					m.put(k, v.getResult());
 				}
-
-				funcs = new HashMap<Object, Function[]>();
-				currentDate = nextDate;
-				nextDate = getDateLimit(d);
+			} else {
+				for (Object value : values) {
+					for (String k : ((Map<String, Function>) value).keySet()) {
+						Function v = ((Map<String, Function>) value).get(k);
+						if (keyField != null)
+							m.put(v.toString() + ":" + k, v.getResult());
+						else
+							m.put(k, v.getResult());
+					}
+				}
 			}
-
-			LogMap logmap = new LogMap(m);
-			Object key = m.get(keyField);
-
-			if (!funcs.containsKey(key)) {
-				Function[] value = new Function[values.length];
-				for (int i = 0; i < values.length; i++)
-					value[i] = values[i].clone();
-				funcs.put(key, value);
-			}
-
-			for (Function func : funcs.get(key))
-				func.put(logmap);
+			write(new LogMap(m));
 		}
-		writeData(currentDate, funcs);
-
 		data.close();
 		data = null;
+		amount = null;
+
+		super.eof();
 	}
 
-	private void writeData(Date date, Map<Object, Function[]> funcs) {
-		LogMap result = new LogMap();
-		result.put(headerColumn.get("date"), date);
-		if (keyField == null) {
-			for (Function func : funcs.get(null))
-				result.put(func.toString(), func.getResult());
-		} else {
-			if (values.length == 1) {
-				for (Object key : funcs.keySet())
-					result.put((key != null) ? key.toString() : "null", funcs.get(key)[0].getResult());
-			} else {
-				for (Object key : funcs.keySet()) {
-					for (Function func : funcs.get(key))
-						result.put(func.toString() + ":" + key, func.getResult());
-				}
-			}
-		}
-		write(result);
-	}
+	private Date getKey(Date date) {
+		long time = date.getTime();
 
-	private Date getDateLimit(Date key) {
-		long time = key.getTime();
-
-		if (spanField.ordinal() <= Span.Week.ordinal()) {
-			int raw = TimeZone.getDefault().getRawOffset();
-			time += 259200000L + raw; // base to Monday, 00:00:00
+		if (spanField == Span.Second || spanField == Span.Minute || spanField == Span.Hour || spanField == Span.Day
+				|| spanField == Span.Week) {
+			time += 291600000L; // base to Monday, 00:00:00
 			time -= time % (spanField.millis * spanAmount);
-			time -= 259200000L + raw;
-			time += spanField.millis * spanAmount;
+			time -= 291600000L;
 		} else {
 			Calendar c = Calendar.getInstance();
 			c.setTimeInMillis(time - time % Span.Second.millis);
@@ -196,12 +175,11 @@ public class Timechart extends LogQueryCommand {
 				int month = monthOffset + c.get(Calendar.MONTH);
 				month -= month % spanAmount;
 				month -= monthOffset;
-				month += spanAmount;
 				c.add(Calendar.MONTH, month);
 				time = c.getTimeInMillis();
 			} else if (spanField == Span.Year) {
 				int year = c.get(Calendar.YEAR);
-				c.set(Calendar.YEAR, year - (year % spanAmount) + spanAmount);
+				c.set(Calendar.YEAR, year - (year % spanAmount));
 				time = c.getTimeInMillis();
 			}
 		}

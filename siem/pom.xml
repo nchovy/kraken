@@ -32,11 +32,14 @@
 		<module>kraken-logdb-cmd</module>
 		<module>kraken-syslogmon</module>
 		<module>kraken-snmpmon</module>		
-		<module>kraken-filemon</module>
+		<!--module>kraken-filemon</module-->
 		<module>kraken-portmon</module>
 		<module>kraken-firewall-api</module>
 		<module>kraken-iptables</module>
 		<module>kraken-rule</module>
 		<module>kraken-http-rule</module>
+		<module>kraken-winapi</module>
+		<module>kraken-linux-api</module>
+		<module>kraken-ipmanager</module>
 	</modules>
 </project>

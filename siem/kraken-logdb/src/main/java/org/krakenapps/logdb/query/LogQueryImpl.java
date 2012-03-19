@@ -19,9 +19,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,8 +30,6 @@ import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.SyntaxProvider;
-import org.krakenapps.logdb.impl.ResourceManager;
-import org.krakenapps.logdb.query.ResourceManagerImpl.CommandThread;
 import org.krakenapps.logdb.query.command.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,24 +39,20 @@ public class LogQueryImpl implements LogQuery {
 	private static AtomicInteger nextId = new AtomicInteger(1);
 
 	private final int id = nextId.getAndIncrement();
-	private ResourceManager resman;
 	private String queryString;
-	private LinkedList<LogQueryCommand> commands = new LinkedList<LogQueryCommand>();
+	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
 	private Date lastStarted;
 	private Result result;
 	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
 
-	public LogQueryImpl(ResourceManager resman, String queryString) {
-		this.resman = resman;
+	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString) {
 		this.queryString = queryString;
 
 		for (String q : split(queryString)) {
 			q = q.trim();
 			try {
-				LogQueryCommand cmd = resman.get(SyntaxProvider.class).eval(this, q);
-				if (!commands.isEmpty())
-					commands.getLast().setNextCommand(cmd);
+				LogQueryCommand cmd = syntaxProvider.eval(this, q);
 				commands.add(cmd);
 			} catch (ParseException e) {
 				throw new IllegalArgumentException("invalid query command: " + q);
@@ -70,16 +62,18 @@ public class LogQueryImpl implements LogQuery {
 		if (commands.isEmpty())
 			throw new IllegalArgumentException("empty query");
 
-		LogQueryCommand callback = commands.getLast();
-		ListIterator<LogQueryCommand> cmdIter = commands.listIterator(commands.size());
-		while (cmdIter.hasPrevious()) {
-			LogQueryCommand prev = cmdIter.previous();
-			if (prev.isReducer() && cmdIter.hasPrevious()) {
-				callback = cmdIter.previous();
-				cmdIter.next();
+		boolean setReducer = false;
+		for (int i = 0; i < commands.size(); i++) {
+			LogQueryCommand command = commands.get(i);
+			if (i < commands.size() - 1)
+				command.setNextCommand(commands.get(i + 1));
+			if (command.isReducer() && !setReducer && i > 0) {
+				setReducer = true;
+				commands.get(i - 1).setCallbackTimeline(true);
 			}
 		}
-		callback.setCallbackTimeline(true);
+		if (!setReducer)
+			commands.get(commands.size() - 1).setCallbackTimeline(true);
 	}
 
 	private static List<String> split(String query) {
@@ -109,6 +103,32 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
+	public void run() {
+		if (!isEnd())
+			throw new IllegalStateException("already running");
+
+		lastStarted = new Date();
+		if (commands.isEmpty())
+			return;
+
+		try {
+			result = new Result();
+			commands.get(commands.size() - 1).setNextCommand(result);
+			for (LogQueryCallback callback : logQueryCallbacks)
+				result.registerCallback(callback);
+			logQueryCallbacks.clear();
+
+			logger.trace("kraken logstorage: run query => {}", queryString);
+			for (LogQueryCommand command : commands)
+				command.init();
+
+			commands.get(0).start();
+		} catch (Exception e) {
+			logger.error("kraken logstorage: cannot start query", e);
+		}
+	}
+
+	@Override
 	public int getId() {
 		return id;
 	}
@@ -124,50 +144,22 @@ public class LogQueryImpl implements LogQuery {
 			return true;
 		if (result == null)
 			return true;
-		if (commands.getFirst().getStatus() == Status.Waiting)
+		if (commands.get(0).getStatus() == Status.Waiting)
 			return true;
 		return result.getStatus().equals(Status.End);
 	}
 
 	@Override
-	public void start() {
-		if (!isEnd())
-			throw new IllegalStateException("already running");
-
-		lastStarted = new Date();
-		try {
-			if (result != null)
-				result.closeResult();
-
-			result = new Result();
-			result.setLogQuery(this);
-			result.setExecutorService(resman.getExecutorService());
-			for (LogQueryCallback callback : logQueryCallbacks)
-				result.registerCallback(callback);
-			commands.getLast().setNextCommand(result);
-
-			for (LogQueryCommand command : commands)
-				command.init();
-
-			logger.trace("kraken logstorage: run query => {}", queryString);
-			commands.getFirst().start();
-		} catch (Exception e) {
-			logger.error("kraken logstorage: cannot start query", e);
-		}
-	}
-
-	@Override
 	public void cancel() {
-		if (isEnd())
+		if (result == null)
 			return;
-
-		ListIterator<LogQueryCommand> cmdIter = commands.listIterator(commands.size());
-		while (cmdIter.hasPrevious())
-			cmdIter.previous().eof();
-
-		for (CommandThread thread : resman.getThreads()) {
-			if (this.equals(thread.getQuery()))
-				thread.interrupt();
+		if (result.getStatus() != Status.End)
+			result.eof();
+		for (int i = commands.size() - 1; i >= 0; i--) {
+			LogQueryCommand command = commands.get(i);
+			if (command.getStatus() != Status.End) {
+				command.eof();
+			}
 		}
 	}
 
@@ -178,12 +170,16 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public List<Map<String, Object>> getResult() {
-		return (result != null) ? result.getResult() : null;
+		if (result != null)
+			return result.getResult();
+		return null;
 	}
 
 	@Override
 	public List<Map<String, Object>> getResult(int offset, int limit) {
-		return (result != null) ? result.getResult(offset, limit) : null;
+		if (result != null)
+			return result.getResult(offset, limit);
+		return null;
 	}
 
 	@Override
@@ -203,7 +199,7 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void unregisterQueryCallback(LogQueryCallback callback) {
-		logQueryCallbacks.remove(callback);
+		logQueryCallbacks.add(callback);
 	}
 
 	@Override
@@ -225,4 +221,5 @@ public class LogQueryImpl implements LogQuery {
 	public String toString() {
 		return "id=" + id + ", query=" + queryString;
 	}
+
 }

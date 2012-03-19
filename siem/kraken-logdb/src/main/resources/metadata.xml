@@ -4,11 +4,10 @@
 	<instance component="logdb-rpc" />
 	<instance component="logdb-script-factory" />
 	<instance component="logdb-msgbus" />
-	<instance component="logdb-query-service" />
+	<instance component="logdb-query" />
 	<instance component="logdb-mapreduce" />
 	<instance component="logdb-syntax-provider" />
 	<instance component="logdb-lookup-registry" />
 	<instance component="log-script-registry" />
 	<instance component="data-source-registry" />
-	<instance component="resource-manager" />
 </ipojo>

@@ -28,7 +28,9 @@ public class TextFile extends LogQueryCommand {
 	}
 
 	@Override
-	protected void startProcess() {
+	public void start() {
+		status = Status.Running;
+
 		try {
 			Charset utf8 = Charset.forName("utf-8");
 			BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(is), utf8));

@@ -112,7 +112,9 @@ public class Datasource extends LogQueryCommand {
 	}
 
 	@Override
-	protected void startProcess() {
+	public void start() {
+		status = Status.Running;
+
 		if (from == null)
 			from = new Date(0);
 		if (to == null)
@@ -123,7 +125,7 @@ public class Datasource extends LogQueryCommand {
 
 		int write = 0;
 		while (!q.isEmpty() || !isEnd()) {
-			if (getStatus().equals(Status.End))
+			if (status.equals(Status.End))
 				break;
 
 			DataWrapper data = poll();
@@ -255,7 +257,7 @@ public class Datasource extends LogQueryCommand {
 
 			@Override
 			public boolean isInterrupted() {
-				return interrupt | getStatus().equals(Status.End);
+				return interrupt | status.equals(Status.End);
 			}
 		}
 	}
