@@ -142,7 +142,8 @@ public class LogStorageEngine implements LogStorage {
 
 		status = LogStorageStatus.Starting;
 
-		checkAllLogFiles();
+		// checkAllLogFiles();
+		checkLatestLogFiles();
 
 		writerSweeperThread = new Thread(writerSweeper, "LogStorage Sweeper");
 		writerSweeperThread.start();
@@ -184,6 +185,7 @@ public class LogStorageEngine implements LogStorage {
 		status = LogStorageStatus.Closed;
 	}
 
+	@SuppressWarnings("unused")
 	private void checkAllLogFiles() {
 		logger.info("kraken logstorage: verifying all log tables");
 		for (String tableName : tableRegistry.getTableNames()) {
@@ -208,12 +210,63 @@ public class LogStorageEngine implements LogStorage {
 					try {
 						LogFileFixReport report = new LogFileTruncator().fix(indexPath, dataPath);
 						if (report != null)
-							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
+							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName,
+									report);
 					} catch (IOException e) {
-						logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
-								+ dataPath.getAbsolutePath() + "]", e);
+						logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile()
+								+ "], data [" + dataPath.getAbsolutePath() + "]", e);
 					}
 				}
+			}
+		}
+		logger.info("kraken logstorage: all table verifications are completed");
+	}
+
+	private void checkLatestLogFiles() {
+		logger.info("kraken logstorage: verifying all log tables");
+		for (String tableName : tableRegistry.getTableNames()) {
+			File dir = getTableDirectory(tableName);
+			if (dir == null) {
+				logger.error("kraken logstorage: table [{}] directory not found", tableName);
+				continue;
+			}
+
+			logger.trace("kraken logstorage: checking for [{}] table", tableName);
+
+			File[] files = dir.listFiles();
+			if (files == null)
+				continue;
+
+			long lastModified = 0;
+			File lastModifiedFile = null;
+
+			// max lastmodified
+			for (File f : files) {
+				if (f.getName().endsWith(".idx") && lastModified < f.lastModified()) {
+					lastModified = f.lastModified();
+					lastModifiedFile = f;
+				}
+			}
+
+			if (lastModifiedFile == null) {
+				logger.trace("kraken logstorage: empty table [{}], skip verification", tableName);
+				continue;
+			}
+
+			if (logger.isDebugEnabled())
+				logger.debug("kraken logstorage: table [{}], last modified [{}]", tableName, new Date(lastModified));
+
+			String datFileName = lastModifiedFile.getName().replace(".idx", ".dat");
+			File indexPath = lastModifiedFile;
+			File dataPath = new File(dir, datFileName);
+
+			try {
+				LogFileFixReport report = new LogFileTruncator().fix(indexPath, dataPath);
+				if (report != null)
+					logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
+			} catch (IOException e) {
+				logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
+						+ dataPath.getAbsolutePath() + "]", e);
 			}
 		}
 		logger.info("kraken logstorage: all table verifications are completed");
@@ -257,7 +310,8 @@ public class LogStorageEngine implements LogStorage {
 		for (File f : tableDir.listFiles()) {
 			if (f.isFile() && (f.getName().endsWith(".idx") || f.getName().endsWith(".dat"))) {
 				if (!f.delete())
-					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
+					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(),
+							tableName);
 			}
 		}
 
@@ -420,8 +474,8 @@ public class LogStorageEngine implements LogStorage {
 			if (logdata == null) {
 				if (logger.isTraceEnabled()) {
 					String dayText = DateUtil.getDayText(day);
-					logger.trace("kraken logstorage: log [table={}, date={}, id={}] not found", new Object[] { tableName,
-							dayText, id });
+					logger.trace("kraken logstorage: log [table={}, date={}, id={}] not found", new Object[] {
+							tableName, dayText, id });
 				}
 				return null;
 			}
@@ -452,7 +506,8 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException {
+	public int search(Date from, Date to, int offset, int limit, LogSearchCallback callback)
+			throws InterruptedException {
 		verify();
 
 		int found = 0;
@@ -478,7 +533,8 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException {
+	public int search(String tableName, Date from, Date to, int limit, LogSearchCallback callback)
+			throws InterruptedException {
 		return search(tableName, from, to, 0, limit, callback);
 	}
 
@@ -538,7 +594,8 @@ public class LogStorageEngine implements LogStorage {
 					ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
 					while (li.hasPrevious()) {
 						LogRecord logData = li.previous();
-						if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
+						if ((from == null || logData.getDate().after(from))
+								&& (to == null || logData.getDate().before(to))) {
 							if (offset > 0) {
 								offset--;
 								continue;

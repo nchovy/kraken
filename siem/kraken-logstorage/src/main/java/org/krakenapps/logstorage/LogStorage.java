@@ -87,6 +87,6 @@ public interface LogStorage {
 	void addLogListener(LogCallback callback);
 
 	void removeLogListener(LogCallback callback);
-
+	
 	List<LogWriterStatus> getWriterStatuses();
 }
