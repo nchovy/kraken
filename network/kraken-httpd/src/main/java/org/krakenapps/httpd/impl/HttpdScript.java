@@ -77,16 +77,20 @@ public class HttpdScript implements Script {
 		for (InetSocketAddress binding : httpd.getListenAddresses()) {
 			HttpServer server = httpd.getServer(binding);
 			HttpConfiguration config = server.getConfiguration();
-			context.println(config + "isOpen: " + server.isOpened());
+			context.println(config + ", isOpen: " + (server.isOpened() ? "opened" : "closed"));
 		}
 	}
 
-	@ScriptUsage(description = "open port", arguments = { @ScriptArgument(name = "port", type = "int", description = "bind port") })
+	@ScriptUsage(description = "open port", arguments = {
+			@ScriptArgument(name = "port", type = "int", description = "bind port"),
+			@ScriptArgument(name = "default context", type = "String", description = "default http context") })
 	public void open(String[] args) {
 		try {
 			int port = Integer.valueOf(args[0]);
+			String defaultContext = args[1];
 
 			HttpConfiguration config = new HttpConfiguration(new InetSocketAddress(port));
+			config.setDefaultHttpContext(defaultContext);
 			HttpServer server = httpd.createServer(config);
 			server.open();
 			context.println("opened http server");

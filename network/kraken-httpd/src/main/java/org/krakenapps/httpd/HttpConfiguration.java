@@ -50,6 +50,8 @@ public class HttpConfiguration {
 
 	private int idleTimeout;
 
+	private String defaultHttpContext;
+
 	@CollectionTypeHint(VirtualHost.class)
 	private List<VirtualHost> virtualHosts;
 
@@ -113,6 +115,14 @@ public class HttpConfiguration {
 		notifyChange("idleTimeout", idleTimeout);
 	}
 
+	public String getDefaultHttpContext() {
+		return defaultHttpContext;
+	}
+
+	public void setDefaultHttpContext(String defaultHttpContext) {
+		this.defaultHttpContext = defaultHttpContext;
+	}
+
 	public CopyOnWriteArraySet<HttpConfigurationListener> getListeners() {
 		return listeners;
 	}
@@ -137,6 +147,11 @@ public class HttpConfiguration {
 		String hosts = "\n";
 		for (VirtualHost h : virtualHosts)
 			hosts += "  " + h + ", idle timeout: " + this.idleTimeout + "seconds, ";
-		return getListenAddress() + " " + ssl + hosts;
+		
+		String information = getListenAddress() + " " + ssl + hosts;
+		if ( getDefaultHttpContext() == null )
+			return information;
+		
+		return information + ", default context:  " + getDefaultHttpContext();
 	}
 }

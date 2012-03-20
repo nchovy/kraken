@@ -99,10 +99,16 @@ public class HttpServerHandler extends IdleStateAwareChannelHandler {
 	}
 
 	private HttpContext findHttpContext(String host) {
-		for (VirtualHost v : config.getVirtualHosts())
-			if (v.matches(host))
-				return contextRegistry.findContext(v.getHttpContextName());
-		return null;
+		if (host != null) {
+			for (VirtualHost v : config.getVirtualHosts())
+				if (v.matches(host))
+					return contextRegistry.findContext(v.getHttpContextName());
+		}
+
+		String contextName = config.getDefaultHttpContext();
+		if (contextName == null)
+			return null;
+		return contextRegistry.findContext(contextName);
 	}
 
 	@Override
