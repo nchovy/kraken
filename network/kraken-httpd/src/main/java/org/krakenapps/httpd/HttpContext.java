@@ -68,14 +68,14 @@ public class HttpContext {
 		try {
 			String servletPath = null;
 			ServletMatchResult r = servletContext.matches(uri);
-			if (r != null) {
-				servlet = (HttpServlet) r.getServlet();
-				pathInfo = r.getPathInfo();
-				servletPath = r.getServletPath();
-			} else if (webSocketManager.getPath().equals(uri)) {
+			if (webSocketManager.getPath().equals(uri)) {
 				servlet = webSocketManager.getServlet();
 				servletPath = webSocketManager.getPath();
 				pathInfo = uri.substring(uri.indexOf(servletPath) + servletPath.length());
+			} else if (r != null) {
+				servlet = (HttpServlet) r.getServlet();
+				pathInfo = r.getPathInfo();
+				servletPath = r.getServletPath();
 			} else {
 				String contextPath = request.getContextPath();
 				if (!contextPath.equals("")) {
@@ -88,6 +88,7 @@ public class HttpContext {
 				return;
 			}
 
+			logger.trace("kraken httpd: servlet path is [{}]", servletPath);
 			request.setServletPath(servletPath);
 			request.setPathInfo(pathInfo);
 
