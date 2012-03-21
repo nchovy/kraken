@@ -94,7 +94,7 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			}
 			if (!isFound) {
 				logger.error("kraken dom : invalidate Hardening key");
-				throw new IllegalArgumentException("invalidate Hardening key");
+				throw new IllegalArgumentException("invalidate Hardening key: ");
 			}
 		}
 	}

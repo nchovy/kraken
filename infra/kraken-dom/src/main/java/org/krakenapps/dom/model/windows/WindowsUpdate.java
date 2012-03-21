@@ -17,7 +17,7 @@ public class WindowsUpdate {
 
 	private boolean mandatory;
 
-	private int msrcSeverity;
+	private String msrcSeverity;
 
 	public String getIdentity() {
 		return identity;
@@ -75,11 +75,11 @@ public class WindowsUpdate {
 		this.mandatory = mandatory;
 	}
 
-	public int getMsrcSeverity() {
+	public String getMsrcSeverity() {
 		return msrcSeverity;
 	}
 
-	public void setMsrcSeverity(int msrcSeverity) {
+	public void setMsrcSeverity(String msrcSeverity) {
 		this.msrcSeverity = msrcSeverity;
 	}
 }
