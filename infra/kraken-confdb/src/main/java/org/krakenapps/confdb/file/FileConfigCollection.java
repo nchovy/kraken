@@ -364,6 +364,6 @@ public class FileConfigCollection implements ConfigCollection {
 
 	@Override
 	public String toString() {
-		return "config collection: " + col.toString();
+		return "[" + col.getId() + "] " + col.getName();
 	}
 }

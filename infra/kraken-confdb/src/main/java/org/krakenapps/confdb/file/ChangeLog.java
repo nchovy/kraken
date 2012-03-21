@@ -16,6 +16,7 @@
 package org.krakenapps.confdb.file;
 
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -215,6 +216,7 @@ class ChangeLog implements CommitLog {
 
 	@Override
 	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		StringBuilder sb = new StringBuilder();
 		int i = 0;
 		for (ConfigChange c : changeset) {
@@ -223,6 +225,11 @@ class ChangeLog implements CommitLog {
 			sb.append(c.toString());
 		}
 
-		return "rev=" + rev + ", committer=" + committer + ", msg=" + message + ", changeset=[" + sb.toString() + "]";
+		String createdDate = ", date=";
+		if (created != null)
+			createdDate += dateFormat.format(created);
+
+		return "rev=" + rev + createdDate + ", committer=" + committer + ", msg=" + message + ", changeset=["
+				+ sb.toString() + "]";
 	}
 }

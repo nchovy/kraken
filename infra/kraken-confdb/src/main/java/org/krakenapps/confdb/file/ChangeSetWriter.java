@@ -17,6 +17,7 @@ package org.krakenapps.confdb.file;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 import org.krakenapps.confdb.CommitOp;
@@ -33,6 +34,7 @@ class ChangeSetWriter {
 		change.setCommitter(committer);
 		change.setMessage(log);
 		change.setChangeSet(changeSet);
+		change.setCreated(new Date());
 
 		RevLog cl = new RevLog();
 		cl.setRev(1);

@@ -28,6 +28,7 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Manifest;
 
 public class ConfScript implements Script {
 	private ConfigService conf;
@@ -87,6 +88,21 @@ public class ConfScript implements Script {
 		context.println("dropped");
 	}
 
+	@ScriptUsage(description = "print manifest", arguments = {
+			@ScriptArgument(name = "database name", type="string", description = "database name"),
+			@ScriptArgument(name = "rev id", type="integer", description = "manifest revision id") })
+	public void manifest(String[] args) {
+		int revId = Integer.parseInt((args[1]));
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+		
+		Manifest manifest = db.getManifest(revId);
+		context.println( manifest );
+	}
+
 	@ScriptUsage(description = "show revision logs", arguments = {
 			@ScriptArgument(name = "name", type = "string", description = "database name"),
 			@ScriptArgument(name = "offset", type = "integer", optional = true, description = "log offset"),
@@ -121,8 +137,10 @@ public class ConfScript implements Script {
 
 		context.println("Collections");
 		context.println("-------------");
-		for (String name : db.getCollectionNames())
-			context.println(name);
+		for (String name : db.getCollectionNames()) {
+			ConfigCollection col = db.getCollection(name);
+			context.println(col);
+		}
 	}
 
 	@ScriptUsage(description = "print documents", arguments = {
@@ -147,7 +165,8 @@ public class ConfScript implements Script {
 		try {
 			while (it.hasNext()) {
 				Config c = it.next();
-				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc=" + Primitive.stringify(c.getDocument());
+				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc="
+						+ Primitive.stringify(c.getDocument());
 				context.println(s);
 			}
 		} finally {
