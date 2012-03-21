@@ -52,6 +52,8 @@ import org.slf4j.LoggerFactory;
 @Component(name = "logdb-msgbus")
 @MsgbusPlugin
 public class LogQueryPlugin {
+	private final Logger logger = LoggerFactory.getLogger(LogQueryPlugin.class.getName());
+
 	@Requires
 	private LogQueryService service;
 
@@ -142,16 +144,20 @@ public class LogQueryPlugin {
 
 		LogQuery target = null;
 		List<LogQuery> l = queries.get(req.getSession());
-		if (l == null)
+		if (l == null) {
+			logger.debug("kraken logdb: remove target query not found for session [{}]", req.getSession());
 			return;
+		}
 
 		synchronized (l) {
 			for (LogQuery q : l)
 				if (q.getId() == id)
 					target = q;
 
-			if (target != null)
+			if (target != null) {
 				l.remove(target);
+				logger.debug("kraken logdb: removing query [{}] from session [{}]", target.getId(), req.getSession());
+			}
 		}
 
 		service.removeQuery(id);
@@ -295,10 +301,11 @@ public class LogQueryPlugin {
 			m.put("count", query.getResult().size());
 			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m);
 
-			logger.trace("kraken logstorage: timeline callback => "
-					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
-					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime, Arrays.toString(values),
-							query.getResult().size() });
+			logger.trace(
+					"kraken logstorage: timeline callback => "
+							+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
+					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
+							Arrays.toString(values), query.getResult().size() });
 		}
 	}
 }
