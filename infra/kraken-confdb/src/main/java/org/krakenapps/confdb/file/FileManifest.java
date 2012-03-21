@@ -226,4 +226,18 @@ class FileManifest implements Manifest {
 			names.add(e.getName());
 		return names;
 	}
+	
+	@Override
+	public String toString(){		
+		String manifest = "version=" + getVersion() + ", id=" + getId() + "\n" + "collections\n";
+		
+		manifest += "-------------------------------\n";
+		if ( colMap != null ){
+			for ( CollectionEntry c : colMap.values() ){
+				manifest += c.toString() + ", count=" + configMap.get(c.getId()).values().size() + "\n";
+			}
+		}
+		
+		return manifest;
+	}
 }

@@ -146,7 +146,7 @@ public class HttpConfiguration {
 		String ssl = isSsl ? "(ssl: key " + keyAlias + ", trust " + trustAlias + ")" : "";
 		String hosts = "\n";
 		for (VirtualHost h : virtualHosts)
-			hosts += "  " + h + ", idle timeout: " + this.idleTimeout + "seconds, ";
+			hosts += "  " + h + ", idle timeout: " + this.idleTimeout + "seconds";
 		
 		String information = getListenAddress() + " " + ssl + hosts;
 		if ( getDefaultHttpContext() == null )

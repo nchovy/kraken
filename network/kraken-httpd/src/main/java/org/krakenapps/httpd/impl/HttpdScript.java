@@ -77,7 +77,8 @@ public class HttpdScript implements Script {
 		for (InetSocketAddress binding : httpd.getListenAddresses()) {
 			HttpServer server = httpd.getServer(binding);
 			HttpConfiguration config = server.getConfiguration();
-			context.println(config + ", isOpen: " + (server.isOpened() ? "opened" : "closed"));
+			String configString = config.toString().replaceFirst("\n", (server.isOpened() ? ", opened\n" : ", closed\n"));			
+			context.println(configString);
 		}
 	}
 

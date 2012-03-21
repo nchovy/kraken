@@ -44,4 +44,6 @@ public interface Manifest {
 	void remove(ConfigEntry e);
 
 	byte[] serialize();
+	
+	String toString();
 }

@@ -89,18 +89,27 @@ public class ConfScript implements Script {
 	}
 
 	@ScriptUsage(description = "print manifest", arguments = {
-			@ScriptArgument(name = "database name", type="string", description = "database name"),
-			@ScriptArgument(name = "rev id", type="integer", description = "manifest revision id") })
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "rev id", type = "integer", description = "changelog revision id", optional = true) })
 	public void manifest(String[] args) {
-		int revId = Integer.parseInt((args[1]));
 		ConfigDatabase db = conf.getDatabase(args[0]);
 		if (db == null) {
 			context.println("database not found");
 			return;
 		}
-		
-		Manifest manifest = db.getManifest(revId);
-		context.println( manifest );
+
+		Integer revId = null;
+		if (args.length >= 2)
+			revId = Integer.parseInt(args[1]);
+
+		Manifest m = db.getManifest(revId);
+
+		if (m == null) {
+			context.println("manifest not found");
+			return;
+		}
+
+		context.println(db.getManifest(revId).toString());
 	}
 
 	@ScriptUsage(description = "show revision logs", arguments = {
