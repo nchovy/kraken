@@ -49,6 +49,7 @@ public class FileBufferList<E> implements List<E> {
 	private boolean needFlip = false;
 	private int fliped = 0;
 	private Object cacheLock = new Object();
+	private Object readLock = new Object();
 
 	private File file;
 	private RandomAccessFile raf;
@@ -415,7 +416,6 @@ public class FileBufferList<E> implements List<E> {
 		private long fp;
 		private SoftReference<E> cache;
 		private E obj;
-		private Object readLock = new Object();
 
 		public ObjectWrapper(E obj) {
 			this.isFlushed = false;
@@ -438,6 +438,9 @@ public class FileBufferList<E> implements List<E> {
 
 						try {
 							return decode((int) (fp - readBufferIndex));
+						} catch (IndexOutOfBoundsException e) {
+							read(fp);
+							return decode(0);
 						} catch (UnsupportedTypeException e) {
 							logger.error("kraken logstorage: unsupported decode type, {}", e.getMessage());
 						} catch (BufferUnderflowException e) {

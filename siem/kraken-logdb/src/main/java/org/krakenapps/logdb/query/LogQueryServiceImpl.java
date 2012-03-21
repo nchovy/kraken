@@ -153,18 +153,26 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 	@Override
 	public void removeQuery(int id) {
-		LogQuery lq = queries.get(id);
-		if (lq == null)
+		LogQuery lq = queries.remove(id);
+		if (lq == null) {
+			logger.debug("kraken logdb: query [{}] not found, remove failed", id);
 			return;
+		}
 
-		if (!lq.isEnd())
-			lq.cancel();
+		try {
+			if (!lq.isEnd())
+				lq.cancel();
+		} catch (Throwable t) {
+			logger.error("kraken logdb: cannot cancel query " + lq.getId(), t);
+		}
 
-		FileBufferList<Map<String, Object>> fbl = (FileBufferList<Map<String, Object>>) lq.getResult();
-		if (fbl != null)
-			fbl.close();
-
-		queries.remove(id);
+		try {
+			FileBufferList<Map<String, Object>> fbl = (FileBufferList<Map<String, Object>>) lq.getResult();
+			if (fbl != null)
+				fbl.close();
+		} catch (Throwable t) {
+			logger.error("kraken logdb: cannot close file buffer list for query " + lq.getId(), t);
+		}
 
 		invokeCallbacks(lq, LogQueryStatus.Removed);
 	}
@@ -190,6 +198,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 	}
 
 	private void invokeCallbacks(LogQuery lq, LogQueryStatus status) {
+		logger.debug("kraken logdb: invoking callback to notify query [{}], status [{}]", lq.getId(), status);
 		for (LogQueryEventListener callback : callbacks) {
 			try {
 				callback.onQueryStatusChange(lq, status);
