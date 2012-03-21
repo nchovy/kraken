@@ -110,7 +110,7 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			Host host = queue.poll();
 			if (host == null)
 				break;
-			if ( hosts.get(host.getGuid()) != null )
+			if (hosts.get(host.getGuid()) != null)
 				aleadyExist.incrementAndGet();
 			hosts.put(host.getGuid(), host);
 		}
@@ -131,8 +131,10 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 		}
 
 		long lockBegin = new Date().getTime();
-		hostApi.createHosts("localhost", addHosts.values());
-		hostApi.updateHosts("localhost", updateHosts.values());
+		if (addHosts.size() > 0)
+			hostApi.createHosts("localhost", addHosts.values());
+		if (updateHosts.size() > 0)
+			hostApi.updateHosts("localhost", updateHosts.values());
 		long lockEnd = new Date().getTime();
 
 		long end = new Date().getTime();
