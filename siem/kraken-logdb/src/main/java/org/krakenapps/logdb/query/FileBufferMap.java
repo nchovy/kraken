@@ -24,9 +24,12 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.krakenapps.codec.CustomCodec;
 import org.krakenapps.codec.EncodingRule;
@@ -43,7 +46,7 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 	private File file;
 	private RandomAccessFile raf;
 	private long rafLength;
-	private Map<K, V> cache = new HashMap<K, V>();
+	private ConcurrentMap<K, V> cache = new ConcurrentHashMap<K, V>();
 	private int cacheSize;
 	private Map<K, Block> fp = new HashMap<K, Block>();
 	private PriorityQueue<Block> freeBlock = new PriorityQueue<Block>(11, new BlockComparator()); // unused
@@ -102,16 +105,15 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 				raf.read(bb.array(), 0, b.size);
 				Object obj = EncodingRule.decode(bb, cc);
 				bb.clear();
-				if (!classinfo.getClass().isArray())
-					cache.put((K) key, (V) obj);
-				else {
+				if (obj.getClass().isArray()) {
 					Class<?> component = classinfo.getClass().getComponentType();
 					int length = Array.getLength(obj);
 					Object r = Array.newInstance(component, length);
 					for (int i = 0; i < length; i++)
 						Array.set(r, i, component.cast(Array.get(obj, i)));
 					cache.put((K) key, (V) r);
-				}
+				} else
+					cache.put((K) key, (V) obj);
 			} catch (IOException e) {
 				logger.error("kraken logstorage: get error", e);
 			}
@@ -202,6 +204,10 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 
 	@Override
 	public Set<K> keySet() {
+		if (fp == null) {
+			logger.debug("kraken logdb: file buffer map is already closed.");
+			return new HashSet<K>();
+		}
 		return fp.keySet();
 	}
 

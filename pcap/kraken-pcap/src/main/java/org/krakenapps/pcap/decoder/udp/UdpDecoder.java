@@ -70,7 +70,7 @@ public class UdpDecoder implements IpProcessor, Ipv6Processor {
 		b.discardReadBytes();
 		newUdp.setData(b);
 
-		dispatchUdpProcessor(newUdp);
+		dispatch(newUdp);
 	}
 
 	@Override
@@ -81,17 +81,17 @@ public class UdpDecoder implements IpProcessor, Ipv6Processor {
 		int length = b.getUnsignedShort();
 		short checksum = b.getShort();
 
-		UdpPacket newUdp = new UdpPacket(p, sourcePort, destinationPort);
-		newUdp.setLength(length);
-		newUdp.setChecksum(checksum);
+		UdpPacket pkt = new UdpPacket(p, sourcePort, destinationPort);
+		pkt.setLength(length);
+		pkt.setChecksum(checksum);
 
 		b.discardReadBytes();
-		newUdp.setData(b);
+		pkt.setData(b);
 
-		dispatchUdpProcessor(newUdp);
+		dispatch(pkt);
 	}
 
-	private void dispatchUdpProcessor(UdpPacket newUdp) {
+	private void dispatch(UdpPacket newUdp) {
 		/* manipulate udp packet from outside */
 		for (UdpProcessor callback : callbacks) {
 			try {

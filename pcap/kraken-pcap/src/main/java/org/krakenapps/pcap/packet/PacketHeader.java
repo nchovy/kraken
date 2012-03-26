@@ -15,6 +15,8 @@
  */
 package org.krakenapps.pcap.packet;
 
+import java.util.Date;
+
 /**
  * Packet header contains metadata for actual packet data. It doesn't mean
  * protocol header.
@@ -61,6 +63,10 @@ public class PacketHeader {
 		this.tsUsec = source.tsUsec;
 		this.inclLen = source.inclLen;
 		this.origLen = source.origLen;
+	}
+
+	public Date getDate() {
+		return new Date(getTsSec() * 1000L + getTsUsec());
 	}
 
 	public int getTsSec() {

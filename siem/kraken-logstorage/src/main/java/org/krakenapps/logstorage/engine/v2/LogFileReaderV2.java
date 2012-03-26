@@ -38,6 +38,8 @@ public class LogFileReaderV2 extends LogFileReader {
 	private Logger logger = LoggerFactory.getLogger(LogFileReaderV2.class);
 	public static final int INDEX_ITEM_SIZE = 4;
 
+	private File indexPath;
+	private File dataPath;
 	private RandomAccessFile indexFile;
 	private RandomAccessFile dataFile;
 
@@ -51,6 +53,8 @@ public class LogFileReaderV2 extends LogFileReader {
 	private Inflater decompresser = new Inflater();
 
 	public LogFileReaderV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
+		this.indexPath = indexPath;
+		this.dataPath = dataPath;
 		this.indexFile = new RandomAccessFile(indexPath, "r");
 		LogFileHeader indexFileHeader = LogFileHeader.extractHeader(indexFile, indexPath);
 		if (indexFileHeader.version() != 2)
@@ -262,7 +266,12 @@ public class LogFileReaderV2 extends LogFileReader {
 		private int logCount;
 
 		private IndexBlockHeader(RandomAccessFile f) throws IOException {
-			this.logCount = f.readInt();
+			try {
+				this.logCount = f.readInt();
+			} catch (IOException e) {
+				logger.error("kraken logstorage: broken index file - " + indexPath.getAbsolutePath());
+				throw e;
+			}
 			this.firstId = indexBlockNextId;
 			indexBlockNextId += logCount;
 		}
@@ -278,7 +287,12 @@ public class LogFileReaderV2 extends LogFileReader {
 		private int compressedLength;
 
 		private DataBlockHeader(RandomAccessFile f) throws IOException {
-			f.readFully(dataBlockHeader.array());
+			try {
+				f.readFully(dataBlockHeader.array());
+			} catch (IOException e) {
+				logger.error("kraken logstorage: broken data file - " + dataPath.getAbsolutePath());
+				throw e;
+			}
 			dataBlockHeader.position(0);
 			this.startDate = dataBlockHeader.getLong();
 			this.endDate = dataBlockHeader.getLong();

@@ -33,9 +33,6 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 		return mapper;
 	}
 
-	public void dispatchNewTcpSegment(TcpSessionImpl session, TcpPacket segment) {
-	}
-
 	public Collection<TcpSessionImpl> getCurrentSessions() {
 		return sessionTable.getCurrentSessions();
 	}
@@ -78,27 +75,25 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 		}
 	}
 
-	private void handle(TcpPacket newTcp) {
+	private void handle(TcpPacket pkt) {
 		/* get session */
-		TcpSessionImpl session = sessionTable.getSession(newTcp.getSessionKey());
-		flagHandler.handle(sessionTable, session, newTcp);
-		session = sessionTable.getSession(newTcp.getSessionKey());
+		TcpSessionImpl session = sessionTable.getSession(pkt.getSessionKey());
+		flagHandler.handle(sessionTable, session, pkt);
+		session = sessionTable.getSession(pkt.getSessionKey());
 
-		dispatchNewTcpSegment(session, newTcp);
-
-		if (newTcp.isGarbage() || session == null) {
+		if (pkt.isGarbage() || session == null) {
 			if (logger.isDebugEnabled())
-				logger.debug("kraken pcap: null session for tcp [{}]", newTcp);
+				logger.debug("kraken pcap: null session for tcp [{}]", pkt);
 			return;
 		}
 
-		newTcp.setDirection(session);
-		TcpDirection direction = newTcp.getDirection();
+		pkt.setDirection(session);
+		TcpDirection direction = pkt.getDirection();
 
 		/* find and set SACK option */
-		int flags = newTcp.getFlags();
+		int flags = pkt.getFlags();
 		if (flags == TcpFlag.SYN || flags == (TcpFlag.SYN + TcpFlag.ACK)) {
-			if (isSack(newTcp)) {
+			if (isSack(pkt)) {
 				if (direction == TcpDirection.ToServer)
 					session.setClientStreamOption(TcpStreamOption.SACK);
 				else
@@ -114,9 +109,11 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 			streamOption = session.getClientStreamOption();
 
 		if (streamOption == TcpStreamOption.SACK)
-			sackHandler.handle(sessionTable, session, newTcp);
+			sackHandler.handle(sessionTable, session, pkt);
 		else
-			packetHandler.handle(sessionTable, session, newTcp);
+			packetHandler.handle(sessionTable, session, pkt);
+
+		segmentCallbacks.fireReceiveCallbacks(session, pkt);
 	}
 
 	private boolean isSack(TcpPacket packet) {

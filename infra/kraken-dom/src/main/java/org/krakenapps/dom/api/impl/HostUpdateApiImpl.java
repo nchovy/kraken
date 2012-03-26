@@ -1,9 +1,12 @@
 package org.krakenapps.dom.api.impl;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,6 +27,7 @@ import org.slf4j.LoggerFactory;
 @Provides
 public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 	private final Logger logger = LoggerFactory.getLogger(HostUpdateApiImpl.class.getName());
+	private final Set<String> validHardeningKeys;
 
 	@Requires
 	private HostApi hostApi;
@@ -32,6 +36,12 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 
 	private Thread t;
 	private volatile boolean doStop;
+
+	public HostUpdateApiImpl() {
+		validHardeningKeys = new HashSet<String>(Arrays.asList("UseFirewall", "UseLogonPassword", "UseScreenSaver",
+				"UseScreenSaverPassword", "UseShareFolderPassword", "UseManagementShareFolder", "UseWindowsUpdate",
+				"UseAutoLogin", "UseGuestAccount", "MinimumPasswordLength", "PasswordExpiry", "ScreenSaverIdleInterval"));
+	}
 
 	@Validate
 	public void start() {
@@ -80,22 +90,11 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 	}
 
 	private void validateHardeningKeys(WindowsHost whost) {
-		final String[] validHardeningKeys = new String[] { "UseFirewall", "UseLoginPassword", "UseScreenSaver",
-				"UseScreenSaverPassword", "UseShareFolderPassword", "UseManagementShareFolder", "UseWindowsUpdate",
-				"UseAutoLogin", "UseGuestAccount", "MinimumPasswordLength", "PasswordExpiry", "ScreenSaverIdleInterval" };
-
-		for (String key : whost.getHardenings().keySet()) {
-			boolean isFound = false;
-			for (String hardeningKey : validHardeningKeys) {
-				if (hardeningKey.equals(key)) {
-					isFound = true;
-					break;
-				}
-			}
-			if (!isFound) {
-				logger.error("kraken dom : invalidate Hardening key");
-				throw new IllegalArgumentException("invalidate Hardening key: ");
-			}
+		if (!validHardeningKeys.containsAll(whost.getHardenings().keySet())) {
+			logger.error("kraken dom : invalidate Hardening key");
+			Set<String> invalids = new HashSet<String>(whost.getHardenings().keySet());
+			invalids.removeAll(validHardeningKeys);
+			throw new IllegalArgumentException("invalidate Hardening key: " + invalids.toString());
 		}
 	}
 
