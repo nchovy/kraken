@@ -47,7 +47,7 @@ public class NetScreenLogParser implements LogParser {
 
 			return map;
 		} catch (Exception e) {
-			logger.debug("parse error for: " + line);
+			logger.error("kraken syslog parser: netscreen parse error [{}]", line);
 		}
 		return null;
 	}

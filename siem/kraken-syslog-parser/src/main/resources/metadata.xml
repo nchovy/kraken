@@ -9,4 +9,5 @@
 	<instance component="snort-log-parser-factory" />
 	<instance component="weguardia-log-parser-factory" />
 	<instance component="weguardia-log-normalizer-factory" />
+	<instance component="neobox-log-parser-factory" />
 </ipojo>
