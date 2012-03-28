@@ -172,6 +172,14 @@ public class LogStorageScript implements Script {
 		context.println("table created");
 	}
 
+	@ScriptUsage(description = "rename table", arguments = {
+			@ScriptArgument(name = "current table name", type = "string", description = "current log table name"),
+			@ScriptArgument(name = "new table name", type = "string", description = "new table name") })
+	public void renameTable(String[] args) {
+		tableRegistry.renameTable(args[0], args[1]);
+		context.println("ok");
+	}
+
 	@ScriptUsage(description = "drop log table", arguments = { @ScriptArgument(name = "name", type = "string", description = "log table name") })
 	public void dropTable(String[] args) {
 		try {

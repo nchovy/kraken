@@ -30,6 +30,8 @@ public interface LogTableRegistry {
 
 	void createTable(String tableName, Map<String, String> tableMetadata);
 
+	void renameTable(String currentName, String newName);
+
 	void dropTable(String tableName);
 
 	Set<String> getTableMetadataKeys(String tableName);

@@ -160,6 +160,28 @@ public class LogTableRegistryImpl implements LogTableRegistry {
 	}
 
 	@Override
+	public void renameTable(String currentName, String newName) {
+		// check duplicated name first
+		if (tableSchemas.containsKey(newName))
+			throw new IllegalStateException("table already exists: " + newName);
+
+		// change renamed table metadata
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogTableSchema.class, Predicates.field("name", currentName));
+		if (c == null)
+			throw new IllegalStateException("table not found: " + currentName);
+
+		LogTableSchema schema = c.getDocument(LogTableSchema.class);
+		schema.setName(newName);
+		db.update(c, schema);
+
+		// rename table in memory
+		tableSchemas.remove(currentName);
+		tableSchemas.putIfAbsent(newName, schema);
+		tableNames.put(schema.getId(), newName);
+	}
+
+	@Override
 	public void dropTable(String tableName) {
 		LogTableSchema old = tableSchemas.remove(tableName);
 		if (old == null)
