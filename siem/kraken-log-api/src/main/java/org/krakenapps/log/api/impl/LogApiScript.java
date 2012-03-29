@@ -15,6 +15,7 @@
  */
 package org.krakenapps.log.api.impl;
 
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -106,6 +107,43 @@ public class LogApiScript implements Script {
 		for (Logger logger : loggerRegistry.getLoggers()) {
 			context.println(logger.toString());
 		}
+	}
+
+	@ScriptUsage(description = "print logger configuration", arguments = { @ScriptArgument(name = "logger fullname", type = "string", description = "logger fullname") })
+	public void logger(String[] args) {
+		String fullName = args[0];
+		context.println("Logger " + fullName);
+		printLine(fullName.length() + 10);
+		Logger logger = loggerRegistry.getLogger(fullName);
+		if (logger == null) {
+			context.println("logger not found");
+			return;
+		}
+
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		context.println("description: " + logger.getDescription());
+		context.println("logger Factory: " + logger.getFactoryFullName());
+		context.println("status: " + logger.getStatus());
+		context.println("interval: " + logger.getInterval());
+		context.println("last log: " + logger.getLastLogDate() != null ? dateFormat.format(logger.getLastLogDate())
+				: "N/A");
+		context.println("last run: " + logger.getLastRunDate() != null ? dateFormat.format(logger.getLastRunDate())
+				: "N/A");
+		context.println("log count: " + logger.getLogCount());
+
+		context.println("Configuration");
+		context.println("---------------");
+		Properties props = logger.getConfig();
+		if (props != null) {
+			for (Object key : props.keySet())
+				context.println(key + ": " + props.get(key));
+		}
+	}
+
+	private void printLine(int len) {
+		for (int i = 0; i < len; i++)
+			context.print('-');
+		context.println();
 	}
 
 	public void parserFactories(String[] args) {
@@ -243,7 +281,8 @@ public class LogApiScript implements Script {
 
 			String[] tokens = fullName.split("\\\\");
 
-			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(), logger.getFactoryName());
+			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(),
+					logger.getFactoryName());
 			factory.deleteLogger(tokens[0], tokens[1]);
 			context.println("logger removed");
 		} catch (Exception e) {
