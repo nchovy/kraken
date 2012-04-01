@@ -1,27 +1,31 @@
 package org.krakenapps.honey.sshd.impl;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CodingErrorAction;
-
-import org.krakenapps.honey.sshd.HoneySshService;
+import org.krakenapps.honey.sshd.HoneySshSession;
+import org.krakenapps.honey.sshd.handler.Shell;
 import org.krakenapps.termio.TerminalEventListener;
 import org.krakenapps.termio.TerminalSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HoneySshHandler implements TerminalEventListener {
-	private HoneySshService sshd;
-	private TerminalSession session;
+	private final Logger logger = LoggerFactory.getLogger(HoneySshHandler.class.getName());
+	private HoneySshSession session;
+	private Shell shell;
 
-	public HoneySshHandler(HoneySshService sshd, TerminalSession session) {
-		this.sshd = sshd;
+	public HoneySshHandler(HoneySshSession session) {
 		this.session = session;
 	}
 
 	@Override
 	public void onConnected(TerminalSession session) {
-		print("Last login: Sat Mar 31 17:55:39 2012 from 14.56.93.242\r\n");
-		printPrompt();
+		shell = new Shell();
+		shell.setSession(this.session);
+		shell.start();
+	}
+
+	@Override
+	public void onDisconnected(TerminalSession session) {
+		shell.kill();
 	}
 
 	@Override
@@ -29,34 +33,11 @@ public class HoneySshHandler implements TerminalEventListener {
 	}
 
 	@Override
-	public void onData(TerminalSession session, int b) {
+	public void onData(TerminalSession session, byte b) {
 		try {
-			if (b == '\n' || b == '\r') {
-				print("\r\n");
-				printPrompt();
-			} else {
-				session.write(b);
-				session.flush();
-			}
-		} catch (IOException e) {
+			session.getInputStream().push(b);
+		} catch (InterruptedException e) {
 		}
 	}
 
-	private void printPrompt() {
-		String prompt = "[" + session.getUsername() + "@" + sshd.getHostname() + " ~]";
-		if (session.getUsername().equals("root"))
-			prompt += "# ";
-		else
-			prompt += "$ ";
-		print(prompt);
-	}
-
-	private void print(String s) {
-		try {
-			session.write(s.getBytes("utf-8"));
-			session.flush();
-		} catch (UnsupportedEncodingException e) {
-		} catch (IOException e) {
-		}
-	}
 }

@@ -3,6 +3,7 @@ package org.krakenapps.honey.sshd.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -11,19 +12,33 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
+import org.apache.sshd.server.SessionAware;
+import org.apache.sshd.server.session.ServerSession;
+import org.krakenapps.honey.sshd.HoneyFileSystem;
+import org.krakenapps.honey.sshd.HoneySshService;
+import org.krakenapps.honey.sshd.HoneySshSession;
 import org.krakenapps.termio.TerminalDecoder;
 import org.krakenapps.termio.TerminalEventListener;
-import org.krakenapps.termio.TerminalSession;
+import org.krakenapps.termio.TerminalInputStream;
+import org.krakenapps.termio.TerminalOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HoneySshSessionImpl implements Command, Runnable, TerminalSession {
+public class HoneySshSessionImpl implements Command, Runnable, HoneySshSession, SessionAware {
 	private final Logger logger = LoggerFactory.getLogger(HoneySshSessionImpl.class.getName());
 
+	private HoneySshService sshd;
+	private HoneyFileSystem fs;
+
 	private Environment env;
+	private ServerSession session;
 	private InputStream in;
 	private OutputStream out;
 	private OutputStream err;
+
+	private TerminalInputStream tin;
+	private TerminalOutputStream tout;
+
 	private ExitCallback callback;
 	private TerminalDecoder decoder;
 	private Map<String, String> environmentVariables;
@@ -31,19 +46,28 @@ public class HoneySshSessionImpl implements Command, Runnable, TerminalSession {
 	private Thread t;
 	private CopyOnWriteArraySet<TerminalEventListener> listeners = new CopyOnWriteArraySet<TerminalEventListener>();
 
-	public HoneySshSessionImpl() {
-		decoder = new TerminalDecoder(this);
-		environmentVariables = new HashMap<String, String>();
+	public HoneySshSessionImpl(HoneySshService sshd) {
+		this.sshd = sshd;
+		this.fs = new HoneyFileSystemImpl(sshd.getRootPath());
+		this.decoder = new TerminalDecoder(this);
+		this.environmentVariables = new HashMap<String, String>();
+	}
+
+	@Override
+	public void setSession(ServerSession session) {
+		this.session = session;
 	}
 
 	@Override
 	public void setInputStream(InputStream in) {
 		this.in = in;
+		this.tin = new TerminalInputStream();
 	}
 
 	@Override
 	public void setOutputStream(OutputStream out) {
 		this.out = out;
+		this.tout = new TerminalOutputStream(out);
 	}
 
 	@Override
@@ -96,6 +120,11 @@ public class HoneySshSessionImpl implements Command, Runnable, TerminalSession {
 	}
 
 	@Override
+	public InetSocketAddress getRemoteAddress() {
+		return (InetSocketAddress) session.getIoSession().getRemoteAddress();
+	}
+
+	@Override
 	public String getEnvironmentVariable(String key) {
 		return environmentVariables.get(key);
 	}
@@ -106,18 +135,28 @@ public class HoneySshSessionImpl implements Command, Runnable, TerminalSession {
 	}
 
 	@Override
-	public void write(int b) throws IOException {
-		out.write(b);
+	public TerminalInputStream getInputStream() {
+		return tin;
 	}
 
 	@Override
-	public void write(byte[] b) throws IOException {
-		out.write(b);
+	public void setInputStream(TerminalInputStream in) {
+		this.in = in;
 	}
 
 	@Override
-	public void flush() throws IOException {
-		out.flush();
+	public TerminalOutputStream getOutputStream() {
+		return tout;
+	}
+
+	@Override
+	public void setOutputStream(TerminalOutputStream out) {
+		this.out = out;
+	}
+
+	@Override
+	public void close() {
+		callback.onExit(0);
 	}
 
 	@Override
@@ -133,6 +172,16 @@ public class HoneySshSessionImpl implements Command, Runnable, TerminalSession {
 	@Override
 	public void removeListener(TerminalEventListener listener) {
 		listeners.remove(listener);
+	}
+
+	@Override
+	public HoneySshService getHoneySshService() {
+		return sshd;
+	}
+
+	@Override
+	public HoneyFileSystem getHoneyFileSystem() {
+		return fs;
 	}
 
 }

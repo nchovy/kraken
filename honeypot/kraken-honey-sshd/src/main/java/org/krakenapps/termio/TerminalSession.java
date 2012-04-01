@@ -1,20 +1,26 @@
 package org.krakenapps.termio;
 
-import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Set;
 
 public interface TerminalSession {
 	String getUsername();
 
+	InetSocketAddress getRemoteAddress();
+
 	String getEnvironmentVariable(String key);
 
 	void setEnvironmentVariable(String key, String value);
 
-	void write(int b) throws IOException;
+	TerminalInputStream getInputStream();
 
-	void write(byte[] b) throws IOException;
+	void setInputStream(TerminalInputStream in);
 
-	void flush() throws IOException;
+	TerminalOutputStream getOutputStream();
+
+	void setOutputStream(TerminalOutputStream out);
+
+	void close();
 
 	Set<TerminalEventListener> getListeners();
 

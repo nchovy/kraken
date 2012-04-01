@@ -129,7 +129,7 @@ public class TerminalDecoder {
 		}
 	}
 
-	private void notifyData(int b) {
+	private void notifyData(byte b) {
 		for (TerminalEventListener listener : session.getListeners()) {
 			try {
 				listener.onData(session, b);

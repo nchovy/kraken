@@ -1,21 +1,17 @@
 package org.krakenapps.honey.sshd.impl;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.krakenapps.honey.sshd.HoneySshService;
 
-@Component(name = "honey-sshd")
-@Provides
 public class HoneySshServiceImpl implements HoneySshService {
 	private String hostname;
+	private File rootPath;
 	private SshServer sshd;
 
-	@Invalidate
 	public void stop() {
 		close();
 	}
@@ -30,6 +26,25 @@ public class HoneySshServiceImpl implements HoneySshService {
 	@Override
 	public void setHostname(String hostname) {
 		this.hostname = hostname;
+	}
+
+	@Override
+	public File getRootPath() {
+		return rootPath;
+	}
+
+	@Override
+	public void setRootPath(File dir) {
+		if (dir == null)
+			throw new IllegalArgumentException("dir should be not null");
+
+		if (!dir.exists())
+			throw new IllegalArgumentException("dir does not exist");
+
+		if (!dir.isDirectory())
+			throw new IllegalArgumentException("dir should be directory");
+
+		this.rootPath = dir;
 	}
 
 	@Override
@@ -52,6 +67,8 @@ public class HoneySshServiceImpl implements HoneySshService {
 	}
 
 	public static void main(String[] args) throws IOException {
-		new HoneySshServiceImpl().open();
+		HoneySshServiceImpl s = new HoneySshServiceImpl();
+		s.setRootPath(new File("src/main/resources/fakefs"));
+		s.open();
 	}
 }

@@ -8,6 +8,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-honey-sshd</artifactId>
+	<version>0.1.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Honey SSHD</name>
 	<build>
@@ -37,6 +38,45 @@
 					<execution>
 						<goals>
 							<goal>ipojo-bundle</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+						</manifest>
+						<manifestEntries>
+							<Main-Class>org.krakenapps.honey.sshd.impl.HoneySshServiceImpl</Main-Class>
+						</manifestEntries>
+						<addMavenDescriptor>false</addMavenDescriptor>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2-beta-2</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<Main-Class>org.krakenapps.honey.sshd.impl.HoneySshServiceImpl</Main-Class>
+						</manifest>
+					</archive>
+					<descriptors>
+						<descriptor>src/main/assembly/src.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
 						</goals>
 					</execution>
 				</executions>
