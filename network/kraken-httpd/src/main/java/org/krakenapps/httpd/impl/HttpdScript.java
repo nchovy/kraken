@@ -78,17 +78,24 @@ public class HttpdScript implements Script {
 			HttpServer server = httpd.getServer(binding);
 			HttpConfiguration config = server.getConfiguration();
 
-			String ssl = config.isSsl() ? " (ssl: key " + config.getKeyAlias() + ", trust " + config.getTrustAlias()	+ ")" : "";
-			String hosts = "\n";
-			for (VirtualHost h : config.getVirtualHosts())
-				hosts += "  " + h + ", idle timeout: " + config.getIdleTimeout() + "seconds";
-			String information = config.getListenAddress() + ssl + (server.isOpened() ? ", opened " : ", closed")	+ hosts;
+			String ssl = config.isSsl() ? " (ssl: key " + config.getKeyAlias() + ", trust " + config.getTrustAlias()
+					+ ")" : "";
+			String hosts = "";
+			if (config.getVirtualHosts().size() > 0) {
+				hosts += "\n";
+				for (VirtualHost h : config.getVirtualHosts())
+					hosts += "  " + h + ", idle timeout: " + config.getIdleTimeout() + "seconds";
+			} else
+				hosts += "idle timeout: " + config.getIdleTimeout() + "seconds";
+
+			String information = config.getListenAddress() + ssl + (server.isOpened() ? ", opened, " : ", closed, ")
+					+ hosts + "\n";
 
 			if (config.getDefaultHttpContext() == null)
 				context.println(information);
 			else
-				context.print(information + (config.getVirtualHosts().size() > 0 ? "," : "") + " default context:  "
-						+ config.getDefaultHttpContext() + "\n");
+				context.println(information + (config.getVirtualHosts().size() > 0 ? "," : "") + " default context: "
+						+ config.getDefaultHttpContext());
 		}
 	}
 

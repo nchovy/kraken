@@ -147,11 +147,11 @@ public class HttpConfiguration {
 		String hosts = "\n";
 		for (VirtualHost h : virtualHosts)
 			hosts += "  " + h + ", idle timeout: " + this.idleTimeout + "seconds";
-		
+
 		String information = getListenAddress() + " " + ssl + hosts;
-		if ( getDefaultHttpContext() == null )
+		if (getDefaultHttpContext() == null)
 			return information;
-		
+
 		return information + ", default context:  " + getDefaultHttpContext();
 	}
 }
