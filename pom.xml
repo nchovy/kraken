@@ -20,6 +20,7 @@
 		<module>format</module>
 		<module>compiler</module>
 		<module>reporting</module>
+		<module>honeypot</module>
 		<module>utility</module>
 	</modules>
 	<url>http://krakenapps.org</url>
