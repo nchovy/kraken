@@ -22,7 +22,7 @@
 						<Bundle-SymbolicName>org.krakenapps.logparser.snmptrap
 						</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.logparser.snmptrap.wapples;version=${project.version}
+							org.krakenapps.logparser.snmptrap.pentasecurity;version=${project.version}
 						</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>
