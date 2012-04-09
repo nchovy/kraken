@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-pcap</artifactId>
-	<version>1.6.1</version>
+	<version>1.7.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken PCAP</name>
 	<build>
@@ -34,7 +34,8 @@
 							lib/linux_x86_64/libkpcap.so; osname=linux;
 							processor=x86_64
 						</Bundle-NativeCode>
-						<Export-Package>org.krakenapps.pcap;version=${project.version},
+						<Export-Package>
+							org.krakenapps.pcap;version=${project.version},
 							org.krakenapps.pcap.decoder.ethernet;version=${project.version},
 							org.krakenapps.pcap.decoder.arp;version=${project.version},
 							org.krakenapps.pcap.decoder.ip;version=${project.version},
@@ -43,6 +44,8 @@
 							org.krakenapps.pcap.decoder.icmpv6;version=${project.version},
 							org.krakenapps.pcap.decoder.tcp;version=${project.version},
 							org.krakenapps.pcap.decoder.udp;version=${project.version},
+							org.krakenapps.pcap.decoder.wlan;version=${project.version},
+							org.krakenapps.pcap.decoder.wlan.tag;version=${project.version},
 							org.krakenapps.pcap.file;version=${project.version},
 							org.krakenapps.pcap.live;version=${project.version},
 							org.krakenapps.pcap.routing;version=${project.version},

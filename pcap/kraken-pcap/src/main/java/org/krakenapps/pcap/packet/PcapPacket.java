@@ -31,12 +31,12 @@ public class PcapPacket {
 		this.header = header;
 		this.payload = payload;
 	}
-	
+
 	public PcapPacket(PacketHeader header, PacketPayload payload) {
 		this.header = header;
 		this.payload = payload.getBuffer();
 	}
-	
+
 	public PacketHeader getPacketHeader() {
 		return header;
 	}
@@ -44,4 +44,10 @@ public class PcapPacket {
 	public Buffer getPacketData() {
 		return payload;
 	}
+
+	@Override
+	public String toString() {
+		return header.toString();
+	}
+
 }

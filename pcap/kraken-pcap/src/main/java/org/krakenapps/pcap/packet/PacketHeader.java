@@ -118,7 +118,7 @@ public class PacketHeader {
 
 	@Override
 	public String toString() {
-		return String.format("%d.%ds (%d bytes)", tsSec, tsUsec, inclLen);
+		return String.format("%s (%d.%ds) - %d bytes", getDate(), tsSec, tsUsec, inclLen);
 	}
 
 }
