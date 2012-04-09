@@ -39,10 +39,10 @@ public class HoneySshServiceImpl implements HoneySshService {
 			throw new IllegalArgumentException("dir should be not null");
 
 		if (!dir.exists())
-			throw new IllegalArgumentException("dir does not exist");
+			throw new IllegalArgumentException("dir does not exist: " + dir.getAbsolutePath());
 
 		if (!dir.isDirectory())
-			throw new IllegalArgumentException("dir should be directory");
+			throw new IllegalArgumentException("dir should be directory: " + dir.getAbsolutePath());
 
 		this.rootPath = dir;
 	}
@@ -68,7 +68,7 @@ public class HoneySshServiceImpl implements HoneySshService {
 
 	public static void main(String[] args) throws IOException {
 		HoneySshServiceImpl s = new HoneySshServiceImpl();
-		s.setRootPath(new File("src/main/resources/fakefs"));
+		// s.setRootPath(new File("src/main/resources/fakefs"));
 		s.open();
 	}
 }

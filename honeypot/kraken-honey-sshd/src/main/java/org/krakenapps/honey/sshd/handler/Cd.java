@@ -1,5 +1,13 @@
 package org.krakenapps.honey.sshd.handler;
 
-public class Cd {
+import org.krakenapps.honey.sshd.HoneyBaseCommandHandler;
+
+public class Cd extends HoneyBaseCommandHandler {
+
+	@Override
+	public int main(String[] args) {
+		getSession().setEnvironmentVariable("$PWD", args[1]);
+		return 0;
+	}
 
 }

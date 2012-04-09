@@ -44,27 +44,31 @@ public class Shell extends HoneyBaseCommandHandler implements Runnable {
 		String command = tokens[0];
 
 		HoneyCommandHandler handler = null;
-		if (line.equals("w")) {
+		if (command.equals("w")) {
 			handler = new W();
-		} else if (line.startsWith("uname")) {
+		} else if (command.startsWith("uname")) {
 			handler = new Uname();
-		} else if (line.equals("clear")) {
+		} else if (command.equals("clear")) {
 			handler = new Clear();
-		} else if (line.equals("ls")) {
+		} else if (command.equals("ls")) {
 			handler = new Ls();
-		} else if (line.equals("ps")) {
+		} else if (command.equals("ps")) {
 			handler = new Ps();
-		} else if (line.equals("pwd")) {
+		} else if (command.equals("pwd")) {
 			handler = new Pwd();
-		} else if (line.equals("id")) {
+		} else if (command.equals("id")) {
 			handler = new Id();
-		} else if (line.equals("adduser")) {
+		} else if (command.equals("adduser")) {
 			handler = new Adduser();
+		} else if (command.equals("pwd")) {
+			handler = new Pwd();
+		} else if (command.equals("cd")) {
+			handler = new Cd();
 		}
 
 		if (handler != null) {
 			handler.setSession(getSession());
-			handler.main(new String[] {});
+			handler.main(tokens);
 		} else {
 			String error = "-bash: " + command + ": command not found\r\n";
 			getSession().getOutputStream().write(error.getBytes());
@@ -94,6 +98,8 @@ public class Shell extends HoneyBaseCommandHandler implements Runnable {
 
 	@Override
 	public int main(String[] args) {
+		getSession().setEnvironmentVariable("$PWD", "/");
+
 		print("Last login: Sat Mar 31 17:55:39 2012 from 14.56.93.242\r\n");
 		printPrompt();
 
