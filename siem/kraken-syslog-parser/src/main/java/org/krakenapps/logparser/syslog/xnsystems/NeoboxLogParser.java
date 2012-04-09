@@ -20,7 +20,7 @@ import java.util.Map;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.logparser.syslog.internal.KeyValueParser;
 
-public class NeoboxParser implements LogParser {
+public class NeoboxLogParser implements LogParser {
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		Map<String, Object> m = KeyValueParser.parse((String) params.get("line"));

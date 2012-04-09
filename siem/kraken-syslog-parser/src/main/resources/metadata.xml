@@ -11,4 +11,5 @@
 	<instance component="weguardia-log-normalizer-factory" />
 	<instance component="neobox-log-parser-factory" />
 	<instance component="defensepro-log-parser-factory" />
+	<instance component="paloalto-log-parser-factory" />
 </ipojo>

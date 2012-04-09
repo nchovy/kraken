@@ -29,7 +29,7 @@ import org.krakenapps.log.api.LoggerConfigOption;
 
 @Component(name = "neobox-log-parser-factory")
 @Provides
-public class NeoboxParserFactory implements LogParserFactory {
+public class NeoboxLogParserFactory implements LogParserFactory {
 
 	@Override
 	public String getName() {
@@ -63,6 +63,6 @@ public class NeoboxParserFactory implements LogParserFactory {
 
 	@Override
 	public LogParser createParser(Properties config) {
-		return new NeoboxParser();
+		return new NeoboxLogParser();
 	}
 }
