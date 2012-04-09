@@ -134,6 +134,7 @@ public class LogQueryPlugin {
 				l.add(query);
 			}
 		} catch (Exception e) {
+			logger.error("kraken logdb: cannot create query", e);
 			throw new MsgbusException("logdb", e.getMessage());
 		}
 	}

@@ -38,6 +38,7 @@ public class Term {
 	private Operator operator;
 	private Object rh;
 	private boolean isRhString = true;
+	private Pattern p;
 
 	public boolean eval(LogMap m) {
 		Object l = isLhString ? lh : m.get(lh.toString());
@@ -60,8 +61,16 @@ public class Term {
 				return cmp <= 0;
 			case Contain:
 				return l.toString().contains(r.toString());
-			case Regexp:
-				return Pattern.matches(r.toString(), l.toString());
+			case Regexp: {
+				if (l == null)
+					return false;
+				if (isRhString)
+					return p.matcher(l.toString()).find();
+				else {
+					Pattern pp = Pattern.compile(m.get(rh.toString()).toString(), Pattern.MULTILINE);
+					return pp.matcher(l.toString()).find();
+				}
+			}
 			case In:
 				return Arrays.asList(r.toString().replaceAll(",( )*", ",").split(",")).contains(l.toString());
 			case IsNull:
@@ -105,6 +114,9 @@ public class Term {
 
 	public void setRh(Object rh) {
 		this.rh = rh;
+		if (operator == Operator.Regexp && isRhString) {
+			this.p = Pattern.compile(rh.toString());
+		}
 	}
 
 	public boolean isRhString() {

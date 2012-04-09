@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb</artifactId>
-	<version>0.5.7</version>
+	<version>0.5.9</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log DB</name>
 	<build>
