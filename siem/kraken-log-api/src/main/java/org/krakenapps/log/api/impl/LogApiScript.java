@@ -112,7 +112,7 @@ public class LogApiScript implements Script {
 	@ScriptUsage(description = "print logger configuration", arguments = { @ScriptArgument(name = "logger fullname", type = "string", description = "logger fullname") })
 	public void logger(String[] args) {
 		String fullName = args[0];
-		context.println("Logger " + fullName);
+		context.println("Logger [" + fullName + "]");
 		printLine(fullName.length() + 10);
 		Logger logger = loggerRegistry.getLogger(fullName);
 		if (logger == null) {
@@ -121,22 +121,24 @@ public class LogApiScript implements Script {
 		}
 
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		context.println("description: " + logger.getDescription());
-		context.println("logger Factory: " + logger.getFactoryFullName());
-		context.println("status: " + logger.getStatus());
-		context.println("interval: " + logger.getInterval());
-		context.println("last log: " + logger.getLastLogDate() != null ? dateFormat.format(logger.getLastLogDate())
-				: "N/A");
-		context.println("last run: " + logger.getLastRunDate() != null ? dateFormat.format(logger.getLastRunDate())
-				: "N/A");
-		context.println("log count: " + logger.getLogCount());
+		String lastLogDate = logger.getLastLogDate() != null ? dateFormat.format(logger.getLastLogDate()) : "N/A";
+		String lastRunDate = logger.getLastRunDate() != null ? dateFormat.format(logger.getLastRunDate()) : "N/A";
+
+		context.println(" * Description: " + logger.getDescription());
+		context.println(" * Logger Factory: " + logger.getFactoryFullName());
+		context.println(" * Status: " + logger.getStatus());
+		context.println(" * Interval: " + logger.getInterval() + "ms");
+		context.println(" * Last Log: " + lastLogDate);
+		context.println(" * Last Run: " + lastRunDate);
+		context.println(" * Log Count: " + logger.getLogCount());
+		context.println("");
 
 		context.println("Configuration");
 		context.println("---------------");
 		Properties props = logger.getConfig();
 		if (props != null) {
 			for (Object key : props.keySet())
-				context.println(key + ": " + props.get(key));
+				context.println(" * " + key + ": " + props.get(key));
 		}
 	}
 
