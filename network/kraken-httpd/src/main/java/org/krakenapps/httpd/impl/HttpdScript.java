@@ -77,8 +77,25 @@ public class HttpdScript implements Script {
 		for (InetSocketAddress binding : httpd.getListenAddresses()) {
 			HttpServer server = httpd.getServer(binding);
 			HttpConfiguration config = server.getConfiguration();
-			String configString = config.toString().replaceFirst("\n", (server.isOpened() ? ", opened\n" : ", closed\n"));			
-			context.println(configString);
+
+			String ssl = config.isSsl() ? " (ssl: key " + config.getKeyAlias() + ", trust " + config.getTrustAlias()
+					+ ")" : "";
+			String hosts = "";
+			if (config.getVirtualHosts().size() > 0) {
+				hosts += "\n";
+				for (VirtualHost h : config.getVirtualHosts())
+					hosts += "  " + h + ", idle timeout: " + config.getIdleTimeout() + "seconds";
+			} else
+				hosts += "idle timeout: " + config.getIdleTimeout() + "seconds";
+
+			String information = config.getListenAddress() + ssl + (server.isOpened() ? ", opened, " : ", closed, ")
+					+ hosts + "\n";
+
+			if (config.getDefaultHttpContext() == null)
+				context.println(information);
+			else
+				context.println(information + (config.getVirtualHosts().size() > 0 ? "," : "") + " default context: "
+						+ config.getDefaultHttpContext());
 		}
 	}
 
