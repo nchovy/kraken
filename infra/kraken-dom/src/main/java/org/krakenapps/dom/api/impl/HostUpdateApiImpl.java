@@ -18,6 +18,7 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.api.HostUpdateApi;
+import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.windows.WindowsHost;
 import org.slf4j.Logger;
@@ -32,15 +33,19 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 	@Requires
 	private HostApi hostApi;
 
+	@Requires
+	private OrganizationApi orgApi;
+
 	private ConcurrentLinkedQueue<Host> queue = new ConcurrentLinkedQueue<Host>();
 
 	private Thread t;
 	private volatile boolean doStop;
 
 	public HostUpdateApiImpl() {
-		validHardeningKeys = new HashSet<String>(Arrays.asList("UseFirewall", "UseLogonPassword", "UseScreenSaver",
-				"UseScreenSaverPassword", "UseShareFolderPassword", "UseManagementShareFolder", "UseWindowsUpdate",
-				"UseAutoLogin", "UseGuestAccount", "MinimumPasswordLength", "PasswordExpiry", "ScreenSaverIdleInterval"));
+		validHardeningKeys = new HashSet<String>(
+				Arrays.asList("UseFirewall", "UseLogonPassword", "UseScreenSaver", "UseScreenSaverPassword",
+						"UseShareFolderPassword", "UseManagementShareFolder", "UseWindowsUpdate", "UseAutoLogin",
+						"UseGuestAccount", "MinimumPasswordLength", "PasswordExpiry", "ScreenSaverIdleInterval"));
 	}
 
 	@Validate
@@ -65,7 +70,9 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			logger.info("kraken dom: starting host updater thread");
 			while (!doStop) {
 				try {
+
 					runOnce();
+
 					Thread.sleep(10000);
 				} catch (InterruptedException e) {
 					logger.debug("kraken dom: host batch update interrupted");
@@ -99,6 +106,9 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 	}
 
 	private void runOnce() {
+		if (orgApi.findOrganization("localhost") == null)
+			return;
+
 		Map<String, Host> hosts = new HashMap<String, Host>();
 		Map<String, Host> recordedHosts = new HashMap<String, Host>();
 		Map<String, Host> addHosts = new HashMap<String, Host>();
