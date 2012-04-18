@@ -18,16 +18,18 @@ package org.krakenapps.confdb.file;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.PrimitiveConverter;
@@ -40,10 +42,10 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
-import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Manifest;
+import org.krakenapps.confdb.ManifestIterator;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.confdb.RollbackException;
@@ -340,7 +342,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 		int manifestId = 0;
 		RevLogReader reader = null;
 		try {
-
 			reader = new RevLogReader(changeLogFile, changeDatFile);
 			RevLog revlog = null;
 
@@ -374,7 +375,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 			// legacy format upgrade
 			if (manifest.getVersion() == 1)
-				upgradeManifest(manifest);
+				FileManifest.upgradeManifest(manifest, dbDir);
 
 			manifest.setId(manifestId);
 			return manifest;
@@ -388,40 +389,16 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	private void upgradeManifest(FileManifest manifest) {
-		for (String name : manifest.getCollectionNames()) {
-			CollectionEntry col = manifest.getCollectionEntry(name);
-			File logFile = new File(dbDir, "col" + col.getId() + ".log");
-			File datFile = new File(dbDir, "col" + col.getId() + ".dat");
+	public ManifestIterator getManifestIterator(TreeSet<Integer> logRev) {
+		try {
+			RevLogReader manifestReader = new RevLogReader(manifestLogFile, manifestDatFile);
+			RevLogReader changeLogReader = new RevLogReader(changeLogFile, changeDatFile);
+			FileManifestIterator manifestIterator = new FileManifestIterator(manifestReader, changeLogReader, dbDir,
+					logRev);
 
-			if (!logFile.exists() || !datFile.exists())
-				continue;
-
-			RevLogReader reader = null;
-			try {
-				reader = new RevLogReader(logFile, datFile);
-				// build map
-				Map<ConfigEntry, Long> indexMap = new HashMap<ConfigEntry, Long>();
-				long count = reader.count();
-				for (long i = 0; i < count; i++) {
-					RevLog revLog = reader.read(i);
-					indexMap.put(new ConfigEntry(col.getId(), revLog.getDocId(), revLog.getRev()), i);
-				}
-
-				for (ConfigEntry c : manifest.getConfigEntries(col.getName())) {
-					Long index = indexMap.get(c);
-					if (index != null) {
-						c.setIndex(index.intValue());
-						logger.debug("kraken confdb: set index for " + c);
-					} else
-						logger.warn("kraken confdb: cannot find index for " + c);
-				}
-			} catch (IOException e) {
-				logger.error("kraken confdb: cannot upgrade format", e);
-			} finally {
-				if (reader != null)
-					reader.close();
-			}
+			return manifestIterator;
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
 		}
 	}
 
@@ -447,7 +424,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 				change.setRev(revlog.getDocId());
 				commitLogs.add(change);
 			}
-
 			return commitLogs;
 		} catch (FileNotFoundException e) {
 			return commitLogs;
@@ -464,7 +440,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 		RevLogReader reader = null;
 		try {
 			reader = new RevLogReader(changeLogFile, changeDatFile);
-			return reader.count();
+			Long count = reader.count();
+			return count;
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		} finally {
@@ -687,6 +664,21 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public Config remove(ConfigTransaction xact, Config c, boolean checkConflict) {
 		return c.getCollection().remove(xact, c, checkConflict);
+	}
+
+	@Override
+	public void shrink(int count) {
+		new Shrinker(this).shrink(count);
+	}
+
+	@Override
+	public void importData(InputStream is) {
+		new Importer(this).importData(is);
+	}
+
+	@Override
+	public void exportData(OutputStream os) throws IOException {
+		new Exporter(this).exportData(os);
 	}
 
 	@Override

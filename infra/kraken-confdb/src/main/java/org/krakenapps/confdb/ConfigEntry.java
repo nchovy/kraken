@@ -21,7 +21,7 @@ package org.krakenapps.confdb;
  * @author xeraph
  * 
  */
-public class ConfigEntry {
+public class ConfigEntry implements Comparable<ConfigEntry> {
 	private int colId;
 	private int docId;
 	private long rev;
@@ -102,6 +102,29 @@ public class ConfigEntry {
 		if (rev != other.rev)
 			return false;
 		return true;
+	}
+	
+	@Override
+	public int compareTo(ConfigEntry e) {
+		int ret = -1;
+
+		if (e.getColId() < getColId())
+			ret = 1;
+
+		if (e.getColId() == getColId())
+			if (e.getDocId() < getDocId())
+				ret = 1;
+
+		if (e.getColId() == getColId())
+			if (e.getDocId() == getDocId())
+				if (e.getRev() < getRev())
+					ret = 1;
+
+		if (e.getColId() == getColId())
+			if (e.getDocId() == getDocId())
+				if (e.getRev() == getRev())
+					ret = 0;
+		return ret;
 	}
 
 	@Override

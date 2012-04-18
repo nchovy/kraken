@@ -59,13 +59,18 @@ public class FileConfigService implements ConfigService {
 
 	@Override
 	public ConfigDatabase getDatabase(String name) {
+		return getDatabase(name, null);
+	}
+
+	@Override
+	public ConfigDatabase getDatabase(String name, Integer rev) {
 		try {
 			ConfigCollection col = metadb.ensureCollection("database");
 			Config c = col.findOne(Predicates.field("name", name));
 			if (c == null)
 				return null;
 
-			ConfigDatabase db = new FileConfigDatabase(baseDir, name);
+			ConfigDatabase db = new FileConfigDatabase(baseDir, name, rev);
 			ConfigDatabase old = instances.putIfAbsent(name, db);
 			return old != null ? old : db;
 		} catch (IOException e) {

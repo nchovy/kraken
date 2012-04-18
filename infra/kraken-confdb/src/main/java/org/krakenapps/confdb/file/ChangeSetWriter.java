@@ -27,28 +27,36 @@ class ChangeSetWriter {
 	private ChangeSetWriter() {
 	}
 
-	public static void log(File changeLogFile, File changeDatFile, List<ConfigChange> changeSet,
-			int manifestId, String committer, String log) throws IOException {
-		ChangeLog change = new ChangeLog();
-		change.setManifestId(manifestId);
-		change.setCommitter(committer);
-		change.setMessage(log);
-		change.setChangeSet(changeSet);
-		change.setCreated(new Date());
+	public static void log(File changeLogFile, File changeDatFile, List<ConfigChange> changeSet, int manifestId,
+			String committer, String log) throws IOException {
+		log(changeLogFile, changeDatFile, changeSet, manifestId, committer, log, new Date());
+	}
 
-		RevLog cl = new RevLog();
-		cl.setRev(1);
-		cl.setOperation(CommitOp.CreateDoc);
-		cl.setDoc(change.serialize());
-		
+	public static void log(File changeLogFile, File changeDatFile, List<ConfigChange> changeSet, int manifestId,
+			String committer, String log, Date created) throws IOException {
 		RevLogWriter writer = null;
 		try {
 			writer = new RevLogWriter(changeLogFile, changeDatFile);
-			writer.write(cl);
+			log(writer, changeSet, manifestId, committer, log, created);
 		} finally {
 			if (writer != null)
 				writer.close();
 		}
 	}
 
+	public static void log(RevLogWriter writer, List<ConfigChange> changeSet, int manifestId, String committer,
+			String log, Date created) throws IOException {
+		ChangeLog change = new ChangeLog();
+		change.setManifestId(manifestId);
+		change.setCommitter(committer);
+		change.setMessage(log);
+		change.setChangeSet(changeSet);
+		change.setCreated(created);
+
+		RevLog cl = new RevLog();
+		cl.setRev(1);
+		cl.setOperation(CommitOp.CreateDoc);
+		cl.setDoc(change.serialize());
+		writer.write(cl);
+	}
 }

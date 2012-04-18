@@ -15,6 +15,12 @@
  */
 package org.krakenapps.script;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 
 import org.krakenapps.api.Primitive;
@@ -235,5 +241,69 @@ public class ConfScript implements Script {
 
 		db.rollback(Integer.parseInt(args[1]));
 		context.println("complete");
+	}
+
+	@ScriptUsage(description = "shrink log", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "limit", type = "integer", description = "log acount limit") })
+	public void shrink(String[] args) {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not fount");
+			return;
+		}
+		if (args[1] == null) {
+			context.println("count should be input over 0");
+			return;
+		}
+
+		db.shrink(Integer.parseInt(args[1]));
+	}
+
+	@ScriptUsage(description = "export db data", arguments = {
+			@ScriptArgument(name = "database name", type = "string", description = "database name"),
+			@ScriptArgument(name = "export revision", type = "integer", description = "export revision id"),
+			@ScriptArgument(name = "file name", type = "string", description = "export file name") })
+	public void export(String[] args) throws IOException {
+		ConfigDatabase db = conf.getDatabase(args[0], Integer.parseInt(args[1]));
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+		if (args[2] == null) {
+			context.println("input file name");
+			return;
+		}
+		File exportFile = new File(System.getProperty("user.dir") + "\\data\\kraken-confdb\\" + args[0], args[2]);
+		OutputStream os = new FileOutputStream(exportFile);
+		db.exportData(os);
+
+		os.close();
+	}
+
+	@ScriptUsage(description = "import db data", arguments = {
+			@ScriptArgument(name = "database name", type = "String", description = "database name"),
+			@ScriptArgument(name = "file name", type = "string", description = "target file name") })
+	public void importData(String[] args) throws IOException {
+		ConfigDatabase db = conf.getDatabase(args[0]);
+		if (db == null) {
+			context.println("database not found");
+			return;
+		}
+		if (args[1] == null) {
+			context.println("input file name");
+			return;
+		}
+
+		File targetFile = new File(System.getProperty("user.dir") + "\\data\\kraken-confdb\\" + args[0], args[1]);
+
+		if (!targetFile.exists()) {
+			context.println("file is not exsist");
+			return;
+		}
+
+		InputStream is = new FileInputStream(targetFile);
+		db.importData(is);
+		is.close();
 	}
 }

@@ -9,10 +9,9 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-confdb</artifactId>
-	<version>0.8.6</version>
+	<version>0.8.7</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Config Database</name>
-
 	<build>
 		<plugins>
 			<plugin>
@@ -24,7 +23,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.confdb</Bundle-SymbolicName>
 						<Export-Package>
-							org.krakenapps.confdb;version=${project.version}, 
+							org.krakenapps.confdb;version=${project.version},
 							org.krakenapps.confdb.file;version=${project.version}</Export-Package>
 						<Import-Package>*</Import-Package>
 						<Main-Class>org.krakenapps.confdb.file.Console</Main-Class>
@@ -37,7 +36,7 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-codec</artifactId>
-			<version>2.1.1</version>
+			<version>2.1.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -53,6 +52,11 @@
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
 			<version>1.9.8</version>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-json</artifactId>
+			<version>1.0.0</version>
 		</dependency>
 	</dependencies>
 </project>

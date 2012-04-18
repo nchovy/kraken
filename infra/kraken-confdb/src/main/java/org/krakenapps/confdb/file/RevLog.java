@@ -111,6 +111,12 @@ public class RevLog {
 		this.doc = doc;
 	}
 
+	/**
+	 * serialize log header to byte buffer
+	 * 
+	 * @param bb
+	 *            the output buffer
+	 */
 	public void serialize(ByteBuffer bb) {
 		// total 34 bytes
 		bb.putLong(rev);
@@ -123,6 +129,13 @@ public class RevLog {
 		bb.flip();
 	}
 
+	/**
+	 * deserialize log header from byte buffer
+	 * 
+	 * @param bb
+	 *            the input buffer
+	 * @return the parsed revision log header
+	 */
 	public static RevLog deserialize(ByteBuffer bb) {
 		RevLog log = new RevLog();
 		log.setRev(bb.getLong());

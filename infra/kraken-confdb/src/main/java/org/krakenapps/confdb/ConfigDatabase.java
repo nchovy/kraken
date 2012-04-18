@@ -15,6 +15,9 @@
  */
 package org.krakenapps.confdb;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 
@@ -134,5 +137,11 @@ public interface ConfigDatabase {
 	Config remove(Config c, boolean checkConflict, String committer, String log);
 
 	Config remove(ConfigTransaction xact, Config c, boolean checkConflict);
+
+	void importData(InputStream is);
+
+	void exportData(OutputStream os) throws IOException;
+
+	void shrink(int count);
 
 }

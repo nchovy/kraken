@@ -16,7 +16,6 @@
 package org.krakenapps.confdb.file;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -113,7 +112,7 @@ public class FileConfigTransaction implements ConfigTransaction {
 	@Override
 	public void commit(String committer, String log) {
 		try {
-			Manifest manifest = writeManifestLog();
+			Manifest manifest = FileManifest.writeManifest(this.manifest, manifestLogFile, manifestDatFile);
 			ChangeSetWriter.log(changeLogFile, changeDatFile, changeSet, manifest.getId(), committer, log);
 
 			// do not move this code to finally block. rollback should be called
@@ -138,22 +137,4 @@ public class FileConfigTransaction implements ConfigTransaction {
 
 		writers.clear();
 	}
-
-	private Manifest writeManifestLog() throws IOException {
-		RevLog log = new RevLog();
-		log.setRev(1);
-		log.setOperation(CommitOp.CreateDoc);
-		log.setDoc(manifest.serialize());
-
-		RevLogWriter writer = null;
-		try {
-			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
-			manifest.setId(writer.write(log));
-			return manifest;
-		} finally {
-			if (writer != null)
-				writer.close();
-		}
-	}
-
 }

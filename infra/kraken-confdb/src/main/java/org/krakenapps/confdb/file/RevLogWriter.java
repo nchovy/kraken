@@ -158,6 +158,9 @@ public class RevLogWriter {
 		return log.getDocId();
 	}
 
+	/**
+	 * @return the number of revision log items including duplicated updates
+	 */
 	public int count() {
 		return (int) ((logFileLength - logHeaderLength) / COL_LOG_SIZE);
 	}

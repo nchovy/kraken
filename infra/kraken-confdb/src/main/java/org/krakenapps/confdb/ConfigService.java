@@ -20,6 +20,8 @@ import java.util.List;
 public interface ConfigService {
 	ConfigDatabase getDatabase(String name);
 
+	ConfigDatabase getDatabase(String name, Integer rev);
+
 	ConfigDatabase ensureDatabase(String name);
 
 	ConfigDatabase createDatabase(String name);

@@ -15,6 +15,8 @@
  */
 package org.krakenapps.confdb.file;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,10 +29,13 @@ import java.util.TreeSet;
 
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
+import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.Manifest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-class FileManifest implements Manifest {
+class FileManifest implements Manifest {	
 	private int version;
 
 	private int id;
@@ -39,6 +44,67 @@ class FileManifest implements Manifest {
 
 	// col id -> (doc id -> entry) map
 	private Map<Integer, Map<Integer, ConfigEntry>> configMap = new TreeMap<Integer, Map<Integer, ConfigEntry>>();
+	
+	public static void upgradeManifest(FileManifest manifest, File dbDir) {
+		final Logger logger = LoggerFactory.getLogger(FileManifest.class);
+		for (String name : manifest.getCollectionNames()) {
+			CollectionEntry col = manifest.getCollectionEntry(name);
+			File logFile = new File(dbDir, "col" + col.getId() + ".log");
+			File datFile = new File(dbDir, "col" + col.getId() + ".dat");
+
+			if (!logFile.exists() || !datFile.exists())
+				continue;
+
+			RevLogReader reader = null;
+			try {
+				reader = new RevLogReader(logFile, datFile);
+				// build map
+				Map<ConfigEntry, Long> indexMap = new HashMap<ConfigEntry, Long>();
+				long count = reader.count();
+				for (long i = 0; i < count; i++) {
+					RevLog revLog = reader.read(i);
+					indexMap.put(new ConfigEntry(col.getId(), revLog.getDocId(), revLog.getRev()), i);
+				}
+
+				for (ConfigEntry c : manifest.getConfigEntries(col.getName())) {
+					Long index = indexMap.get(c);
+					if (index != null) {
+						c.setIndex(index.intValue());
+						logger.debug("kraken confdb: set index for " + c);
+					} else
+						logger.warn("kraken confdb: cannot find index for " + c);
+				}
+			} catch (IOException e) {
+				logger.error("kraken confdb: cannot upgrade format", e);
+			} finally {
+				if (reader != null)
+					reader.close();
+			}
+		}
+	}
+
+	public static Manifest writeManifest(Manifest manifest, File manifestLogFile, File manifestDatFile)
+			throws IOException {
+		RevLogWriter writer = null;
+		try {
+			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
+			return writeManifest(manifest, writer);
+		} finally {
+			if (writer != null)
+				writer.close();
+		}
+	}
+
+	public static Manifest writeManifest(Manifest manifest, RevLogWriter writer) throws IOException {
+		RevLog log = new RevLog();
+		log.setRev(1);
+		log.setOperation(CommitOp.CreateDoc);
+		log.setDoc(manifest.serialize());
+
+		manifest.setId(writer.write(log));
+		return manifest;
+
+	}
 
 	public FileManifest() {
 	}
@@ -208,7 +274,8 @@ class FileManifest implements Manifest {
 					// legacy format support
 					@SuppressWarnings("unchecked")
 					Map<String, Object> c = (Map<String, Object>) o;
-					manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
+					manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c
+							.get("rev")));
 				} else {
 					Object[] arr = (Object[]) o;
 					manifest.add(new ConfigEntry((Integer) arr[0], (Integer) arr[1], (Long) arr[2]));
@@ -227,17 +294,44 @@ class FileManifest implements Manifest {
 		return names;
 	}
 	
+	
+
 	@Override
-	public String toString(){		
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + id;
+		result = prime * result + version;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		FileManifest other = (FileManifest) obj;
+		if (id != other.id)
+			return false;
+		if (version != other.version)
+			return false;
+		return true;
+	}
+
+	@Override
+	public String toString() {
 		String manifest = "version=" + getVersion() + ", id=" + getId() + "\n" + "collections\n";
-		
+
 		manifest += "-------------------------------\n";
-		if ( colMap != null ){
-			for ( CollectionEntry c : colMap.values() ){
+		if (colMap != null) {
+			for (CollectionEntry c : colMap.values()) {
 				manifest += c.toString() + ", count=" + configMap.get(c.getId()).values().size() + "\n";
 			}
 		}
-		
+
 		return manifest;
 	}
 }
