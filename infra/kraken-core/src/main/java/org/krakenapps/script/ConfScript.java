@@ -274,13 +274,14 @@ public class ConfScript implements Script {
 			context.println("input file name");
 			return;
 		}
-		File exportFile = new File(System.getProperty("user.dir") + "\\data\\kraken-confdb\\" + args[0], args[2]);
+		File exportFile = new File(System.getProperty("kraken.data.dir") + "/kraken-confdb/" + args[0], args[2]);
 		OutputStream os = new FileOutputStream(exportFile);
 		db.exportData(os);
 
 		os.close();
 	}
 
+	// catch IOExeption, close InputStream
 	@ScriptUsage(description = "import db data", arguments = {
 			@ScriptArgument(name = "database name", type = "String", description = "database name"),
 			@ScriptArgument(name = "file name", type = "string", description = "target file name") })
@@ -295,7 +296,7 @@ public class ConfScript implements Script {
 			return;
 		}
 
-		File targetFile = new File(System.getProperty("user.dir") + "\\data\\kraken-confdb\\" + args[0], args[1]);
+		File targetFile = new File(System.getProperty("kraken.data.dir") + "/kraken-confdb/" + args[0], args[1]);
 
 		if (!targetFile.exists()) {
 			context.println("file is not exsist");
