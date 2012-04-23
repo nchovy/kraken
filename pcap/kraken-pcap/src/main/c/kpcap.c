@@ -11,14 +11,24 @@
   #include <linux/if.h>
   #include <netinet/in.h>
 #endif
+#ifdef __APPLE__
+  #include <string.h>
+  #include <sys/ioctl.h>
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <net/if.h>
+  #include <net/if_dl.h>
+  #include <ifaddrs.h>
+#endif
 #include <stdlib.h>
-#include <pcap/pcap.h>
+#include <pcap.h>
 #include "org_krakenapps_pcap_live_PcapDevice.h"
 
 #define MAX_NUMBER_OF_INSTANCE 255L
 
 int checkDeviceStatus(JNIEnv *, int);
-#ifdef __linux
+#if defined(__linux__) || defined (__APPLE__)
   int GetTickCount();
 #endif
 
@@ -44,9 +54,13 @@ JNIEXPORT jobjectArray JNICALL Java_org_krakenapps_pcap_live_PcapDeviceManager_g
 	char **devNames;
 	int ret;
 #endif
-#ifdef __linux__
+#if defined(__linux__)
 	struct ifreq ifr;
 	int s;
+#endif
+#if defined (__APPLE__)
+    pcap_addr_t *ifa_iter;
+    jbyte *ifa_addr;
 #endif
 	int i;
 
@@ -80,7 +94,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_krakenapps_pcap_live_PcapDeviceManager_g
 		WideCharToMultiByte(0, 0, pInfo->Adapter[i].Name, -1, devNames[i], lSize, NULL, NULL);
 	}
 #endif
-#ifdef __linux__
+#if defined(__linux__)
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 #endif
 
@@ -146,12 +160,29 @@ JNIEXPORT jobjectArray JNICALL Java_org_krakenapps_pcap_live_PcapDeviceManager_g
 			}
 		}
 #endif
-#ifdef __linux__
+#if defined(__linux__)
 		memset(&ifr, 0x00, sizeof(ifr));
 		strcpy(ifr.ifr_name, dev->name);
 		ioctl(s, SIOCGIFHWADDR, &ifr);
 
 		(*env)->SetByteArrayRegion(env, macaddr, 0, (jsize) 6, (jbyte *)ifr.ifr_hwaddr.sa_data);
+#endif
+#if defined(__APPLE__)
+		for (ifa_iter = dev->addresses; ifa_iter != NULL; ifa_iter = ifa_iter->next) 
+		{
+			if(ifa_iter->addr->sa_family == AF_LINK && ifa_iter->addr->sa_data != NULL)
+			{
+				if (((struct sockaddr_dl*)ifa_iter->addr->sa_data)->sdl_alen > 6) 
+				{
+					ifa_addr = (jbyte *)LLADDR((struct sockaddr_dl*)ifa_iter->addr->sa_data)  + 1;
+				}
+				else
+				{
+					ifa_addr = (jbyte *)LLADDR((struct sockaddr_dl*)ifa_iter->addr->sa_data);
+				}
+				(*env)->SetByteArrayRegion(env, macaddr, 0, (jsize) 6, ifa_addr);
+			}
+		}
 #endif
 
 		// get Subnet
@@ -446,7 +477,7 @@ int checkDeviceStatus(JNIEnv *env, int id) {
 	return 0;
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined (__APPLE__)
 int GetTickCount() {
 	struct timeval tv;
 
