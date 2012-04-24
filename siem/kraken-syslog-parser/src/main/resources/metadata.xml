@@ -12,4 +12,6 @@
 	<instance component="neobox-log-parser-factory" />
 	<instance component="defensepro-log-parser-factory" />
 	<instance component="paloalto-log-parser-factory" />
+	<instance component="tippingpoint-classifier" />
+	<instance component="tippingpoint-log-parser-factory" />
 </ipojo>
