@@ -260,6 +260,7 @@ public class ConfScript implements Script {
 		db.shrink(Integer.parseInt(args[1]));
 	}
 
+	// catch IOExeption, close OutputStream
 	@ScriptUsage(description = "export db data", arguments = {
 			@ScriptArgument(name = "database name", type = "string", description = "database name"),
 			@ScriptArgument(name = "export revision", type = "integer", description = "export revision id"),

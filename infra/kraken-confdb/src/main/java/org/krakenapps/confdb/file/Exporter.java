@@ -100,6 +100,8 @@ public class Exporter {
 			return createList("int", doc);
 		} else if (doc instanceof Boolean) {
 			return createList("bool", doc);
+		} else if (doc instanceof Long) {
+			return createList("long", doc);
 		} else if (doc instanceof Inet4Address) {
 			return createList("ip4", ((Inet4Address) doc).getHostAddress());
 		} else if (doc instanceof Inet6Address) {
@@ -111,6 +113,8 @@ public class Exporter {
 		} else if (doc instanceof Date) {
 			Date docDate = (Date) doc;
 			return createList("date", sdf.format(docDate));
+		} else if (doc instanceof Short) {
+			return createList("short", doc);
 		} else if (doc == null) {
 			return createList("null", doc);
 		} else if (doc instanceof Map) {
@@ -147,7 +151,7 @@ public class Exporter {
 				return createList("list", newOs);
 			}
 		} else {
-			throw new IllegalArgumentException("unsupported type [" + doc + "]");
+			throw new IllegalArgumentException("unsupported type [" + doc.getClass().getName() + "]");
 		}
 	}
 

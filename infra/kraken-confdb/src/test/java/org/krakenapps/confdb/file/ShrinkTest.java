@@ -77,7 +77,7 @@ public class ShrinkTest {
 				break;
 			assertTrue(compareObject(oldDocs.get(index), newDocs.get(index)));
 		}
-		new File(db.getDbDirectory(), "export_" + rev + ".txt").delete();
+		// new File(db.getDbDirectory(), "export_" + rev + ".txt").delete();
 	}
 
 	// Exist manifest and changeset, import data
@@ -204,6 +204,8 @@ public class ShrinkTest {
 			return false;
 		if (!(oldMap.get("null") == null && newMap.get("null") == null))
 			return false;
+		if (!oldMap.get("long").equals(newMap.get("long")))
+			return false;
 
 		return true;
 	}
@@ -238,6 +240,8 @@ public class ShrinkTest {
 		Inet6Address ip6Data = (Inet6Address) Inet6Address.getByName("1080:0:0:0:8:800:200C:417A");
 		Object o1 = "object1";
 		Object o2 = "object2";
+		long longData = Long.MAX_VALUE;
+		Short shortData = 3276;
 		Object[] os = new Object[2];
 		os[0] = o1;
 		os[1] = o2;
@@ -255,6 +259,8 @@ public class ShrinkTest {
 		m.put("ip6", ip6Data);
 		m.put("byte", createByteArray());
 		m.put("object", os);
+		m.put("long", longData);
+		m.put("short", shortData);
 
 		return m;
 	}

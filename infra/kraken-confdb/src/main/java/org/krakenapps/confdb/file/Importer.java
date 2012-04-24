@@ -16,7 +16,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -79,18 +78,18 @@ public class Importer {
 	}
 
 	private String getJsonString(InputStream is) throws IOException {
-		BufferedReader in = new BufferedReader(new InputStreamReader(is));
+		BufferedReader in = new BufferedReader(new InputStreamReader(is, "utf-8"));
 
-		String json = "";
+		StringBuilder json = new StringBuilder();
 		String line = null;
 
 		while ((line = in.readLine()) != null) {
-			json += line;
+			json.append(line);
 		}
 
 		in.close();
 
-		return json;
+		return json.toString();
 	}
 
 	private CollectionEntry checkCollectionEntry(Manifest manifest, String colName, int collectionId) {
@@ -231,6 +230,8 @@ public class Importer {
 				return (String) value;
 			} else if (type.equals("int")) {
 				return (Integer) value;
+			} else if (type.equals("long")) {
+				return Long.valueOf(value.toString());
 			} else if (type.equals("bool")) {
 				return (Boolean) value;
 			} else if (type.equals("ip4")) {
@@ -243,6 +244,8 @@ public class Importer {
 				return Float.valueOf(value.toString());
 			} else if (type.equals("date")) {
 				return dateFormat.parse((String) value);
+			} else if (type.equals("short")) {
+				return Short.valueOf(value.toString());
 			} else if (type.equals("map")) {
 				Map<String, Object> m = (Map<String, Object>) value;
 
