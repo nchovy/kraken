@@ -286,16 +286,6 @@ public class ConfScript implements Script {
 				return;
 			}
 
-			if (!exportFile.createNewFile()) {
-				context.println("catnot create file");
-				return;
-			}
-
-			if (!exportFile.canWrite()) {
-				context.println("cannot write file, check permission");
-				return;
-			}
-
 			os = new FileOutputStream(exportFile);
 			db.exportData(os);
 		} catch (IOException e) {
