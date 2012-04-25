@@ -137,7 +137,6 @@ public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization
 		organization.setParameters(params);
 		organization.setUpdated(new Date());
 		cfg.update(domain, cls, null, organization, NOT_FOUND, this);
-		fireEntityUpdated(organization.getDomain(), organization);
 	}
 
 	@Override
@@ -149,6 +148,5 @@ public class OrganizationApiImpl extends DefaultEntityEventProvider<Organization
 		organization.setParameters(params);
 		organization.setUpdated(new Date());
 		cfg.update(domain, cls, null, organization, NOT_FOUND, this);
-		fireEntityUpdated(organization.getDomain(), organization);
 	}
 }
