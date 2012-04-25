@@ -58,7 +58,7 @@ public class ShrinkTest {
 
 	// no exist manifest and changeset, import data
 	@Test
-	public void testNoExistImport() throws IOException, ParseException, JSONException {
+	public void testEmptyImport() throws IOException, ParseException, JSONException {
 		db = new FileConfigDatabase(workingDir, "testdb");
 
 		col1 = (FileConfigCollection) db.ensureCollection("testcol1");
@@ -122,7 +122,7 @@ public class ShrinkTest {
 	}
 
 	@Test
-	public void testCreateLogShrink() throws UnknownHostException {
+	public void testCreateLogShrink() throws IOException {
 		for (int id = 0; id < 10; id++)
 			col1.add(createObject(id));
 
@@ -141,7 +141,7 @@ public class ShrinkTest {
 	}
 
 	@Test
-	public void testUpdateLogShrink() throws UnknownHostException {
+	public void testUpdateLogShrink() throws IOException {
 		Config c = null;
 		for (int id = 0; id < 10; id++)
 			c = col1.add(createObject(id));
@@ -163,7 +163,7 @@ public class ShrinkTest {
 	}
 
 	@Test
-	public void testShrinkRollback() throws UnknownHostException {
+	public void testShrinkRollback() throws IOException {
 		for (int id = 0; id < 10; id++)
 			col1.add(createObject(id));
 
@@ -288,7 +288,6 @@ public class ShrinkTest {
 		OutputStream os = new FileOutputStream(exportFile);
 
 		fdb.exportData(os);
-
 		os.close();
 	}
 

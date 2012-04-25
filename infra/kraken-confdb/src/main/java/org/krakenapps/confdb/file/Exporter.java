@@ -29,47 +29,48 @@ public class Exporter {
 		this.db = db;
 	}
 
-	public void exportData(OutputStream os) {
+	public void exportData(OutputStream os) throws IOException {
 		logger.debug("kraken confdb: start export data");
-		Comparator<String> reverseOrder = new Comparator<String>() {
-			@Override
-			public int compare(String s1, String s2) {
-
-				return s2.compareTo(s1);
-			}
-		};
-
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		StringWriter writer = new StringWriter(10240);
-		JSONWriter jsonWriter = new JSONWriter(writer);
-		Map<String, Object> m = new TreeMap<String, Object>(reverseOrder);
-		Map<String, Object> metadata = new TreeMap<String, Object>();
-		Map<String, Object> cols = new TreeMap<String, Object>();
-
-		metadata.put("version", 1);
-		metadata.put("date", sdf.format(new Date()));
-
-		m.put("metadata", metadata);
-
-		for (String name : db.getCollectionNames()) {
-			List<Object> docs = new ArrayList<Object>();
-			ConfigCollection col = db.getCollection(name);
-
-			ConfigIterator it = col.findAll();
-			try {
-				while (it.hasNext()) {
-					Object doc = it.next().getDocument();
-					docs.add(doc);
-				}
-			} finally {
-				it.close();
-			}
-			cols.put(name, insertType(docs));
-		}
-
-		m.put("collections", cols);
-
+		db.lock();
 		try {
+			Comparator<String> reverseOrder = new Comparator<String>() {
+				@Override
+				public int compare(String s1, String s2) {
+
+					return s2.compareTo(s1);
+				}
+			};
+
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+			StringWriter writer = new StringWriter(10240);
+			JSONWriter jsonWriter = new JSONWriter(writer);
+			Map<String, Object> m = new TreeMap<String, Object>(reverseOrder);
+			Map<String, Object> metadata = new TreeMap<String, Object>();
+			Map<String, Object> cols = new TreeMap<String, Object>();
+
+			metadata.put("version", 1);
+			metadata.put("date", sdf.format(new Date()));
+
+			m.put("metadata", metadata);
+
+			for (String name : db.getCollectionNames()) {
+				List<Object> docs = new ArrayList<Object>();
+				ConfigCollection col = db.getCollection(name);
+
+				ConfigIterator it = col.findAll();
+				try {
+					while (it.hasNext()) {
+						Object doc = it.next().getDocument();
+						docs.add(doc);
+					}
+				} finally {
+					it.close();
+				}
+				cols.put(name, insertType(docs));
+			}
+
+			m.put("collections", cols);
+
 			jsonWriter.object();
 
 			for (String key : m.keySet())
@@ -77,26 +78,24 @@ public class Exporter {
 
 			jsonWriter.endObject();
 
+			logger.debug("kraken confdb: export complete");
+			writeJsonString(writer.toString(), os);
 		} catch (JSONException e) {
-			logger.error("kraken confdb: cannot serialize json", e);
+			throw new IOException(e);
+		} finally {
+			db.unlock();
 		}
-
-		logger.debug("kraken confdb: export complete");
-		writeJsonString(writer.toString(), os);
 	}
 
-	private void writeJsonString(String json, OutputStream os) {
+	private void writeJsonString(String json, OutputStream os) throws IOException {
 		OutputStreamWriter writer = null;
 		try {
 			writer = new OutputStreamWriter(os, "utf-8");
 			writer.write(json);
+			writer.flush();
 		} catch (IOException e) {
-			logger.error("frodo xtmconf: cannot write json string", e);
-		} finally {
-			try {
-				writer.close();
-			} catch (IOException e) {
-			}
+			logger.error("kraken confdb: cannot write json", e);
+			throw e;
 		}
 	}
 
@@ -159,12 +158,13 @@ public class Exporter {
 				return createList("list", newOs);
 			}
 		} else {
-			throw new IllegalArgumentException("unsupported type [" + doc.getClass().getName() + "]");
+			throw new IllegalArgumentException("unsupported value [" + doc + "], type [" + doc.getClass().getName()
+					+ "]");
 		}
 	}
 
 	private List<Object> createList(String type, Object doc) {
-		List<Object> l = new ArrayList<Object>();
+		List<Object> l = new ArrayList<Object>(2);
 		l.add(type);
 		l.add(doc);
 

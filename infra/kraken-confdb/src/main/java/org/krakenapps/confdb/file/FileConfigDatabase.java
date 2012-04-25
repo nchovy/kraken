@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -389,16 +390,20 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 	}
 
-	public ManifestIterator getManifestIterator(TreeSet<Integer> logRev) {
+	public ManifestIterator getManifestIterator(TreeSet<Integer> logRev) throws IOException {
+		RevLogReader manifestReader = null;
+		RevLogReader changeLogReader = null;
 		try {
-			RevLogReader manifestReader = new RevLogReader(manifestLogFile, manifestDatFile);
-			RevLogReader changeLogReader = new RevLogReader(changeLogFile, changeDatFile);
+			manifestReader = new RevLogReader(manifestLogFile, manifestDatFile);
+			changeLogReader = new RevLogReader(changeLogFile, changeDatFile);
 			FileManifestIterator manifestIterator = new FileManifestIterator(manifestReader, changeLogReader, dbDir,
 					logRev);
 
 			return manifestIterator;
 		} catch (IOException e) {
-			throw new IllegalStateException(e);
+			if (manifestReader != null)
+				manifestReader.close();
+			throw e;
 		}
 	}
 
@@ -668,17 +673,31 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public void shrink(int count) {
-		new Shrinker(this).shrink(count);
+		try {
+			new Shrinker(this).shrink(count);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Override
 	public void importData(InputStream is) {
-		new Importer(this).importData(is);
+		try {
+			new Importer(this).importData(is);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		} catch (ParseException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Override
 	public void exportData(OutputStream os) {
-		new Exporter(this).exportData(os);
+		try {
+			new Exporter(this).exportData(os);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Override

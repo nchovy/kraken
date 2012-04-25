@@ -26,40 +26,41 @@ public class Shrinker {
 	public Shrinker(FileConfigDatabase db) {
 		this.db = db;
 		this.dbDir = db.getDbDirectory();
-		db.lock();
 	}
 
-	public void shrink(int count) {
+	public void shrink(int count) throws IOException {
 		if (count < 1) {
-			db.unlock();
-			throw new IllegalArgumentException("should be input over 0");
+			throw new IllegalArgumentException("count should be positive");
 		}
+		db.lock();
 
-		logger.debug("kraken confdb: start shrink for " + count + " logs");
-		List<CommitLog> logs = getSortedCommitLogs(count);
-
-		TreeSet<Integer> manifestIds = new TreeSet<Integer>();
-		for (CommitLog c : logs) {
-			ChangeLog changeLog = (ChangeLog) c;
-			manifestIds.add(changeLog.getManifestId());
-		}
-
-		TreeSet<ConfigEntry> configEntries = new TreeSet<ConfigEntry>();
-		List<Manifest> manifests = new ArrayList<Manifest>();
-
-		loadManifests(manifestIds, configEntries, manifests);
-
-		// mapping old ConfigEntry to new ConfigEntry
-		Map<ConfigEntry, ConfigEntry> docIdMap = writeConfigEntries(configEntries);
-
-		// create new Manifest. Insert ConfigEntries and CollectionEntries
-		List<Manifest> newManifests = createNewManifests(manifests, docIdMap);
-
-		writeNewChangeLog(logs, writeNewManifestLog(newManifests));
 		try {
+			logger.debug("kraken confdb: start shrink for " + count + " logs");
+			List<CommitLog> logs = getSortedCommitLogs(count);
+
+			TreeSet<Integer> manifestIds = new TreeSet<Integer>();
+			for (CommitLog c : logs) {
+				ChangeLog changeLog = (ChangeLog) c;
+				manifestIds.add(changeLog.getManifestId());
+			}
+
+			TreeSet<ConfigEntry> configEntries = new TreeSet<ConfigEntry>();
+			List<Manifest> manifests = new ArrayList<Manifest>();
+			loadManifests(manifestIds, configEntries, manifests);
+
+			// mapping old ConfigEntry to new ConfigEntry
+			Map<ConfigEntry, ConfigEntry> docIdMap = writeConfigEntries(configEntries);
+
+			// create new Manifest. Insert ConfigEntries and CollectionEntries
+			List<Manifest> newManifests = createNewManifests(manifests, docIdMap);
+
+			writeNewChangeLog(logs, writeNewManifestLog(newManifests));
+
 			renameFiles(configEntries);
-		} catch (RuntimeException e) {
+		} catch (IOException e) {
+			revertFileNames();
 			logger.error("kraken confdb: shrink fail", e);
+			throw e;
 		} finally {
 			db.unlock();
 		}
@@ -67,22 +68,28 @@ public class Shrinker {
 	}
 
 	private void loadManifests(TreeSet<Integer> manifestIds, TreeSet<ConfigEntry> configEntries,
-			List<Manifest> manifests) {
-		ManifestIterator it = db.getManifestIterator(manifestIds);
-		while (it.hasNext()) {
-			Manifest manifest = it.next();
+			List<Manifest> manifests) throws IOException {
+		ManifestIterator it = null;
+		try {
+			it = db.getManifestIterator(manifestIds);
+			while (it.hasNext()) {
+				Manifest manifest = it.next();
 
-			for (String name : manifest.getCollectionNames()) {
-				for (ConfigEntry c : manifest.getConfigEntries(name)) {
-					configEntries.add(c);
+				for (String name : manifest.getCollectionNames()) {
+					for (ConfigEntry c : manifest.getConfigEntries(name)) {
+						configEntries.add(c);
+					}
 				}
+				manifests.add(manifest);
 			}
-			manifests.add(manifest);
+		} finally {
+			if (it != null)
+				it.close();
 		}
-		it.close();
 	}
 
-	private List<Manifest> createNewManifests(List<Manifest> manifests, Map<ConfigEntry, ConfigEntry> docIdMap) {
+	private List<Manifest> createNewManifests(List<Manifest> manifests, Map<ConfigEntry, ConfigEntry> docIdMap)
+			throws IOException {
 		List<Manifest> newManifests = new ArrayList<Manifest>();
 		for (Manifest old : manifests) {
 			FileManifest newManifest = new FileManifest();
@@ -95,12 +102,7 @@ public class Shrinker {
 
 			for (String name : old.getCollectionNames()) {
 				for (ConfigEntry e : old.getConfigEntries(name)) {
-					if (docIdMap.containsKey(e))
-						newManifest.add(docIdMap.get(e));
-					else {
-						db.unlock();
-						throw new IllegalStateException("config entry not fount [" + e + "]");
-					}
+					newManifest.add(docIdMap.get(e));
 				}
 			}
 			newManifests.add(newManifest);
@@ -123,7 +125,7 @@ public class Shrinker {
 		return logs;
 	}
 
-	private void renameFiles(TreeSet<ConfigEntry> configEntries) {
+	private void renameFiles(TreeSet<ConfigEntry> configEntries) throws IOException {
 		TreeSet<Integer> collectionIds = new TreeSet<Integer>();
 		for (ConfigEntry c : configEntries) {
 			collectionIds.add(c.getColId());
@@ -137,7 +139,7 @@ public class Shrinker {
 
 	}
 
-	private void renameTo(String fileName) {
+	private void renameTo(String fileName) throws IOException {
 		String datName = fileName + ".dat";
 		String logName = fileName + ".log";
 		File oldDat = new File(dbDir, datName);
@@ -152,7 +154,7 @@ public class Shrinker {
 
 		if (!(oldDat.renameTo(new File(dbDir, "old_" + datName)) && oldLog.renameTo(new File(dbDir, "old_" + logName))
 				&& newDat.renameTo(new File(dbDir, datName)) && newLog.renameTo(new File(dbDir, logName)))) {
-			throw new RuntimeException("file rename fail");
+			throw new IOException("file rename fail");
 		}
 	}
 
@@ -171,7 +173,7 @@ public class Shrinker {
 		}
 	}
 
-	private void writeNewChangeLog(List<CommitLog> logs, Map<Integer, Integer> manifestIds) {
+	private void writeNewChangeLog(List<CommitLog> logs, Map<Integer, Integer> manifestIds) throws IOException {
 		File changeLogFile = new File(dbDir, "new_changeset.log");
 		File changeDatFile = new File(dbDir, "new_changeset.dat");
 		RevLogWriter changeLogWriter = null;
@@ -184,16 +186,13 @@ public class Shrinker {
 						manifestIds.get(changeLog.getManifestId()), changeLog.getCommitter(), changeLog.getMessage(),
 						changeLog.getCreated());
 			}
-		} catch (IOException e) {
-			db.unlock();
-			throw new IllegalStateException(e);
 		} finally {
 			if (changeLogWriter != null)
 				changeLogWriter.close();
 		}
 	}
 
-	private Map<Integer, Integer> writeNewManifestLog(List<Manifest> newManifests) {
+	private Map<Integer, Integer> writeNewManifestLog(List<Manifest> newManifests) throws IOException {
 		File manifestLogFile = new File(dbDir, "new_manifest.log");
 		File manifestDatFile = new File(dbDir, "new_manifest.dat");
 		RevLogWriter manifestWriter = null;
@@ -204,17 +203,15 @@ public class Shrinker {
 			for (Manifest manifest : newManifests)
 				manifestIds.put(manifest.getId(), FileManifest.writeManifest(manifest, manifestWriter).getId());
 
-		} catch (IOException e) {
-			db.unlock();
-			throw new IllegalStateException(e);
 		} finally {
 			if (manifestWriter != null)
 				manifestWriter.close();
 		}
+
 		return manifestIds;
 	}
 
-	private Map<ConfigEntry, ConfigEntry> writeConfigEntries(TreeSet<ConfigEntry> configEntries) {
+	private Map<ConfigEntry, ConfigEntry> writeConfigEntries(TreeSet<ConfigEntry> configEntries) throws IOException {
 		int lastDocId = -1;
 		int newDocId = 0;
 		int collectionId = 0;
@@ -253,8 +250,6 @@ public class Shrinker {
 				lastDocId = c.getDocId();
 				changeIndex.put(c, new ConfigEntry(collectionId, newDocId, c.getRev(), newIndex));
 			}
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
 		} finally {
 			if (reader != null)
 				reader.close();

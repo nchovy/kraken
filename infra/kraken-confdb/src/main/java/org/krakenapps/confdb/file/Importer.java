@@ -38,26 +38,26 @@ public class Importer {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void importData(InputStream is) {
+	public void importData(InputStream is) throws IOException, ParseException {
 		logger.debug("kraken confdb: start import data");
+		db.lock();
+
 		try {
 			JSONObject jsonObject = new JSONObject(getJsonString(is));
 			Map<String, Object> collections = (Map<String, Object>) parse(jsonObject.optJSONObject("collections"));
 
 			Manifest manifest = db.getManifest(null);
 			List<ConfigChange> configChanges = new ArrayList<ConfigChange>();
-			int collectionId = manifest.getCollectionNames().size();
 
 			for (String colName : collections.keySet()) {
-				collectionId++;
-				CollectionEntry collectionEntry = checkCollectionEntry(manifest, colName, collectionId);
+				CollectionEntry collectionEntry = checkCollectionEntry(manifest, colName);
 				manifest.add(collectionEntry);
 				List<Object> docs = (List<Object>) removeType((List<Object>) collections.get(colName));
 
 				for (Object o : docs) {
 					ConfigEntry configEntry = writeConfigEntry(o, collectionEntry.getId());
-					configChanges.add(new ConfigChange(CommitOp.CreateDoc, colName, collectionId, configEntry
-							.getDocId()));
+					configChanges.add(new ConfigChange(CommitOp.CreateDoc, colName, collectionEntry.getId(),
+							configEntry.getDocId()));
 					manifest.add(configEntry);
 				}
 
@@ -67,65 +67,52 @@ public class Importer {
 			writeChangeLog(configChanges, manifest.getId());
 			logger.debug("kraken confdb: import complete");
 		} catch (JSONException e) {
-			logger.error("kraken confdb: invalid json data", e);
-			return;
-		} catch (ParseException e) {
-			logger.error("kraken confdb: invalid data type", e);
-			return;
+			throw new ParseException(e.getMessage(), 0);
+		} finally {
+			db.unlock();
 		}
 	}
 
-	private String getJsonString(InputStream is) {
+	private String getJsonString(InputStream is) throws IOException {
 		BufferedReader in = null;
 		StringBuilder json = null;
-		try {
-			in = new BufferedReader(new InputStreamReader(is, "utf-8"));
 
-			json = new StringBuilder();
-			String line = null;
+		in = new BufferedReader(new InputStreamReader(is, "utf-8"));
 
-			while ((line = in.readLine()) != null) {
-				json.append(line);
-			}
-		} catch (IOException e) {
-			logger.error("frodo xtmconf: cannot read json string", e);
-		} finally {
-			if (in != null)
-				try {
-					in.close();
-				} catch (IOException e) {
-				}
+		json = new StringBuilder();
+		String line = null;
+
+		while ((line = in.readLine()) != null) {
+			json.append(line);
 		}
 
 		return json.toString();
 	}
 
-	private CollectionEntry checkCollectionEntry(Manifest manifest, String colName, int collectionId) {
-
+	private CollectionEntry checkCollectionEntry(Manifest manifest, String colName) {
 		CollectionEntry collectionEntry = manifest.getCollectionEntry(colName);
-		if (collectionEntry == null)
+		if (collectionEntry == null) {
+			int collectionId = db.nextCollectionId();
 			collectionEntry = new CollectionEntry(collectionId, colName);
+		}
 
 		return collectionEntry;
 	}
 
-	private void writeChangeLog(List<ConfigChange> configChanges, int manifestId) {
+	private void writeChangeLog(List<ConfigChange> configChanges, int manifestId) throws IOException {
 		File changeLogFile = new File(db.getDbDirectory(), "changeset.log");
 		File changeDatFile = new File(db.getDbDirectory(), "changeset.dat");
 		RevLogWriter changeLogWriter = null;
 		try {
 			changeLogWriter = new RevLogWriter(changeLogFile, changeDatFile);
 			ChangeSetWriter.log(changeLogWriter, configChanges, manifestId, null, "import", new Date());
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
 		} finally {
 			if (changeLogWriter != null)
 				changeLogWriter.close();
 		}
-
 	}
 
-	private int writeManifestLog(Manifest newManifest) {
+	private int writeManifestLog(Manifest newManifest) throws IOException {
 		File manifestLogFile = new File(db.getDbDirectory(), "manifest.log");
 		File manifestDatFile = new File(db.getDbDirectory(), "manifest.dat");
 		int manifestId = 0;
@@ -134,8 +121,6 @@ public class Importer {
 		try {
 			manifestWriter = new RevLogWriter(manifestLogFile, manifestDatFile);
 			manifestId = FileManifest.writeManifest(newManifest, manifestWriter).getId();
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
 		} finally {
 			if (manifestWriter != null)
 				manifestWriter.close();
@@ -143,7 +128,7 @@ public class Importer {
 		return manifestId;
 	}
 
-	private ConfigEntry writeConfigEntry(Object doc, int collectionId) {
+	private ConfigEntry writeConfigEntry(Object doc, int collectionId) throws IOException {
 
 		RevLogWriter writer = null;
 		try {
@@ -160,8 +145,6 @@ public class Importer {
 			int index = writer.count() - 1;
 
 			return new ConfigEntry(collectionId, docId, 0, index);
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
 		} finally {
 			if (writer != null)
 				writer.close();
@@ -175,7 +158,7 @@ public class Importer {
 		return bb;
 	}
 
-	private Map<String, Object> parse(JSONObject jsonObject) {
+	private Map<String, Object> parse(JSONObject jsonObject) throws IOException {
 		Map<String, Object> m = new HashMap<String, Object>();
 		String[] names = JSONObject.getNames(jsonObject);
 		if (names == null)
@@ -193,14 +176,15 @@ public class Importer {
 
 				m.put(key, value);
 			} catch (JSONException e) {
-				e.printStackTrace();
+				logger.error("kraken confdb: cannot parse json", e);
+				throw new IOException(e);
 			}
 		}
 
 		return m;
 	}
 
-	private Object parse(JSONArray jsonarray) {
+	private Object parse(JSONArray jsonarray) throws IOException {
 		List<Object> list = new ArrayList<Object>();
 		for (int i = 0; i < jsonarray.length(); i++) {
 			try {
@@ -214,7 +198,8 @@ public class Importer {
 				else
 					list.add(o);
 			} catch (JSONException e) {
-				e.printStackTrace();
+				logger.error("kraken confdb: cannot parse json", e);
+				throw new IOException(e);
 			}
 		}
 		return list;
@@ -277,7 +262,7 @@ public class Importer {
 
 				return Base64.decode(byteString);
 			} else {
-				throw new IllegalArgumentException("unsupported type [" + type + "]");
+				throw new IllegalArgumentException("unsupported value [" + value + "], type [" + type + "]");
 			}
 		} catch (UnknownHostException e) {
 			throw new IllegalArgumentException("invalid host [" + value + "]", e);

@@ -103,28 +103,19 @@ public class ConfigEntry implements Comparable<ConfigEntry> {
 			return false;
 		return true;
 	}
-	
+
 	@Override
 	public int compareTo(ConfigEntry e) {
-		int ret = -1;
+		if (colId != e.getColId())
+			return colId - e.getColId();
 
-		if (e.getColId() < getColId())
-			ret = 1;
+		if (docId != e.getDocId())
+			return docId - e.getDocId();
 
-		if (e.getColId() == getColId())
-			if (e.getDocId() < getDocId())
-				ret = 1;
+		if (rev != e.getRev())
+			return (int) (rev - e.getRev());
 
-		if (e.getColId() == getColId())
-			if (e.getDocId() == getDocId())
-				if (e.getRev() < getRev())
-					ret = 1;
-
-		if (e.getColId() == getColId())
-			if (e.getDocId() == getDocId())
-				if (e.getRev() == getRev())
-					ret = 0;
-		return ret;
+		return 0;
 	}
 
 	@Override

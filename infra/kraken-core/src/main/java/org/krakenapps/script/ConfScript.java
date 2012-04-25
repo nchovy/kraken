@@ -258,8 +258,13 @@ public class ConfScript implements Script {
 			context.println("count should be input over 0");
 			return;
 		}
-
-		db.shrink(Integer.parseInt(args[1]));
+		try {
+			db.shrink(Integer.parseInt(args[1]));
+			context.println("ok");
+		} catch (Exception e) {
+			logger.error("kraken core: failed to shrink [" + db.getName() + "]", e);
+			context.println("failed to shrink [" + db.getName() + "], " + e.getMessage());
+		}
 	}
 
 	@ScriptUsage(description = "export db data", arguments = {
@@ -288,8 +293,10 @@ public class ConfScript implements Script {
 
 			os = new FileOutputStream(exportFile);
 			db.exportData(os);
+			context.println("exported " + db.getName() + " to " + exportFile.getAbsolutePath());
 		} catch (IOException e) {
 			logger.error("kraken core: cannot export data", e);
+			context.println("export failed due to " + e.getMessage());
 		} finally {
 			try {
 				if (os != null)
@@ -331,8 +338,10 @@ public class ConfScript implements Script {
 		try {
 			is = new FileInputStream(targetFile);
 			db.importData(is);
+			context.println("imported " + db.getName() + " from " + targetFile.getAbsolutePath());
 		} catch (IOException e) {
 			logger.error("kraken core: cannot import data", e);
+			context.println("import failed due to " + e.getMessage());
 		} finally {
 			try {
 				if (is != null)

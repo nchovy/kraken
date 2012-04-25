@@ -2,6 +2,7 @@ package org.krakenapps.confdb.file;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.TreeSet;
 
 import org.krakenapps.confdb.Manifest;
@@ -12,26 +13,26 @@ public class FileManifestIterator implements ManifestIterator {
 	private RevLogReader changeLogReader = null;
 	private File dbDir;
 	private TreeSet<Integer> manifestIds;
+	private Iterator<Integer> it;
 
-	public FileManifestIterator(RevLogReader manifestReader, RevLogReader changLogReader, File dbDir, TreeSet<Integer> manifestIds) throws IOException {
+	public FileManifestIterator(RevLogReader manifestReader, RevLogReader changeLogReader, File dbDir,
+			TreeSet<Integer> manifestIds) {
 		this.manifestReader = manifestReader;
-		this.changeLogReader = changLogReader;
+		this.changeLogReader = changeLogReader;
 		this.dbDir = dbDir;
 		this.manifestIds = manifestIds;
+		it = this.manifestIds.iterator();
 	}
 
 	@Override
 	public boolean hasNext() {
-		if (manifestIds.size() == 0)
-			return false;
-		else
-			return true;
+		return it.hasNext();
 	}
 
 	@Override
 	public Manifest next() {
 		try {
-			int manifestId = manifestIds.pollFirst();			
+			int manifestId = it.next();
 			RevLog revlog = manifestReader.findDoc(manifestId);
 			byte[] doc = manifestReader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
 			FileManifest manifest = FileManifest.deserialize(doc);
