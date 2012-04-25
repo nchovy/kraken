@@ -677,7 +677,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	@Override
-	public void exportData(OutputStream os) throws IOException {
+	public void exportData(OutputStream os) {
 		new Exporter(this).exportData(os);
 	}
 

@@ -72,22 +72,30 @@ public class Importer {
 		} catch (ParseException e) {
 			logger.error("kraken confdb: invalid data type", e);
 			return;
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 
-	private String getJsonString(InputStream is) throws IOException {
-		BufferedReader in = new BufferedReader(new InputStreamReader(is, "utf-8"));
+	private String getJsonString(InputStream is) {
+		BufferedReader in = null;
+		StringBuilder json = null;
+		try {
+			in = new BufferedReader(new InputStreamReader(is, "utf-8"));
 
-		StringBuilder json = new StringBuilder();
-		String line = null;
+			json = new StringBuilder();
+			String line = null;
 
-		while ((line = in.readLine()) != null) {
-			json.append(line);
+			while ((line = in.readLine()) != null) {
+				json.append(line);
+			}
+		} catch (IOException e) {
+			logger.error("frodo xtmconf: cannot read json string", e);
+		} finally {
+			if (in != null)
+				try {
+					in.close();
+				} catch (IOException e) {
+				}
 		}
-
-		in.close();
 
 		return json.toString();
 	}

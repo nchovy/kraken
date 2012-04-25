@@ -29,7 +29,7 @@ public class Exporter {
 		this.db = db;
 	}
 
-	public void exportData(OutputStream os) throws IOException {
+	public void exportData(OutputStream os) {
 		logger.debug("kraken confdb: start export data");
 		Comparator<String> reverseOrder = new Comparator<String>() {
 			@Override
@@ -85,11 +85,19 @@ public class Exporter {
 		writeJsonString(writer.toString(), os);
 	}
 
-	private void writeJsonString(String json, OutputStream os) throws IOException {
-		OutputStreamWriter writer = new OutputStreamWriter(os, "utf-8");
-		writer.write(json);
-
-		writer.close();
+	private void writeJsonString(String json, OutputStream os) {
+		OutputStreamWriter writer = null;
+		try {
+			writer = new OutputStreamWriter(os, "utf-8");
+			writer.write(json);
+		} catch (IOException e) {
+			logger.error("frodo xtmconf: cannot write json string", e);
+		} finally {
+			try {
+				writer.close();
+			} catch (IOException e) {
+			}
+		}
 	}
 
 	private Object insertType(Object doc) {

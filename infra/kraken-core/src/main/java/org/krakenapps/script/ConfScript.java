@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
-
 import org.krakenapps.api.Primitive;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -35,8 +34,11 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Manifest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConfScript implements Script {
+	private final Logger logger = LoggerFactory.getLogger(ConfScript.class);
 	private ConfigService conf;
 	private ScriptContext context;
 
@@ -260,33 +262,58 @@ public class ConfScript implements Script {
 		db.shrink(Integer.parseInt(args[1]));
 	}
 
-	// catch IOExeption, close OutputStream
 	@ScriptUsage(description = "export db data", arguments = {
 			@ScriptArgument(name = "database name", type = "string", description = "database name"),
-			@ScriptArgument(name = "export revision", type = "integer", description = "export revision id"),
-			@ScriptArgument(name = "file name", type = "string", description = "export file name") })
-	public void export(String[] args) throws IOException {
-		ConfigDatabase db = conf.getDatabase(args[0], Integer.parseInt(args[1]));
+			@ScriptArgument(name = "file path", type = "string", description = "export file path"),
+			@ScriptArgument(name = "export revision", type = "integer", description = "export revision id", optional = true) })
+	public void exportFile(String[] args) {
+		Integer rev = null;
+		if (args.length > 2)
+			rev = Integer.parseInt(args[2]);
+
+		ConfigDatabase db = conf.getDatabase(args[0], rev);
 		if (db == null) {
 			context.println("database not found");
 			return;
 		}
-		if (args[2] == null) {
-			context.println("input file name");
-			return;
-		}
-		File exportFile = new File(System.getProperty("kraken.data.dir") + "/kraken-confdb/" + args[0], args[2]);
-		OutputStream os = new FileOutputStream(exportFile);
-		db.exportData(os);
 
-		os.close();
+		OutputStream os = null;
+		File dir = (File) context.getSession().getProperty("dir");
+		File exportFile = canonicalize(dir, args[1]);
+		try {
+			if (exportFile.exists()) {
+				context.println("file already exists: " + exportFile.getAbsolutePath());
+				return;
+			}
+
+			if (!exportFile.createNewFile()) {
+				context.println("catnot create file");
+				return;
+			}
+
+			if (!exportFile.canWrite()) {
+				context.println("cannot write file, check permission");
+				return;
+			}
+
+			os = new FileOutputStream(exportFile);
+			db.exportData(os);
+		} catch (IOException e) {
+			logger.error("kraken core: cannot export data", e);
+		} finally {
+			try {
+				if (os != null)
+					os.close();
+			} catch (IOException e) {
+			}
+		}
+
 	}
 
-	// catch IOExeption, close InputStream
 	@ScriptUsage(description = "import db data", arguments = {
 			@ScriptArgument(name = "database name", type = "String", description = "database name"),
-			@ScriptArgument(name = "file name", type = "string", description = "target file name") })
-	public void importData(String[] args) throws IOException {
+			@ScriptArgument(name = "file path", type = "string", description = "target file path") })
+	public void importFile(String[] args) {
 		ConfigDatabase db = conf.getDatabase(args[0]);
 		if (db == null) {
 			context.println("database not found");
@@ -297,15 +324,39 @@ public class ConfScript implements Script {
 			return;
 		}
 
-		File targetFile = new File(System.getProperty("kraken.data.dir") + "/kraken-confdb/" + args[0], args[1]);
+		File dir = (File) context.getSession().getProperty("dir");
+		File targetFile = canonicalize(dir, args[1]);
 
 		if (!targetFile.exists()) {
-			context.println("file is not exsist");
+			context.println("file does not exist: " + targetFile.getAbsolutePath());
 			return;
 		}
 
-		InputStream is = new FileInputStream(targetFile);
-		db.importData(is);
-		is.close();
+		if (!targetFile.canRead()) {
+			context.println("cannot read file, check permission");
+			return;
+		}
+
+		InputStream is = null;
+		try {
+			is = new FileInputStream(targetFile);
+			db.importData(is);
+		} catch (IOException e) {
+			logger.error("kraken core: cannot import data", e);
+		} finally {
+			try {
+				if (is != null)
+					is.close();
+			} catch (IOException e) {
+			}
+		}
 	}
+
+	private File canonicalize(File dir, String path) {
+		if (path.startsWith("/"))
+			return new File(path);
+		else
+			return new File(dir, path);
+	}
+
 }
