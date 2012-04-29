@@ -281,7 +281,7 @@ public class ShrinkTest {
 	}
 
 	private void export(int rev) throws IOException {
-		File exportFile = new File(System.getProperty("user.dir") + "\\" + db.getName(), "export_" + rev + ".txt");
+		File exportFile = new File(System.getProperty("user.dir") + File.separatorChar + db.getName(), "export_" + rev + ".txt");
 		if (exportFile.exists())
 			exportFile.delete();
 		FileConfigDatabase fdb = new FileConfigDatabase(new File(System.getProperty("user.dir")), "testdb", rev);
