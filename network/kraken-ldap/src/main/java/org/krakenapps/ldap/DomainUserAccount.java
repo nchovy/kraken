@@ -52,6 +52,8 @@ public class DomainUserAccount {
 	public DomainUserAccount(LDAPEntry entry) {
 		LDAPAttributeSet attrs = entry.getAttributeSet();
 		this.accountName = getString(attrs, "sAMAccountName");
+		if (accountName == null)
+			accountName = getString(attrs, "uid");
 		this.domainAdmin = getInt(attrs, "adminCount") > 0;
 		this.allowDialIn = "TRUE".equals(getString(attrs, "msNPAllowDialin"));
 		this.logonCount = getInt(attrs, "logonCount");
@@ -59,6 +61,8 @@ public class DomainUserAccount {
 		this.distinguishedName = getString(attrs, "distinguishedName");
 		this.userPrincipalName = getString(attrs, "userPrincipalName");
 		this.displayName = getString(attrs, "displayName");
+		if (displayName == null)
+			displayName = getString(attrs, "cn");
 		this.surname = getString(attrs, "sn");
 		this.givenName = getString(attrs, "givenName");
 		this.title = getString(attrs, "title");
@@ -72,12 +76,14 @@ public class DomainUserAccount {
 		if (expire != 0L && expire != 0x7FFFFFFFFFFFFFFFL)
 			this.accountExpires = getTimestamp(attrs, "accountExpires");
 
-		for (String token : distinguishedName.split("(?<!\\\\),")) {
-			String attr = token.split("=")[0];
-			String value = token.split("=")[1];
-			if (attr.equals("OU")) {
-				this.organizationUnitName = value;
-				break;
+		if (distinguishedName != null) {
+			for (String token : distinguishedName.split("(?<!\\\\),")) {
+				String attr = token.split("=")[0];
+				String value = token.split("=")[1];
+				if (attr.equals("OU")) {
+					this.organizationUnitName = value;
+					break;
+				}
 			}
 		}
 	}

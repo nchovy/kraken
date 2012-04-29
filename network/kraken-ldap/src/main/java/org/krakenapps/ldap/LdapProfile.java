@@ -61,6 +61,10 @@ public class LdapProfile {
 	private byte[] trustStore;
 	private long syncInterval = DEFAULT_SYNC_INTERVAL;
 
+	private String baseDn;
+
+	private LdapServerType serverType = LdapServerType.ActiveDirectory;
+
 	@FieldOption(skip = true)
 	private Date lastSync;
 
@@ -173,6 +177,22 @@ public class LdapProfile {
 		this.syncInterval = syncInterval;
 	}
 
+	public String getBaseDn() {
+		return baseDn;
+	}
+
+	public void setBaseDn(String baseDn) {
+		this.baseDn = baseDn;
+	}
+
+	public LdapServerType getServerType() {
+		return serverType;
+	}
+
+	public void setServerType(LdapServerType serverType) {
+		this.serverType = serverType;
+	}
+
 	public Date getLastSync() {
 		return lastSync;
 	}
@@ -183,8 +203,9 @@ public class LdapProfile {
 
 	@Override
 	public String toString() {
-		return String.format("%s [target=%s, host=%s:%d, account=%s, sync interval=%dms, last sync=%s, keystore=%s]", name,
-				targetDomain, dc, getPort(), account, syncInterval, DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync),
-				(trustStore != null));
+		return String.format(
+				"%s [target=%s, host=%s:%d, account=%s, type=%s, base dn=%s, sync interval=%dms, last sync=%s, keystore=%s]",
+				name, targetDomain, dc, getPort(), account, serverType, baseDn, syncInterval,
+				DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), (trustStore != null));
 	}
 }

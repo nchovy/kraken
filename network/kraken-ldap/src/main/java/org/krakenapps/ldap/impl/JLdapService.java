@@ -38,6 +38,7 @@ import org.krakenapps.confdb.Predicates;
 import org.krakenapps.ldap.DomainOrganizationalUnit;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
+import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import com.novell.ldap.LDAPEntry;
 import com.novell.ldap.LDAPException;
 import com.novell.ldap.LDAPJSSESecureSocketFactory;
 import com.novell.ldap.LDAPReferralException;
+import com.novell.ldap.LDAPSearchConstraints;
 import com.novell.ldap.LDAPSearchResults;
 import com.novell.ldap.LDAPSocketFactory;
 
@@ -107,7 +109,13 @@ public class JLdapService implements LdapService {
 		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
 			String filter = "(&(userPrincipalName=*))";
-			LDAPSearchResults r = lc.search(buildBaseDN(profile), LDAPConnection.SCOPE_SUB, filter, null, false);
+			if (profile.getServerType() != LdapServerType.ActiveDirectory)
+				filter = "(&(uid=*))";
+
+			LDAPSearchConstraints cons = new LDAPSearchConstraints();
+			cons.setTimeLimit(20000);
+			cons.setMaxResults(5000);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile), LDAPConnection.SCOPE_SUB, filter, null, false, cons);
 
 			while (r.hasMore()) {
 				try {
@@ -178,8 +186,15 @@ public class JLdapService implements LdapService {
 		LDAPConnection lc = openLdapConnection(profile, timeout);
 
 		try {
-			String filter = "(sAMAccountName=" + account + ")";
-			LDAPSearchResults r = lc.search(buildBaseDN(profile), LDAPConnection.SCOPE_SUB, filter, null, false);
+			String filter = null;
+			if (profile.getServerType() == LdapServerType.ActiveDirectory) {
+				filter = "(sAMAccountName=" + account + ")";
+			} else {
+				filter = "(uid=" + account + ")";
+			}
+
+			String baseDn = buildBaseDN(profile);
+			LDAPSearchResults r = lc.search(baseDn, LDAPConnection.SCOPE_SUB, filter, null, false);
 
 			bindStatus = true;
 
@@ -188,8 +203,12 @@ public class JLdapService implements LdapService {
 			logger.trace("kraken ldap: verify password for {}", entry);
 
 			// try bind
-			String dn = entry.getAttribute("distinguishedName").getStringValue();
-			lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
+			if (profile.getServerType() == LdapServerType.ActiveDirectory) {
+				String dn = entry.getAttribute("distinguishedName").getStringValue();
+				lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
+			} else {
+				lc.bind(LDAPConnection.LDAP_V3, "uid=" + account + "," + baseDn, password.getBytes("utf-8"));
+			}
 			return true;
 		} catch (Exception e) {
 			if (!bindStatus)
@@ -235,6 +254,9 @@ public class JLdapService implements LdapService {
 	}
 
 	private String buildBaseDN(LdapProfile profile) {
+		if (profile.getBaseDn() != null)
+			return profile.getBaseDn();
+
 		String domain = profile.getDc();
 		StringTokenizer t = new StringTokenizer(domain, ".");
 		String dn = "";

@@ -188,7 +188,12 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Map<List<String>, DomainOrganizationalUnit> orgUnitsMap = new HashMap<List<String>, DomainOrganizationalUnit>();
 		Pattern p = Pattern.compile("OU=(.*?),");
 		for (DomainOrganizationalUnit orgUnit : orgUnits) {
-			Matcher m = p.matcher(orgUnit.getDistinguishedName());
+			// only active directory has org unit distinguished name
+			String dn = orgUnit.getDistinguishedName();
+			if (dn == null)
+				continue;
+
+			Matcher m = p.matcher(dn);
 			List<String> names = new ArrayList<String>();
 			while (m.find())
 				names.add(m.group(1));
@@ -228,8 +233,8 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		return result;
 	}
 
-	private OrganizationUnit createOrgUnits(String domain, List<OrganizationUnit> create, Map<String, OrganizationUnit> createdRoot,
-			List<String> names) {
+	private OrganizationUnit createOrgUnits(String domain, List<OrganizationUnit> create,
+			Map<String, OrganizationUnit> createdRoot, List<String> names) {
 		if (names.isEmpty())
 			return null;
 

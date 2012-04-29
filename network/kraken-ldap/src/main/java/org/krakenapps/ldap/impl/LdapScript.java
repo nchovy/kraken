@@ -26,6 +26,7 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.ldap.DomainOrganizationalUnit;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
+import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
 import org.krakenapps.ldap.LdapProfile.CertificateType;
@@ -60,6 +61,8 @@ public class LdapScript implements Script {
 			@ScriptArgument(name = "dc", type = "string", description = "domain name of domain controller "),
 			@ScriptArgument(name = "account", type = "string", description = "admin account name for simple bind (e.g. OFFICE\\xeraph"),
 			@ScriptArgument(name = "password", type = "string", description = "admin password"),
+			@ScriptArgument(name = "server type", type = "string", description = "ActiveDirectory or SunOneDirectory", optional = true),
+			@ScriptArgument(name = "base dn", type = "string", description = "LDAP base DN", optional = true),
 			@ScriptArgument(name = "truststore path", type = "string", description = "truststore file path", optional = true) })
 	public void createProfile(String[] args) {
 		try {
@@ -68,8 +71,12 @@ public class LdapScript implements Script {
 			profile.setDc(args[1]);
 			profile.setAccount(args[2]);
 			profile.setPassword(args[3]);
-			if (args.length > 4) {
-				File file = new File(args[4]);
+			if (args.length > 4)
+				profile.setServerType(LdapServerType.valueOf(args[4]));
+			if (args.length > 5)
+				profile.setBaseDn(args[5]);
+			if (args.length > 6) {
+				File file = new File(args[6]);
 				if (!file.exists())
 					throw new IllegalArgumentException("file not found");
 				profile.setTrustStore(CertificateType.X509, new FileInputStream(file));
