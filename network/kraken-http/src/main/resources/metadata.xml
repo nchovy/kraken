@@ -41,5 +41,4 @@
 	<instance component="http-service-controller" />
 	<instance component="http-servlet-controller" />
 	<instance component="file-upload-service" />
-	<instance component="file-upload-plugin" />
 </iPOJO>

@@ -68,8 +68,8 @@ public class TcpSessionTable {
 		return map.get(key);
 	}
 
-	public List<TcpSessionImpl> getCurrentSessions() { 
-		List<TcpSessionImpl> sessions = new ArrayList<TcpSessionImpl>(map.values());
+	public List<TcpSession> getCurrentSessions() { 
+		List<TcpSession> sessions = new ArrayList<TcpSession>(map.values());
 		return sessions;
 	}
 	

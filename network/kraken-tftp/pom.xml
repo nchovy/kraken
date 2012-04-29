@@ -17,7 +17,6 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-bundle-plugin</artifactId>
-				<version>2.0.1</version>
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
@@ -32,7 +31,6 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-ipojo-plugin</artifactId>
-				<version>1.4.0</version>
 				<executions>
 					<execution>
 						<goals>
@@ -47,17 +45,14 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.5.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
-			<version>1.5.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -67,7 +62,6 @@
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
-			<version>1.4.0</version>
 		</dependency>
 	</dependencies>
 </project>

@@ -33,7 +33,7 @@ public class TcpDecoder implements IpProcessor, Ipv6Processor {
 		return mapper;
 	}
 
-	public Collection<TcpSessionImpl> getCurrentSessions() {
+	public Collection<? extends TcpSession> getCurrentSessions() {
 		return sessionTable.getCurrentSessions();
 	}
 

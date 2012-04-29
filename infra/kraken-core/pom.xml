@@ -30,17 +30,14 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.9.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-cron</artifactId>
-			<version>1.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-confdb</artifactId>
-			<version>0.8.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>

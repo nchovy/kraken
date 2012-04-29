@@ -15,6 +15,7 @@
  */
 package org.krakenapps.sentry.linux.logger;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,7 +62,7 @@ public class LinuxCommandHandler implements SentryCommandHandler {
 	}
 
 	@SentryMethod
-	public List<Object> getArpCache() {
+	public List<Object> getArpCache() throws FileNotFoundException {
 		List<Object> list = new ArrayList<Object>();
 
 		for (ArpEntry entry : ArpCache.getEntries()) {

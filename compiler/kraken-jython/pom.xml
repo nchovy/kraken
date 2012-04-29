@@ -43,7 +43,6 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-ipojo-plugin</artifactId>
-				<version>1.4.0</version>
 				<executions>
 					<execution>
 						<goals>
@@ -58,7 +57,6 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>jython</groupId>
@@ -68,13 +66,11 @@
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo</artifactId>
-			<version>1.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo.annotations
 			</artifactId>
-			<version>1.4.0</version>
 		</dependency>
 
 	</dependencies>

@@ -1,6 +1,5 @@
 package org.krakenapps.sonar.script;
 
-import java.util.Collection;
 import java.util.Properties;
 
 import javax.persistence.EntityManagerFactory;
@@ -56,8 +55,7 @@ public class SonarScript implements Script {
 			context.println("----------------");
 			PcapLiveRunner runner = scanner.getDevice(name);
 
-			Collection<TcpSession> sessions = runner.getTcpDecoder().getCurrentSessions();
-			for (TcpSession session : sessions) {
+			for (TcpSession session : runner.getTcpDecoder().getCurrentSessions()) {
 				context.println(session.toString());
 			}
 		}

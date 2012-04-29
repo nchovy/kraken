@@ -13,6 +13,7 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMessage.RecipientType;
 
 import org.krakenapps.event.api.Event;
+import org.krakenapps.mail.MailerConfig;
 import org.krakenapps.mail.MailerRegistry;
 import org.krakenapps.siem.response.ResponseAction;
 import org.krakenapps.siem.response.ResponseActionManager;
@@ -38,7 +39,8 @@ public class MailResponseAction implements ResponseAction {
 		this.description = description;
 		this.config = config;
 		this.mailerName = config.getProperty("mailer_name");
-		this.session = registry.getSession(mailerName);
+		MailerConfig mailerConfig = registry.getConfig(mailerName);
+		this.session = registry.getSession(mailerConfig);
 		try {
 			this.fromAddr = new InternetAddress(config.getProperty("from"));
 			this.toAddr = new InternetAddress(config.getProperty("to"));
@@ -121,8 +123,8 @@ public class MailResponseAction implements ResponseAction {
 
 	@Override
 	public String toString() {
-		return String.format("mail response, mailer [%s], from [%s], to [%s], subject prefix [%s]", mailerName,
-				fromAddr, toAddr, prefix);
+		return String.format("mail response, mailer [%s], from [%s], to [%s], subject prefix [%s]", mailerName, fromAddr, toAddr,
+				prefix);
 	}
 
 	@Override

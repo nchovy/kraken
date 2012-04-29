@@ -50,12 +50,10 @@
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
-			<version>1.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-httpd</artifactId>
-			<version>1.0.0</version>
 		</dependency>
 	</dependencies>
 </project>

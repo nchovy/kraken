@@ -16,12 +16,12 @@
 package org.krakenapps.sentry.linux.logger;
 
 import java.util.Locale;
-import java.util.Properties;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.AbstractLoggerFactory;
 import org.krakenapps.log.api.Logger;
+import org.krakenapps.log.api.LoggerSpecification;
 
 @Component(name = "cpu-usage-logger-factory")
 @Provides
@@ -32,8 +32,8 @@ public class CpuUsageLoggerFactory extends AbstractLoggerFactory {
 	}
 
 	@Override
-	public Logger createLogger(String namespace, String name, String description, Properties config) {
-		return new CpuUsageLogger(namespace, name, description, this);
+	protected Logger createLogger(LoggerSpecification spec) {
+		return new CpuUsageLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this);
 	}
 
 	@Override
