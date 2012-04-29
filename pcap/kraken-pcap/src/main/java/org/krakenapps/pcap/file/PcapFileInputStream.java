@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.krakenapps.pcap.PcapInputStream;
 import org.krakenapps.pcap.packet.PacketHeader;
@@ -40,6 +41,21 @@ import org.krakenapps.pcap.util.ChainBuffer;
 public class PcapFileInputStream implements PcapInputStream {
 	private DataInputStream is;
 	private GlobalHeader globalHeader;
+
+	/**
+	 * Opens pcap file input stream.
+	 * 
+	 * @param file
+	 *            the file to be opened for reading
+	 * @throws FileNotFoundException
+	 *             if the file does not exist, is a directory rather than a
+	 *             regular file, or for some other reason cannot be opened for
+	 *             reading.
+	 */
+	public PcapFileInputStream(InputStream stream) throws IOException {
+		is = new DataInputStream(stream);
+		readGlobalHeader();
+	}
 
 	/**
 	 * Opens pcap file input stream.
@@ -116,11 +132,11 @@ public class PcapFileInputStream implements PcapInputStream {
 	private Buffer readPacketData(int packetLength) throws IOException {
 		byte[] packets = new byte[packetLength];
 		is.read(packets);
-		
+
 		Buffer payload = new ChainBuffer();
 		payload.addLast(packets);
 		return payload;
-//		return new PacketPayload(packets);
+		// return new PacketPayload(packets);
 	}
 
 	/**

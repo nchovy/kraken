@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-pcap</artifactId>
-	<version>1.7.0</version>
+	<version>1.7.1</version>
 	<packaging>bundle</packaging>
 	<name>Kraken PCAP</name>
 	<build>
@@ -31,6 +31,8 @@
 							lib/linux_x86/libkpcap.so; osname=linux;
 							processor=x86,
 							lib/linux_x86_64/libkpcap.so; osname=linux;
+							processor=x86_64,
+							lib/osx_x64/libkpcap.dylib; osname=macosx;
 							processor=x86_64
 						</Bundle-NativeCode>
 						<Export-Package>
