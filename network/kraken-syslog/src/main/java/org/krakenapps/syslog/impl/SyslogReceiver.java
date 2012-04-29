@@ -47,7 +47,7 @@ public class SyslogReceiver implements SyslogServer, Runnable {
 
 	private PushRunner internalRunner = new PushRunner();
 	private Thread thread;
-	private Thread internalRunnerThread;
+	private Thread pushRunnerThread;
 	private LinkedBlockingQueue<Syslog> packetQueue;
 
 	private Set<SyslogListener> callbacks;
@@ -63,7 +63,7 @@ public class SyslogReceiver implements SyslogServer, Runnable {
 		this.packetQueue = new LinkedBlockingQueue<Syslog>(profile.getQueueSize());
 		this.callbacks = Collections.newSetFromMap(new ConcurrentHashMap<SyslogListener, Boolean>());
 		this.thread = new Thread(this, "Syslog " + profile.getListenAddress());
-		this.internalRunnerThread = new Thread(internalRunner, "Syslog Push " + profile.getListenAddress());
+		this.pushRunnerThread = new Thread(internalRunner, "Syslog Push " + profile.getListenAddress());
 	}
 
 	@Override
@@ -89,7 +89,7 @@ public class SyslogReceiver implements SyslogServer, Runnable {
 
 		doStop = false;
 		doStopPush = false;
-		internalRunnerThread.start();
+		pushRunnerThread.start();
 		thread.start();
 	}
 
@@ -102,7 +102,8 @@ public class SyslogReceiver implements SyslogServer, Runnable {
 		socket.close();
 
 		try {
-			internalRunnerThread.join(2500);
+			pushRunnerThread.interrupt();
+			pushRunnerThread.join(2500);
 			thread.join(2500);
 		} catch (InterruptedException e) {
 			logger.warn("kraken syslog: internal runner didn't respond for stop request");
