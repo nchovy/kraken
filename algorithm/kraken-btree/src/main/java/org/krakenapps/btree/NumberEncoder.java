@@ -17,7 +17,6 @@ public class NumberEncoder {
 		long value = 0L;
 
 		byte b;
-		int cnt = 0;
 		do {
 			value = value << 7;
 			b = bb.get();

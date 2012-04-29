@@ -1,12 +1,9 @@
 package org.krakenapps.sonar.httpheaderparser;
 
 import java.text.ParseException;
-import java.util.Date;
-import java.util.List;
 
 import org.krakenapps.bnf.Syntax;
 import org.krakenapps.sonar.httpheaderparser.syntax.HttpHeaderSyntax;
-import org.krakenapps.sonar.passive.fingerprint.HttpApplicationMetaData;
 
 public class HttpHeaderParser {
 	private Syntax syntax;

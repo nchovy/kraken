@@ -32,9 +32,6 @@ public class HttpAttackDetector extends DefaultHttpProcessor {
 	private PassiveScanner scanner;
 
 	@Requires
-	private Metabase metabase;
-
-	@Requires
 	private MalwareDomainService malwareDomainService;
 
 	private InjectionChecker injectionChecker;

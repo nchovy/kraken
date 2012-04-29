@@ -3,31 +3,17 @@ package org.krakenapps.sonar.passive.fingerprint;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
-import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.pcap.decoder.ip.InternetProtocol;
 import org.krakenapps.pcap.decoder.ip.IpPacket;
 import org.krakenapps.pcap.decoder.ip.IpProcessor;
 import org.krakenapps.pcap.decoder.ip.Ipv4Packet;
 import org.krakenapps.pcap.decoder.ipv6.Ipv6Packet;
 import org.krakenapps.pcap.decoder.ipv6.Ipv6Processor;
 import org.krakenapps.pcap.decoder.tcp.TcpPacket;
-import org.krakenapps.sonar.Metabase;
-import org.krakenapps.sonar.PassiveScanner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Component(name = "sonar-tcp-os-detector")
 @Provides
 public class TcpOsDetector implements IpProcessor, Ipv6Processor {
-	private final Logger logger = LoggerFactory.getLogger(TcpOsDetector.class.getName());
-
-	@Requires
-	private PassiveScanner scanner;
-
-	@Requires
-	private Metabase metabase;
-
 	@Validate
 	public void start() {
 		// scanner.addIpProcessor(InternetProtocol.TCP, this);

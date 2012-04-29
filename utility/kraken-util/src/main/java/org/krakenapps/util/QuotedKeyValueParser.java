@@ -5,20 +5,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 public class QuotedKeyValueParser {
-	public static void main(String[] args) {
-		String sample1 = "date=2010-11-23 time=05:06:41 devname=FG300B3909605075 device_id=FG300B3909605075 log_id=0021010001 type=traffic subtype=allowed pri=notice vd=root fwver=040003 SN=643663 duration=200 carrier_ep=N/A user=N/A group=N/A rule=8 policyid=8 proto=6 service=80/tcp app_type=N/A status=accept src=192.168.3.132 srcname=192.168.3.132 dst=82.178.10.116 dstname=82.178.10.116 src_int=\"port4\" dst_int=\"port4\" sent=128 rcvd=1988 sent_pkt=3 rcvd_pkt=4 src_port=53742 dst_port=80 vpn=\"N/A\" tran_ip=192.168.0.26 tran_port=80 dir_disp=org tran_disp=dnat";
-		long started = System.currentTimeMillis();
-		for (int i = 0; i < 1000; ++i) {
-			Map<String, String> result = parse(sample1);
-			for (Entry<String, String> entry : result.entrySet()) {
-				//System.out.println(String.format("[%s] = [%s]", entry.getKey(), entry.getValue()));
-			}
-		}
-		System.out.printf("elapsed: %dms\n", System.currentTimeMillis() - started);
-	}
 
 	public static Map<String, String> parse(String line) {
 		List<SimpleEntry<String, String>> parseArgs = parseArgs(line);
@@ -117,8 +105,8 @@ public class QuotedKeyValueParser {
 			if (quote1Pos == -1 && quote2Pos == -1)
 				quotePos = -1;
 			else {
-				quotePos = Math.min(quote1Pos == -1 ? Integer.MAX_VALUE : quote1Pos,
-						quote2Pos == -1 ? Integer.MAX_VALUE : quote2Pos);
+				quotePos = Math.min(quote1Pos == -1 ? Integer.MAX_VALUE : quote1Pos, quote2Pos == -1 ? Integer.MAX_VALUE
+						: quote2Pos);
 			}
 			if (quotePos == -1 || quotePos == 0)
 				break;

@@ -5,7 +5,6 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.dom.api.ConfigManager;
-import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.api.HostUpdateApi;
 import org.krakenapps.dom.model.Host;
