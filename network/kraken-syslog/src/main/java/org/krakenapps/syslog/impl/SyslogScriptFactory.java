@@ -15,25 +15,28 @@
  */
 package org.krakenapps.syslog.impl;
 
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
-import org.krakenapps.filter.FilterManager;
-import org.krakenapps.syslog.SyslogScript;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
+import org.krakenapps.syslog.SyslogServerRegistry;
 
+@Component(name = "syslog-script-factory")
+@Provides
 public class SyslogScriptFactory implements ScriptFactory {
-	private BundleContext bundleContext;
-	
-	public SyslogScriptFactory(BundleContext bundleContext) {
-		this.bundleContext = bundleContext;
-	}
-	
+
+	@SuppressWarnings("unused")
+	@ServiceProperty(name = "alias", value = "syslog")
+	private String alias;
+
+	@Requires
+	private SyslogServerRegistry syslogRegistry;
+
 	@Override
 	public Script createScript() {
-		ServiceReference ref = bundleContext.getServiceReference(FilterManager.class.getName());
-		FilterManager filterManager = (FilterManager) bundleContext.getService(ref);
-		return new SyslogScript(filterManager);
+		return new SyslogScript(syslogRegistry);
 	}
 
 }

@@ -16,16 +16,23 @@
 package org.krakenapps.syslog;
 
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.Collection;
 
 public interface SyslogServerRegistry {
 	boolean contains(String name);
 
 	Collection<String> getNames();
-	
+
 	SyslogServer getServer(String name);
-	
+
 	SyslogServer findServer(InetSocketAddress local);
+
+	Collection<SyslogProfile> getSyslogProfiles();
+
+	void open(SyslogProfile profile) throws SocketException;
+
+	void close(String name);
 
 	void register(String name, SyslogServer server);
 

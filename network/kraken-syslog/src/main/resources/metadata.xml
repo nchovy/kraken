@@ -1,26 +1,6 @@
-<ipojo xmlns:filter="org.krakenapps.filter.FilterHandler">
-	<component classname="org.krakenapps.syslog.SyslogReceiver"
-		immediate="true" architecture="true">
-		<provides />
-		<filter:filter />
-	</component>
-	<component classname="org.krakenapps.syslog.SyslogSender"
-		immediate="true" architecture="true">
-		<provides />
-		<filter:filter />
-	</component>
-	<component classname="org.krakenapps.syslog.SyslogTracer"
-		immediate="true" architecture="true">
-		<provides />
-		<filter:filter />
-	</component>
-	<component className="org.krakenapps.syslog.impl.SyslogScriptFactory"
-		name="syslog-script-factory" immediate="true" factory="false">
-		<provides>
-			<property name="alias" type="string" value="syslog" />
-		</provides>
-	</component>
-
+<ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
+	xmlns="org.apache.felix.ipojo">
 	<instance component="syslog-script-factory" />
 	<instance component="syslog-server-registry" />
 </ipojo>

@@ -16,14 +16,19 @@
 package org.krakenapps.syslog;
 
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.nio.charset.Charset;
 
 public interface SyslogServer {
-	InetSocketAddress getLocalAddress();
+	InetSocketAddress getListenAddress();
 
 	Charset getCharset();
-	
+
 	void addListener(SyslogListener callback);
 
 	void removeListener(SyslogListener callback);
+
+	void open() throws SocketException;
+
+	void close();
 }
