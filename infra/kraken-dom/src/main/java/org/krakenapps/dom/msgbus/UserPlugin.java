@@ -26,13 +26,16 @@ import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
+import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
+import org.krakenapps.msgbus.handler.MsgbusPermission;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
 
 @Component(name = "dom-user-plugin")
@@ -46,6 +49,53 @@ public class UserPlugin {
 
 	@Requires
 	private AdminApi adminApi;
+
+	@Requires
+	private OrganizationUnitApi orgApi;
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "config_edit")
+	public void moveUsers(Request req, Response resp) {
+		if (!req.has("org_unit_guid"))
+			throw new DOMException("null-org-unit");
+
+		if (!req.has("login_names"))
+			throw new DOMException("null-login-names");
+
+		Admin admin = adminApi.findAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		if (admin == null)
+			throw new DOMException("admin-not-found");
+
+		String orgUnitGuid = req.getString("org_unit_guid");
+
+		// org unit guid can be null (for root node)
+		OrganizationUnit orgUnit = null;
+		if (orgUnitGuid != null)
+			orgUnit = orgApi.findOrganizationUnit("localhost", orgUnitGuid);
+
+		Collection<String> loginNames = (Collection<String>) req.get("login_names");
+		Collection<User> users = userApi.getUsers(req.getOrgDomain(), loginNames);
+
+		List<String> failures = new ArrayList<String>();
+
+		for (User u : users) {
+			// try to check role
+			String loginName = u.getLoginName();
+			Admin targetAdmin = adminApi.findAdmin(req.getOrgDomain(), loginName);
+			if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
+					&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
+				failures.add(loginName);
+				continue;
+			}
+
+			u.setOrgUnit(orgUnit);
+		}
+
+		userApi.updateUsers("localhost", users, false);
+
+		resp.put("failed_login_names", failures);
+	}
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
@@ -80,7 +130,7 @@ public class UserPlugin {
 		int offset = 0;
 		int limit = users.size();
 
-		if (req.has("offset")){
+		if (req.has("offset")) {
 			offset = range(0, users.size(), req.getInteger("offset"));
 			limit -= offset;
 		}
@@ -108,7 +158,8 @@ public class UserPlugin {
 
 	@MsgbusMethod
 	public void createUser(Request req, Response resp) {
-		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
@@ -127,7 +178,8 @@ public class UserPlugin {
 				&& targetAdmin.getRole().getLevel() >= request.getRole().getLevel())
 			throw new DOMException("no-permission");
 
-		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		userApi.updateUser(req.getOrgDomain(), user, req.has("password"));
 	}
 
