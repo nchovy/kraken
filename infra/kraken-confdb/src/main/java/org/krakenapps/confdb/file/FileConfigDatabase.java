@@ -293,6 +293,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 			xact = beginTransaction();
 
 		try {
+			// prevent duplicated collection name caused by race condition
+			CollectionEntry col = getManifest(changeset, true).getCollectionEntry(name);
+			if (col != null) {
+				logger.trace("kraken confdb: duplicated collection name [{}]", name);
+				xact.rollback();
+				return col;
+			}
+
 			xact.log(CommitOp.CreateCol, name, 0, 0, 0);
 			if (implicitTransact) {
 				xact.commit(null, null);
