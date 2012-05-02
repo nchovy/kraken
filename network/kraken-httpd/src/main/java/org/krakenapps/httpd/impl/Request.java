@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -174,9 +176,13 @@ public class Request implements HttpServletRequest {
 
 	private void parseCookies(HttpRequest req) {
 		List<String> cs = req.getHeaders(HttpHeaders.Names.COOKIE);
+		ArrayList<Cookie> parsed = new ArrayList<Cookie>();
 		this.cookies = new Cookie[cs.size()];
 		for (int i = 0; i < cs.size(); i++) {
 			String s = cs.get(i);
+			if (s == null || s.trim().isEmpty())
+				continue;
+
 			String name = null;
 			String value = null;
 			if (s.contains("=")) {
@@ -187,9 +193,12 @@ public class Request implements HttpServletRequest {
 				name = s.trim();
 			}
 
-			logger.debug("kraken httpd: cookie [name={}, value={}]", name, value);
-			this.cookies[i] = new Cookie(name, value);
+			logger.debug("kraken httpd: cookie [{} -> name={}, value={}]", new Object[] { s, name, value });
+			parsed.add(new Cookie(name, value));
 		}
+
+		this.cookies = new Cookie[parsed.size()];
+		parsed.toArray(this.cookies);
 	}
 
 	private int deduceKeyLength(String cipherSuite) {
@@ -399,7 +408,7 @@ public class Request implements HttpServletRequest {
 
 	@Override
 	public String getScheme() {
-		return "http";
+		return ctx.getPipeline().get("ssl") == null ? "http" : "https";
 	}
 
 	@Override
