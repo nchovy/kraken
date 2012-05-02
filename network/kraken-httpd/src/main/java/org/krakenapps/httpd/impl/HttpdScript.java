@@ -80,22 +80,22 @@ public class HttpdScript implements Script {
 
 			String ssl = config.isSsl() ? " (ssl: key " + config.getKeyAlias() + ", trust " + config.getTrustAlias()
 					+ ")" : "";
-			String hosts = "";
+			String virtualHosts = "";
 			if (config.getVirtualHosts().size() > 0) {
-				hosts += "\n";
 				for (VirtualHost h : config.getVirtualHosts())
-					hosts += "  " + h + ", idle timeout: " + config.getIdleTimeout() + "seconds";
-			} else
-				hosts += "idle timeout: " + config.getIdleTimeout() + "seconds";
+					virtualHosts += "\n  " + h;
+			}
+
+			String idleTime = "idle timeout: " + config.getIdleTimeout() + "seconds";
+			String defaultHttpContext = config.getDefaultHttpContext();
+
+			String additional = defaultHttpContext == null ? idleTime : "default context: "
+					+ config.getDefaultHttpContext() + ", " + idleTime;
 
 			String information = config.getListenAddress() + ssl + (server.isOpened() ? ", opened, " : ", closed, ")
-					+ hosts + "\n";
+					+ additional;
 
-			if (config.getDefaultHttpContext() == null)
-				context.println(information);
-			else
-				context.println(information + (config.getVirtualHosts().size() > 0 ? "," : "") + " default context: "
-						+ config.getDefaultHttpContext());
+			context.println(information + virtualHosts);
 		}
 	}
 
