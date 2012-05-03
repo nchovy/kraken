@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -30,17 +31,24 @@ import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.dom.model.Permission;
+import org.krakenapps.dom.model.Role;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
+import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPermission;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-user-plugin")
 @MsgbusPlugin
 public class UserPlugin {
+	private final Logger logger = LoggerFactory.getLogger(UserPlugin.class.getName());
+
 	@Requires
 	private ConfigManager conf;
 
@@ -186,8 +194,30 @@ public class UserPlugin {
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void removeUsers(Request req, Response resp) {
-		Collection<String> loginNames = (Collection<String>) req.get("login_names");
+		Admin admin = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		if (!admin.getRole().getPermissions().contains(new Permission("dom", "config_edit")))
+			throw new MsgbusException("dom", "no-permission");
+
+		int currentLevel = admin.getRole().getLevel();
+
+		List<String> loginNames = (List<String>) req.get("login_names");
+		List<String> failedLoginNames = new ArrayList<String>();
+
+		Collection<User> users = userApi.getUsers(req.getOrgDomain());
+		for (User user : users) {
+			if (user.getExt().get("admin") == null)
+				continue;
+
+			Admin adminUser = adminApi.findAdmin(req.getOrgDomain(), user.getLoginName());
+			if (adminUser.getRole().getLevel() >= currentLevel)
+				failedLoginNames.add(user.getLoginName());
+		}
+
+		loginNames.removeAll(failedLoginNames);
 		userApi.removeUsers(req.getOrgDomain(), loginNames);
+
+		// return failed users
+		resp.put("failed_login_names", failedLoginNames);
 	}
 
 	@MsgbusMethod
