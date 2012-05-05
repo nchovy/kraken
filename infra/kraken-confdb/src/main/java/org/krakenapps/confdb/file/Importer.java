@@ -140,6 +140,7 @@ public class Importer {
 			ByteBuffer bb = encodeDocument(doc);
 			RevLog log = new RevLog();
 			log.setDoc(bb.array());
+			log.setRev(1);
 			log.setOperation(CommitOp.CreateDoc);
 			int docId = writer.write(log);
 			int index = writer.count() - 1;
