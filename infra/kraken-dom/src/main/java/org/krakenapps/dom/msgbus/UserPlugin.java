@@ -203,7 +203,7 @@ public class UserPlugin {
 		List<String> loginNames = (List<String>) req.get("login_names");
 		List<String> failedLoginNames = new ArrayList<String>();
 
-		Collection<User> users = userApi.getUsers(req.getOrgDomain());
+		Collection<User> users = userApi.getUsers(req.getOrgDomain(), loginNames);
 		for (User user : users) {
 			if (user.getExt().get("admin") == null)
 				continue;
