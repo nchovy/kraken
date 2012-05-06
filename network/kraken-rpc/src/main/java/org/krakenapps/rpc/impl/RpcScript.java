@@ -25,6 +25,7 @@ import org.krakenapps.rpc.RpcPeerRegistry;
 import org.krakenapps.rpc.RpcPeeringCallback;
 import org.krakenapps.rpc.RpcServiceBinding;
 import org.krakenapps.rpc.RpcSession;
+import org.krakenapps.rpc.RpcTrustLevel;
 import org.krakenapps.rpc.RpcWaitingCall;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

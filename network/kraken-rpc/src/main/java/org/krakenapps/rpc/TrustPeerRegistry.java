@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.krakenapps.rpc.impl.RpcPeerImpl;
-import org.krakenapps.rpc.impl.RpcTrustLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

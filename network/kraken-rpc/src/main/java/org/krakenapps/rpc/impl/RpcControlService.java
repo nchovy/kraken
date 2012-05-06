@@ -15,6 +15,7 @@ import org.krakenapps.rpc.RpcServiceBinding;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.rpc.RpcSessionEvent;
 import org.krakenapps.rpc.RpcSessionEventCallback;
+import org.krakenapps.rpc.RpcTrustLevel;
 import org.krakenapps.rpc.SimpleRpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

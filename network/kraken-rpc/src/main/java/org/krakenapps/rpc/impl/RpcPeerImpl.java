@@ -1,6 +1,7 @@
 package org.krakenapps.rpc.impl;
 
 import org.krakenapps.rpc.RpcPeer;
+import org.krakenapps.rpc.RpcTrustLevel;
 
 public class RpcPeerImpl implements RpcPeer {
 	private String guid;

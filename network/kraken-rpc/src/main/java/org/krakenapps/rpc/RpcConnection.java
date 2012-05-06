@@ -5,7 +5,6 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Properties;
 
-import org.krakenapps.rpc.impl.RpcTrustLevel;
 
 public interface RpcConnection {
 	/**

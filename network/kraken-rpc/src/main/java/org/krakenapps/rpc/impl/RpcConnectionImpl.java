@@ -35,6 +35,7 @@ import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.rpc.RpcSessionEvent;
 import org.krakenapps.rpc.RpcSessionEventCallback;
 import org.krakenapps.rpc.RpcSessionState;
+import org.krakenapps.rpc.RpcTrustLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

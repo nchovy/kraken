@@ -1,4 +1,4 @@
-package org.krakenapps.rpc.impl;
+package org.krakenapps.rpc;
 
 public enum RpcTrustLevel {
 	Untrusted(1), Low(2), Medium(3), High(4);
