@@ -79,8 +79,8 @@ public class RpcClient {
 		if (ownHandler)
 			handler.start();
 
-		ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(
-				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+		ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
+				Executors.newCachedThreadPool()));
 
 		bootstrap.setOption("tcpNoDelay", true);
 		bootstrap.setOption("keepAlive", true);
@@ -138,7 +138,7 @@ public class RpcClient {
 	private RpcConnection doPostConnectSteps(Channel channel, RpcConnectionProperties props) {
 		if (channel != null && channel.isConnected()) {
 			if (props.getPeerCert() != null)
-				logger.info("kraken-rpc: connected with peer {}", props.getPeerCert().getSubjectDN().getName());
+				logger.trace("kraken-rpc: connected with peer {}", props.getPeerCert().getSubjectDN().getName());
 
 			return handler.newClientConnection(channel, props);
 		}
@@ -150,15 +150,15 @@ public class RpcClient {
 		if (ownHandler)
 			handler.stop();
 
-		if (conn != null) {
+		if (conn != null && conn.isOpen()) {
 			conn.close();
-			conn = null;
 		}
+		conn = null;
 
 		if (bootstrap != null) {
 			bootstrap.releaseExternalResources();
-			bootstrap = null;
 		}
+		bootstrap = null;
 	}
 
 }

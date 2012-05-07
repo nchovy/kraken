@@ -179,8 +179,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 		if (bindingMap.containsKey(name))
 			throw new IllegalStateException("duplicated service name: " + name);
 
-		logger.trace("kraken rpc: binding {}:{} to {}", new Object[] { channel.getId(), name,
-				service.getClass().getName() });
+		logger.trace("kraken rpc: binding {}:{} to {}", new Object[] { channel.getId(), name, service.getClass().getName() });
 		bindingMap.put(name, new RpcServiceBindingImpl(name, service));
 	}
 
@@ -231,8 +230,8 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 		RpcSessionEvent event = new RpcSessionEventImpl(RpcSessionEvent.Opened, session);
 		try {
 			// create pseudo rpc message and invoke session request callback
-			RpcMessage pseudoMessage = new RpcMessage(new Object[] { new HashMap<String, Object>(),
-					new HashMap<String, Object>() });
+			RpcMessage pseudoMessage = new RpcMessage(
+					new Object[] { new HashMap<String, Object>(), new HashMap<String, Object>() });
 			pseudoMessage.setSession(session);
 			RpcContext.setMessage(pseudoMessage);
 
@@ -279,6 +278,9 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 	@Override
 	public void close() {
+		if (state == RpcConnectionState.Closed)
+			return;
+
 		state = RpcConnectionState.Closed;
 
 		// close all sessions
@@ -508,8 +510,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 			int trustedLevel = (Integer) ret[1];
 
 			// challenge result
-			logger.trace("kraken rpc: {} login result = {}, trusted level = {}", new Object[] { peerGuid, peered,
-					trustedLevel });
+			logger.trace("kraken rpc: {} login result = {}, trusted level = {}", new Object[] { peerGuid, peered, trustedLevel });
 
 			if (peered)
 				setTrustedLevel(RpcTrustLevel.parse(trustedLevel));
