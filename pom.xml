@@ -178,7 +178,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-confdb</artifactId>
-				<version>0.8.10</version>
+				<version>0.8.11</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>

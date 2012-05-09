@@ -68,6 +68,7 @@ public class SyslogServerRegistryImpl implements SyslogServerRegistry, SyslogLis
 			try {
 				SyslogReceiver server = new SyslogReceiver(p);
 				server.open();
+				server.addListener(this);
 				serverMap.put(p.getName(), server);
 			} catch (Throwable t) {
 				logger.error("kraken syslog: cannot open syslog server", t);
@@ -82,6 +83,7 @@ public class SyslogServerRegistryImpl implements SyslogServerRegistry, SyslogLis
 	public void stop() {
 		for (SyslogServer server : serverMap.values()) {
 			try {
+				server.removeListener(this);
 				server.close();
 			} catch (Throwable t) {
 				logger.error("kraken syslog: cannot close - " + server, t);
@@ -160,8 +162,9 @@ public class SyslogServerRegistryImpl implements SyslogServerRegistry, SyslogLis
 
 	@Override
 	public void addSyslogListener(SyslogListener callback) {
-		if (callback == null)
+		if (callback == null) {
 			return;
+		}
 
 		syslogCallbacks.add(callback);
 	}
@@ -220,6 +223,10 @@ public class SyslogServerRegistryImpl implements SyslogServerRegistry, SyslogLis
 
 		SyslogReceiver server = new SyslogReceiver(profile);
 		server.open();
+
+		// add callback
+		server.addListener(this);
+
 		serverMap.put(profile.getName(), server);
 
 		ConfigDatabase db = conf.ensureDatabase("kraken-syslog");
@@ -229,8 +236,11 @@ public class SyslogServerRegistryImpl implements SyslogServerRegistry, SyslogLis
 	@Override
 	public void close(String name) {
 		SyslogServer server = serverMap.remove(name);
-		if (server != null)
+		if (server != null) {
+			// remove callback
+			server.removeListener(this);
 			server.close();
+		}
 
 		ConfigDatabase db = conf.ensureDatabase("kraken-syslog");
 		Config c = db.findOne(SyslogProfile.class, Predicates.field("name", name));

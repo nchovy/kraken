@@ -322,7 +322,15 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public void dropCollection(String name) {
 		ConfigTransaction xact = beginTransaction();
+
 		try {
+			CollectionEntry col = xact.getManifest().getCollectionEntry(name);
+			if (col == null) {
+				logger.trace("kraken confdb: does not exist collection name [{}]", name);
+				xact.rollback();
+				return;
+			}
+
 			xact.getManifest();
 			xact.log(CommitOp.DropCol, name, 0, 0, 0);
 			xact.commit(null, null);

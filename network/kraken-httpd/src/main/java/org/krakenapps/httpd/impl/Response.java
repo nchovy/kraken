@@ -34,9 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -44,6 +43,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.slf4j.Logger;
@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 public class Response implements HttpServletResponse {
 	private final Logger logger = LoggerFactory.getLogger(Response.class.getName());
+	private final int bufferSize = 128 * 1024;
 
 	private BundleContext bc;
 	private ChannelHandlerContext ctx;
@@ -71,11 +72,14 @@ public class Response implements HttpServletResponse {
 
 	private class ResponseOutputStream extends ServletOutputStream {
 		private boolean closed = false;
+		private boolean sentHeader = false;
 		private ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
 
 		@Override
 		public void write(int b) throws IOException {
 			buf.writeByte(b);
+			if (buf.readableBytes() > bufferSize)
+				flush();
 		}
 
 		@Override
@@ -86,6 +90,8 @@ public class Response implements HttpServletResponse {
 		@Override
 		public void write(byte[] b, int off, int len) throws IOException {
 			buf.writeBytes(b, off, len);
+			if (buf.readableBytes() > bufferSize)
+				flush();
 		}
 
 		@Override
@@ -97,47 +103,53 @@ public class Response implements HttpServletResponse {
 
 			closed = true;
 
-			// send response if not sent
-			HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+			flush();
 
-			HttpSessionImpl session = (HttpSessionImpl) req.getSession(false);
-			if (session != null) {
-				if (session.isNew()) {
-					resp.addHeader(HttpHeaders.Names.SET_COOKIE, "JSESSIONID=" + session.getId() + "; path=/");
-					session.setNew(false);
-				}
+			ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
 
-				session.setLastAccess(new Date());
-			}
-
-			for (Cookie c : cookies) {
-				resp.addHeader(HttpHeaders.Names.SET_COOKIE, c.getName() + "=" + c.getValue());
-			}
-
-			for (String name : headers.keySet())
-				resp.setHeader(name, headers.get(name));
-
-			// resp.setHeader("Access-Control-Allow-Origin", "*");
-			// resp.setHeader("Access-Control-Allow-Credentials", "true");
-
-			logger.debug("kraken httpd: flush response [{}]", buf.readableBytes());
-
-			ChannelBuffer dup = buf.duplicate();
-			buf.clear();
-
-			resp.setContent(dup.duplicate());
-			HttpHeaders.setContentLength(resp, dup.readableBytes());
-
-			ChannelFuture f = ctx.getChannel().write(resp);
 			if (!isKeepAlive()) {
 				logger.trace("kraken httpd: channel [{}] will be closed", ctx.getChannel());
-				f.addListener(ChannelFutureListener.CLOSE);
+				ctx.getChannel().close();
 			}
 		}
 
 		@Override
 		public void flush() throws IOException {
-			// do not move flush code here (header should not sent twice)
+			if (!sentHeader) {
+				// send response if not sent
+				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+
+				HttpSessionImpl session = (HttpSessionImpl) req.getSession(false);
+				if (session != null) {
+					if (session.isNew()) {
+						resp.addHeader(HttpHeaders.Names.SET_COOKIE, "JSESSIONID=" + session.getId() + "; path=/");
+						session.setNew(false);
+					}
+
+					session.setLastAccess(new Date());
+				}
+
+				for (Cookie c : cookies) {
+					resp.addHeader(HttpHeaders.Names.SET_COOKIE, c.getName() + "=" + c.getValue());
+				}
+
+				for (String name : headers.keySet())
+					resp.setHeader(name, headers.get(name));
+
+				resp.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, "chunked");
+
+				logger.debug("kraken httpd: flush response [{}]", buf.readableBytes());
+
+				// write http header
+				ctx.getChannel().write(resp);
+
+				sentHeader = true;
+			}
+
+			ChannelBuffer dup = buf.duplicate();
+			ctx.getChannel().write(new DefaultHttpChunk(dup));
+			buf.clear();
+
 		}
 
 		private boolean isKeepAlive() {
@@ -228,11 +240,14 @@ public class Response implements HttpServletResponse {
 			msg = "";
 
 		String body = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n" //
-				+ "<html><head><title>" + sc + " " + status.getReasonPhrase()
+				+ "<html><head><title>" + sc + " "
+				+ status.getReasonPhrase()
 				+ "</title></head>\n" //
-				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>" + msg
+				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>"
+				+ msg
 				+ "</pre><hr/><address>Kraken HTTPd/"
-				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION) + "</address></body></html>";
+				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION)
+				+ "</address></body></html>";
 
 		writer.append(body);
 		writer.close();

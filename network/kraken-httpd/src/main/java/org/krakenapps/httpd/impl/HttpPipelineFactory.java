@@ -31,6 +31,7 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
@@ -84,6 +85,7 @@ public class HttpPipelineFactory implements ChannelPipelineFactory, HttpConfigur
 		pipeline.addLast("decoder", new HttpRequestDecoder());
 		pipeline.addLast("aggregator", new HttpChunkAggregator(config.getMaxContentLength()));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
+		pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
 		pipeline.addLast("handler", new HttpServerHandler(bc, config, contextRegistry));
 		return pipeline;
 	}
