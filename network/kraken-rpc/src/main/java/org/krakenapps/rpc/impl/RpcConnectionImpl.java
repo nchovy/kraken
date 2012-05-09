@@ -56,7 +56,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 	private final Lock controlLock = new ReentrantLock();
 	private Condition controlReady = controlLock.newCondition();
-	private boolean isControlReady = false;
+	private volatile boolean isControlReady = false;
 
 	private final Lock peeringLock = new ReentrantLock();
 	private Condition peeringReady = peeringLock.newCondition();
@@ -390,6 +390,9 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 	@Override
 	public void waitControlReady() {
 		try {
+			if (!isControlReady)
+				logger.trace("kraken rpc: waiting control ready for [{}]", getId());
+
 			controlLock.lock();
 			while (!isControlReady) {
 				controlReady.await();
@@ -457,6 +460,7 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 		public void onComplete(RpcAsyncResult r) {
 			if (r.isError()) {
 				logger.error("kraken rpc: peering error", r.getException());
+				session.getConnection().close();
 				return;
 			}
 

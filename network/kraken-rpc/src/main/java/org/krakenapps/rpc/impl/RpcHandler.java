@@ -265,14 +265,18 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			logger.trace("kraken rpc: new peer certificate subject={}, remote={}", peerCommonName, channel.getRemoteAddress());
 
 			if (executor != null)
-				executor.submit(this);
+				new Thread(this).start();
 			else
-				logger.trace("kraken rpc: handler threadpool stopped, drop ssl init");
+				logger.error("kraken rpc: handler threadpool stopped, drop ssl init");
 		}
 
 		@Override
 		public void run() {
-			init(channel, props);
+			try {
+				init(channel, props);
+			} catch (Throwable t) {
+				logger.error("kraken rpc: ssl connection init fail", t);
+			}
 		}
 	}
 
@@ -302,9 +306,13 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 	private RpcConnection initializeConnection(Channel channel, RpcConnectionProperties props) throws InterruptedException {
 		RpcConnectionImpl newConnection = null;
 
+		logger.trace("kraken rpc: start initialize connection [{}]", channel.getId());
+
 		// wait connect callback thread ends
 		while (newConnection == null) {
 			newConnection = connMap.get(channel.getId());
+			if (logger.isTraceEnabled())
+				logger.trace("kraken rpc: wait until connection setup [{}]", channel.getId());
 			Thread.sleep(100);
 		}
 
@@ -320,6 +328,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		// by default.
 		RpcSession session = newConnection.openSession(0, "rpc-control");
 		if (session == null) {
+			logger.error("kraken rpc: cannot open rpc control session, connection [{}]", channel.getId());
 			newConnection.close();
 			return null;
 		}
@@ -327,11 +336,17 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		// auto-binding
 		for (RpcService service : serviceMap.keySet()) {
 			String serviceName = serviceMap.get(service);
-			newConnection.bind(serviceName, service);
-			logger.debug("kraken rpc: binding service [{}] to new connection [{}]", serviceName, newConnection);
+			try {
+				newConnection.bind(serviceName, service);
+				if (logger.isTraceEnabled())
+					logger.trace("kraken rpc: binding service [{}] to new connection [{}]", serviceName, newConnection);
+			} catch (Throwable t) {
+				logger.error("kraken rpc: cannot bind service [{}] to connection [{}]", serviceName, newConnection);
+			}
 		}
 
 		// at this moment, control session is opened
+		logger.trace("kraken rpc: signal control ready [{}]", channel.getId());
 		newConnection.setControlReady();
 
 		// try peering
