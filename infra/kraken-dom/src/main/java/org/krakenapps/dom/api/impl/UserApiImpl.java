@@ -173,8 +173,15 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void createUser(String domain, User user) {
-		user.setSalt(createSalt(domain));
-		user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
+		createUser(domain, user, false);
+	}
+
+	@Override
+	public void createUser(String domain, User user, boolean noHash) {
+		if (!noHash) {
+			user.setSalt(createSalt(domain));
+			user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
+		}
 		cfg.add(domain, cls, getPred(user.getLoginName()), user, ALREADY_EXIST, this);
 	}
 
