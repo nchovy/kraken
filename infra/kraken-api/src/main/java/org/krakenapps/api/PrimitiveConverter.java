@@ -115,8 +115,10 @@ public class PrimitiveConverter {
 				if (value instanceof Enum) {
 					m.put(fieldName, value.toString());
 				} else if (value instanceof String) {
-					if (option != null && option.length() > 0 && ((String) value).length() > option.length())
-						throw new IllegalArgumentException(String.format("String field %s.%s too long", cls.getName(), f.getName()));
+					if (option != null && option.length() > 0 && ((String) value).length() > option.length()) {
+						String s = (String) value;
+						throw new IllegalArgumentException(String.format("Too long String value for %s.%s (limit: %d, input: [%s])", cls.getName(), f.getName(), option.length(), s));
+					}
 					m.put(fieldName, value);
 				} else {
 					if (value == null)
