@@ -196,8 +196,8 @@ public class DomainUserAccount {
 
 	@Override
 	public String toString() {
-		return String.format("account=%s, name=%s, title=%s, dept=%s", accountName, displayName, nullToEmpty(title),
-				nullToEmpty(department));
+		return String.format("account=%s, name=%s, title=%s, dept=%s, mail=%s", accountName, displayName, nullToEmpty(title),
+				nullToEmpty(department), nullToEmpty(mail));
 	}
 
 	private String nullToEmpty(String str) {
