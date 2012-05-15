@@ -38,14 +38,10 @@ import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPermission;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-user-plugin")
 @MsgbusPlugin
 public class UserPlugin {
-	private final Logger logger = LoggerFactory.getLogger(UserPlugin.class.getName());
-
 	@Requires
 	private ConfigManager conf;
 
@@ -58,7 +54,36 @@ public class UserPlugin {
 	@Requires
 	private OrganizationUnitApi orgApi;
 
-	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "config_edit")
+	public void removeAllUsers(Request req, Response resp) {
+		Admin admin = adminApi.findAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		String domain = req.getOrgDomain();
+		Collection<User> users = userApi.getUsers(domain);
+
+		Collection<String> loginNames = new ArrayList<String>();
+		List<String> failures = new ArrayList<String>();
+		for (User u : users) {
+			if (u.getLoginName().equals("admin"))
+				continue;
+
+			String loginName = u.getLoginName();
+			Admin targetAdmin = PrimitiveConverter.parse(Admin.class, u.getExt().get("admin"),
+					conf.getParseCallback(domain));
+
+			if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
+					&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
+				failures.add(loginName);
+				continue;
+			}
+
+			loginNames.add(u.getLoginName());
+		}
+
+		userApi.removeUsers(domain, loginNames);
+		resp.put("failed_user", failures);
+	}
+
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void moveUsers(Request req, Response resp) {
@@ -79,6 +104,7 @@ public class UserPlugin {
 		if (orgUnitGuid != null)
 			orgUnit = orgApi.findOrganizationUnit("localhost", orgUnitGuid);
 
+		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
 		Collection<User> users = userApi.getUsers(req.getOrgDomain(), loginNames);
 
