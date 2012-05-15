@@ -1,5 +1,6 @@
 package org.krakenapps.dom.api.impl;
 
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,15 +38,13 @@ public class ConfigManagerImpl implements ConfigManager {
 	private ConfigService confsvc;
 
 	private ConcurrentMap<Class<?>, ConfigParser> parsers = new ConcurrentHashMap<Class<?>, ConfigParser>();
-	private ConcurrentMap<String, ParseCallback> callbacks = new ConcurrentHashMap<String, ParseCallback>();
 
 	public void setConfigService(ConfigService conf) {
 		this.confsvc = conf;
 	}
 
 	private PrimitiveParseCallback getCallback(String domain) {
-		callbacks.putIfAbsent(domain, new ParseCallback(domain));
-		return callbacks.get(domain);
+		return new ParseCallback(domain);
 	}
 
 	@Override
@@ -129,8 +128,8 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void adds(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs,
-			String alreadyExistMessage, Object state) {
+	public <T> void adds(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
+			Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -191,20 +190,19 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs,
-			String notFoundMessage) {
+	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs, String notFoundMessage) {
 		updateForGuids(xact, cls, guids, docs, notFoundMessage, null);
 	}
 
 	@Override
-	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs,
-			String notFoundMessage, DefaultEntityEventProvider<T> provider) {
+	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider) {
 		updateForGuids(domain, cls, guids, docs, notFoundMessage, provider, null);
 	}
 
 	@Override
-	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs,
-			String notFoundMessage, DefaultEntityEventProvider<T> provider, Object state) {
+	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs, String notFoundMessage,
+			DefaultEntityEventProvider<T> provider, Object state) {
 		ConfigDatabase db = getDatabase(domain);
 		Transaction xact = new Transaction(domain, db);
 		xact.addEventProvider(cls, provider);
@@ -221,8 +219,8 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
-	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs,
-			String notFoundMessage, Object state) {
+	public <T> void updateForGuids(Transaction xact, Class<T> cls, List<String> guids, List<T> docs, String notFoundMessage,
+			Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -303,8 +301,8 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	@Deprecated
 	@Override
-	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs,
-			String notFoundMessage, Object state) {
+	public <T> void updates(Transaction xact, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
+			Object state) {
 		if (docs.isEmpty())
 			return;
 
@@ -490,14 +488,74 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	private class ParseCallback implements PrimitiveParseCallback {
 		private String domain;
+		private SoftReference<ConcurrentMap<JoinKey, Object>> cache;
 
 		public ParseCallback(String domain) {
 			this.domain = domain;
+			this.cache = new SoftReference<ConcurrentMap<JoinKey, Object>>(
+					new ConcurrentHashMap<ConfigManagerImpl.JoinKey, Object>());
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <T> T onParse(Class<T> cls, Map<String, Object> referenceKey) {
+			JoinKey joinKey = new JoinKey(cls.getName(), referenceKey);
+			ConcurrentMap<JoinKey, Object> m = cache.get();
+			if (m == null) {
+				m = new ConcurrentHashMap<ConfigManagerImpl.JoinKey, Object>();
+				cache = new SoftReference<ConcurrentMap<JoinKey, Object>>(m);
+			} else {
+				Object cached = m.get(joinKey);
+				if (cached != null) {
+					return (T) cached;
+				}
+			}
+
+			T ret = find(domain, cls, Predicates.field(referenceKey));
+			m.put(joinKey, ret);
+
+			return ret;
+		}
+	}
+
+	private static class JoinKey {
+		private String className;
+		private Object key;
+
+		public JoinKey(String className, Object key) {
+			this.className = className;
+			this.key = key;
 		}
 
 		@Override
-		public <T> T onParse(Class<T> cls, Map<String, Object> referenceKey) {
-			return find(domain, cls, Predicates.field(referenceKey));
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((className == null) ? 0 : className.hashCode());
+			result = prime * result + ((key == null) ? 0 : key.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			JoinKey other = (JoinKey) obj;
+			if (className == null) {
+				if (other.className != null)
+					return false;
+			} else if (!className.equals(other.className))
+				return false;
+			if (key == null) {
+				if (other.key != null)
+					return false;
+			} else if (!key.equals(other.key))
+				return false;
+			return true;
 		}
 	}
 }
