@@ -34,6 +34,8 @@ public interface UserApi extends EntityEventProvider<User> {
 
 	void createUsers(String domain, Collection<User> users);
 
+	void createUsers(String domain, Collection<User> users, boolean noHash);
+
 	void createUser(String domain, User user);
 
 	void createUser(String domain, User user, boolean noHash);

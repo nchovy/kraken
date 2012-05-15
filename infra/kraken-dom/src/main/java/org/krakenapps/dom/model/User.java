@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.model;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -168,6 +169,17 @@ public class User {
 
 	public void setLastPasswordChange(Date lastPasswordChange) {
 		this.lastPasswordChange = lastPasswordChange;
+	}
+
+	@Override
+	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String orgUnitName = null;
+		if (orgUnit != null)
+			orgUnitName = orgUnit.getName();
+
+		return "login_name=" + loginName + ", org unit=" + orgUnitName + ", name=" + name + ", updated="
+				+ dateFormat.format(updated);
 	}
 
 }
