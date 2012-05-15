@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.lang.ref.SoftReference;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.text.ParseException;
@@ -31,6 +32,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.PrimitiveConverter;
@@ -90,6 +93,12 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 */
 	private int defaultTimeout = 5000;
 
+	// change set rev to manifest id cache
+	private SoftReference<ConcurrentMap<Integer, Integer>> changeCache;
+
+	// manifest id to manifest cache
+	private SoftReference<ConcurrentMap<Integer, FileManifest>> manifestCache;
+
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
 		this(baseDir, name, null);
 	}
@@ -100,6 +109,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 		this.dbDir = new File(baseDir, name);
 		this.changeset = rev;
 		this.threadLock = new ReentrantLock();
+		this.changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(new ConcurrentHashMap<Integer, Integer>());
+		this.manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(
+				new ConcurrentHashMap<Integer, FileManifest>());
 
 		changeLogFile = new File(dbDir, "changeset.log");
 		changeDatFile = new File(dbDir, "changeset.dat");
@@ -370,8 +382,16 @@ public class FileConfigDatabase implements ConfigDatabase {
 			} else {
 				revlog = reader.findDoc(rev);
 			}
-			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
-			manifestId = ChangeLog.getManifest(doc);
+
+			Integer cached = getCachedManifestId(revlog.getDocId());
+			if (cached != null) {
+				manifestId = cached;
+			} else {
+				byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
+				manifestId = ChangeLog.getManifest(doc);
+
+				setChangeSetCache(revlog.getDocId(), manifestId);
+			}
 		} catch (FileNotFoundException e) {
 			// changeset can be empty
 			return new FileManifest();
@@ -386,6 +406,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 		// read manifest
 		try {
+			FileManifest cached = getManifestCache(manifestId);
+			if (cached != null)
+				return cached;
+
 			reader = new RevLogReader(manifestLogFile, manifestDatFile);
 			RevLog revlog = reader.findDoc(manifestId);
 			byte[] doc = reader.readDoc(revlog.getDocOffset(), revlog.getDocLength());
@@ -397,6 +421,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 				FileManifest.upgradeManifest(manifest, dbDir);
 
 			manifest.setId(manifestId);
+
+			setManifestCache(manifest);
 			return manifest;
 		} catch (FileNotFoundException e) {
 			return new FileManifest();
@@ -414,8 +440,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		try {
 			manifestReader = new RevLogReader(manifestLogFile, manifestDatFile);
 			changeLogReader = new RevLogReader(changeLogFile, changeDatFile);
-			FileManifestIterator manifestIterator = new FileManifestIterator(manifestReader, changeLogReader, dbDir,
-					logRev);
+			FileManifestIterator manifestIterator = new FileManifestIterator(manifestReader, changeLogReader, dbDir, logRev);
 
 			return manifestIterator;
 		} catch (IOException e) {
@@ -513,6 +538,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 */
 	public void purge() throws IOException {
 		try {
+			manifestCache.clear();
 			lock();
 
 			// TODO: retry until deleted (other process may hold it)
@@ -693,6 +719,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void shrink(int count) {
 		try {
 			new Shrinker(this).shrink(count);
+			manifestCache.clear();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
@@ -702,6 +729,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void importData(InputStream is) {
 		try {
 			new Importer(this).importData(is);
+			manifestCache.clear();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		} catch (ParseException e) {
@@ -716,6 +744,46 @@ public class FileConfigDatabase implements ConfigDatabase {
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+
+	private FileManifest getManifestCache(int rev) {
+		ConcurrentMap<Integer, FileManifest> manifestMap = manifestCache.get();
+		if (manifestMap == null)
+			return null;
+
+		FileManifest fileManifest = manifestMap.get(rev);
+		if (fileManifest == null)
+			return null;
+
+		return fileManifest.duplicate();
+	}
+
+	private Integer getCachedManifestId(int rev) {
+		ConcurrentMap<Integer, Integer> changeMap = changeCache.get();
+		if (changeMap == null)
+			return null;
+
+		return changeMap.get(rev);
+	}
+
+	private void setChangeSetCache(int changeDocId, int manifestId) {
+		ConcurrentMap<Integer, Integer> changeMap = changeCache.get();
+		if (changeMap == null) {
+			changeMap = new ConcurrentHashMap<Integer, Integer>();
+			changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(changeMap);
+		}
+
+		changeMap.put(changeDocId, manifestId);
+	}
+
+	private void setManifestCache(FileManifest manifest) {
+		ConcurrentMap<Integer, FileManifest> manifestMap = manifestCache.get();
+		if (manifestMap == null) {
+			manifestMap = new ConcurrentHashMap<Integer, FileManifest>();
+			manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
+		}
+
+		manifestMap.put(manifest.getId(), manifest.duplicate());
 	}
 
 	@Override

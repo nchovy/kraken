@@ -35,7 +35,7 @@ import org.krakenapps.confdb.Manifest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class FileManifest implements Manifest {	
+class FileManifest implements Manifest {
 	private int version;
 
 	private int id;
@@ -44,7 +44,23 @@ class FileManifest implements Manifest {
 
 	// col id -> (doc id -> entry) map
 	private Map<Integer, Map<Integer, ConfigEntry>> configMap = new TreeMap<Integer, Map<Integer, ConfigEntry>>();
-	
+
+	public FileManifest duplicate() {
+		FileManifest dup = new FileManifest();
+
+		dup.id = id;
+		dup.version = version;
+		dup.colMap = new TreeMap<Integer, CollectionEntry>(colMap);
+		dup.configMap = new TreeMap<Integer, Map<Integer, ConfigEntry>>();
+
+		for (Integer key : configMap.keySet()) {
+			Map<Integer, ConfigEntry> value = configMap.get(key);
+			dup.configMap.put(key, new TreeMap<Integer, ConfigEntry>(value));
+		}
+
+		return dup;
+	}
+
 	public static void upgradeManifest(FileManifest manifest, File dbDir) {
 		final Logger logger = LoggerFactory.getLogger(FileManifest.class);
 		for (String name : manifest.getCollectionNames()) {
@@ -83,8 +99,7 @@ class FileManifest implements Manifest {
 		}
 	}
 
-	public static Manifest writeManifest(Manifest manifest, File manifestLogFile, File manifestDatFile)
-			throws IOException {
+	public static Manifest writeManifest(Manifest manifest, File manifestLogFile, File manifestDatFile) throws IOException {
 		RevLogWriter writer = null;
 		try {
 			writer = new RevLogWriter(manifestLogFile, manifestDatFile);
@@ -274,8 +289,7 @@ class FileManifest implements Manifest {
 					// legacy format support
 					@SuppressWarnings("unchecked")
 					Map<String, Object> c = (Map<String, Object>) o;
-					manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c
-							.get("rev")));
+					manifest.add(new ConfigEntry((Integer) c.get("col_id"), (Integer) c.get("doc_id"), (Long) c.get("rev")));
 				} else {
 					Object[] arr = (Object[]) o;
 					manifest.add(new ConfigEntry((Integer) arr[0], (Integer) arr[1], (Long) arr[2]));
@@ -293,8 +307,6 @@ class FileManifest implements Manifest {
 			names.add(e.getName());
 		return names;
 	}
-	
-	
 
 	@Override
 	public int hashCode() {
