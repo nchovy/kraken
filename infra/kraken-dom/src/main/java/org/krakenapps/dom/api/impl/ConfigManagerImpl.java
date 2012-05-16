@@ -512,7 +512,8 @@ public class ConfigManagerImpl implements ConfigManager {
 			}
 
 			T ret = find(domain, cls, Predicates.field(referenceKey));
-			m.put(joinKey, ret);
+			if (ret != null)
+				m.put(joinKey, ret);
 
 			return ret;
 		}
