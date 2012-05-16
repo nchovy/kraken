@@ -18,9 +18,12 @@ package org.krakenapps.confdb.file;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
@@ -59,6 +62,8 @@ public class FileConfigCollection implements ConfigCollection {
 
 	private File datFile;
 
+	private SoftReference<ConcurrentMap<Integer, List<RevLog>>> snapshotCache;
+
 	public FileConfigCollection(FileConfigDatabase db, Integer changeset, CollectionEntry col) throws IOException {
 		File dbDir = db.getDbDirectory();
 		boolean created = dbDir.mkdirs();
@@ -71,6 +76,8 @@ public class FileConfigCollection implements ConfigCollection {
 
 		logFile = new File(dbDir, "col" + col.getId() + ".log");
 		datFile = new File(dbDir, "col" + col.getId() + ".dat");
+		this.snapshotCache = new SoftReference<ConcurrentMap<Integer, List<RevLog>>>(
+				new ConcurrentHashMap<Integer, List<RevLog>>());
 	}
 
 	@Override
@@ -133,7 +140,11 @@ public class FileConfigCollection implements ConfigCollection {
 	private List<RevLog> getSnapshot(RevLogReader reader) throws IOException {
 		Manifest manifest = db.getManifest(changeset);
 
-		List<RevLog> snapshot = new ArrayList<RevLog>();
+		List<RevLog> snapshot = getSnapshotCache(manifest.getId());
+		if (snapshot != null)
+			return snapshot;
+
+		snapshot = new ArrayList<RevLog>();
 		if (manifest.getVersion() == 1) {
 			long count = reader.count();
 			for (long index = 0; index < count; index++) {
@@ -149,9 +160,30 @@ public class FileConfigCollection implements ConfigCollection {
 				RevLog log = reader.read(c.getIndex());
 				snapshot.add(log);
 			}
+
+			setSnapshotCache(manifest.getId(), snapshot);
 		}
 
 		return snapshot;
+	}
+
+	private List<RevLog> getSnapshotCache(int manifestId) {
+		ConcurrentMap<Integer, List<RevLog>> snapshotMap = snapshotCache.get();
+		if (snapshotMap == null)
+			return null;
+
+		return snapshotMap.get(manifestId);
+	}
+
+	private void setSnapshotCache(int manifestId, List<RevLog> snapshot) {
+		ConcurrentMap<Integer, List<RevLog>> snapshotMap = snapshotCache.get();
+		if (snapshotMap == null) {
+			snapshotMap = new ConcurrentHashMap<Integer, List<RevLog>>();
+			snapshotCache = new SoftReference<ConcurrentMap<Integer, List<RevLog>>>(new ConcurrentHashMap<Integer, List<RevLog>>(
+					snapshotMap));
+		}
+
+		snapshotMap.put(manifestId, snapshot);
 	}
 
 	@Override

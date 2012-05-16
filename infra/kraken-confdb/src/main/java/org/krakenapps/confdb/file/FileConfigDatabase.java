@@ -758,6 +758,16 @@ public class FileConfigDatabase implements ConfigDatabase {
 		return fileManifest.duplicate();
 	}
 
+	private void setManifestCache(FileManifest manifest) {
+		ConcurrentMap<Integer, FileManifest> manifestMap = manifestCache.get();
+		if (manifestMap == null) {
+			manifestMap = new ConcurrentHashMap<Integer, FileManifest>();
+			manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
+		}
+
+		manifestMap.put(manifest.getId(), manifest.duplicate());
+	}
+
 	private Integer getCachedManifestId(int rev) {
 		ConcurrentMap<Integer, Integer> changeMap = changeCache.get();
 		if (changeMap == null)
@@ -774,16 +784,6 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 
 		changeMap.put(changeDocId, manifestId);
-	}
-
-	private void setManifestCache(FileManifest manifest) {
-		ConcurrentMap<Integer, FileManifest> manifestMap = manifestCache.get();
-		if (manifestMap == null) {
-			manifestMap = new ConcurrentHashMap<Integer, FileManifest>();
-			manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
-		}
-
-		manifestMap.put(manifest.getId(), manifest.duplicate());
 	}
 
 	@Override
