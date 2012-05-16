@@ -29,7 +29,6 @@ import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
-import org.krakenapps.dom.model.Permission;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.MsgbusException;
@@ -57,24 +56,32 @@ public class UserPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void removeAllUsers(Request req, Response resp) {
-		Admin admin = adminApi.findAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		String adminLoginName = req.getAdminLoginName();
+		Admin admin = adminApi.findAdmin(req.getOrgDomain(), adminLoginName);
 		String domain = req.getOrgDomain();
 		Collection<User> users = userApi.getUsers(domain);
 
 		Collection<String> loginNames = new ArrayList<String>();
-		List<String> failures = new ArrayList<String>();
+		List<String> failedLoginNames = new ArrayList<String>();
 		for (User u : users) {
-			if (u.getLoginName().equals("admin"))
+			if (u.getLoginName().equals("admin")) {
+				failedLoginNames.add(u.getLoginName());
 				continue;
-
-			if (!adminApi.canManage(domain, admin, u))
+			}
+			if (adminLoginName.equals(u.getLoginName())) {
+				failedLoginNames.add(u.getLoginName());
 				continue;
+			}
+			if (!adminApi.canManage(domain, admin, u)) {
+				failedLoginNames.add(u.getLoginName());
+				continue;
+			}
 
 			loginNames.add(u.getLoginName());
 		}
 
 		userApi.removeUsers(domain, loginNames);
-		resp.put("failed_user", failures);
+		resp.put("failed_login_names", failedLoginNames);
 	}
 
 	@MsgbusMethod
@@ -86,7 +93,8 @@ public class UserPlugin {
 		if (!req.has("login_names"))
 			throw new DOMException("null-login-names");
 
-		Admin admin = adminApi.findAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		String adminLoginName = req.getAdminLoginName();
+		Admin admin = adminApi.findAdmin(req.getOrgDomain(), adminLoginName);
 		if (admin == null)
 			throw new DOMException("admin-not-found");
 
@@ -102,12 +110,12 @@ public class UserPlugin {
 		Collection<User> users = userApi.getUsers(req.getOrgDomain(), loginNames);
 
 		List<String> failures = new ArrayList<String>();
-
 		for (User u : users) {
 			// try to check role
-			if (!adminApi.canManage(req.getOrgDomain(), admin, u))
+			if (!adminApi.canManage(req.getOrgDomain(), admin, u)) {
+				failures.add(u.getLoginName());
 				continue;
-
+			}
 			u.setOrgUnit(orgUnit);
 		}
 
@@ -176,52 +184,73 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void createUser(Request req, Response resp) {
-		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(),
-				conf.getParseCallback(req.getOrgDomain()));
+		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		userApi.createUser(req.getOrgDomain(), user);
 	}
 
 	@MsgbusMethod
 	public void updateUser(Request req, Response resp) {
-		Admin request = adminApi.findAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		String domain = req.getOrgDomain();
+		Admin request = adminApi.findAdmin(domain, req.getAdminLoginName());
+
 		if (request == null)
 			throw new DOMException("admin-not-found");
 
 		String loginName = req.getString("login_name");
-		User before = userApi.getUser(req.getOrgDomain(), loginName);
+		User old = userApi.getUser(domain, loginName);
+		if (request.getRole().getLevel() == 2) {
+			if (req.getAdminLoginName().equals(loginName)) {
+				old.setName(req.getString("name"));
+				old.setDescription(req.getString("description"));
+				old.setEmail(req.getString("email"));
+				if (req.has("password"))
+					old.setPassword(req.getString("password"));
+				old.setTitle(req.getString("title"));
+				old.setPhone(req.getString("phone"));
 
-		// try to check role
-		Admin targetAdmin = adminApi.findAdmin(req.getOrgDomain(), loginName);
-		if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
-				&& targetAdmin.getRole().getLevel() >= request.getRole().getLevel())
+				userApi.updateUser(domain, old, req.has("password"));
+				return;
+			} else
+				throw new DOMException("no-permission");
+		} else if (!adminApi.canManage(domain, request, old))
 			throw new DOMException("no-permission");
 
-		User user = (User) PrimitiveConverter.overwrite(before, req.getParams(),
-				conf.getParseCallback(req.getOrgDomain()));
-		userApi.updateUser(req.getOrgDomain(), user, req.has("password"));
+		User user = (User) PrimitiveConverter.overwrite(old, req.getParams(), conf.getParseCallback(domain));
+		userApi.updateUser(domain, user, req.has("password"));
 	}
 
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void removeUsers(Request req, Response resp) {
-		Admin admin = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName());
-		if (!admin.getRole().getPermissions().contains(new Permission("dom", "config_edit")))
-			throw new MsgbusException("dom", "no-permission");
+		String adminLoginName = req.getAdminLoginName();
+		Admin admin = adminApi.getAdmin(req.getOrgDomain(), adminLoginName);
+		if (admin == null)
+			throw new MsgbusException("dom", "admin-not-found");
 
-		List<String> loginNames = (List<String>) req.get("login_names");
+		List<String> loginNames = new ArrayList<String>();
 		List<String> failedLoginNames = new ArrayList<String>();
 
-		Collection<User> users = userApi.getUsers(req.getOrgDomain(), loginNames);
+		Collection<User> users = userApi.getUsers(req.getOrgDomain(), (List<String>) req.get("login_names"));
 		for (User user : users) {
-			if (user.getExt().get("admin") == null)
-				continue;
-
-			if (!adminApi.canManage(req.getOrgDomain(), admin, user))
+			if (user.getLoginName().equals("admin")) {
 				failedLoginNames.add(user.getLoginName());
+				continue;
+			}
+			if (adminLoginName.equals(user.getLoginName())) {
+				failedLoginNames.add(user.getLoginName());
+				continue;
+			}
+			if (!adminApi.canManage(req.getOrgDomain(), admin, user)) {
+				failedLoginNames.add(user.getLoginName());
+				continue;
+			}
+
+			loginNames.add(user.getLoginName());
 		}
 
-		loginNames.removeAll(failedLoginNames);
 		userApi.removeUsers(req.getOrgDomain(), loginNames);
 
 		// return failed users
@@ -229,9 +258,24 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "config_edit")
 	public void removeUser(Request req, Response resp) {
-		String loginName = req.getString("login_name");
-		userApi.removeUser(req.getOrgDomain(), loginName);
+		String loginName = req.getAdminLoginName();
+		Admin admin = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName());
+		if (admin == null)
+			throw new MsgbusException("dom", "admin-not-found");
+
+		User target = userApi.findUser("localhost", req.getString("login_name"));
+		if (target == null)
+			throw new MsgbusException("dom", "user-not-found");
+
+		if (loginName.equals(target.getLoginName()))
+			throw new MsgbusException("dom", "cannot-remove-self");
+
+		if (!adminApi.canManage("localhost", admin, target))
+			throw new MsgbusException("dom", "no-permission");
+
+		userApi.removeUser(req.getOrgDomain(), target.getLoginName());
 	}
 
 	@MsgbusMethod

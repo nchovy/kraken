@@ -20,10 +20,12 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.User;
+import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
@@ -90,7 +92,32 @@ public class AdminPlugin {
 
 	@MsgbusMethod
 	public void updateOtpSeed(Request req, Response resp) {
-		String newSeed = adminApi.updateOtpSeed(req.getOrgDomain(), req.getAdminLoginName(), req.getString("login_name"));
+		String loginName = req.getString("login_name");
+
+		String domain = req.getOrgDomain();
+		Admin admin = adminApi.findAdmin(domain, req.getAdminLoginName());
+		if (admin == null)
+			throw new MsgbusException("dom", "admin-not-found");
+
+		if (admin.getRole().getLevel() == 2) {
+			if (req.getAdminLoginName().equals(loginName)) {
+				String newSeed = adminApi.updateOtpSeed(domain, req.getAdminLoginName(), loginName);
+				resp.put("otp_seed", newSeed);
+				return;
+			} else {
+				throw new DOMException("no-permission");
+			}
+		}
+
+		User target = userApi.findUser(domain, req.getString("login_name"));
+
+		if (target == null)
+			throw new MsgbusException("dom", "user-not-found");
+
+		if (!adminApi.canManage(domain, admin, target))
+			throw new DOMException("no-permission");
+
+		String newSeed = adminApi.updateOtpSeed(domain, req.getAdminLoginName(), loginName);
 		resp.put("otp_seed", newSeed);
 	}
 }
