@@ -497,4 +497,16 @@ public class AdminApiImpl implements AdminApi {
 	public void unregisterLoginCallback(LoginCallback callback) {
 		callbacks.remove(callback);
 	}
+
+	@Override
+	public boolean canManage(String domain, Admin admin, User user) {
+		String loginName = user.getLoginName();
+		Admin targetAdmin = PrimitiveConverter.parse(Admin.class, user.getExt().get("admin"), cfg.getParseCallback(domain));
+
+		if (targetAdmin != null && !loginName.equals(admin.getUser().getLoginName())
+				&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
+			return false;
+		}
+		return true;
+	}
 }

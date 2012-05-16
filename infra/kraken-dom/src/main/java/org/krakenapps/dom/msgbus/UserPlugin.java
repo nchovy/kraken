@@ -67,15 +67,8 @@ public class UserPlugin {
 			if (u.getLoginName().equals("admin"))
 				continue;
 
-			String loginName = u.getLoginName();
-			Admin targetAdmin = PrimitiveConverter.parse(Admin.class, u.getExt().get("admin"),
-					conf.getParseCallback(domain));
-
-			if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
-					&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
-				failures.add(loginName);
+			if (!adminApi.canManage(domain, admin, u))
 				continue;
-			}
 
 			loginNames.add(u.getLoginName());
 		}
@@ -112,13 +105,8 @@ public class UserPlugin {
 
 		for (User u : users) {
 			// try to check role
-			String loginName = u.getLoginName();
-			Admin targetAdmin = adminApi.findAdmin(req.getOrgDomain(), loginName);
-			if (targetAdmin != null && !loginName.equals(req.getAdminLoginName())
-					&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
-				failures.add(loginName);
+			if (!adminApi.canManage(req.getOrgDomain(), admin, u))
 				continue;
-			}
 
 			u.setOrgUnit(orgUnit);
 		}
@@ -221,8 +209,6 @@ public class UserPlugin {
 		if (!admin.getRole().getPermissions().contains(new Permission("dom", "config_edit")))
 			throw new MsgbusException("dom", "no-permission");
 
-		int currentLevel = admin.getRole().getLevel();
-
 		List<String> loginNames = (List<String>) req.get("login_names");
 		List<String> failedLoginNames = new ArrayList<String>();
 
@@ -231,8 +217,7 @@ public class UserPlugin {
 			if (user.getExt().get("admin") == null)
 				continue;
 
-			Admin adminUser = adminApi.findAdmin(req.getOrgDomain(), user.getLoginName());
-			if (adminUser.getRole().getLevel() >= currentLevel)
+			if (!adminApi.canManage(req.getOrgDomain(), admin, user))
 				failedLoginNames.add(user.getLoginName());
 		}
 
