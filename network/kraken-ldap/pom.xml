@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-ldap</artifactId>
-	<version>1.3.2</version>
+	<version>1.3.3</version>
 	<packaging>bundle</packaging>
 	<name>Kraken LDAP</name>
 	<build>

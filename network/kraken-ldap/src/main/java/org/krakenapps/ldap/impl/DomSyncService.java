@@ -177,8 +177,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		profile.setLastSync(new Date());
 	}
 
-	private void exportDom(Collection<DomainOrganizationalUnit> orgUnits, Collection<DomainUserAccount> users,
-			LdapProfile profile) {
+	private void exportDom(Collection<DomainOrganizationalUnit> orgUnits, Collection<DomainUserAccount> users, LdapProfile profile) {
 		Map<String, OrganizationUnit> domOrgUnits = exportOrgUnits(profile.getTargetDomain(), orgUnits);
 		exportUsers(profile.getTargetDomain(), profile.getBaseDn(), users, domOrgUnits);
 	}
@@ -329,6 +328,12 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Admin defaultAdmin = new Admin();
 		defaultAdmin.setRole(roleApi.getRole(domain, DEFAULT_ROLE_NAME));
 		defaultAdmin.setProfile(programApi.getProgramProfile(domain, DEFAULT_PROFILE_NAME));
+		defaultAdmin.setIdleTimeout(3600);
+		defaultAdmin.setLoginLockCount(5);
+		defaultAdmin.setUseLoginLock(true);
+		defaultAdmin.setUseIdleTimeout(true);
+		defaultAdmin.setUseOtp(false);
+		defaultAdmin.setUseAcl(false);
 		defaultAdmin.setEnabled(true);
 
 		// sync
@@ -396,8 +401,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	/**
 	 * @return true if user data updated
 	 */
-	private boolean updateDomUserFromDomainUser(Map<String, OrganizationUnit> orgUnits, DomainUserAccount user,
-			User domUser) {
+	private boolean updateDomUserFromDomainUser(Map<String, OrganizationUnit> orgUnits, DomainUserAccount user, User domUser) {
 		boolean updated = false;
 
 		if (domUser.getLoginName() == null || !domUser.getLoginName().equals(user.getAccountName())) {
@@ -435,21 +439,24 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 	private void checkConstraints(User domUser) {
 		if (domUser.getLoginName() != null && DomUserConstraints.lenLoginName < domUser.getLoginName().length())
-			throw new IllegalArgumentException(String.format("getLoginName longer than %d: %s", DomUserConstraints.lenLoginName, domUser.getLoginName()));
+			throw new IllegalArgumentException(String.format("getLoginName longer than %d: %s", DomUserConstraints.lenLoginName,
+					domUser.getLoginName()));
 		if (domUser.getName() != null && DomUserConstraints.lenName < domUser.getName().length())
-			throw new IllegalArgumentException(String.format("getName longer than %d: %s", DomUserConstraints.lenName, domUser.getName()));
+			throw new IllegalArgumentException(String.format("getName longer than %d: %s", DomUserConstraints.lenName,
+					domUser.getName()));
 		if (domUser.getTitle() != null && DomUserConstraints.lenTitle < domUser.getTitle().length())
-			throw new IllegalArgumentException(String.format("getTitle longer than %d: %s", DomUserConstraints.lenTitle, domUser.getTitle()));
+			throw new IllegalArgumentException(String.format("getTitle longer than %d: %s", DomUserConstraints.lenTitle,
+					domUser.getTitle()));
 		if (domUser.getEmail() != null && DomUserConstraints.lenEmail < domUser.getEmail().length())
-			throw new IllegalArgumentException(String.format("getEmail longer than %d: %s", DomUserConstraints.lenEmail, domUser.getEmail()));
+			throw new IllegalArgumentException(String.format("getEmail longer than %d: %s", DomUserConstraints.lenEmail,
+					domUser.getEmail()));
 		if (domUser.getPhone() != null && DomUserConstraints.lenPhone < domUser.getPhone().length())
-			throw new IllegalArgumentException(String.format("getPhone longer than %d: %s", DomUserConstraints.lenPhone, domUser.getPhone()));
+			throw new IllegalArgumentException(String.format("getPhone longer than %d: %s", DomUserConstraints.lenPhone,
+					domUser.getPhone()));
 	}
 
 	private boolean isSameDN(User domUser, DomainUserAccount user) {
-		if (domUser == null || user == null
-				|| user.getDistinguishedName() == null
-				|| domUser.getExt() == null)
+		if (domUser == null || user == null || user.getDistinguishedName() == null || domUser.getExt() == null)
 			return false;
 		@SuppressWarnings("unchecked")
 		Map<String, String> ldapExt = (Map<String, String>) domUser.getExt().get("ldap");
