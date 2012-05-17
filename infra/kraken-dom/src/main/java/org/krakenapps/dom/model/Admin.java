@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.krakenapps.api.CollectionTypeHint;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.MapTypeHint;
 import org.krakenapps.api.ReferenceKey;
@@ -53,6 +54,8 @@ public class Admin {
 	private boolean useOtp;
 	private String otpSeed;
 	private boolean useAcl;
+
+	@CollectionTypeHint(String.class)
 	private List<String> trustHosts = new ArrayList<String>();
 
 	@MapTypeHint({ String.class, Object.class })

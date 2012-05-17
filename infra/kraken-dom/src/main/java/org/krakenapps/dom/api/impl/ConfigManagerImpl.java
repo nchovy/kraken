@@ -139,8 +139,11 @@ public class ConfigManagerImpl implements ConfigManager {
 		ConfigDatabase db = xact.getConfigDatabase();
 
 		Predicate pred = Predicates.or(preds.toArray(new Predicate[0]));
-		if (db.findOne(cls, pred) != null)
+		Config dup = db.findOne(cls, pred);
+		if (dup != null) {
+			logger.error("kraken dom: already exists doc [{}]", dup.getDocument());
 			throw new DOMException(alreadyExistMessage);
+		}
 
 		Iterator<T> docIterator = docs.iterator();
 		while (docIterator.hasNext()) {
@@ -514,6 +517,8 @@ public class ConfigManagerImpl implements ConfigManager {
 			T ret = find(domain, cls, Predicates.field(referenceKey));
 			if (ret != null)
 				m.put(joinKey, ret);
+			else if (logger.isTraceEnabled())
+				logger.trace("kraken dom: cannot find join [{}] key [{}]", cls.getName(), referenceKey);
 
 			return ret;
 		}
