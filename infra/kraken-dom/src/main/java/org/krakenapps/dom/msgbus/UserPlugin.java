@@ -212,6 +212,10 @@ public class UserPlugin {
 
 				userApi.updateUser(domain, old, req.has("password"));
 				return;
+			} else if (adminApi.canManage(domain, request, old)) {
+				User user = (User) PrimitiveConverter.overwrite(old, req.getParams(), conf.getParseCallback(domain));
+				userApi.updateUser(domain, user, req.has("password"));
+				return;
 			} else
 				throw new DOMException("no-permission");
 		} else if (!adminApi.canManage(domain, request, old))
