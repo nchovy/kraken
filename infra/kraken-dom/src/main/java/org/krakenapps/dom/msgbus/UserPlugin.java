@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
@@ -51,7 +53,7 @@ public class UserPlugin {
 	private AdminApi adminApi;
 
 	@Requires
-	private OrganizationUnitApi orgApi;
+	private OrganizationUnitApi orgUnitApi;
 
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "user_edit")
@@ -103,7 +105,7 @@ public class UserPlugin {
 		// org unit guid can be null (for root node)
 		OrganizationUnit orgUnit = null;
 		if (orgUnitGuid != null)
-			orgUnit = orgApi.findOrganizationUnit("localhost", orgUnitGuid);
+			orgUnit = orgUnitApi.findOrganizationUnit("localhost", orgUnitGuid);
 
 		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
@@ -209,6 +211,11 @@ public class UserPlugin {
 					old.setPassword(req.getString("password"));
 				old.setTitle(req.getString("title"));
 				old.setPhone(req.getString("phone"));
+
+				@SuppressWarnings("unchecked")
+				Map<String, Object> m = (Map<String, Object>) req.get("org_unit");
+				if (m != null)
+					old.setOrgUnit(orgUnitApi.findOrganizationUnit(domain, (String) m.get("guid")));
 
 				userApi.updateUser(domain, old, req.has("password"));
 				return;
