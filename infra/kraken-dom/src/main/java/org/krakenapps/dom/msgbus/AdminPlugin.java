@@ -99,8 +99,17 @@ public class AdminPlugin {
 		if (admin == null)
 			throw new MsgbusException("dom", "admin-not-found");
 
+		User target = userApi.findUser(domain, req.getString("login_name"));
+
+		if (target == null)
+			throw new MsgbusException("dom", "user-not-found");
+
 		if (admin.getRole().getLevel() == 2) {
 			if (req.getAdminLoginName().equals(loginName)) {
+				String newSeed = adminApi.updateOtpSeed(domain, req.getAdminLoginName(), loginName);
+				resp.put("otp_seed", newSeed);
+				return;
+			} else if (adminApi.canManage(domain, admin, target)) {
 				String newSeed = adminApi.updateOtpSeed(domain, req.getAdminLoginName(), loginName);
 				resp.put("otp_seed", newSeed);
 				return;
@@ -108,11 +117,6 @@ public class AdminPlugin {
 				throw new DOMException("no-permission");
 			}
 		}
-
-		User target = userApi.findUser(domain, req.getString("login_name"));
-
-		if (target == null)
-			throw new MsgbusException("dom", "user-not-found");
 
 		if (!adminApi.canManage(domain, admin, target))
 			throw new DOMException("no-permission");
