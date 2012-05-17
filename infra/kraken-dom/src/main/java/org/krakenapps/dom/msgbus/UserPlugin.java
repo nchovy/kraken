@@ -54,7 +54,7 @@ public class UserPlugin {
 	private OrganizationUnitApi orgApi;
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "config_edit")
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void removeAllUsers(Request req, Response resp) {
 		String adminLoginName = req.getAdminLoginName();
 		Admin admin = adminApi.findAdmin(req.getOrgDomain(), adminLoginName);
@@ -85,7 +85,7 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "config_edit")
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void moveUsers(Request req, Response resp) {
 		if (!req.has("org_unit_guid"))
 			throw new DOMException("null-org-unit");
@@ -184,7 +184,7 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "config_edit")
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void createUser(Request req, Response resp) {
 		User user = (User) PrimitiveConverter.overwrite(new User(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
 		userApi.createUser(req.getOrgDomain(), user);
@@ -223,7 +223,7 @@ public class UserPlugin {
 
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "config_edit")
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void removeUsers(Request req, Response resp) {
 		String adminLoginName = req.getAdminLoginName();
 		Admin admin = adminApi.getAdmin(req.getOrgDomain(), adminLoginName);
@@ -258,7 +258,7 @@ public class UserPlugin {
 	}
 
 	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "config_edit")
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void removeUser(Request req, Response resp) {
 		String loginName = req.getAdminLoginName();
 		Admin admin = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName());
