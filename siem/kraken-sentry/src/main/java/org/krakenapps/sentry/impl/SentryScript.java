@@ -108,7 +108,7 @@ public class SentryScript implements Script {
 			String trustAlias = args[4];
 
 			InetSocketAddress address = new InetSocketAddress(ip, port);
-			Base base = new BaseImpl(name, address, keyAlias, trustAlias);
+			Base base = new BaseConfig(name, address, keyAlias, trustAlias);
 
 			sentry.addBase(base);
 			watchdog.checkNow();

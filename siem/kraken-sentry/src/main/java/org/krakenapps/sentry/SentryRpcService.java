@@ -17,7 +17,9 @@ package org.krakenapps.sentry;
 
 import java.util.Collection;
 
-public interface SentryRpcService {
+import org.krakenapps.rpc.RpcService;
+
+public interface SentryRpcService extends RpcService {
 	Collection<String> getFeatures();
 
 	void registerFeature(String feature);
@@ -29,6 +31,6 @@ public interface SentryRpcService {
 	void register(String alias, Object service, String methodName);
 
 	void unregister(String alias, Object service, String methodName);
-	
+
 	Object run(String method, Object[] params);
 }

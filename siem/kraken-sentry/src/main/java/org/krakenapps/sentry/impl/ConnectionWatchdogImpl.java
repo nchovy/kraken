@@ -32,7 +32,6 @@ import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.rpc.RpcAgent;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
-import org.krakenapps.rpc.RpcService;
 import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.sentry.Base;
 import org.krakenapps.sentry.ConnectionWatchdog;
@@ -191,7 +190,7 @@ public class ConnectionWatchdogImpl implements ConnectionWatchdog, Runnable {
 			}
 
 			// bind sentry service, and connect to base service.
-			connection.bind("kraken-sentry", (RpcService) sentryRpcService);
+			connection.bind("kraken-sentry", sentryRpcService);
 			RpcSession commandSession = connection.createSession("kraken-base");
 			sentry.addCommandSession(base.getName(), commandSession);
 

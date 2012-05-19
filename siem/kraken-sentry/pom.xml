@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-sentry</artifactId>
-	<version>1.3.0</version>
+	<version>1.4.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Sentry</name>
 	<build>
@@ -54,6 +54,14 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-confdb</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>

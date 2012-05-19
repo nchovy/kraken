@@ -16,12 +16,11 @@
 package org.krakenapps.sentry.impl;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +35,11 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.KeyStoreManager;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerFactory;
 import org.krakenapps.log.api.LoggerFactoryRegistry;
@@ -50,21 +54,17 @@ import org.krakenapps.rpc.RpcSession;
 import org.krakenapps.sentry.Base;
 import org.krakenapps.sentry.CommandHandler;
 import org.krakenapps.sentry.Sentry;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 
 @Component(name = "sentry")
 @Provides
 public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFactoryRegistryEventListener {
-	private static final String BASE_PATH = "bases";
 	private final org.slf4j.Logger slog = org.slf4j.LoggerFactory.getLogger(SentryImpl.class.getName());
 
 	@Requires
 	private RpcAgent agent;
 
 	@Requires
-	private PreferencesService prefsvc;
+	private ConfigService conf;
 
 	@Requires
 	private LoggerFactoryRegistry loggerFactoryRegistry;
@@ -125,19 +125,31 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 
 	@Override
 	public String getGuid() {
-		Preferences prefs = getPreferences();
-		return prefs.get("guid", null);
+		ConfigDatabase db = conf.ensureDatabase("kraken-sentry");
+		ConfigCollection col = db.ensureCollection("sentry");
+		Config c = col.findOne(null);
+		if (c == null)
+			return null;
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> m = (Map<String, Object>) c.getDocument();
+		return (String) m.get("guid");
 	}
 
 	@Override
 	public void setGuid(String guid) {
-		try {
-			Preferences prefs = getPreferences();
-			prefs.put("guid", guid);
-			prefs.flush();
-			prefs.sync();
-		} catch (BackingStoreException e) {
-			slog.error("kraken-sentry: failed to save guid");
+		ConfigDatabase db = conf.ensureDatabase("kraken-sentry");
+		ConfigCollection col = db.ensureCollection("sentry");
+		Config c = col.findOne(null);
+		if (c != null) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> m = (Map<String, Object>) c.getDocument();
+			m.put("guid", guid);
+			col.update(c);
+		} else {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("guid", guid);
+			col.add(m);
 		}
 	}
 
@@ -226,7 +238,7 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 				}
 			});
 
-			RpcSession logSession = dataConnection.createSession("kraken-base");
+			RpcSession logSession = dataConnection.createSession("kraken-sentry");
 			logSession.call("setLogChannel", new Object[] { getGuid(), nonce });
 
 			RpcSession old = logSessions.putIfAbsent(baseName, logSession);
@@ -257,87 +269,43 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 	public Collection<Base> getBases() {
 		List<Base> l = new ArrayList<Base>();
 
-		try {
-			Preferences root = getPreferences().node(BASE_PATH);
-			for (String name : root.childrenNames()) {
-				Preferences node = root.node(name);
+		ConfigDatabase db = conf.ensureDatabase("kraken-base");
 
-				InetAddress ip = InetAddress.getByName(node.get("ip", null));
-				int port = node.getInt("port", 0);
-				String keyAlias = node.get("key", null);
-				String trustAlias = node.get("ca", null);
+		for (BaseConfig base : db.findAll(BaseConfig.class).getDocuments(BaseConfig.class))
+			l.add(base);
 
-				InetSocketAddress address = new InetSocketAddress(ip, port);
-				Base base = new BaseImpl(name, address, keyAlias, trustAlias);
-
-				l.add(base);
-			}
-		} catch (BackingStoreException e) {
-			slog.warn("kraken-sentry: get base list failed", e);
-		} catch (UnknownHostException e) {
-
-		}
 		return l;
 	}
 
 	@Override
 	public Base getBase(String baseName) {
-		try {
-			Preferences root = getPreferences().node(BASE_PATH);
-			if (!root.nodeExists(baseName))
-				return null;
-
-			Preferences p = root.node(baseName);
-			InetAddress ip = InetAddress.getByName(p.get("ip", null));
-			int port = p.getInt("port", 7140);
-			String keyAlias = p.get("key", null);
-			String trustAlias = p.get("ca", null);
-
-			return new BaseImpl(baseName, new InetSocketAddress(ip, port), keyAlias, trustAlias);
-		} catch (BackingStoreException e) {
-			slog.warn("kraken-sentry: remove base failed", e);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
-
+		ConfigDatabase db = conf.ensureDatabase("kraken-sentry");
+		Config c = db.findOne(BaseConfig.class, Predicates.field("name", baseName));
+		if (c != null)
+			return c.getDocument(BaseConfig.class);
 		return null;
 	}
 
 	@Override
 	public void addBase(Base base) {
-		try {
-			Preferences root = getPreferences().node(BASE_PATH);
-			if (root.nodeExists(base.getName()))
-				throw new IllegalStateException("duplicated base name: " + base.getName());
+		BaseConfig config = new BaseConfig();
 
-			Preferences node = root.node(base.getName());
-			InetSocketAddress address = base.getAddress();
+		ConfigDatabase db = conf.ensureDatabase("kraken-sentry");
+		Base old = getBase(base.getName());
+		if (old != null)
+			throw new IllegalStateException("duplicated base name: " + base.getName());
 
-			node.put("ip", address.getAddress().getHostAddress());
-			node.putInt("port", address.getPort());
-			node.put("key", base.getKeyAlias());
-			node.put("ca", base.getTrustAlias());
-
-			root.flush();
-			root.sync();
-		} catch (BackingStoreException e) {
-			slog.warn("kraken-sentry: add base failed", e);
-		}
+		db.add(config);
 	}
 
 	@Override
 	public void removeBase(String name) {
-		try {
-			Preferences root = getPreferences().node(BASE_PATH);
-			if (!root.nodeExists(name))
-				throw new IllegalStateException("base not found: " + name);
+		ConfigDatabase db = conf.ensureDatabase("kraken-sentry");
+		Config c = db.findOne(BaseConfig.class, Predicates.field("name", name));
+		if (c == null)
+			return;
 
-			root.node(name).removeNode();
-			root.flush();
-			root.sync();
-		} catch (BackingStoreException e) {
-			slog.warn("kraken-sentry: remove base failed", e);
-		}
+		db.remove(c);
 	}
 
 	@Override
@@ -359,10 +327,6 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 			throw new IllegalArgumentException("name must be not null");
 
 		commandHandlers.remove(name);
-	}
-
-	private Preferences getPreferences() {
-		return prefsvc.getSystemPreferences();
 	}
 
 	//
