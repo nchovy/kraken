@@ -1,5 +1,8 @@
 package org.krakenapps.rpc;
 
+import org.krakenapps.confdb.CollectionName;
+
+@CollectionName("bindings")
 public class RpcBindingProperties {
 	private String addr;
 	private int port;

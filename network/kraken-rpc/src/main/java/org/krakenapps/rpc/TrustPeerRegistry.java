@@ -3,7 +3,7 @@ package org.krakenapps.rpc;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.krakenapps.rpc.impl.RpcPeerImpl;
+import org.krakenapps.rpc.impl.RpcPeerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +19,7 @@ public class TrustPeerRegistry implements RpcPeerRegistry {
 	public RpcPeer authenticate(String guid, String nonce, String hash) {
 		// trust all password hash
 		logger.trace("kraken-rpc: bypass auth for [guid={}, nonce={}, hash={}]", new Object[] { guid, nonce, hash });
-		return new RpcPeerImpl(guid, null, RpcTrustLevel.High.getCode());
+		return new RpcPeerConfig(guid, null, RpcTrustLevel.High.getCode());
 	}
 
 	@Override

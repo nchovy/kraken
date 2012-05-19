@@ -174,7 +174,7 @@ public class RpcScript implements Script {
 			return;
 		}
 
-		RpcPeer peer = new RpcPeerImpl(guid, password, trustLevel);
+		RpcPeer peer = new RpcPeerConfig(guid, password, trustLevel);
 		try {
 			registry.register(peer);
 			context.println(peer.getGuid() + " registered");

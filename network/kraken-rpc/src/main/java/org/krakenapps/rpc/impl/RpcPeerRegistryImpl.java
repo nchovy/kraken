@@ -1,32 +1,31 @@
 package org.krakenapps.rpc.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.rpc.RpcPeer;
 import org.krakenapps.rpc.RpcPeerRegistry;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class RpcPeerRegistryImpl implements RpcPeerRegistry {
-	private Logger logger = LoggerFactory.getLogger(RpcPeerRegistryImpl.class.getName());
-	private Preferences prefs;
+	private ConfigService conf;
 
-	public RpcPeerRegistryImpl(Preferences prefs) {
-		this.prefs = prefs;
+	public RpcPeerRegistryImpl(ConfigService conf) {
+		this.conf = conf;
 	}
 
 	@Override
 	public Collection<String> getPeerGuids() {
-		Preferences root = getPeerRoot();
-		try {
-			return Arrays.asList(root.childrenNames());
-		} catch (BackingStoreException e) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-rpc");
+		List<String> peerGuids = new ArrayList<String>();
+		for (RpcPeerConfig c : db.findAll(RpcPeerConfig.class).getDocuments(RpcPeerConfig.class)) {
+			peerGuids.add(c.getGuid());
 		}
-		return new ArrayList<String>();
+		return peerGuids;
 	}
 
 	@Override
@@ -44,59 +43,36 @@ public class RpcPeerRegistryImpl implements RpcPeerRegistry {
 
 	@Override
 	public RpcPeer findPeer(String guid) {
-		Preferences root = getPeerRoot();
-		try {
-			if (!root.nodeExists(guid))
-				return null;
+		ConfigDatabase db = conf.ensureDatabase("kraken-rpc");
+		Config c = db.findOne(RpcPeerConfig.class, Predicates.field("guid", guid));
+		if (c == null)
+			return null;
 
-			Preferences p = root.node(guid);
-
-			String password = p.get("password", null);
-			int trustLevel = p.getInt("trust-level", 1);
-
-			return new RpcPeerImpl(guid, password, trustLevel);
-		} catch (BackingStoreException e) {
-			logger.warn("kraken-rpc: cannot find peer", e);
-		}
-		return null;
+		return c.getDocument(RpcPeerConfig.class);
 	}
 
 	@Override
 	public void register(RpcPeer peer) {
-		Preferences root = getPeerRoot();
-		try {
-			String guid = peer.getGuid();
-			if (root.nodeExists(guid))
-				throw new IllegalStateException("peer already exists: " + guid);
+		ConfigDatabase db = conf.ensureDatabase("kraken-rpc");
+		Config c = db.findOne(RpcPeerConfig.class, Predicates.field("guid", peer.getGuid()));
 
-			Preferences p = root.node(guid);
-			p.put("password", peer.getPassword());
-			p.putInt("trust-level", peer.getTrustLevel().getCode());
+		if (c != null)
+			throw new IllegalStateException("peer already exists: " + peer.getGuid());
 
-			p.flush();
-			p.sync();
-
-		} catch (BackingStoreException e) {
-			logger.warn("kraken-rpc: cannot register peer", e);
-		}
+		RpcPeerConfig config = new RpcPeerConfig();
+		config.setGuid(peer.getGuid());
+		config.setPassword(peer.getPassword());
+		config.setTrustLevel(peer.getTrustLevel());
+		db.add(config);
 	}
 
 	@Override
 	public void unregister(String guid) {
-		Preferences root = getPeerRoot();
-		try {
-			if (!root.nodeExists(guid))
-				return;
+		ConfigDatabase db = conf.ensureDatabase("kraken-rpc");
+		Config c = db.findOne(RpcPeerConfig.class, Predicates.field("guid", guid));
+		if (c == null)
+			return;
 
-			root.node(guid).removeNode();
-			root.flush();
-			root.sync();
-		} catch (BackingStoreException e) {
-			logger.warn("kraken-rpc: cannot unregister peer", e);
-		}
-	}
-
-	private Preferences getPeerRoot() {
-		return prefs.node("/kraken-rpc/peers");
+		db.remove(c);
 	}
 }

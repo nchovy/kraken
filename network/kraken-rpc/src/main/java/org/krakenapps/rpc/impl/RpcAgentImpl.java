@@ -4,6 +4,8 @@ import java.net.InetSocketAddress;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -31,6 +33,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
@@ -44,10 +47,6 @@ import org.krakenapps.rpc.RpcConnectionEventListener;
 import org.krakenapps.rpc.RpcConnectionProperties;
 import org.krakenapps.rpc.RpcPeerRegistry;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +70,7 @@ public class RpcAgentImpl implements RpcAgent {
 
 	public RpcAgentImpl(BundleContext bc) {
 		this.bc = bc;
-		peerRegistry = new RpcPeerRegistryImpl(getPreferences());
+		peerRegistry = new RpcPeerRegistryImpl(conf);
 		handler = new RpcHandler(getGuid(), peerRegistry);
 		tracker = new RpcServiceTracker(bc, handler);
 		bindings = new ConcurrentHashMap<RpcBindingProperties, Channel>();
@@ -118,25 +117,20 @@ public class RpcAgentImpl implements RpcAgent {
 
 	@Override
 	public String getGuid() {
-		try {
-			Preferences prefs = getPreferences();
-			Preferences p = prefs.node("/kraken-rpc");
-			String guid = p.get("guid", null);
-			if (guid == null) {
-				p.put("guid", UUID.randomUUID().toString());
-			} else {
-				return guid;
-			}
-
-			p.flush();
-			p.sync();
-
-			return p.get("guid", guid);
-		} catch (BackingStoreException e) {
-			logger.warn("kraken-rpc: cannot generate guid", e);
+		ConfigDatabase db = conf.ensureDatabase("kraken-rpc");
+		ConfigCollection col = db.ensureCollection("agent");
+		Config c = col.findOne(null);
+		if (c != null) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> doc = (Map<String, Object>) c.getDocument();
+			return (String) doc.get("guid");
 		}
 
-		return null;
+		Map<String, Object> doc = new HashMap<String, Object>();
+		String guid = UUID.randomUUID().toString();
+		doc.put("guid", guid);
+		col.add(doc);
+		return guid;
 	}
 
 	@Override
@@ -279,13 +273,6 @@ public class RpcAgentImpl implements RpcAgent {
 	@Override
 	public Collection<RpcConnection> getConnections() {
 		return handler.getConnections();
-	}
-
-	private Preferences getPreferences() {
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		Preferences prefs = prefsService.getSystemPreferences();
-		return prefs;
 	}
 
 	@Override
