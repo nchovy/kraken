@@ -34,13 +34,11 @@ public class ShrinkTest {
 	private FileConfigCollection col1;
 	private FileConfigCollection col2;
 	private ConfigService conf;
-	private Shrinker shrink;
 
 	@Before
 	public void start() throws IOException {
 		workingDir = new File(System.getProperty("user.dir"));
 		this.db = new FileConfigDatabase(workingDir, "testdb");
-		this.shrink = new Shrinker(db);
 		conf = new FileConfigService();
 		conf.ensureDatabase(db.getName());
 
@@ -128,7 +126,7 @@ public class ShrinkTest {
 
 		assertEquals(11, db.getCommitCount());
 		List<Object> oldDocs = getDocument("testcol1");
-		shrink.shrink(1);
+		db.shrink(1);
 		assertEquals(1, db.getCommitCount());
 		List<Object> newDocs = getDocument("testcol1");
 
@@ -150,7 +148,7 @@ public class ShrinkTest {
 		c.update();
 		List<Object> oldDocs = getDocument("testcol1");
 		assertEquals(12, db.getCommitCount());
-		shrink.shrink(1);
+		db.shrink(1);
 		assertEquals(1, db.getCommitCount());
 
 		List<Object> newDocs = getDocument("testcol1");
@@ -159,25 +157,6 @@ public class ShrinkTest {
 			if (oldDocs.get(index) instanceof List)
 				break;
 			assertTrue(compareObject(oldDocs.get(index), newDocs.get(index)));
-		}
-	}
-
-	@Test
-	public void testShrinkRollback() throws IOException {
-		for (int id = 0; id < 10; id++)
-			col1.add(createObject(id));
-
-		List<Object> oldDocs = getDocument("testcol1");
-		shrink.shrink(1);
-		col1.add(createObject(100));
-		col1.add(createObject(200));
-		shrink.revertFileNames();
-		List<Object> rollbackDocs = getDocument("testcol1");
-
-		for (int index = 0; index < oldDocs.size(); index++) {
-			if (oldDocs.get(index) instanceof List)
-				break;
-			assertTrue(compareObject(oldDocs.get(index), rollbackDocs.get(index)));
 		}
 	}
 

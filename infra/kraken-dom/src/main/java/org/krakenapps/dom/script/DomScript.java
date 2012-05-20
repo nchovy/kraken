@@ -13,12 +13,14 @@ import org.krakenapps.dom.api.GlobalConfigApi;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.api.HostUpdateApi;
 import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Host;
 import org.krakenapps.dom.model.HostExtension;
 import org.krakenapps.dom.model.HostType;
+import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.Program;
 import org.krakenapps.dom.model.ProgramPack;
 import org.krakenapps.dom.model.ProgramProfile;
@@ -30,6 +32,7 @@ public class DomScript implements Script {
 
 	private GlobalConfigApi globalConfigApi;
 	private OrganizationApi orgApi;
+	private OrganizationUnitApi orgUnitApi;
 	private UserApi userApi;
 	private RoleApi roleApi;
 	private ProgramApi programApi;
@@ -38,10 +41,12 @@ public class DomScript implements Script {
 	private ApplicationApi appApi;
 	private HostUpdateApi updateApi;
 
-	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, UserApi userApi, RoleApi roleApi,
-			ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi, HostUpdateApi updateApi) {
+	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, OrganizationUnitApi orgUnitApi, UserApi userApi,
+			RoleApi roleApi, ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi,
+			HostUpdateApi updateApi) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
+		this.orgUnitApi = orgUnitApi;
 		this.userApi = userApi;
 		this.roleApi = roleApi;
 		this.programApi = programApi;
@@ -309,23 +314,41 @@ public class DomScript implements Script {
 	@ScriptUsage(description = "update hosts", arguments = { @ScriptArgument(name = "count", type = "string", description = "host count") })
 	public void updateHosts(String[] args) {
 		int count = Integer.parseInt(args[0]);
-		if ( count <= 0 ){
+		if (count <= 0) {
 			context.println("host count should be larger than 0");
 			return;
 		}
-		
-		Random random = new Random();		
-		while ( count > 0 ){
-			Host host = new Host();		
+
+		Random random = new Random();
+		while (count > 0) {
+			Host host = new Host();
 			int id = random.nextInt(20000);
 			host.setGuid(String.valueOf(id));
 			host.setName(String.valueOf(id));
 			HostType type = new HostType();
 			type.setGuid("0dd73318-6db5-49fd-aae4-7deff285da6b");
 			host.setType(type);
-			
+
 			updateApi.update(host);
 			count--;
+		}
+	}
+
+	@ScriptUsage(description = "print organization units", arguments = { @ScriptArgument(name = "domain", type = "string", description = "organization domain") })
+	public void orgUnits(String[] args) {
+		context.println("DOM Organization Units");
+		context.println("-------------------------");
+		for (OrganizationUnit orgUnit : orgUnitApi.getOrganizationUnits(args[0])) {
+			context.println(orgUnit);
+		}
+	}
+
+	@ScriptUsage(description = "print users", arguments = { @ScriptArgument(name = "domain", type = "string", description = "organization domain") })
+	public void users(String[] args) {
+		context.println("DOM Users");
+		context.println("-------------");
+		for (User user : userApi.getUsers(args[0])) {
+			context.println(user);
 		}
 	}
 }

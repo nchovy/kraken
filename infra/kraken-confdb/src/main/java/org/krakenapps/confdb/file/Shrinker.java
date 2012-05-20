@@ -158,7 +158,7 @@ public class Shrinker {
 		}
 	}
 
-	public void revertFileNames() {
+	private void revertFileNames() {
 		for (File f : new File(dbDir.getAbsolutePath()).listFiles()) {
 			if (f.getName().startsWith("new_") && (f.getName().endsWith(".log") || f.getName().endsWith(".dat")))
 				f.delete();

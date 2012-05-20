@@ -1,5 +1,6 @@
 package org.krakenapps.ldap.impl;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -16,6 +17,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
@@ -177,7 +179,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 	private void exportDom(Collection<DomainOrganizationalUnit> orgUnits, Collection<DomainUserAccount> users, LdapProfile profile) {
 		Map<String, OrganizationUnit> domOrgUnits = exportOrgUnits(profile.getTargetDomain(), orgUnits);
-		exportUsers(profile.getTargetDomain(), users, domOrgUnits);
+		exportUsers(profile.getTargetDomain(), profile.getBaseDn(), users, domOrgUnits);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -278,8 +280,39 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		return orgUnit;
 	}
 
+	private static class DomUserConstraints {
+		static public int lenLoginName;
+		static public int lenName;
+		static public int lenTitle;
+		static public int lenEmail;
+		static public int lenPhone;
+		static {
+			try {
+				lenLoginName = getLength("loginName");
+				lenName = getLength("name");
+				lenTitle = getLength("title");
+				lenEmail = getLength("email");
+				lenPhone = getLength("phone");
+			} catch (SecurityException e) {
+				e.printStackTrace();
+			} catch (NoSuchFieldException e) {
+				e.printStackTrace();
+			}
+		}
+
+		private static int getLength(String string) throws SecurityException, NoSuchFieldException {
+			Field declaredField = User.class.getDeclaredField("loginName");
+			FieldOption annotation = declaredField.getAnnotation(FieldOption.class);
+			if (annotation != null)
+				return annotation.length();
+			else
+				return 0;
+		}
+	}
+
 	@SuppressWarnings("unchecked")
-	private void exportUsers(String domain, Collection<DomainUserAccount> users, Map<String, OrganizationUnit> orgUnits) {
+	private void exportUsers(String domain, String baseDn, Collection<DomainUserAccount> users,
+			Map<String, OrganizationUnit> orgUnits) {
 		// remove removed ldap users
 		Set<String> loginNames = new HashSet<String>();
 		for (DomainUserAccount user : users)
@@ -295,11 +328,18 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Admin defaultAdmin = new Admin();
 		defaultAdmin.setRole(roleApi.getRole(domain, DEFAULT_ROLE_NAME));
 		defaultAdmin.setProfile(programApi.getProgramProfile(domain, DEFAULT_PROFILE_NAME));
+		defaultAdmin.setIdleTimeout(3600);
+		defaultAdmin.setLoginLockCount(5);
+		defaultAdmin.setUseLoginLock(true);
+		defaultAdmin.setUseIdleTimeout(true);
+		defaultAdmin.setUseOtp(false);
+		defaultAdmin.setUseAcl(false);
 		defaultAdmin.setEnabled(true);
 
 		// sync
 		List<User> create = new ArrayList<User>();
 		List<User> update = new ArrayList<User>();
+		List<Object[]> failed = new ArrayList<Object[]>();
 		for (DomainUserAccount user : users) {
 			User domUser = userApi.findUser(domain, user.getAccountName());
 			boolean exist = (domUser != null);
@@ -309,14 +349,18 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			ext.remove("logon_count");
 			ext.remove("last_logon");
 
-			if (domUser == null) {
-				domUser = new User();
-				domUser.setLoginName(user.getAccountName());
-				domUser.setOrgUnit(orgUnits.get(user.getOrganizationUnitName()));
-				domUser.setName(user.getDisplayName());
-				domUser.setTitle(user.getTitle());
-				domUser.setEmail(user.getMail());
-				domUser.setPhone(user.getMobile());
+			boolean basicInfoUpdated = false;
+			try {
+				if (domUser == null) {
+					domUser = new User();
+					basicInfoUpdated = updateDomUserFromDomainUser(orgUnits, user, domUser);
+				} else if (isSameDN(domUser, user)) {
+					basicInfoUpdated = updateDomUserFromDomainUser(orgUnits, user, domUser);
+				}
+			} catch (Exception e) {
+				logger.trace("update failed", e);
+				failed.add(new Object[] { user, e });
+				continue;
 			}
 
 			Map<String, Object> domUserExt = domUser.getExt();
@@ -333,12 +377,95 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			if (!exist)
 				create.add(domUser);
 			else {
-				if (!equals)
+				if (!equals || basicInfoUpdated)
 					update.add(domUser);
+			}
+		}
+
+		if (!failed.isEmpty()) {
+			int reportId = new Object().hashCode();
+			logger.warn(
+					"kraken dom: Importing some accounts failed and ignored while syncing in DomSyncService. failure report identifier: {}",
+					reportId);
+			for (Object[] f : failed) {
+				DomainUserAccount acc = (DomainUserAccount) f[0];
+				Exception e = (Exception) f[1];
+				logger.warn("kraken dom: {}: {}", reportId, String.format("%s: %s", acc.getDistinguishedName(), e.toString()));
 			}
 		}
 
 		userApi.createUsers(domain, create);
 		userApi.updateUsers(domain, update, false);
 	}
+
+	/**
+	 * @return true if user data updated
+	 */
+	private boolean updateDomUserFromDomainUser(Map<String, OrganizationUnit> orgUnits, DomainUserAccount user, User domUser) {
+		boolean updated = false;
+
+		if (domUser.getLoginName() == null || !domUser.getLoginName().equals(user.getAccountName())) {
+			domUser.setLoginName(user.getAccountName());
+			updated = true;
+		}
+		if (domUser.getOrgUnit() == null || !domUser.getOrgUnit().equals(orgUnits.get(user.getOrganizationUnitName()))) {
+			domUser.setOrgUnit(orgUnits.get(user.getOrganizationUnitName()));
+			updated = true;
+		}
+		if (domUser.getName() == null || !domUser.getName().equals(user.getDisplayName())) {
+			domUser.setName(user.getDisplayName());
+			updated = true;
+		}
+		if (domUser.getTitle() == null || !domUser.getTitle().equals(user.getTitle())) {
+			domUser.setName(user.getDisplayName());
+			updated = true;
+		}
+		if (domUser.getEmail() == null || !domUser.getEmail().equals(user.getMail())) {
+			domUser.setEmail(user.getMail());
+			updated = true;
+		}
+		if (domUser.getPhone() == null || !domUser.getPhone().equals(user.getMobile())) {
+			domUser.setPhone(user.getMobile());
+			updated = true;
+		}
+
+		if (updated) {
+			checkConstraints(domUser);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private void checkConstraints(User domUser) {
+		if (domUser.getLoginName() != null && DomUserConstraints.lenLoginName < domUser.getLoginName().length())
+			throw new IllegalArgumentException(String.format("getLoginName longer than %d: %s", DomUserConstraints.lenLoginName,
+					domUser.getLoginName()));
+		if (domUser.getName() != null && DomUserConstraints.lenName < domUser.getName().length())
+			throw new IllegalArgumentException(String.format("getName longer than %d: %s", DomUserConstraints.lenName,
+					domUser.getName()));
+		if (domUser.getTitle() != null && DomUserConstraints.lenTitle < domUser.getTitle().length())
+			throw new IllegalArgumentException(String.format("getTitle longer than %d: %s", DomUserConstraints.lenTitle,
+					domUser.getTitle()));
+		if (domUser.getEmail() != null && DomUserConstraints.lenEmail < domUser.getEmail().length())
+			throw new IllegalArgumentException(String.format("getEmail longer than %d: %s", DomUserConstraints.lenEmail,
+					domUser.getEmail()));
+		if (domUser.getPhone() != null && DomUserConstraints.lenPhone < domUser.getPhone().length())
+			throw new IllegalArgumentException(String.format("getPhone longer than %d: %s", DomUserConstraints.lenPhone,
+					domUser.getPhone()));
+	}
+
+	private boolean isSameDN(User domUser, DomainUserAccount user) {
+		if (domUser == null || user == null || user.getDistinguishedName() == null || domUser.getExt() == null)
+			return false;
+		@SuppressWarnings("unchecked")
+		Map<String, String> ldapExt = (Map<String, String>) domUser.getExt().get("ldap");
+		if (ldapExt == null)
+			return false;
+		String existDn = ldapExt.get("distinguished_name");
+		if (existDn == null)
+			return false;
+		return user.getDistinguishedName().equals(existDn);
+	}
+
 }

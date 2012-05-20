@@ -49,6 +49,7 @@ import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.model.Admin;
+import org.krakenapps.dom.model.Permission;
 import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.dom.model.User;
 import org.krakenapps.msgbus.PushApi;
@@ -496,5 +497,20 @@ public class AdminApiImpl implements AdminApi {
 	@Override
 	public void unregisterLoginCallback(LoginCallback callback) {
 		callbacks.remove(callback);
+	}
+
+	@Override
+	public boolean canManage(String domain, Admin admin, User user) {
+		String loginName = user.getLoginName();
+		Admin targetAdmin = PrimitiveConverter.parse(Admin.class, user.getExt().get("admin"), cfg.getParseCallback(domain));
+
+		if (!admin.getRole().getPermissions().contains(new Permission("dom", "user_edit")))
+			return false;
+
+		if (targetAdmin != null && !loginName.equals(admin.getUser().getLoginName())
+				&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
+			return false;
+		}
+		return true;
 	}
 }

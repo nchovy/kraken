@@ -24,10 +24,14 @@ import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -51,6 +55,8 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.main.Kraken;
 import org.krakenapps.pkg.HttpWagon;
 import org.osgi.framework.BundleException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
@@ -60,11 +66,45 @@ import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
 
 public class CoreScript implements Script {
+	private final Logger logger = LoggerFactory.getLogger(CoreScript.class.getName());
 	private ScriptContext context;
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	@ScriptUsage(description = "tcp scan", arguments = {
+			@ScriptArgument(name = "ip", type = "string", description = "ip address or host name"),
+			@ScriptArgument(name = "port", type = "integer", description = "port number"),
+			@ScriptArgument(name = "timeout", type = "integer", description = "timeout(ms)", optional = true) })
+	public void tcpscan(String[] args) {
+		InetSocketAddress endpoint = null;
+		Socket socket = new Socket();
+		try {
+			InetAddress host = InetAddress.getByName(args[0]);
+			Integer port = Integer.parseInt(args[1]);
+			Integer timeout = (args.length > 2) ? Integer.parseInt(args[2]) : 3000;
+
+			endpoint = new InetSocketAddress(host, port);
+
+			context.println("trying to connect " + endpoint);
+			socket.connect(endpoint, timeout);
+			context.println("opened");
+		} catch (UnknownHostException e) {
+			context.println("invalid host [" + args[0] + "]");
+		} catch (SocketTimeoutException e) {
+			context.println("timeout");
+		} catch (IOException e) {
+			context.println("not opened: " + e.getMessage());
+			logger.error("kraken core: cannot connect to " + endpoint, e);
+		} finally {
+			try {
+				socket.close();
+			} catch (IOException e) {
+			}
+		}
+
 	}
 
 	public void cat(String[] args) throws IOException {

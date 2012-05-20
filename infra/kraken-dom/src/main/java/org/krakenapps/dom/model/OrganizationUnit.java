@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.model;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -103,4 +104,11 @@ public class OrganizationUnit {
 	public void setUpdated(Date updated) {
 		this.updated = updated;
 	}
+
+	@Override
+	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return "guid=" + guid + ", name=" + name + ", updated=" + dateFormat.format(updated);
+	}
+
 }

@@ -30,6 +30,8 @@ public interface AdminApi extends UserExtensionProvider {
 
 	Admin getAdmin(String domain, User user);
 
+	boolean canManage(String domain, Admin admin, User user);
+
 	void setAdmin(String domain, String requestAdminLoginName, String targetUserLoginName, Admin admin);
 
 	String updateOtpSeed(String domain, String requestAdminLoginName, String targetUserLoginName);

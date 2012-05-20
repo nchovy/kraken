@@ -12,6 +12,7 @@ import org.krakenapps.dom.api.GlobalConfigApi;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.api.HostUpdateApi;
 import org.krakenapps.dom.api.OrganizationApi;
+import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
@@ -30,6 +31,9 @@ public class DomScriptFactory implements ScriptFactory {
 	private OrganizationApi orgApi;
 
 	@Requires
+	private OrganizationUnitApi orgUnitApi;
+
+	@Requires
 	private UserApi userApi;
 
 	@Requires
@@ -46,11 +50,13 @@ public class DomScriptFactory implements ScriptFactory {
 
 	@Requires
 	private ApplicationApi appApi;
-	
-	@Requires HostUpdateApi updateApi;
+
+	@Requires
+	private HostUpdateApi updateApi;
 
 	@Override
 	public Script createScript() {
-		return new DomScript(globalConfigApi, orgApi, userApi, roleApi, programApi, areaApi, hostApi, appApi, updateApi);
+		return new DomScript(globalConfigApi, orgApi, orgUnitApi, userApi, roleApi, programApi, areaApi, hostApi, appApi,
+				updateApi);
 	}
 }

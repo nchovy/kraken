@@ -188,7 +188,7 @@ public class PrimitiveConverter {
 					if (value instanceof Map) {
 						Map<String, Object> keys = (Map<String, Object>) value;
 						if (callback != null)
-							f.set(n, callback.onParse(fieldType, keys));
+							f.set(n, callback.onParse(fieldType, getRefKeys(keys, refkey.value())));
 						else if (option != null && !option.nullable())
 							throw new IllegalArgumentException(fieldName + " requires parse callback");
 					} else if (value instanceof Object[]) {
@@ -196,7 +196,7 @@ public class PrimitiveConverter {
 						for (Object v : (Object[]) value) {
 							Map<String, Object> keys = (Map<String, Object>) v;
 							if (callback != null) {
-								Object o = callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(), keys);
+								Object o = callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(), getRefKeys(keys, refkey.value()));
 								if (o != null)
 									coll.add(o);
 							} else if (option != null && !option.nullable())
@@ -263,6 +263,13 @@ public class PrimitiveConverter {
 		} catch (Exception e) {
 			throw new RuntimeException("Primitive parse failed", e);
 		}
+	}
+
+	private static Map<String, Object> getRefKeys(Map<String, Object> src, String[] refkeys) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		for (String key: refkeys)
+			m.put(key, src.get(key));
+		return m;
 	}
 
 	public static <T> Collection<T> parseCollection(Class<T> cls, Collection<Object> coll) {
