@@ -17,7 +17,6 @@ package org.krakenapps.radius.server.userdatabase;
 
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
-import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 import org.slf4j.Logger;
@@ -26,36 +25,31 @@ import org.slf4j.LoggerFactory;
 public class LdapUserDatabase extends RadiusUserDatabase {
 	private final Logger logger = LoggerFactory.getLogger(LdapUserDatabase.class.getName());
 	private LdapService ldap;
+	private String ldapProfileName;
 
-	public LdapUserDatabase(String name, RadiusUserDatabaseFactory factory, RadiusConfigurator config,
-			LdapService ldap) {
-		super(name, factory, config);
+	public LdapUserDatabase(String name, RadiusUserDatabaseFactory factory, LdapService ldap, String ldapProfileName) {
+		super(name, factory);
 		this.ldap = ldap;
+		this.ldapProfileName = ldapProfileName;
 	}
 
 	@Override
 	public boolean verifyPassword(String userName, String password) {
-		String profileName = getProfileName();
-		LdapProfile profile = ldap.getProfile(profileName);
+		LdapProfile profile = ldap.getProfile(ldapProfileName);
 		if (profile == null) {
-			logger.error("kraken radius: ldap profile not found - {}", profileName);
+			logger.error("kraken radius: ldap profile not found - {}", ldapProfileName);
 			return false;
 		}
 
 		return ldap.verifyPassword(profile, userName, password);
 	}
 
-	private String getProfileName() {
-		return (String) getConfig("profile_name");
-	}
-
 	@Override
 	public String toString() {
-		String profileName = getProfileName();
 		LdapProfile profile = null;
-		if (profileName != null)
-			profile = ldap.getProfile(profileName);
+		if (ldapProfileName != null)
+			profile = ldap.getProfile(ldapProfileName);
 
-		return "LDAP connector [profile=" + (profile != null ? profile : profileName) + "]";
+		return "LDAP connector [profile=" + (profile != null ? profile : ldapProfileName) + "]";
 	}
 }

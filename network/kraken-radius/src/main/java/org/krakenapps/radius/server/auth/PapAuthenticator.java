@@ -26,7 +26,6 @@ import org.krakenapps.radius.protocol.RadiusResponse;
 import org.krakenapps.radius.protocol.ReplyMessageAttribute;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
-import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusProfile;
 import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.slf4j.Logger;
@@ -38,8 +37,8 @@ public class PapAuthenticator extends RadiusAuthenticator {
 	private Date lastAuth;
 	private AtomicInteger counter;
 
-	public PapAuthenticator(String name, RadiusAuthenticatorFactory factory, RadiusConfigurator config) {
-		super(name, factory, config);
+	public PapAuthenticator(String name, RadiusAuthenticatorFactory factory) {
+		super(name, factory);
 
 		this.lastAuth = null;
 		this.counter = new AtomicInteger();

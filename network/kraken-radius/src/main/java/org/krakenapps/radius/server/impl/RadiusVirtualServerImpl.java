@@ -31,7 +31,6 @@ import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.RadiusPacket;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusClientAddress;
-import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusModule;
 import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusPortType;
@@ -64,41 +63,29 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 
 	private Map<RadiusClientAddress, String> clientOverrides;
 	private CopyOnWriteArraySet<RadiusVirtualServerEventListener> callbacks;
-	private RadiusConfigurator conf;
 	private ExecutorService executor;
 	private Thread listenerThread;
 
-	public RadiusVirtualServerImpl(RadiusServer server, String name, RadiusPortType portType, RadiusConfigurator conf,
+	public RadiusVirtualServerImpl(RadiusServer server, String name, String profileName, RadiusPortType portType,
 			ExecutorService executor) {
-		this(server, name, portType, conf, executor, null);
+		this(server, name, profileName, portType, executor, null);
 	}
 
-	public RadiusVirtualServerImpl(RadiusServer server, String name, RadiusPortType portType, RadiusConfigurator conf,
+	public RadiusVirtualServerImpl(RadiusServer server, String name, String profileName, RadiusPortType portType,
 			ExecutorService executor, InetSocketAddress bindAddress) {
 		this.server = server;
-		this.conf = conf;
 		this.isOpened = false;
 		this.name = name;
 		this.executor = executor;
 		this.bindAddress = bindAddress;
 		this.clientOverrides = new ConcurrentHashMap<RadiusClientAddress, String>();
 		this.callbacks = new CopyOnWriteArraySet<RadiusVirtualServerEventListener>();
-		this.profile = server.getProfile(conf.getString(PROFILE_KEY));
 		this.portType = portType;
+		this.profile = server.getProfile(profileName);
 
 		verifyNotNull("name", name);
 		verifyNotNull("port type", portType);
 		verifyNotNull("executor", executor);
-
-		// set config
-		conf.put(PORT_TYPE_KEY, portType.getAlias());
-
-		if (bindAddress != null) {
-			conf.put(PORT_KEY, bindAddress.getPort());
-			conf.put(HOSTNAME_KEY, bindAddress.getAddress().getHostAddress());
-		} else {
-			conf.put(PORT_KEY, DEFAULT_AUTH_PORT);
-		}
 	}
 
 	@Override
@@ -226,28 +213,6 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	@Override
 	public RadiusProfile getProfile() {
 		return profile;
-	}
-
-	@Override
-	public void setProfile(String profileName) {
-		if (profileName == null)
-			throw new IllegalArgumentException("profile name should be not null");
-
-		this.profile = server.getProfile(profileName);
-		if (profile == null)
-			throw new IllegalStateException("profile not found: " + profileName);
-
-		// make persistent
-		conf.put(PROFILE_KEY, profileName);
-
-		// fire callbacks
-		for (RadiusVirtualServerEventListener callback : callbacks) {
-			try {
-				callback.onSetProfile(this, profileName);
-			} catch (Exception e) {
-				logger.error("kraken radius: callback should not throw any exception", e);
-			}
-		}
 	}
 
 	@Override

@@ -16,8 +16,8 @@
 package org.krakenapps.radius.server;
 
 public abstract class RadiusUserDatabase extends RadiusInstance {
-	public RadiusUserDatabase(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
-		super(name, factory, conf);
+	public RadiusUserDatabase(String name, RadiusFactory<?> factory) {
+		super(name, factory);
 	}
 
 	public abstract boolean verifyPassword(String userName, String password);

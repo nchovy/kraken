@@ -23,7 +23,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
-import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusInstanceConfig;
 import org.krakenapps.radius.server.RadiusModuleType;
 import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
@@ -59,9 +59,9 @@ public class LocalUserDatabaseFactory implements RadiusUserDatabaseFactory {
 	}
 
 	@Override
-	public RadiusUserDatabase newInstance(String name, RadiusConfigurator config) {
+	public RadiusUserDatabase newInstance(RadiusInstanceConfig config) {
 		config.verify(configMetadatas);
-		return new LocalUserDatabase(name, this, config, userRegistry);
+		return new LocalUserDatabase(config.getName(), this, userRegistry);
 	}
 
 	@Override

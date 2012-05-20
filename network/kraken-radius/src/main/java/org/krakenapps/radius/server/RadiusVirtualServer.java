@@ -34,8 +34,6 @@ public interface RadiusVirtualServer {
 
 	RadiusProfile getProfile();
 
-	void setProfile(String profileName);
-
 	List<RadiusClientAddress> getOverriddenClients();
 
 	RadiusProfile getClientProfile(RadiusClientAddress client);

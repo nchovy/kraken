@@ -21,8 +21,8 @@ import org.krakenapps.radius.protocol.AccessRequest;
 import org.krakenapps.radius.protocol.RadiusResponse;
 
 public abstract class RadiusAuthenticator extends RadiusInstance {
-	public RadiusAuthenticator(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
-		super(name, factory, conf);
+	public RadiusAuthenticator(String name, RadiusFactory<?> factory) {
+		super(name, factory);
 	}
 
 	public abstract RadiusResponse authenticate(RadiusProfile profile, AccessRequest req,

@@ -15,7 +15,6 @@
  */
 package org.krakenapps.radius.server.userdatabase;
 
-import org.krakenapps.radius.server.RadiusConfigurator;
 import org.krakenapps.radius.server.RadiusUserDatabase;
 import org.krakenapps.radius.server.RadiusUserDatabaseFactory;
 
@@ -23,9 +22,8 @@ public class LocalUserDatabase extends RadiusUserDatabase {
 
 	private LocalUserRegistry userRegistry;
 
-	public LocalUserDatabase(String name, RadiusUserDatabaseFactory factory, RadiusConfigurator config,
-			LocalUserRegistry userRegistry) {
-		super(name, factory, config);
+	public LocalUserDatabase(String name, RadiusUserDatabaseFactory factory, LocalUserRegistry userRegistry) {
+		super(name, factory);
 		this.userRegistry = userRegistry;
 	}
 

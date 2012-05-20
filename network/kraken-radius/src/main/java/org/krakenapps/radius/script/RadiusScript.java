@@ -264,8 +264,8 @@ public class RadiusScript implements Script {
 		} catch (InterruptedException e) {
 			context.println("");
 			context.println("interrupted");
-		} catch (Exception e) {
-			context.println(e.getMessage());
+		} catch (Throwable t) {
+			context.println(t.getMessage());
 		}
 	}
 

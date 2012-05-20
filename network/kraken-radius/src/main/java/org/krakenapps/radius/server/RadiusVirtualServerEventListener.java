@@ -19,9 +19,6 @@ public abstract class RadiusVirtualServerEventListener {
 	public void onClose(RadiusVirtualServer virtualServer) {
 	}
 
-	public void onSetProfile(RadiusVirtualServer virtualServer, String profileName) {
-	}
-
 	public void onAddClientProfile(RadiusVirtualServer virtualServer, RadiusClientAddress client, String profileName) {
 	}
 

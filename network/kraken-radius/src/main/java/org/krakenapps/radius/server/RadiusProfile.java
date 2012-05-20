@@ -18,12 +18,20 @@ package org.krakenapps.radius.server;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.krakenapps.api.CollectionTypeHint;
+import org.krakenapps.confdb.CollectionName;
+
+@CollectionName("profiles")
 public class RadiusProfile {
 	private String name;
 	private String sharedSecret;
+
+	@CollectionTypeHint(String.class)
 	private List<String> authenticators;
+
+	@CollectionTypeHint(String.class)
 	private List<String> userDatabases;
-	
+
 	public RadiusProfile() {
 		this.authenticators = new ArrayList<String>();
 		this.userDatabases = new ArrayList<String>();

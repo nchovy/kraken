@@ -6,5 +6,5 @@
 	<instance component="radius-ldap-udf" />
 	<instance component="radius-papauth-factory" />
 	<instance component="radius-local-udf" />
-	<instance component="radius-mem-user-registry" />
+	<instance component="radius-confdb-user-registry" />
 </ipojo>

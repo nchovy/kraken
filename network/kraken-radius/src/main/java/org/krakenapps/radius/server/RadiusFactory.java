@@ -19,10 +19,10 @@ import java.util.List;
 
 public interface RadiusFactory<Instance extends RadiusInstance> {
 	RadiusModuleType getModuleType();
-	
+
 	String getName();
 
-	Instance newInstance(String name, RadiusConfigurator conf);
+	Instance newInstance(RadiusInstanceConfig config);
 
 	List<RadiusConfigMetadata> getConfigMetadatas();
 }

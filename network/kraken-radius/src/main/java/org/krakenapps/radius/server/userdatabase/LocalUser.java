@@ -15,8 +15,15 @@
  */
 package org.krakenapps.radius.server.userdatabase;
 
+import org.krakenapps.api.FieldOption;
+import org.krakenapps.confdb.CollectionName;
+
+@CollectionName("local_users")
 public class LocalUser {
+	@FieldOption(nullable = false)
 	private String loginName;
+
+	@FieldOption(nullable = false)
 	private String password;
 
 	public String getLoginName() {

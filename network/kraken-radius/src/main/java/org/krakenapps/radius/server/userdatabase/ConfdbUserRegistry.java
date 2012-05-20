@@ -21,15 +21,32 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Requires;
+import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 
-@Component(name = "radius-mem-user-registry")
+@Component(name = "radius-confdb-user-registry")
 @Provides
-public class MemoryUserRegistry implements LocalUserRegistry {
+public class ConfdbUserRegistry implements LocalUserRegistry {
 
 	private ConcurrentMap<String, LocalUser> users;
 
-	public MemoryUserRegistry() {
+	@Requires
+	private ConfigService conf;
+
+	public ConfdbUserRegistry() {
 		users = new ConcurrentHashMap<String, LocalUser>();
+	}
+
+	@Validate
+	public void start() {
+		ConfigDatabase db = conf.ensureDatabase("kraken-radius");
+		for (LocalUser user : db.findAll(LocalUser.class).getDocuments(LocalUser.class)) {
+			users.put(user.getLoginName(), user);
+		}
 	}
 
 	@Override
@@ -39,13 +56,23 @@ public class MemoryUserRegistry implements LocalUserRegistry {
 
 	@Override
 	public void add(LocalUser user) {
-		users.put(user.getLoginName(), user);
 
+		LocalUser old = users.putIfAbsent(user.getLoginName(), user);
+		if (old != null)
+			throw new IllegalStateException("duplicated login name: " + user.getLoginName());
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-radius");
+		db.add(user);
 	}
 
 	@Override
 	public void remove(String loginName) {
 		users.remove(loginName);
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-radius");
+		Config c = db.findOne(LocalUser.class, Predicates.field("login_name", loginName));
+		if (c != null)
+			db.remove(c);
 	}
 
 	@Override

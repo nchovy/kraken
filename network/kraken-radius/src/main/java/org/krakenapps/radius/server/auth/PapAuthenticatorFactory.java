@@ -27,7 +27,7 @@ import org.krakenapps.radius.server.RadiusAuthType;
 import org.krakenapps.radius.server.RadiusAuthenticator;
 import org.krakenapps.radius.server.RadiusAuthenticatorFactory;
 import org.krakenapps.radius.server.RadiusConfigMetadata;
-import org.krakenapps.radius.server.RadiusConfigurator;
+import org.krakenapps.radius.server.RadiusInstanceConfig;
 import org.krakenapps.radius.server.RadiusModuleType;
 
 @Component(name = "radius-papauth-factory")
@@ -55,8 +55,8 @@ public class PapAuthenticatorFactory implements RadiusAuthenticatorFactory {
 	}
 
 	@Override
-	public RadiusAuthenticator newInstance(String name, RadiusConfigurator config) {
-		return new PapAuthenticator(name, this, config);
+	public RadiusAuthenticator newInstance(RadiusInstanceConfig config) {
+		return new PapAuthenticator(config.getName(), this);
 	}
 
 	@Override

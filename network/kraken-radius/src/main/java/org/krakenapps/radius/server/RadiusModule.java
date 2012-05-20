@@ -20,26 +20,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.krakenapps.radius.server.impl.PreferencesConfigurator;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.radius.server.impl.RadiusFactoryServiceTracker;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RadiusModule {
 	private final Logger logger = LoggerFactory.getLogger(RadiusModule.class.getName());
 
-	private PreferencesService prefsvc;
-	private String configNamespace;
+	private ConfigService cfg;
 	private Map<String, RadiusFactory<?>> factories;
 	private Map<String, RadiusInstance> instances;
 	private RadiusFactoryServiceTracker tracker;
 
-	public RadiusModule(BundleContext bc, RadiusFactoryEventListener listener, RadiusModuleType type,
-			PreferencesService prefsvc) {
-		this.prefsvc = prefsvc;
-		this.configNamespace = type.getConfigNamespace();
+	public RadiusModule(BundleContext bc, RadiusFactoryEventListener listener, RadiusModuleType type, ConfigService cfg) {
+		this.cfg = cfg;
 		this.factories = new ConcurrentHashMap<String, RadiusFactory<?>>();
 		this.instances = new ConcurrentHashMap<String, RadiusInstance>();
 		this.tracker = new RadiusFactoryServiceTracker(listener, bc, type.getFactoryClass().getName());
@@ -82,19 +81,24 @@ public class RadiusModule {
 		if (factory == null)
 			throw new IllegalArgumentException("factory not found: " + factoryName);
 
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
-		conf.put("factory_name", factory.getName());
-
-		// copy configs
-		for (String key : configs.keySet())
-			conf.put(key, configs.get(key));
+		ConfigDatabase db = cfg.ensureDatabase("kraken-radius");
+		RadiusInstanceConfig config = new RadiusInstanceConfig();
+		config.setName(instanceName);
+		config.setFactoryName(factoryName);
+		config.setConfigs(configs);
+		db.add(config);
 
 		return loadInstance(instanceName);
 	}
 
 	public RadiusInstance loadInstance(String instanceName) {
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
-		String factoryName = conf.getString("factory_name");
+		ConfigDatabase db = cfg.ensureDatabase("kraken-radius");
+		Config c = db.findOne(RadiusInstanceConfig.class, Predicates.field("name", instanceName));
+		if (c == null)
+			return null;
+
+		RadiusInstanceConfig config = c.getDocument(RadiusInstanceConfig.class);
+		String factoryName = config.getFactoryName();
 
 		// return already loaded instance
 		if (instances.containsKey(instanceName))
@@ -105,7 +109,7 @@ public class RadiusModule {
 		if (factory == null)
 			return null;
 
-		RadiusInstance instance = factory.newInstance(instanceName, conf);
+		RadiusInstance instance = factory.newInstance(config);
 		instances.put(instanceName, instance);
 		logger.info("kraken radius: loaded radius instance [{}]", instanceName);
 
@@ -113,8 +117,11 @@ public class RadiusModule {
 	}
 
 	public void removeInstance(String instanceName) {
-		RadiusConfigurator conf = new PreferencesConfigurator(prefsvc, configNamespace, instanceName);
-		conf.purge();
+		ConfigDatabase db = cfg.ensureDatabase("kraken-radius");
+		Config c = db.findOne(RadiusInstanceConfig.class, Predicates.field("name", instanceName));
+		if (c != null) {
+			db.remove(c);
+		}
 
 		RadiusInstance instance = instances.remove(instanceName);
 		if (instance == null)

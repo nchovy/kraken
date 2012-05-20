@@ -22,5 +22,5 @@ public interface RadiusUserDatabaseFactory extends RadiusFactory<RadiusUserDatab
 
 	List<RadiusConfigMetadata> getConfigMetadatas();
 
-	RadiusUserDatabase newInstance(String name, RadiusConfigurator config);
+	RadiusUserDatabase newInstance(RadiusInstanceConfig config);
 }

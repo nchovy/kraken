@@ -15,17 +15,13 @@
  */
 package org.krakenapps.radius.server;
 
-import java.util.Set;
-
 public abstract class RadiusInstance {
 	private String name;
 	private RadiusFactory<?> factory;
-	private RadiusConfigurator conf;
 
-	public RadiusInstance(String name, RadiusFactory<?> factory, RadiusConfigurator conf) {
+	public RadiusInstance(String name, RadiusFactory<?> factory) {
 		this.name = name;
 		this.factory = factory;
-		this.conf = conf;
 	}
 
 	public String getName() {
@@ -40,17 +36,5 @@ public abstract class RadiusInstance {
 
 	public RadiusFactory<?> getFactory() {
 		return factory;
-	}
-
-	public Set<String> getConfigNames() {
-		return conf.keySet();
-	}
-
-	public void setConfig(String name, Object value) {
-		conf.put(name, value);
-	}
-
-	public Object getConfig(String name) {
-		return conf.get(name);
 	}
 }

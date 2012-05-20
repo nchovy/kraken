@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-radius</artifactId>
-	<version>0.6.2</version>
+	<version>0.7.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken RADIUS</name>
 	<build>
@@ -68,12 +68,11 @@
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-ldap</artifactId>
-			<optional>true</optional>
+			<artifactId>kraken-confdb</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-jpa</artifactId>
+			<artifactId>kraken-ldap</artifactId>
 			<optional>true</optional>
 		</dependency>
 	</dependencies>
