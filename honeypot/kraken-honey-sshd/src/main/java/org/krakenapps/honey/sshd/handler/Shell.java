@@ -40,9 +40,12 @@ public class Shell extends HoneyBaseCommandHandler implements Runnable {
 	}
 
 	private void execute(String line) throws IOException {
+		HoneySshSession session = getSession();
+		String remoteAddr = session.getRemoteAddress().getAddress().getHostAddress();
+		logger.info("kraken honey sshd: [{}] {}", remoteAddr, line);
+
 		String[] tokens = line.split("[\t ]");
 		String command = tokens[0];
-
 		HoneyCommandHandler handler = null;
 		if (command.equals("w")) {
 			handler = new W();

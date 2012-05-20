@@ -2,16 +2,32 @@ package org.krakenapps.honey.sshd.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
+import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.krakenapps.honey.sshd.HoneyLoginAttemptListener;
 import org.krakenapps.honey.sshd.HoneySshService;
 
+@Component(name = "honey-sshd")
+@Provides
 public class HoneySshServiceImpl implements HoneySshService {
 	private String hostname;
 	private File rootPath;
 	private SshServer sshd;
 
+	private CopyOnWriteArraySet<HoneyLoginAttemptListener> loginAttemptListeners;
+
+	public HoneySshServiceImpl() {
+		loginAttemptListeners = new CopyOnWriteArraySet<HoneyLoginAttemptListener>();
+	}
+
+	@Invalidate
 	public void stop() {
 		close();
 	}
@@ -53,7 +69,7 @@ public class HoneySshServiceImpl implements HoneySshService {
 		sshd.setPort(22);
 		sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider("hostkey.pem"));
 		sshd.setShellFactory(new HoneySshCommandFactory(this));
-		sshd.setPasswordAuthenticator(new HoneyPasswordAuthenticator());
+		sshd.setPasswordAuthenticator(new HoneyPasswordAuthenticator(this));
 		sshd.start();
 	}
 
@@ -64,6 +80,21 @@ public class HoneySshServiceImpl implements HoneySshService {
 				sshd.stop(true);
 			} catch (InterruptedException e) {
 			}
+	}
+
+	@Override
+	public Collection<HoneyLoginAttemptListener> getLoginAttemptListeners() {
+		return Collections.unmodifiableCollection(loginAttemptListeners);
+	}
+
+	@Override
+	public void addLoginAttemptListener(HoneyLoginAttemptListener listener) {
+		loginAttemptListeners.add(listener);
+	}
+
+	@Override
+	public void removeLoginAttemptListener(HoneyLoginAttemptListener listener) {
+		loginAttemptListeners.remove(listener);
 	}
 
 	public static void main(String[] args) throws IOException {

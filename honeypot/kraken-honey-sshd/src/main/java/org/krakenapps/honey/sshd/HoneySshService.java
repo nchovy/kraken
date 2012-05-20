@@ -2,6 +2,7 @@ package org.krakenapps.honey.sshd;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 
 public interface HoneySshService {
 	String getHostname();
@@ -15,4 +16,10 @@ public interface HoneySshService {
 	void open() throws IOException;
 
 	void close();
+
+	Collection<HoneyLoginAttemptListener> getLoginAttemptListeners();
+
+	void addLoginAttemptListener(HoneyLoginAttemptListener listener);
+
+	void removeLoginAttemptListener(HoneyLoginAttemptListener listener);
 }
