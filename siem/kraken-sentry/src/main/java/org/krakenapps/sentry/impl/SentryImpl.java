@@ -238,7 +238,7 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 				}
 			});
 
-			RpcSession logSession = dataConnection.createSession("kraken-sentry");
+			RpcSession logSession = dataConnection.createSession("kraken-base");
 			logSession.call("setLogChannel", new Object[] { getGuid(), nonce });
 
 			RpcSession old = logSessions.putIfAbsent(baseName, logSession);
@@ -269,7 +269,7 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 	public Collection<Base> getBases() {
 		List<Base> l = new ArrayList<Base>();
 
-		ConfigDatabase db = conf.ensureDatabase("kraken-base");
+		ConfigDatabase db = conf.ensureDatabase("kraken-sentry");
 
 		for (BaseConfig base : db.findAll(BaseConfig.class).getDocuments(BaseConfig.class))
 			l.add(base);
@@ -295,6 +295,11 @@ public class SentryImpl implements Sentry, LoggerRegistryEventListener, LoggerFa
 		if (old != null)
 			throw new IllegalStateException("duplicated base name: " + base.getName());
 
+		config.setName(base.getName());
+		config.setIp(base.getAddress().getAddress().getHostAddress());
+		config.setPort(base.getAddress().getPort());
+		config.setKeyAlias(base.getKeyAlias());
+		config.setTrustAlias(base.getTrustAlias());
 		db.add(config);
 	}
 
