@@ -15,7 +15,9 @@
  */
 package org.krakenapps.dom.msgbus;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -37,6 +39,18 @@ public class OrganizationUnitPlugin {
 
 	@Requires
 	private OrganizationUnitApi orgUnitApi;
+
+	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "admin_grant")
+	public void removeAllOrganizationUnits(Request req, Response resp) {
+		String domain = req.getOrgDomain();
+		List<String> guids = new ArrayList<String>();
+		for (OrganizationUnit u : orgUnitApi.getOrganizationUnits(domain)) {
+			guids.add(u.getGuid());
+		}
+
+		orgUnitApi.removeOrganizationUnits(domain, guids, true);
+	}
 
 	@MsgbusMethod
 	public void getOrganizationUnits(Request req, Response resp) {
