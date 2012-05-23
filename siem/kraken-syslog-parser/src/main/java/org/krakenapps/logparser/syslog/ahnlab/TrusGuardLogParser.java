@@ -2,14 +2,16 @@ package org.krakenapps.logparser.syslog.ahnlab;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
 import org.krakenapps.log.api.LogParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TrusGuardLogParser implements LogParser {
+	private final Logger logger = LoggerFactory.getLogger(TrusGuardLogParser.class.getName());
 
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
@@ -17,26 +19,31 @@ public class TrusGuardLogParser implements LogParser {
 		if (line == null)
 			return null;
 
-		Map<String, Object> m = new HashMap<String, Object>();
-		Scanner scanner = new Scanner(line);
-		scanner.useDelimiter("`");
+		try {
+			Map<String, Object> m = new HashMap<String, Object>();
+			Scanner scanner = new Scanner(line);
+			scanner.useDelimiter("`");
 
-		// log header
-		m.put("version", Integer.valueOf(scanner.next()));
-		m.put("encrypt", Integer.valueOf(scanner.next()));
+			// log header
+			m.put("version", Integer.valueOf(scanner.next()));
+			m.put("encrypt", Integer.valueOf(scanner.next()));
 
-		int type = Integer.valueOf(scanner.next());
-		m.put("type", type);
-		m.put("count", Integer.valueOf(scanner.next()));
-		m.put("utm_id", scanner.next());
+			int type = Integer.valueOf(scanner.next());
+			m.put("type", type);
+			m.put("count", Integer.valueOf(scanner.next()));
+			m.put("utm_id", scanner.next());
 
-		if (type == 1) { // kernel log (packet filter)
-			parseFirewallLog(scanner, m);
-		} else if (type == 2) { // application log
-			parseApplicationLog(scanner, m);
+			if (type == 1) { // kernel log (packet filter)
+				parseFirewallLog(scanner, m);
+			} else if (type == 2) { // application log
+				parseApplicationLog(scanner, m);
+			}
+
+			return m;
+		} catch (Throwable t) {
+			logger.warn("kraken syslog parser: cannot parse trusguard log => " + line, t);
+			return null;
 		}
-
-		return m;
 	}
 
 	private void parseFirewallLog(Scanner scanner, Map<String, Object> m) {
@@ -94,7 +101,9 @@ public class TrusGuardLogParser implements LogParser {
 		} catch (ParseException e) {
 		}
 
-		if (moduleFlag == 2)
+		if (moduleFlag == 1)
+			parseOperationLog(scanner, m);
+		else if (moduleFlag == 2)
 			parseVirusLog(scanner, m);
 		else if (moduleFlag == 3)
 			parseSpamLog(scanner, m);
@@ -108,6 +117,19 @@ public class TrusGuardLogParser implements LogParser {
 			parseIpsLog(scanner, m);
 		else if (moduleFlag == 12)
 			parseInternetAccessControlLog(scanner, m);
+	}
+
+	private void parseOperationLog(Scanner scanner, Map<String, Object> m) {
+		String severityToken = scanner.next();
+		scanner.next();
+
+		m.put("severity", severityToken);
+		scanner.next();
+		scanner.next();
+		m.put("action", scanner.next());
+		scanner.next();
+		m.put("module_name", scanner.next());
+		m.put("description", scanner.next());
 	}
 
 	private void parseVirusLog(Scanner scanner, Map<String, Object> m) {

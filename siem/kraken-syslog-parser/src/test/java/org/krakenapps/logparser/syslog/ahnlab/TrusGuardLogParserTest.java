@@ -28,11 +28,41 @@ public class TrusGuardLogParserTest {
 	@Test
 	public void testOperationLog() {
 		String line = "1`0`2`1`000000`1`20071026`12:48:08`0````3009``운영 로그`TrusGuard UTM의 정책을 적용했습니다.`";
+		Map<String, Object> m = new TrusGuardLogParser().parse(line(line));
+
+		// check log header
+		assertNotNull(m);
+		assertEquals(1, m.get("version"));
+		assertEquals(0, m.get("encrypt"));
+		assertEquals(2, m.get("type"));
+		assertEquals(1, m.get("count"));
+		assertEquals("000000", m.get("utm_id"));
+
+		// check log data
+		assertEquals("3009", m.get("action"));
+		assertEquals("운영 로그", m.get("module_name"));
+		assertEquals("TrusGuard UTM의 정책을 적용했습니다.", m.get("description"));
 	}
 
 	@Test
 	public void testStatLog() {
 		String line = "1`0`2`1`0bf075`1`20071025`18:00:44`0````3009``Operation Log`CPU: 19.280720, Memory: 22.252111, HDD: 30, Connections: 28, IN: 130.0Kbps, OUT: 68.3Kbps, IN:128 pps, OUT:41 pps, HA: OFF`";
+		Map<String, Object> m = new TrusGuardLogParser().parse(line(line));
+
+		// check log header
+		assertNotNull(m);
+		assertEquals(1, m.get("version"));
+		assertEquals(0, m.get("encrypt"));
+		assertEquals(2, m.get("type"));
+		assertEquals(1, m.get("count"));
+		assertEquals("0bf075", m.get("utm_id"));
+
+		// check log data
+		assertEquals("3009", m.get("action"));
+		assertEquals("Operation Log", m.get("module_name"));
+		assertEquals(
+				"CPU: 19.280720, Memory: 22.252111, HDD: 30, Connections: 28, IN: 130.0Kbps, OUT: 68.3Kbps, IN:128 pps, OUT:41 pps, HA: OFF",
+				m.get("description"));
 	}
 
 	@Test
