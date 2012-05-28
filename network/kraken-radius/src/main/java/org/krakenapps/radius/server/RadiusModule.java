@@ -65,7 +65,15 @@ public class RadiusModule {
 	}
 
 	public void removeFactory(String name) {
-		factories.remove(name);
+		RadiusFactory<?> factory = factories.remove(name);
+		if (factory == null)
+			return;
+
+		// remove all related instances
+		for (RadiusInstance instance : instances.values()) {
+			if (factory == instance.getFactory())
+				instances.remove(instance.getName());
+		}
 	}
 
 	public List<RadiusInstance> getInstances() {

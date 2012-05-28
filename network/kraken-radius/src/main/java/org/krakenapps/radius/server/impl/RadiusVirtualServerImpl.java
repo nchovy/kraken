@@ -102,7 +102,7 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 				}
 			}
 		} catch (IOException e) {
-			if (e instanceof SocketException && e.getMessage().equals("socket closed"))
+			if (e instanceof SocketException && e.getMessage().equalsIgnoreCase("socket closed"))
 				logger.trace("kraken radius: socket closed");
 			else
 				logger.info("kraken radius: io error", e);
@@ -186,6 +186,7 @@ public class RadiusVirtualServerImpl implements RadiusVirtualServer, Runnable {
 	public void close() throws IOException {
 		try {
 			socket.close();
+			executor.shutdownNow();
 			listenerThread.interrupt();
 			logger.info("kraken radius: closed virtual server [{}]", bindAddress);
 		} finally {
