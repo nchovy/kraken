@@ -19,10 +19,13 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -43,7 +46,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.slf4j.Logger;
@@ -59,7 +61,7 @@ public class Response implements HttpServletResponse {
 	private ServletOutputStream os;
 	private PrintWriter writer;
 	private HttpResponseStatus status = HttpResponseStatus.OK;
-	private Map<String, Object> headers = new HashMap<String, Object>();
+	private Map<String, List<String>> headers = new HashMap<String, List<String>>();
 	private Set<Cookie> cookies = new HashSet<Cookie>();
 
 	public Response(BundleContext bc, ChannelHandlerContext ctx, HttpServletRequest req) {
@@ -97,25 +99,45 @@ public class Response implements HttpServletResponse {
 		@Override
 		public void close() throws IOException {
 			if (closed) {
-				logger.trace("kraken httpd: response output closed");
+				if (logger.isDebugEnabled())
+					logger.debug("kraken httpd: response output closed");
 				return;
 			}
 
 			closed = true;
 
-			flush();
+			flush(true);
 
-			ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
+			String transferEncoding = getHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+			if (logger.isDebugEnabled())
+				logger.debug("kraken httpd: transfer encoding header [{}]", transferEncoding);
+
+			if (transferEncoding != null && transferEncoding.equals("chunked")) {
+				ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
+				if (logger.isDebugEnabled())
+					logger.debug("kraken httpd: channel [{}], last empty chunk", ctx.getChannel());
+			}
+
+			if (logger.isDebugEnabled())
+				logger.debug("kraken httpd: closing channel [{}]", ctx.getChannel());
 
 			if (!isKeepAlive()) {
-				logger.trace("kraken httpd: channel [{}] will be closed", ctx.getChannel());
+				if (logger.isDebugEnabled())
+					logger.debug("kraken httpd: channel [{}] will be closed", ctx.getChannel());
 				ctx.getChannel().close();
 			}
 		}
 
 		@Override
 		public void flush() throws IOException {
-			if (!sentHeader) {
+			flush(false);
+		}
+
+		private void flush(boolean force) {
+			String transferEncoding = getHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+			boolean isChunked = transferEncoding != null && transferEncoding.equals("chunked");
+
+			if ((force || isChunked) && !sentHeader) {
 				// send response if not sent
 				HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
@@ -129,6 +151,9 @@ public class Response implements HttpServletResponse {
 					session.setLastAccess(new Date());
 				}
 
+				if (!isChunked)
+					resp.setHeader(HttpHeaders.Names.CONTENT_LENGTH, buf.readableBytes());
+
 				for (Cookie c : cookies) {
 					resp.addHeader(HttpHeaders.Names.SET_COOKIE, c.getName() + "=" + c.getValue());
 				}
@@ -136,9 +161,8 @@ public class Response implements HttpServletResponse {
 				for (String name : headers.keySet())
 					resp.setHeader(name, headers.get(name));
 
-				resp.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, "chunked");
-
-				logger.debug("kraken httpd: flush response [{}]", buf.readableBytes());
+				if (logger.isDebugEnabled())
+					logger.debug("kraken httpd: channel [{}], sent header", ctx.getChannel());
 
 				// write http header
 				ctx.getChannel().write(resp);
@@ -146,10 +170,22 @@ public class Response implements HttpServletResponse {
 				sentHeader = true;
 			}
 
-			ChannelBuffer dup = buf.duplicate();
-			ctx.getChannel().write(new DefaultHttpChunk(dup));
-			buf.clear();
+			if (isChunked) {
+				if (logger.isDebugEnabled())
+					logger.debug("kraken httpd: channel [{}], flush chunk [{}]", ctx.getChannel(), buf.readableBytes());
 
+				ChannelBuffer dup = buf.duplicate();
+				ctx.getChannel().write(new DefaultHttpChunk(dup));
+				buf.clear();
+			} else if (sentHeader) {
+				if (logger.isDebugEnabled())
+					logger.debug("kraken httpd: channel [{}], flush response [{}]", ctx.getChannel(),
+							buf.readableBytes());
+
+				ChannelBuffer dup = buf.duplicate();
+				ctx.getChannel().write(dup);
+				buf.clear();
+			}
 		}
 
 		private boolean isKeepAlive() {
@@ -168,9 +204,14 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public String getCharacterEncoding() {
-		String contentType = (String) headers.get(HttpHeaders.Names.CONTENT_TYPE);
-		if (contentType == null || !contentType.contains("charset"))
+		List<String> contentTypes = (List<String>) headers.get(HttpHeaders.Names.CONTENT_TYPE);
+		if (contentTypes == null)
 			return null;
+
+		String contentType = contentTypes.get(0);
+		if (!contentType.contains("charset"))
+			return null;
+
 		for (String t : contentType.split(";")) {
 			if (t.trim().startsWith("charset"))
 				return t.split("=")[1].trim();
@@ -190,12 +231,12 @@ public class Response implements HttpServletResponse {
 
 	@Override
 	public void setContentLength(int len) {
-		headers.put(HttpHeaders.Names.CONTENT_LENGTH, len);
+		headers.put(HttpHeaders.Names.CONTENT_LENGTH, Arrays.asList(Integer.toString(len)));
 	}
 
 	@Override
 	public void setContentType(String type) {
-		headers.put(HttpHeaders.Names.CONTENT_TYPE, type);
+		headers.put(HttpHeaders.Names.CONTENT_TYPE, Arrays.asList(type));
 	}
 
 	@Override
@@ -265,32 +306,6 @@ public class Response implements HttpServletResponse {
 		setHeader(HttpHeaders.Names.LOCATION, location);
 	}
 
-	@Override
-	public void setDateHeader(String name, long date) {
-		headers.put(name, date);
-	}
-
-	@Override
-	public void setHeader(String name, String value) {
-		headers.put(name, value);
-	}
-
-	@Override
-	public void setIntHeader(String name, int value) {
-		headers.put(name, value);
-	}
-
-	@Deprecated
-	@Override
-	public void setStatus(int sc, String sm) {
-		setStatus(sc);
-	}
-
-	@Override
-	public void setStatus(int sc) {
-		this.status = HttpResponseStatus.valueOf(sc);
-	}
-
 	public void close() {
 		writer.close();
 	}
@@ -356,44 +371,76 @@ public class Response implements HttpServletResponse {
 	}
 
 	@Override
-	public void addDateHeader(String name, long date) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addHeader(String name, String value) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void addIntHeader(String name, int value) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public int getStatus() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
 	public String getHeader(String name) {
-		// TODO Auto-generated method stub
-		return null;
+		List<String> l = headers.get(name);
+		if (l == null || l.size() == 0)
+			return null;
+
+		return l.get(0);
 	}
 
 	@Override
 	public Collection<String> getHeaders(String name) {
-		// TODO Auto-generated method stub
-		return null;
+		return headers.get(name);
 	}
 
 	@Override
 	public Collection<String> getHeaderNames() {
-		// TODO Auto-generated method stub
-		return null;
+		return headers.keySet();
 	}
+
+	@Override
+	public void addDateHeader(String name, long date) {
+		addHeader(name, new Date(date).toString());
+	}
+
+	@Override
+	public void addIntHeader(String name, int value) {
+		addHeader(name, Integer.toString(value));
+	}
+
+	@Override
+	public void addHeader(String name, String value) {
+		List<String> l = headers.get(name);
+		if (l == null) {
+			l = new ArrayList<String>();
+			headers.put(name, l);
+		}
+
+		l.add(value);
+	}
+
+	@Override
+	public int getStatus() {
+		return status.getCode();
+	}
+
+	@Override
+	public void setDateHeader(String name, long date) {
+		setHeader(name, new Date(date).toString());
+	}
+
+	@Override
+	public void setIntHeader(String name, int value) {
+		setHeader(name, Integer.toString(value));
+	}
+
+	@Override
+	public void setHeader(String name, String value) {
+		if (logger.isDebugEnabled())
+			logger.debug("kraken httpd: set response header [name: {}, value: {}]", name, value);
+		headers.put(name, Arrays.asList(value));
+	}
+
+	@Deprecated
+	@Override
+	public void setStatus(int sc, String sm) {
+		setStatus(sc);
+	}
+
+	@Override
+	public void setStatus(int sc) {
+		this.status = HttpResponseStatus.valueOf(sc);
+	}
+
 }

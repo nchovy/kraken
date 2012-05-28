@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.krakenapps.httpd.impl.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ public abstract class ResourceServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		logger.trace("kraken httpd: httpd session [{}]", req.getSession().getId());
+		resp.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, "chunked");
 
 		String pathInfo = req.getPathInfo();
 		if (req instanceof Request) {
@@ -67,11 +69,11 @@ public abstract class ResourceServlet extends HttpServlet {
 			int len;
 			while ((len = is.read(b)) != -1)
 				resp.getOutputStream().write(b, 0, len);
-			resp.getOutputStream().flush();
 		} catch (IOException e) {
 			throw e;
 		} finally {
 			is.close();
+			resp.getOutputStream().close();
 		}
 	}
 
