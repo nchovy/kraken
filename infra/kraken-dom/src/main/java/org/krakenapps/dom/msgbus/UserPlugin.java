@@ -216,6 +216,8 @@ public class UserPlugin {
 				Map<String, Object> m = (Map<String, Object>) req.get("org_unit");
 				if (m != null)
 					old.setOrgUnit(orgUnitApi.findOrganizationUnit(domain, (String) m.get("guid")));
+				else
+					old.setOrgUnit(null);
 
 				userApi.updateUser(domain, old, req.has("password"));
 				return;
