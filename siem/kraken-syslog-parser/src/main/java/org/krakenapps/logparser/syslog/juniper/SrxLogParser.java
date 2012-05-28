@@ -2,6 +2,7 @@ package org.krakenapps.logparser.syslog.juniper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.krakenapps.log.api.LogParser;
 import org.slf4j.Logger;
@@ -18,15 +19,77 @@ public class SrxLogParser implements LogParser {
 			return null;
 
 		try {
-			
-			
-			
+			Scanner s = new Scanner(line);
+			s.useDelimiter(" +");
+
+			String month = s.next();
+			String day = s.next();
+			String time = s.next();
+			String type = s.next();
+			String logtype = s.next();
+			s.next();
+			s.next();
+
+			if (logtype.equals("RT_FLOW_SESSION_CREATE:")) {
+				m.put("action", "created");
+				parseCommon(m, s);
+			} else if (logtype.equals("RT_FLOW_SESSION_CLOSE:")) {
+				m.put("action", "closed");
+
+				String reason = s.next();
+				if (!reason.endsWith(":"))
+					reason += " " + s.next();
+
+				m.put("reason", reason.substring(0, reason.length() - 1));
+				parseCommon(m, s);
+				parseStat(m, "sent", s.next());
+				parseStat(m, "rcvd", s.next());
+
+				m.put("elapsed_time", Long.valueOf(s.next()));
+			}
+
 		} catch (Throwable t) {
 			logger.warn("kraken syslog parser: cannot parse log [" + line + "]", t);
 			return params;
 		}
 
 		return m;
+	}
+
+	private void parseStat(Map<String, Object> m, String prefix, String source) {
+		int p1 = source.indexOf('(');
+		m.put(prefix + "_" + "pkts", Long.valueOf(source.substring(0, p1)));
+		m.put(prefix + "_" + "bytes", Long.valueOf(source.substring(p1 + 1, source.length() - 1)));
+	}
+
+	private void parseCommon(Map<String, Object> m, Scanner s) {
+		String flow = s.next();
+		int p1 = flow.indexOf('/');
+		int p2 = flow.indexOf('-', p1);
+		int p3 = flow.indexOf('/', p2);
+
+		m.put("src_ip", flow.substring(0, p1));
+		m.put("src_port", Integer.valueOf(flow.substring(p1 + 1, p2)));
+		m.put("dst_ip", flow.substring(p2 + 2, p3));
+		m.put("dst_port", Integer.valueOf(flow.substring(p3 + 1)));
+		m.put("service", s.next());
+
+		String natFlow = s.next();
+		int p4 = natFlow.indexOf('/');
+		int p5 = natFlow.indexOf('-', p4);
+		int p6 = natFlow.indexOf('/', p5);
+
+		m.put("nat_src_ip", natFlow.substring(0, p4));
+		m.put("nat_src_port", Integer.valueOf(natFlow.substring(p4 + 1, p5)));
+		m.put("nat_dst_ip", natFlow.substring(p5 + 2, p6));
+		m.put("nat_dst_port", Integer.valueOf(natFlow.substring(p6 + 1)));
+		m.put("src_nat_rule", s.next());
+		m.put("dst_nat_rule", s.next());
+		m.put("protocol", s.next());
+		m.put("policy", s.next());
+		m.put("src_zone", s.next());
+		m.put("dst_zone", s.next());
+		m.put("session_id", s.next());
 	}
 
 }

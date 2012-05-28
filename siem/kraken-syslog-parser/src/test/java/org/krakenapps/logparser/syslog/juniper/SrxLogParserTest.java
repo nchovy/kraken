@@ -7,7 +7,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-@Ignore
 public class SrxLogParserTest {
 
 	@Test
@@ -53,12 +52,12 @@ public class SrxLogParserTest {
 		assertEquals("trust", m.get("src_zone"));
 		assertEquals("untrust", m.get("dst_zone"));
 		assertEquals("80888035", m.get("session_id"));
-		assertEquals(46L, m.get("send_pkts"));
-		assertEquals(4109L, m.get("send_bytes"));
+		assertEquals(46L, m.get("sent_pkts"));
+		assertEquals(4109L, m.get("sent_bytes"));
 		assertEquals(42L, m.get("rcvd_pkts"));
 		assertEquals(4812L, m.get("rcvd_bytes"));
 		assertEquals(13512L, m.get("elapsed_time"));
-	}
+	}	
 
 	@Test
 	public void testTcpFinLog() {
@@ -68,7 +67,7 @@ public class SrxLogParserTest {
 
 		assertEquals("closed", m.get("action"));
 		assertEquals("TCP FIN", m.get("reason"));
-		assertEquals("10.254.4.144", m.get("src_ip"));
+		assertEquals("10.253.4.144", m.get("src_ip"));
 		assertEquals(48577, m.get("src_port"));
 		assertEquals("74.125.71.188", m.get("dst_ip"));
 		assertEquals(5228, m.get("dst_port"));
@@ -80,8 +79,8 @@ public class SrxLogParserTest {
 		assertEquals("trust", m.get("src_zone"));
 		assertEquals("untrust", m.get("dst_zone"));
 		assertEquals("100186027", m.get("session_id"));
-		assertEquals(0L, m.get("send_pkts"));
-		assertEquals(0L, m.get("send_bytes"));
+		assertEquals(0L, m.get("sent_pkts"));
+		assertEquals(0L, m.get("sent_bytes"));
 		assertEquals(0L, m.get("rcvd_pkts"));
 		assertEquals(0L, m.get("rcvd_bytes"));
 		assertEquals(1L, m.get("elapsed_time"));
@@ -107,8 +106,8 @@ public class SrxLogParserTest {
 		assertEquals("trust", m.get("src_zone"));
 		assertEquals("untrust", m.get("dst_zone"));
 		assertEquals("80038716", m.get("session_id"));
-		assertEquals(58L, m.get("send_pkts"));
-		assertEquals(5362L, m.get("send_bytes"));
+		assertEquals(58L, m.get("sent_pkts"));
+		assertEquals(5362L, m.get("sent_bytes"));
 		assertEquals(64L, m.get("rcvd_pkts"));
 		assertEquals(6924L, m.get("rcvd_bytes"));
 		assertEquals(28150L, m.get("elapsed_time"));
