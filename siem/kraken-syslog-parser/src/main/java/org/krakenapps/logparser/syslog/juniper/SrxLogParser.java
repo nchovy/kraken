@@ -31,10 +31,10 @@ public class SrxLogParser implements LogParser {
 			s.next();
 
 			if (logtype.equals("RT_FLOW_SESSION_CREATE:")) {
-				m.put("action", "created");
+				m.put("action", "create");
 				parseCommon(m, s);
 			} else if (logtype.equals("RT_FLOW_SESSION_CLOSE:")) {
-				m.put("action", "closed");
+				m.put("action", "close");
 
 				String reason = s.next();
 				if (!reason.endsWith(":"))
@@ -46,7 +46,22 @@ public class SrxLogParser implements LogParser {
 				parseStat(m, "rcvd", s.next());
 
 				m.put("elapsed_time", Long.valueOf(s.next()));
-			}
+			} else if (logtype.equals("RT_FLOW_SESSION_DENY:")) {
+				m.put("action", "deny");
+				parseFlow(m, s);
+
+				String token = s.next();
+				int p1 = token.indexOf('(');
+				String protocol = token.substring(0, p1);
+				String icmpType = token.substring(p1 + 1, token.length() - 1);
+
+				m.put("protocol", protocol);
+				m.put("icmp_type", icmpType);
+				m.put("policy", s.next());
+				m.put("src_zone", s.next());
+				m.put("dst_zone", s.next());
+			} else
+				return params;
 
 		} catch (Throwable t) {
 			logger.warn("kraken syslog parser: cannot parse log [" + line + "]", t);
@@ -63,16 +78,7 @@ public class SrxLogParser implements LogParser {
 	}
 
 	private void parseCommon(Map<String, Object> m, Scanner s) {
-		String flow = s.next();
-		int p1 = flow.indexOf('/');
-		int p2 = flow.indexOf('-', p1);
-		int p3 = flow.indexOf('/', p2);
-
-		m.put("src_ip", flow.substring(0, p1));
-		m.put("src_port", Integer.valueOf(flow.substring(p1 + 1, p2)));
-		m.put("dst_ip", flow.substring(p2 + 2, p3));
-		m.put("dst_port", Integer.valueOf(flow.substring(p3 + 1)));
-		m.put("service", s.next());
+		parseFlow(m, s);
 
 		String natFlow = s.next();
 		int p4 = natFlow.indexOf('/');
@@ -90,6 +96,19 @@ public class SrxLogParser implements LogParser {
 		m.put("src_zone", s.next());
 		m.put("dst_zone", s.next());
 		m.put("session_id", s.next());
+	}
+
+	private void parseFlow(Map<String, Object> m, Scanner s) {
+		String flow = s.next();
+		int p1 = flow.indexOf('/');
+		int p2 = flow.indexOf('-', p1);
+		int p3 = flow.indexOf('/', p2);
+
+		m.put("src_ip", flow.substring(0, p1));
+		m.put("src_port", Integer.valueOf(flow.substring(p1 + 1, p2)));
+		m.put("dst_ip", flow.substring(p2 + 2, p3));
+		m.put("dst_port", Integer.valueOf(flow.substring(p3 + 1)));
+		m.put("service", s.next());
 	}
 
 }

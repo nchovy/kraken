@@ -15,7 +15,7 @@ public class SrxLogParserTest {
 		Map<String, Object> m = parser
 				.parse(line("May  8 02:52:01 RT_FLOW: RT_FLOW_SESSION_CREATE: session created 10.213.110.248/34613->72.14.203.188/5228 None 211.36.132.131/43335->72.14.203.188/5228 r1 None 6 TCP_1H trust untrust 80497606"));
 
-		assertEquals("created", m.get("action"));
+		assertEquals("create", m.get("action"));
 		assertEquals("10.213.110.248", m.get("src_ip"));
 		assertEquals(34613, m.get("src_port"));
 		assertEquals("72.14.203.188", m.get("dst_ip"));
@@ -39,7 +39,7 @@ public class SrxLogParserTest {
 		Map<String, Object> m = parser
 				.parse(line("May  8 02:52:02 RT_FLOW: RT_FLOW_SESSION_CLOSE: session closed TCP RST: 10.254.251.48/35639->72.14.203.188/5228 None 211.36.132.123/40488->72.14.203.188/5228 r1 None 6 TCP_1H trust untrust 80888035 46(4109) 42(4812) 13512"));
 
-		assertEquals("closed", m.get("action"));
+		assertEquals("close", m.get("action"));
 		assertEquals("TCP RST", m.get("reason"));
 		assertEquals("10.254.251.48", m.get("src_ip"));
 		assertEquals(35639, m.get("src_port"));
@@ -57,7 +57,7 @@ public class SrxLogParserTest {
 		assertEquals(42L, m.get("rcvd_pkts"));
 		assertEquals(4812L, m.get("rcvd_bytes"));
 		assertEquals(13512L, m.get("elapsed_time"));
-	}	
+	}
 
 	@Test
 	public void testTcpFinLog() {
@@ -65,7 +65,7 @@ public class SrxLogParserTest {
 		Map<String, Object> m = parser
 				.parse(line("May  8 02:52:06 RT_FLOW: RT_FLOW_SESSION_CLOSE: session closed TCP FIN: 10.253.4.144/48577->74.125.71.188/5228 None 211.36.132.229/52104->74.125.71.188/5228 r1 None 6 TCP_1H trust untrust 100186027 0(0) 0(0) 1"));
 
-		assertEquals("closed", m.get("action"));
+		assertEquals("close", m.get("action"));
 		assertEquals("TCP FIN", m.get("reason"));
 		assertEquals("10.253.4.144", m.get("src_ip"));
 		assertEquals(48577, m.get("src_port"));
@@ -92,7 +92,7 @@ public class SrxLogParserTest {
 		Map<String, Object> m = parser
 				.parse(line("May  8 02:52:02 RT_FLOW: RT_FLOW_SESSION_CLOSE: session closed unset: 10.253.92.74/58350->72.14.203.188/5228 None 211.36.132.81/53350->72.14.203.188/5228 r1 None 6 TCP_1H trust untrust 80038716 58(5362) 64(6924) 28150"));
 
-		assertEquals("closed", m.get("action"));
+		assertEquals("close", m.get("action"));
 		assertEquals("unset", m.get("reason"));
 		assertEquals("10.253.92.74", m.get("src_ip"));
 		assertEquals(58350, m.get("src_port"));
@@ -111,6 +111,25 @@ public class SrxLogParserTest {
 		assertEquals(64L, m.get("rcvd_pkts"));
 		assertEquals(6924L, m.get("rcvd_bytes"));
 		assertEquals(28150L, m.get("elapsed_time"));
+	}
+
+	@Test
+	public void testDenyLog() {
+		SrxLogParser parser = new SrxLogParser();
+		Map<String, Object> m = parser
+				.parse(line("Dec 16 05:02:28  RT_FLOW: RT_FLOW_SESSION_DENY: session denied 10.0.0.32/9370->63.251.254.131/370 None 17(0) default-permit trust untrust"));
+
+		assertEquals("deny", m.get("action"));
+		assertEquals("10.0.0.32", m.get("src_ip"));
+		assertEquals(9370, m.get("src_port"));
+		assertEquals("63.251.254.131", m.get("dst_ip"));
+		assertEquals(370, m.get("dst_port"));
+		assertEquals("None", m.get("service"));
+		assertEquals("17", m.get("protocol"));
+		assertEquals("0", m.get("icmp_type"));
+		assertEquals("default-permit", m.get("policy"));
+		assertEquals("trust", m.get("src_zone"));
+		assertEquals("untrust", m.get("dst_zone"));
 	}
 
 	private Map<String, Object> line(String line) {
