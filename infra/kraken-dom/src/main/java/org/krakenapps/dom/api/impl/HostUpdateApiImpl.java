@@ -42,10 +42,9 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 	private volatile boolean doStop;
 
 	public HostUpdateApiImpl() {
-		validHardeningKeys = new HashSet<String>(
-				Arrays.asList("UseFirewall", "UseLogonPassword", "UseScreenSaver", "UseScreenSaverPassword",
-						"UseShareFolderPassword", "UseManagementShareFolder", "UseWindowsUpdate", "UseAutoLogin",
-						"UseGuestAccount", "MinimumPasswordLength", "PasswordExpiry", "ScreenSaverIdleInterval"));
+		validHardeningKeys = new HashSet<String>(Arrays.asList("UseFirewall", "UseLogonPassword", "UseScreenSaver",
+				"UseScreenSaverPassword", "UseShareFolderPassword", "UseManagementShareFolder", "UseWindowsUpdate",
+				"UseAutoLogin", "UseGuestAccount", "MinimumPasswordLength", "PasswordExpiry", "ScreenSaverIdleInterval"));
 	}
 
 	@Validate
@@ -70,12 +69,12 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			logger.info("kraken dom: starting host updater thread");
 			while (!doStop) {
 				try {
-
 					runOnce();
-
 					Thread.sleep(10000);
 				} catch (InterruptedException e) {
 					logger.debug("kraken dom: host batch update interrupted");
+				} catch (Exception e) {
+					logger.error("kraken dom: host batch update error", e);
 				}
 			}
 		} catch (Throwable e) {
@@ -98,7 +97,7 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 
 	private void validateHardeningKeys(WindowsHost whost) {
 		if (!validHardeningKeys.containsAll(whost.getHardenings().keySet())) {
-			logger.error("kraken dom : invalidate Hardening key");
+			logger.error("kraken dom: invalidate Hardening key");
 			Set<String> invalids = new HashSet<String>(whost.getHardenings().keySet());
 			invalids.removeAll(validHardeningKeys);
 			throw new IllegalArgumentException("invalidate Hardening key: " + invalids.toString());
