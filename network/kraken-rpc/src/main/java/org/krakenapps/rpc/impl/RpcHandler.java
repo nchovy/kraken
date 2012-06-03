@@ -407,7 +407,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 					logger.debug("kraken rpc: channel [{}], begin {} request handling", channel.getId(), msgs.size());
 
 				for (RpcMessage msg : msgs)
-					handle(msg);
+					handle(channel, conn, msg);
 			} catch (Exception e) {
 				logger.error("kraken rpc: cannot handle message", e);
 			} finally {
@@ -419,65 +419,66 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			}
 		}
 
-		private void handle(RpcMessage msg) {
-			conn.waitControlReady();
+	}
 
-			Integer id = (Integer) msg.getHeader("id");
-			Integer sessionId = (Integer) msg.getHeader("session");
-			String type = (String) msg.getHeader("type");
-			String methodName = msg.getString("method");
+	private void handle(Channel channel, RpcConnection conn, RpcMessage msg) {
+		conn.waitControlReady();
 
-			if (logger.isTraceEnabled())
-				logger.trace("kraken rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
-						new Object[] { conn.getId(), sessionId, id, type, methodName });
+		Integer id = (Integer) msg.getHeader("id");
+		Integer sessionId = (Integer) msg.getHeader("session");
+		String type = (String) msg.getHeader("type");
+		String methodName = msg.getString("method");
 
-			RpcSession session = conn.findSession(sessionId);
-			if (session == null) {
-				logger.warn("kraken rpc: session {} not found, connection={}, peer={}", new Object[] { sessionId, conn.getId(),
-						conn.getRemoteAddress() });
-				return;
-			}
+		if (logger.isTraceEnabled())
+			logger.trace("kraken rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
+					new Object[] { conn.getId(), sessionId, id, type, methodName });
 
-			msg.setSession(session);
-			String serviceName = session.getServiceName();
-			RpcServiceBinding binding = conn.findServiceBinding(serviceName);
-			if (binding == null && (type.equals("rpc-call") || type.equals("rpc-post"))) {
-				int newId = conn.nextMessageId();
-				String cause = "service not found: " + serviceName;
-				logger.debug("kraken rpc: service [{}] not found", serviceName);
-				RpcMessage error = RpcMessage.newException(newId, session.getId(), id, cause);
+		RpcSession session = conn.findSession(sessionId);
+		if (session == null) {
+			logger.warn("kraken rpc: session {} not found, connection={}, peer={}",
+					new Object[] { sessionId, conn.getId(), conn.getRemoteAddress() });
+			return;
+		}
+
+		msg.setSession(session);
+		String serviceName = session.getServiceName();
+		RpcServiceBinding binding = conn.findServiceBinding(serviceName);
+		if (binding == null && (type.equals("rpc-call") || type.equals("rpc-post"))) {
+			int newId = conn.nextMessageId();
+			String cause = "service not found: " + serviceName;
+			logger.debug("kraken rpc: service [{}] not found", serviceName);
+			RpcMessage error = RpcMessage.newException(newId, session.getId(), id, cause);
+			channel.write(error);
+			return;
+		}
+
+		if (type.equals("rpc-call")) {
+			int newId = conn.nextMessageId();
+			try {
+				Object ret = call(binding, msg);
+				RpcMessage resp = RpcMessage.newResponse(newId, session.getId(), id, methodName, ret);
+				channel.write(resp);
+
+				logger.trace("kraken rpc: return for [id={}, ret={}, session={}, method={}]",
+						new Object[] { newId, id, session.getId(), methodName });
+			} catch (Throwable t) {
+				if (t.getCause() != null)
+					t = t.getCause();
+
+				cutStackTrace(t);
+
+				logger.trace("kraken rpc: throws exception for call [" + conn.getId() + ", " + methodName + "]", t);
+				RpcMessage error = RpcMessage.newException(newId, session.getId(), id, t.getMessage());
 				channel.write(error);
-				return;
 			}
-
-			if (type.equals("rpc-call")) {
-				int newId = conn.nextMessageId();
-				try {
-					Object ret = call(binding, msg);
-					RpcMessage resp = RpcMessage.newResponse(newId, session.getId(), id, methodName, ret);
-					channel.write(resp);
-
-					logger.trace("kraken rpc: return for [id={}, ret={}, session={}, method={}]", new Object[] { newId, id,
-							session.getId(), methodName });
-				} catch (Throwable t) {
-					if (t.getCause() != null)
-						t = t.getCause();
-
-					cutStackTrace(t);
-
-					logger.trace("kraken rpc: throws exception for call [" + conn.getId() + ", " + methodName + "]", t);
-					RpcMessage error = RpcMessage.newException(newId, session.getId(), id, t.getMessage());
-					channel.write(error);
-				}
-			} else if (type.equals("rpc-post")) {
-				try {
-					// just call
-					call(binding, msg);
-				} catch (Throwable t) {
-					RpcExceptionEvent ex = new RpcExceptionEventImpl(t);
-					RpcService service = binding.getService();
-					service.exceptionCaught(ex);
-				}
+		} else if (type.equals("rpc-post")) {
+			try {
+				// just call
+				call(binding, msg);
+			} catch (Throwable t) {
+				RpcExceptionEvent ex = new RpcExceptionEventImpl(t);
+				RpcService service = binding.getService();
+				service.exceptionCaught(ex);
 			}
 		}
 	}
@@ -518,6 +519,17 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 				logger.trace("kraken rpc: pause channel [{}]", channel.getRemoteAddress());
 
 			channel.setReadable(false);
+		}
+
+		// fast path for control service
+		Integer sessionId = (Integer) msg.getHeader("session");
+		if (sessionId != null && sessionId == 0) {
+			RpcConnection conn = findConnection(channel.getId());
+			if (conn == null)
+				throw new IllegalStateException("channel " + channel.getId() + " not found. already disconnected.");
+
+			handle(channel, conn, msg);
+			return;
 		}
 
 		// cannot use msg.getSession().getId() here (not set)
