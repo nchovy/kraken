@@ -54,7 +54,8 @@ public class ApplicationPlugin {
 
 	@MsgbusMethod
 	public void createVendor(Request req, Response resp) {
-		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(new Vendor(), req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		Vendor vendor = (Vendor) PrimitiveConverter.overwrite(new Vendor(), req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		appApi.createVendor(req.getOrgDomain(), vendor);
 		resp.put("guid", vendor.getGuid());
 	}
@@ -140,5 +141,13 @@ public class ApplicationPlugin {
 	public void removeApplicationGroup(Request req, Response resp) {
 		String guid = req.getString("guid");
 		appApi.removeApplicationGroup(req.getOrgDomain(), guid);
+	}
+
+	@MsgbusMethod
+	public void removeApplications(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
+		Collection<String> guids = (Collection<String>) req.get("guids");
+		appApi.removeApplications(req.getOrgDomain(), guids);
+
 	}
 }
