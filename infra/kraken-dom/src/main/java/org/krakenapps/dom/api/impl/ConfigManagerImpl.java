@@ -412,7 +412,7 @@ public class ConfigManagerImpl implements ConfigManager {
 		xact.addEventProvider(cls, provider);
 
 		Predicate pred = Predicates.or(preds.toArray(new Predicate[0]));
-		if (db.findOne(cls, pred) == null)
+		if (notFoundMessage != null && db.findOne(cls, pred) == null)
 			throw new DOMException(notFoundMessage);
 
 		Collection<T> docs = new ArrayList<T>();
