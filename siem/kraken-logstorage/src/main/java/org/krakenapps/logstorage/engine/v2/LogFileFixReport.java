@@ -27,6 +27,7 @@ public class LogFileFixReport {
 	private int truncatedIndexBytes;
 	private int truncatedDataBytes;
 	private int lostLogCount;
+	private int addedIndexBlocks;
 
 	public File getIndexPath() {
 		return indexPath;
@@ -100,11 +101,20 @@ public class LogFileFixReport {
 		this.lostLogCount = lostLogCount;
 	}
 
+	public int getAddedIndexBlocks() {
+		return addedIndexBlocks;
+	}
+
+	public void setAddedIndexBlocks(int addedIndexBlocks) {
+		this.addedIndexBlocks = addedIndexBlocks;
+	}
+
 	@Override
 	public String toString() {
 		return "index path: " + indexPath.getAbsolutePath() + "\ndata path: " + dataPath.getAbsolutePath()
 				+ "\ntotal log count: " + totalLogCount + "\ntotal index blocks: " + totalIndexBlocks + "\ntotal data blocks: "
 				+ totalDataBlocks + "\nlost logs: " + lostLogCount + "\ntruncated index blocks: " + truncatedIndexBlocks
-				+ "\ntruncated index bytes: " + truncatedIndexBytes + "\ntruncated data bytes: " + truncatedDataBytes;
+				+ "\ntruncated index bytes: " + truncatedIndexBytes + "\ntruncated data bytes: " + truncatedDataBytes
+				+ "\nadded index blocks: " + addedIndexBlocks;
 	}
 }

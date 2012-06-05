@@ -16,7 +16,10 @@
 package org.krakenapps.logstorage.engine.v2;
 
 public class LogIndexBlock {
-	// psuedo index number (just for numbering and ordering)
+	// pseudo field, file offset 
+	private long filePointer;
+
+	// psuedo field, index number (just for numbering and ordering)
 	private int index;
 
 	// physically mapped
@@ -24,6 +27,14 @@ public class LogIndexBlock {
 
 	// physically mapped
 	private int[] offsets;
+
+	public long getFilePointer() {
+		return filePointer;
+	}
+
+	public void setFilePointer(long filePointer) {
+		this.filePointer = filePointer;
+	}
 
 	public int getIndex() {
 		return index;

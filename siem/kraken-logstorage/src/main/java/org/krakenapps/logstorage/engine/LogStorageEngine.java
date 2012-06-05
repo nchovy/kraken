@@ -49,7 +49,7 @@ import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.LogWriterStatus;
 import org.krakenapps.logstorage.engine.v2.LogFileFixReport;
-import org.krakenapps.logstorage.engine.v2.LogFileTruncator;
+import org.krakenapps.logstorage.engine.v2.LogFileRepairer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -208,7 +208,7 @@ public class LogStorageEngine implements LogStorage {
 					File dataPath = new File(dir, datFileName);
 
 					try {
-						LogFileFixReport report = new LogFileTruncator().fix(indexPath, dataPath);
+						LogFileFixReport report = new LogFileRepairer().fix(indexPath, dataPath);
 						if (report != null)
 							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName,
 									report);
@@ -261,7 +261,7 @@ public class LogStorageEngine implements LogStorage {
 			File dataPath = new File(dir, datFileName);
 
 			try {
-				LogFileFixReport report = new LogFileTruncator().fix(indexPath, dataPath);
+				LogFileFixReport report = new LogFileRepairer().fix(indexPath, dataPath);
 				if (report != null)
 					logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
 			} catch (IOException e) {

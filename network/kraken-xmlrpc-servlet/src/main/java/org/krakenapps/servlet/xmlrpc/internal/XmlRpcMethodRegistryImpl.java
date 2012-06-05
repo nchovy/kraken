@@ -131,10 +131,9 @@ public class XmlRpcMethodRegistryImpl extends ServiceTracker implements XmlRpcMe
 		try {
 			obj = m.invoke(service, parameters);
 		} catch (InvocationTargetException e) {
+			logger.error("kraken-xmlrpc-servlet: invocation target error.", e);
 			if (e.getCause() instanceof Exception)
 				throw (Exception) e.getCause();
-			logger.error("kraken-xmlrpc-servlet: invocation target error.", e);
-			throw new Exception();
 		}
 		return obj;
 	}
