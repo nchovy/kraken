@@ -117,7 +117,9 @@ public class PrimitiveConverter {
 				} else if (value instanceof String) {
 					if (option != null && option.length() > 0 && ((String) value).length() > option.length()) {
 						String s = (String) value;
-						throw new IllegalArgumentException(String.format("Too long String value for %s.%s (limit: %d, input: [%s])", cls.getName(), f.getName(), option.length(), s));
+						throw new IllegalArgumentException(String.format(
+								"Too long String value for %s.%s (limit: %d, input: [%s])", cls.getName(), f.getName(),
+								option.length(), s));
 					}
 					m.put(fieldName, value);
 				} else {
@@ -196,7 +198,8 @@ public class PrimitiveConverter {
 						for (Object v : (Object[]) value) {
 							Map<String, Object> keys = (Map<String, Object>) v;
 							if (callback != null) {
-								Object o = callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(), getRefKeys(keys, refkey.value()));
+								Object o = callback.onParse(f.getAnnotation(CollectionTypeHint.class).value(),
+										getRefKeys(keys, refkey.value()));
 								if (o != null)
 									coll.add(o);
 							} else if (option != null && !option.nullable())
@@ -267,8 +270,10 @@ public class PrimitiveConverter {
 
 	private static Map<String, Object> getRefKeys(Map<String, Object> src, String[] refkeys) {
 		Map<String, Object> m = new HashMap<String, Object>();
-		for (String key: refkeys)
+		for (String key : refkeys) {
+			key = toUnderscoreName(key);
 			m.put(key, src.get(key));
+		}
 		return m;
 	}
 
