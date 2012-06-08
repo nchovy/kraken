@@ -263,6 +263,18 @@ public class JLdapService implements LdapService {
 	}
 
 	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
+		if (profile.getDc() == null)
+			throw new IllegalArgumentException("ldap domain controller should be not null");
+
+		if (profile.getPort() == null)
+			throw new IllegalArgumentException("ldap port should be not null");
+
+		if (profile.getAccount() == null)
+			throw new IllegalArgumentException("ldap account should be not null");
+
+		if (profile.getPassword() == null)
+			throw new IllegalArgumentException("ldap password should be not null");
+
 		try {
 			if (profile.getTrustStore() != null) {
 				SSLContext ctx = SSLContext.getInstance("SSL");
@@ -275,6 +287,7 @@ public class JLdapService implements LdapService {
 
 			logger.trace("kraken ldap: connect to {}:{}, user [{}]",
 					new Object[] { profile.getDc(), profile.getPort(), profile.getAccount() });
+
 			LDAPConnection conn = new LDAPConnection();
 			conn.connect(profile.getDc(), profile.getPort());
 			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));
