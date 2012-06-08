@@ -47,7 +47,7 @@ public class XmlRpcServlet extends HttpServlet {
 		try {
 			String response = processRpc(req);
 
-			resp.setContentType("text/xml");
+			resp.setContentType("text/xml; charset=utf8");
 			resp.getOutputStream().write(response.getBytes("utf-8"));
 
 			logger.trace("kraken xmlrpc servlet: response [{}]", response);
