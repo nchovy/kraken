@@ -100,6 +100,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 	// manifest id to manifest cache
 	private SoftReference<ConcurrentMap<Integer, FileManifest>> manifestCache;
 
+	// (collection id, manifest id) to snapshot cache
+	private SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>> snapshotCache;
+
 	// config cache
 	private FileConfigCache configCache;
 
@@ -116,6 +119,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 		this.changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(new ConcurrentHashMap<Integer, Integer>());
 		this.manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(
 				new ConcurrentHashMap<Integer, FileManifest>());
+		this.snapshotCache = new SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(
+				new ConcurrentHashMap<SnapshotKey, List<RevLog>>());
 		this.configCache = new FileConfigCache(this);
 
 		changeLogFile = new File(dbDir, "changeset.log");
@@ -808,5 +813,59 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public String toString() {
 		return dbName + ", changeset=" + (changeset == null ? "tip" : changeset);
+	}
+
+	public List<RevLog> getSnapshotCache(int colId, int manifestId) {
+		ConcurrentMap<SnapshotKey, List<RevLog>> snapshotMap = snapshotCache.get();
+		if (snapshotMap == null) {
+			return null;
+		}
+
+		return snapshotMap.get(new SnapshotKey(colId, manifestId));
+	}
+
+	public void setSnapshotCache(int colId, int manifestId, List<RevLog> snapshot) {
+		ConcurrentMap<SnapshotKey, List<RevLog>> snapshotMap = snapshotCache.get();
+		if (snapshotMap == null) {
+			snapshotMap = new ConcurrentHashMap<SnapshotKey, List<RevLog>>();
+			snapshotCache = new SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(snapshotMap);
+		}
+
+		snapshotMap.put(new SnapshotKey(colId, manifestId), snapshot);
+	}
+
+	private static class SnapshotKey {
+		private int colId;
+		private int manifestId;
+
+		public SnapshotKey(int colId, int manifestId) {
+			this.colId = colId;
+			this.manifestId = manifestId;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + colId;
+			result = prime * result + manifestId;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SnapshotKey other = (SnapshotKey) obj;
+			if (colId != other.colId)
+				return false;
+			if (manifestId != other.manifestId)
+				return false;
+			return true;
+		}
 	}
 }
