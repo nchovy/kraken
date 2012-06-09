@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -231,10 +230,10 @@ class FileManifest implements Manifest {
 	}
 
 	private List<Object> serializeCols() {
-		List<Object> cols = new ArrayList<Object>(colMap.size());
+		ArrayList<Object> cols = new ArrayList<Object>(colMap.size());
 		for (CollectionEntry col : colMap.values()) {
-			List<Object> configs = new LinkedList<Object>();
 			Map<Integer, ConfigEntry> m = configMap.get(col.getId());
+			ArrayList<Object> configs = new ArrayList<Object>(m.size());
 			for (ConfigEntry c : m.values()) {
 				configs.add(new Object[] { c.getDocId(), c.getRev(), c.getIndex() });
 			}

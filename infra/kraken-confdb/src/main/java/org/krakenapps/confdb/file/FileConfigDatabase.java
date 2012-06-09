@@ -43,6 +43,7 @@ import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCache;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
@@ -99,6 +100,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 	// manifest id to manifest cache
 	private SoftReference<ConcurrentMap<Integer, FileManifest>> manifestCache;
 
+	// config cache
+	private FileConfigCache configCache;
+
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
 		this(baseDir, name, null);
 	}
@@ -112,6 +116,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		this.changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(new ConcurrentHashMap<Integer, Integer>());
 		this.manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(
 				new ConcurrentHashMap<Integer, FileManifest>());
+		this.configCache = new FileConfigCache(this);
 
 		changeLogFile = new File(dbDir, "changeset.log");
 		changeDatFile = new File(dbDir, "changeset.dat");
@@ -238,6 +243,15 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public ConfigCollection getCollection(Class<?> cls) {
 		return getCollection(getCollectionName(cls));
+	}
+
+	public Integer getCollectionId(String name) {
+		Manifest manifest = getManifest(changeset, true);
+		CollectionEntry col = manifest.getCollectionEntry(name);
+		if (col == null)
+			return null;
+
+		return col.getId();
 	}
 
 	@Override
@@ -755,7 +769,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		if (fileManifest == null)
 			return null;
 
-		return fileManifest.duplicate();
+		return fileManifest;
 	}
 
 	private void setManifestCache(FileManifest manifest) {
@@ -765,7 +779,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
 		}
 
-		manifestMap.put(manifest.getId(), manifest.duplicate());
+		manifestMap.put(manifest.getId(), manifest);
 	}
 
 	private Integer getCachedManifestId(int rev) {
@@ -784,6 +798,11 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 
 		changeMap.put(changeDocId, manifestId);
+	}
+
+	@Override
+	public ConfigCache getCache() {
+		return configCache;
 	}
 
 	@Override

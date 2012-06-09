@@ -80,6 +80,10 @@ public class FileConfigCollection implements ConfigCollection {
 				new ConcurrentHashMap<Integer, List<RevLog>>());
 	}
 
+	public int getId() {
+		return col.getId();
+	}
+
 	@Override
 	public String getName() {
 		return col.getName();
