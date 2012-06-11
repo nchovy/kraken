@@ -557,7 +557,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 */
 	public void purge() throws IOException {
 		try {
-			manifestCache.clear();
+			clearAllCaches();
 			lock();
 
 			// TODO: retry until deleted (other process may hold it)
@@ -738,7 +738,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void shrink(int count) {
 		try {
 			new Shrinker(this).shrink(count);
-			manifestCache.clear();
+			clearAllCaches();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
@@ -748,7 +748,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void importData(InputStream is) {
 		try {
 			new Importer(this).importData(is);
-			manifestCache.clear();
+			clearAllCaches();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		} catch (ParseException e) {
@@ -832,6 +832,12 @@ public class FileConfigDatabase implements ConfigDatabase {
 		}
 
 		snapshotMap.put(new SnapshotKey(colId, manifestId), snapshot);
+	}
+
+	private void clearAllCaches() {
+		manifestCache.clear();
+		snapshotCache.clear();
+		configCache = new FileConfigCache(this);
 	}
 
 	private static class SnapshotKey {

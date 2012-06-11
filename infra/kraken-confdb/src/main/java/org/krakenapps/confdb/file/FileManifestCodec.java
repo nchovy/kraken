@@ -18,9 +18,13 @@ public class FileManifestCodec implements CustomCodec {
 
 		FileManifest manifest = (FileManifest) value;
 
-		// version
+		// type byte
 		bb.put((byte) 200);
+		
+		// version 2
 		bb.put((byte) 2);
+		
+		// collection count
 		bb.putShort((short) manifest.getCollectionNames().size());
 
 		try {
