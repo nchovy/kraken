@@ -110,9 +110,16 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		tracker.open();
 
 		// load localhost (TODO: load all other domains)
-		List<User> cachedUsers = Collections.synchronizedList(new ArrayList<User>());
-		cachedUsers.addAll(cfg.all("localhost", cls));
-		domainUserCache.put("localhost", cachedUsers);
+		try {
+			List<User> cachedUsers = Collections.synchronizedList(new ArrayList<User>());
+			cachedUsers.addAll(cfg.all("localhost", cls));
+			domainUserCache.put("localhost", cachedUsers);
+		} catch (DOMException e) {
+			if (e.getErrorCode().equals("organization-not-found"))
+				return;
+
+			logger.error("kraken-dom: cannot cache users", e);
+		}
 	}
 
 	@Invalidate
@@ -215,6 +222,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void createUsers(String domain, Collection<User> users, boolean noHash) {
+		if (users == null || users.size() == 0)
+			return;
+
 		List<User> userList = new ArrayList<User>(users);
 		if (!noHash) {
 			for (User user : users) {
@@ -241,6 +251,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void updateUsers(String domain, Collection<User> users, boolean updatePassword) {
+		if (users == null || users.size() == 0)
+			return;
+
 		List<User> userList = new ArrayList<User>(users);
 		for (User user : users) {
 			user.setUpdated(new Date());
@@ -264,6 +277,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public void removeUsers(String domain, Collection<String> loginNames) {
+		if (loginNames == null || loginNames.size() == 0)
+			return;
+
 		List<Predicate> preds = new ArrayList<Predicate>(loginNames.size());
 		for (String loginName : loginNames)
 			preds.add(getPred(loginName));
