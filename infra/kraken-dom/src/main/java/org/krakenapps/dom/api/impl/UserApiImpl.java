@@ -110,9 +110,16 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		tracker.open();
 
 		// load localhost (TODO: load all other domains)
-		List<User> cachedUsers = Collections.synchronizedList(new ArrayList<User>());
-		cachedUsers.addAll(cfg.all("localhost", cls));
-		domainUserCache.put("localhost", cachedUsers);
+		try {
+			List<User> cachedUsers = Collections.synchronizedList(new ArrayList<User>());
+			cachedUsers.addAll(cfg.all("localhost", cls));
+			domainUserCache.put("localhost", cachedUsers);
+		} catch (DOMException e) {
+			if (e.getErrorCode().equals("organization-not-found"))
+				return;
+
+			logger.error("kraken-dom: cannot cache users", e);
+		}
 	}
 
 	@Invalidate
