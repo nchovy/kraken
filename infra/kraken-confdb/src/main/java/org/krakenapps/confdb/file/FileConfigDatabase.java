@@ -43,6 +43,7 @@ import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.CommitOp;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCache;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
@@ -99,6 +100,12 @@ public class FileConfigDatabase implements ConfigDatabase {
 	// manifest id to manifest cache
 	private SoftReference<ConcurrentMap<Integer, FileManifest>> manifestCache;
 
+	// (collection id, manifest id) to snapshot cache
+	private SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>> snapshotCache;
+
+	// config cache
+	private FileConfigCache configCache;
+
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
 		this(baseDir, name, null);
 	}
@@ -112,6 +119,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 		this.changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(new ConcurrentHashMap<Integer, Integer>());
 		this.manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(
 				new ConcurrentHashMap<Integer, FileManifest>());
+		this.snapshotCache = new SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(
+				new ConcurrentHashMap<SnapshotKey, List<RevLog>>());
+		this.configCache = new FileConfigCache(this);
 
 		changeLogFile = new File(dbDir, "changeset.log");
 		changeDatFile = new File(dbDir, "changeset.dat");
@@ -238,6 +248,15 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public ConfigCollection getCollection(Class<?> cls) {
 		return getCollection(getCollectionName(cls));
+	}
+
+	public Integer getCollectionId(String name) {
+		Manifest manifest = getManifest(changeset, true);
+		CollectionEntry col = manifest.getCollectionEntry(name);
+		if (col == null)
+			return null;
+
+		return col.getId();
 	}
 
 	@Override
@@ -538,7 +557,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	 */
 	public void purge() throws IOException {
 		try {
-			manifestCache.clear();
+			clearAllCaches();
 			lock();
 
 			// TODO: retry until deleted (other process may hold it)
@@ -719,7 +738,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void shrink(int count) {
 		try {
 			new Shrinker(this).shrink(count);
-			manifestCache.clear();
+			clearAllCaches();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
@@ -729,7 +748,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	public void importData(InputStream is) {
 		try {
 			new Importer(this).importData(is);
-			manifestCache.clear();
+			clearAllCaches();
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		} catch (ParseException e) {
@@ -755,7 +774,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		if (fileManifest == null)
 			return null;
 
-		return fileManifest.duplicate();
+		return fileManifest;
 	}
 
 	private void setManifestCache(FileManifest manifest) {
@@ -765,7 +784,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 			manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
 		}
 
-		manifestMap.put(manifest.getId(), manifest.duplicate());
+		manifestMap.put(manifest.getId(), manifest);
 	}
 
 	private Integer getCachedManifestId(int rev) {
@@ -787,7 +806,72 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	@Override
+	public ConfigCache getCache() {
+		return configCache;
+	}
+
+	@Override
 	public String toString() {
 		return dbName + ", changeset=" + (changeset == null ? "tip" : changeset);
+	}
+
+	public List<RevLog> getSnapshotCache(int colId, int manifestId) {
+		ConcurrentMap<SnapshotKey, List<RevLog>> snapshotMap = snapshotCache.get();
+		if (snapshotMap == null) {
+			return null;
+		}
+
+		return snapshotMap.get(new SnapshotKey(colId, manifestId));
+	}
+
+	public void setSnapshotCache(int colId, int manifestId, List<RevLog> snapshot) {
+		ConcurrentMap<SnapshotKey, List<RevLog>> snapshotMap = snapshotCache.get();
+		if (snapshotMap == null) {
+			snapshotMap = new ConcurrentHashMap<SnapshotKey, List<RevLog>>();
+			snapshotCache = new SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(snapshotMap);
+		}
+
+		snapshotMap.put(new SnapshotKey(colId, manifestId), snapshot);
+	}
+
+	private void clearAllCaches() {
+		manifestCache.clear();
+		snapshotCache.clear();
+		configCache = new FileConfigCache(this);
+	}
+
+	private static class SnapshotKey {
+		private int colId;
+		private int manifestId;
+
+		public SnapshotKey(int colId, int manifestId) {
+			this.colId = colId;
+			this.manifestId = manifestId;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + colId;
+			result = prime * result + manifestId;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SnapshotKey other = (SnapshotKey) obj;
+			if (colId != other.colId)
+				return false;
+			if (manifestId != other.manifestId)
+				return false;
+			return true;
+		}
 	}
 }

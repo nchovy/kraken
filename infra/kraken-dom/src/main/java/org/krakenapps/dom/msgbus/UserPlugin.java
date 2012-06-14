@@ -17,6 +17,7 @@ package org.krakenapps.dom.msgbus;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +40,14 @@ import org.krakenapps.msgbus.Response;
 import org.krakenapps.msgbus.handler.MsgbusMethod;
 import org.krakenapps.msgbus.handler.MsgbusPermission;
 import org.krakenapps.msgbus.handler.MsgbusPlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "dom-user-plugin")
 @MsgbusPlugin
 public class UserPlugin {
+	private Logger logger = LoggerFactory.getLogger(UserPlugin.class);
+
 	@Requires
 	private ConfigManager conf;
 
@@ -58,6 +63,7 @@ public class UserPlugin {
 	@MsgbusMethod
 	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void removeAllUsers(Request req, Response resp) {
+		long start = new Date().getTime();
 		String adminLoginName = req.getAdminLoginName();
 		Admin admin = adminApi.findAdmin(req.getOrgDomain(), adminLoginName);
 		String domain = req.getOrgDomain();
@@ -83,6 +89,9 @@ public class UserPlugin {
 		}
 
 		userApi.removeUsers(domain, loginNames);
+		long end = new Date().getTime();
+		if (logger.isTraceEnabled())
+			logger.trace("kraken dom: remove [{}] users, [{}] milliseconds elapsed", loginNames.size(), end - start);
 		resp.put("failed_login_names", failedLoginNames);
 	}
 

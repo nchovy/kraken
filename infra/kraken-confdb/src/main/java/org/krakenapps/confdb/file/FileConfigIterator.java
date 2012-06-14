@@ -26,6 +26,7 @@ import java.util.NoSuchElementException;
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigCache;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
@@ -41,7 +42,9 @@ import org.krakenapps.confdb.Predicate;
  */
 class FileConfigIterator implements ConfigIterator {
 	private ConfigDatabase db;
+	private ConfigCache cache;
 	private ConfigCollection col;
+	private String colName;
 	private RevLogReader reader;
 	private Iterator<RevLog> it;
 	private Predicate pred;
@@ -52,7 +55,9 @@ class FileConfigIterator implements ConfigIterator {
 
 	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot, Predicate pred) {
 		this.db = db;
+		this.cache = db.getCache();
 		this.col = col;
+		this.colName = col.getName();
 		this.reader = reader;
 		this.it = snapshot.iterator();
 		this.pred = pred;
@@ -118,10 +123,19 @@ class FileConfigIterator implements ConfigIterator {
 	private Config getNextConfig() throws IOException {
 		RevLog log = it.next();
 
+		// check cache
+		Config cachedConfig = cache.findEntry(colName, log.getDocId(), log.getRev());
+		if (cachedConfig != null) {
+			Object doc = cachedConfig.getDocument();
+			return new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
+		}
+
 		// fetch doc binary and decode it
 		byte[] b = reader.readDoc(log.getDocOffset(), log.getDocLength());
 		Object doc = EncodingRule.decode(ByteBuffer.wrap(b));
-		return new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
+		FileConfig config = new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
+		cache.putEntry(colName, config);
+		return config;
 	}
 
 	@Override

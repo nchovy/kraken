@@ -48,7 +48,7 @@ public class FileConfigTransaction implements ConfigTransaction {
 		File dbDir = db.getDbDirectory();
 
 		// TODO: apply changeset rev
-		manifest = db.getManifest(null);
+		manifest = ((FileManifest) db.getManifest(null)).duplicate();
 		changeSet = new ArrayList<ConfigChange>();
 
 		changeLogFile = new File(dbDir, "changeset.log");

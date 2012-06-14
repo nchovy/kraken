@@ -30,6 +30,8 @@ public interface LdapService {
 
 	Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile);
 
+	DomainUserAccount findDomainUserAccount(LdapProfile profile, String account);
+
 	Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile);
 
 	boolean verifyPassword(LdapProfile profile, String account, String password);

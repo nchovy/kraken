@@ -117,6 +117,25 @@ public class LdapScript implements Script {
 			context.println(account.toString());
 	}
 
+	@ScriptUsage(description = "search by user", arguments = {
+			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
+			@ScriptArgument(name = "account", type = "string", description = "account name") })
+	public void searchUser(String[] args) {
+		String profileName = args[0];
+		LdapProfile profile = ldap.getProfile(profileName);
+		if (profile == null) {
+			context.println("profile not found.");
+			return;
+		}
+
+		DomainUserAccount account = ldap.findDomainUserAccount(profile, args[1]);
+		if (account == null) {
+			context.println("account not found");
+		} else {
+			context.println(account);
+		}
+	}
+
 	@ScriptUsage(description = "print all organization units", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
 	public void organizationUnits(String[] args) {
 		String profileName = args[0];

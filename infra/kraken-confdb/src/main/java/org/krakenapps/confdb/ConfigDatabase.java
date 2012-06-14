@@ -143,4 +143,5 @@ public interface ConfigDatabase {
 
 	void shrink(int count);
 
+	ConfigCache getCache();
 }

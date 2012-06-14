@@ -44,20 +44,26 @@ public class XmlRpcServlet extends HttpServlet {
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String xmlBody = null;
 		try {
-			Document methodResponse = processRpc(req);
-			String response = XmlUtil.toXmlString(methodResponse);
+			xmlBody = readXmlBody(req);
+			if (logger.isTraceEnabled())
+				logger.trace("kraken xmlrpc servlet: request [{}]" + xmlBody);
+
+			String response = processRpc(xmlBody);
+
 			resp.setContentType("text/xml");
 			resp.getOutputStream().write(response.getBytes("utf-8"));
 
-			// NOTE: do NOT close servlet outputstream
+			logger.trace("kraken xmlrpc servlet: response [{}]", response);
 		} catch (Exception e) {
-			logger.error("kraken xmlrpc: cannot process xmlrpc", e);
+			logger.error("kraken xmlrpc servlet: cannot process xmlrpc => " + xmlBody, e);
+		} finally {
+			resp.getOutputStream().close();
 		}
 	}
 
-	private Document processRpc(HttpServletRequest req) throws IOException {
-		String xmlBody = readXmlBody(req);
+	private String processRpc(String xmlBody) throws IOException {
 		Document document = XmlUtil.parse(xmlBody);
 		XmlRpcMessage methodCall = XmlRpcMethodCallParser.parse(document);
 		String methodName = methodCall.getMethodName();
@@ -70,7 +76,8 @@ public class XmlRpcServlet extends HttpServlet {
 		} catch (Exception e) {
 			methodResponse = XmlRpcMethodResponseBuilder.fault(e);
 		}
-		return methodResponse;
+
+		return XmlUtil.toXmlString(methodResponse);
 	}
 
 	private String readXmlBody(HttpServletRequest req) throws IOException {
@@ -87,11 +94,6 @@ public class XmlRpcServlet extends HttpServlet {
 			sb.append(chars, 0, len);
 		}
 
-		String xmlBody = sb.toString();
-
-		if (logger.isTraceEnabled())
-			logger.trace("kraken xmlrpc servlet: request [{}]" + xmlBody);
-
-		return xmlBody;
+		return sb.toString();
 	}
 }

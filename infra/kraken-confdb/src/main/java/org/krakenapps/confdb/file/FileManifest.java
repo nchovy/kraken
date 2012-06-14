@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -221,26 +220,11 @@ class FileManifest implements Manifest {
 
 	@Override
 	public byte[] serialize() {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("ver", 2);
-		m.put("cols", serializeCols());
-
-		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOfMap(m));
-		EncodingRule.encodeMap(bb, m);
+		FileManifestCodec codec = new FileManifestCodec();
+		int len = EncodingRule.lengthOf(this, codec);
+		ByteBuffer bb = ByteBuffer.allocate(len);
+		EncodingRule.encode(bb, this, codec);
 		return bb.array();
-	}
-
-	private List<Object> serializeCols() {
-		List<Object> cols = new ArrayList<Object>(colMap.size());
-		for (CollectionEntry col : colMap.values()) {
-			List<Object> configs = new LinkedList<Object>();
-			Map<Integer, ConfigEntry> m = configMap.get(col.getId());
-			for (ConfigEntry c : m.values()) {
-				configs.add(new Object[] { c.getDocId(), c.getRev(), c.getIndex() });
-			}
-			cols.add(new Object[] { col.getId(), col.getName(), configs });
-		}
-		return cols;
 	}
 
 	public static FileManifest deserialize(byte[] b) {
@@ -249,7 +233,12 @@ class FileManifest implements Manifest {
 
 	public static FileManifest deserialize(byte[] b, boolean noConfigs) {
 		ByteBuffer bb = ByteBuffer.wrap(b);
-		Map<String, Object> m = EncodingRule.decodeMap(bb);
+		Object doc = EncodingRule.decode(bb, new FileManifestCodec());
+		if (doc instanceof FileManifest)
+			return (FileManifest) doc;
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> m = (Map<String, Object>) doc;
 		FileManifest manifest = new FileManifest();
 		if (m.containsKey("ver"))
 			manifest.setVersion((Integer) m.get("ver"));

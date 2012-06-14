@@ -141,6 +141,42 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
+	public DomainUserAccount findDomainUserAccount(LdapProfile profile, String account) {
+		LDAPConnection lc = openLdapConnection(profile, null);
+		try {
+			String filter = "(&(sAMAccountName=" + account + "))";
+			if (profile.getServerType() != LdapServerType.ActiveDirectory)
+				filter = "(&(uid=" + account + "))";
+
+			LDAPSearchConstraints cons = new LDAPSearchConstraints();
+			cons.setTimeLimit(20000);
+			cons.setMaxResults(1);
+			LDAPSearchResults r = lc.search(buildBaseDN(profile), LDAPConnection.SCOPE_SUB, filter, null, false, cons);
+			if (r.hasMore()) {
+				try {
+					LDAPEntry entry = r.next();
+					if (logger.isDebugEnabled())
+						logger.debug("kraken-ldap: fetch entry [{}]", entry);
+					return new DomainUserAccount(entry);
+				} catch (LDAPReferralException e) {
+				}
+			}
+		} catch (Exception e) {
+			logger.error("kraken-ldap: cannot fetch domain users", e);
+			throw new IllegalStateException(e);
+		} finally {
+			try {
+				if (lc != null && lc.isConnected())
+					lc.disconnect();
+			} catch (LDAPException e) {
+				logger.error("kraken ldap: disconnect failed", e);
+			}
+		}
+
+		return null;
+	}
+
+	@Override
 	public Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile) {
 		List<DomainOrganizationalUnit> ous = new ArrayList<DomainOrganizationalUnit>();
 
@@ -227,6 +263,18 @@ public class JLdapService implements LdapService {
 	}
 
 	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
+		if (profile.getDc() == null)
+			throw new IllegalArgumentException("ldap domain controller should be not null");
+
+		if (profile.getPort() == null)
+			throw new IllegalArgumentException("ldap port should be not null");
+
+		if (profile.getAccount() == null)
+			throw new IllegalArgumentException("ldap account should be not null");
+
+		if (profile.getPassword() == null)
+			throw new IllegalArgumentException("ldap password should be not null");
+
 		try {
 			if (profile.getTrustStore() != null) {
 				SSLContext ctx = SSLContext.getInstance("SSL");
@@ -239,6 +287,7 @@ public class JLdapService implements LdapService {
 
 			logger.trace("kraken ldap: connect to {}:{}, user [{}]",
 					new Object[] { profile.getDc(), profile.getPort(), profile.getAccount() });
+
 			LDAPConnection conn = new LDAPConnection();
 			conn.connect(profile.getDc(), profile.getPort());
 			conn.bind(LDAPConnection.LDAP_V3, profile.getAccount(), profile.getPassword().getBytes("utf-8"));

@@ -61,6 +61,27 @@ public class DomScript implements Script {
 		this.context = context;
 	}
 
+	@ScriptUsage(description = "reset user password", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "domain"),
+			@ScriptArgument(name = "login name", type = "string", description = "target login name") })
+	public void resetPassword(String[] args) {
+		User user = userApi.findUser(args[0], args[1]);
+		if (user == null) {
+			context.println("admin not found");
+			return;
+		}
+
+		try {
+			context.print("New Password: ");
+			String password = context.readPassword();
+			user.setPassword(password);
+			userApi.updateUser(args[0], user, true);
+		} catch (InterruptedException e) {
+			context.println("");
+			context.println("interrupted");
+		}
+	}
+
 	@ScriptUsage(description = "reset password", arguments = {
 			@ScriptArgument(name = "domain", type = "string", description = "org domain"),
 			@ScriptArgument(name = "login name", type = "string", description = "login name"),
