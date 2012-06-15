@@ -36,7 +36,11 @@ public class FileConfigCache implements ConfigCache {
 		if (map == null)
 			return null;
 
-		return map.get(new ConfigKey(docId, rev));
+		Config c = map.get(new ConfigKey(docId, rev));
+		if (c != null) {
+			return c.duplicate();
+		}
+		return null;
 	}
 
 	@Override

@@ -31,6 +31,95 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class EncodingRuleTest {
+
+	@Test
+	public void encodeDecodePrimitiveList() {
+		int[] i = new int[] { 1, 2, 3 };
+		long[] l = new long[] { 1, 2, 3 };
+		short[] s = new short[] { 1, 2, 3 };
+		double[] d = new double[] { 1.11, 2.22, 3.33 };
+		float[] f = new float[] { 1.1f, 2.2f, 3.3f };
+		boolean[] b = new boolean[] { true, false, true };
+		byte[] by = new byte[] { 1, 2, 3 };
+
+		// int array
+		ByteBuffer bb = ByteBuffer.allocate(EncodingRule.lengthOf(i));
+		EncodingRule.encode(bb, i);
+		bb.flip();
+
+		Object[] o = (Object[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(i[index], o[index]);
+
+		// long array
+		bb = ByteBuffer.allocate(EncodingRule.lengthOf(l));
+		EncodingRule.encode(bb, l);
+		bb.flip();
+		o = (Object[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(l[index], o[index]);
+
+		// short array
+		bb = ByteBuffer.allocate(EncodingRule.lengthOf(s));
+		EncodingRule.encode(bb, s);
+		bb.flip();
+		o = (Object[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(s[index], o[index]);
+
+		// double array
+		bb = ByteBuffer.allocate(EncodingRule.lengthOf(d));
+		EncodingRule.encode(bb, d);
+		bb.flip();
+		o = (Object[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(d[index], o[index]);
+
+		// float array
+		bb = ByteBuffer.allocate(EncodingRule.lengthOf(f));
+		EncodingRule.encode(bb, f);
+		bb.flip();
+		o = (Object[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(f[index], o[index]);
+
+		// boolean array
+		bb = ByteBuffer.allocate(EncodingRule.lengthOf(b));
+		EncodingRule.encode(bb, b);
+		bb.flip();
+		o = (Object[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(b[index], o[index]);
+
+		// byte array
+		bb = ByteBuffer.allocate(EncodingRule.lengthOf(by));
+		EncodingRule.encode(bb, by);
+		bb.flip();
+		byte[] barr = (byte[]) EncodingRule.decode(bb);
+
+		for (int index = 0; index < o.length; index++)
+			assertEquals(by[index], barr[index]);
+	}
+
+	@Test(expected = UnsupportedTypeException.class)
+	public void lengthOfCharArrayTest() {
+		char[] c = new char[] { 'a', 'b', 'c' };
+		ByteBuffer.allocate(EncodingRule.lengthOf(c));
+	}
+
+	@Test(expected = UnsupportedTypeException.class)
+	public void encodeCharArrayTest() {
+		char[] c = new char[] { 'a', 'b', 'c' };
+		ByteBuffer bb = ByteBuffer.allocate(10);
+		EncodingRule.encode(bb, c);
+	}
+
 	@Test
 	public void encodeDecodeList() {
 		List<String> i = new ArrayList<String>();
@@ -46,11 +135,11 @@ public class EncodingRuleTest {
 		assertEquals("a", o[0]);
 		assertEquals("b", o[1]);
 		assertEquals("c", o[2]);
-		
-		Object[] l = new Object[] { "String Test", (long) -14231231, (int) -200, (short) -10 }; 
+
+		Object[] l = new Object[] { "String Test", (long) -14231231, (int) -200, (short) -10 };
 		bb = ByteBuffer.allocate(EncodingRule.lengthOf(l));
 		EncodingRule.encode(bb, l);
-		
+
 		assertEquals(bb.position(), EncodingRule.lengthOf(l));
 		bb.flip();
 		Object[] decodedL = (Object[]) EncodingRule.decode(bb);
@@ -94,7 +183,7 @@ public class EncodingRuleTest {
 
 		assertEquals(30000, EncodingRule.decodePlainInt(bb));
 	}
-	
+
 	@Test
 	public void encodeNumber() {
 		ByteBuffer bb = ByteBuffer.allocate(100);
@@ -131,31 +220,31 @@ public class EncodingRuleTest {
 		assertEquals(2, bb.remaining());
 		assertEquals(-10, EncodingRule.decode(bb));
 	}
-	
+
 	@Test
 	public void encodeDecodeZigzagNumber() {
 		ByteBuffer bb = ByteBuffer.allocate(100);
-		
+
 		bb.clear();
-		EncodingRule.encode(bb, (int)0);
+		EncodingRule.encode(bb, (int) 0);
 		bb.flip();
 		bb.get();
 		assertEquals(0, EncodingRule.decodeRawNumber(bb));
-	
+
 		bb.clear();
-		EncodingRule.encode(bb, (int)-1);
+		EncodingRule.encode(bb, (int) -1);
 		bb.flip();
 		bb.get();
 		assertEquals(1, EncodingRule.decodeRawNumber(bb));
 
 		bb.clear();
-		EncodingRule.encode(bb, (int)1);
+		EncodingRule.encode(bb, (int) 1);
 		bb.flip();
 		bb.get();
 		assertEquals(2, EncodingRule.decodeRawNumber(bb));
 
 		bb.clear();
-		EncodingRule.encode(bb, (int)-2);
+		EncodingRule.encode(bb, (int) -2);
 		bb.flip();
 		bb.get();
 		assertEquals(3, EncodingRule.decodeRawNumber(bb));
@@ -164,19 +253,19 @@ public class EncodingRuleTest {
 		EncodingRule.encode(bb, Integer.MAX_VALUE);
 		bb.flip();
 		bb.get();
-		assertEquals(0xFFFFFFFFL-1, EncodingRule.decodeRawNumber(bb));
-	
+		assertEquals(0xFFFFFFFFL - 1, EncodingRule.decodeRawNumber(bb));
+
 		bb.clear();
-		EncodingRule.encode(bb, (int)Integer.MIN_VALUE);
+		EncodingRule.encode(bb, (int) Integer.MIN_VALUE);
 		bb.flip();
 		bb.get();
 		assertEquals(0xFFFFFFFFL, EncodingRule.decodeRawNumber(bb));
 	}
-	
+
 	@Test
 	public void encodeDecodeNumberBoundary() {
 		ByteBuffer bb = ByteBuffer.allocate(100);
-		
+
 		bb.clear();
 		EncodingRule.encode(bb, Short.MAX_VALUE);
 		bb.flip();
@@ -307,8 +396,8 @@ public class EncodingRuleTest {
 
 		// case ip6
 		bb.clear();
-		Inet6Address ip6 = (Inet6Address) Inet6Address.getByAddress(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-				13, 14, 15, 16 });
+		Inet6Address ip6 = (Inet6Address) Inet6Address.getByAddress(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+				15, 16 });
 		EncodingRule.encodeIp6(bb, ip6);
 		bb.flip();
 

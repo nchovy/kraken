@@ -69,8 +69,8 @@ public class HostUpdateApiImpl implements HostUpdateApi, Runnable {
 			logger.info("kraken dom: starting host updater thread");
 			while (!doStop) {
 				try {
-					runOnce();
 					Thread.sleep(10000);
+					runOnce();
 				} catch (InterruptedException e) {
 					logger.debug("kraken dom: host batch update interrupted");
 				} catch (Exception e) {

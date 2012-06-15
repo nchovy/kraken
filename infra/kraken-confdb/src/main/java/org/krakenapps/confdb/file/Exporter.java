@@ -16,6 +16,7 @@ import java.util.TreeMap;
 import org.json.JSONException;
 import org.json.JSONWriter;
 import org.krakenapps.codec.Base64;
+import org.krakenapps.codec.UnsupportedTypeException;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigIterator;
 import org.slf4j.Logger;
@@ -144,22 +145,9 @@ public class Exporter {
 
 			return createList("list", newList);
 		} else if (doc.getClass().isArray()) {
-			if (doc.getClass().getName().equals("[B")) {
-				byte[] bs = (byte[]) doc;
-				return createList("blob", Base64.encodeString(new String(bs)));
-
-			} else {
-				Object[] os = (Object[]) doc;
-				Object[] newOs = new Object[os.length];
-				for (int index = 0; index < os.length; index++) {
-					newOs[index] = insertType(os[index]);
-				}
-
-				return createList("list", newOs);
-			}
+			return insertArrayType(doc);
 		} else {
-			throw new IllegalArgumentException("unsupported value [" + doc + "], type [" + doc.getClass().getName()
-					+ "]");
+			throw new UnsupportedTypeException("unsupported value [" + doc + "], type [" + doc.getClass().getName() + "]");
 		}
 	}
 
@@ -169,5 +157,26 @@ public class Exporter {
 		l.add(doc);
 
 		return l;
+	}
+
+	private Object insertArrayType(Object doc) {
+		Class<?> c = doc.getClass().getComponentType();
+		if (c == byte.class) {
+			byte[] arr = (byte[]) doc;
+			return createList("blob", Base64.encodeString(new String(arr)));
+		} else if (c == int.class || c == double.class || c == float.class || c == long.class || c == short.class
+				|| c == boolean.class) {
+			return createList("list", doc);
+		} else if (c == char.class) {
+			throw new UnsupportedTypeException("unsupported data type [" + c.getName() + "]");
+		} else {
+			Object[] os = (Object[]) doc;
+			Object[] newOs = new Object[os.length];
+			for (int index = 0; index < os.length; index++) {
+				newOs[index] = insertType(os[index]);
+			}
+
+			return createList("list", newOs);
+		}
 	}
 }

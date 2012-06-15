@@ -135,7 +135,7 @@ class FileConfigIterator implements ConfigIterator {
 		Object doc = EncodingRule.decode(ByteBuffer.wrap(b));
 		FileConfig config = new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
 		cache.putEntry(colName, config);
-		return config;
+		return config.duplicate();
 	}
 
 	@Override

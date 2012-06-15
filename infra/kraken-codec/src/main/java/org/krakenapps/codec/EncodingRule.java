@@ -80,8 +80,23 @@ public class EncodingRule {
 		} else if (value instanceof List<?>) {
 			encodeArray(bb, (List<?>) value, cc);
 		} else if (value.getClass().isArray()) {
-			if (value.getClass().getName().equals("[B")) {
+			Class c = value.getClass().getComponentType();
+			if (c == byte.class) {
 				encodeBlob(bb, (byte[]) value);
+			} else if (c == int.class) {
+				encodeArray(bb, (int[]) value);
+			} else if (c == long.class) {
+				encodeArray(bb, (long[]) value);
+			} else if (c == short.class) {
+				encodeArray(bb, (short[]) value);
+			} else if (c == boolean.class) {
+				encodeArray(bb, (boolean[]) value);
+			} else if (c == double.class) {
+				encodeArray(bb, (double[]) value);
+			} else if (c == float.class) {
+				encodeArray(bb, (float[]) value);
+			} else if (c == char.class) {
+				throw new UnsupportedTypeException(value.getClass().getName());
 			} else {
 				encodeArray(bb, (Object[]) value, cc);
 			}
@@ -131,8 +146,23 @@ public class EncodingRule {
 		} else if (value instanceof List<?>) {
 			return lengthOfArray((List<?>) value, cc);
 		} else if (value.getClass().isArray()) {
-			if (value.getClass().getName().equals("[B")) {
+			Class c = value.getClass().getComponentType();
+			if (c == byte.class) {
 				return lengthOfBlob((byte[]) value);
+			} else if (c == int.class) {
+				return lengthOfArray((int[]) value);
+			} else if (c == long.class) {
+				return lengthOfArray((long[]) value);
+			} else if (c == short.class) {
+				return lengthOfArray((short[]) value);
+			} else if (c == boolean.class) {
+				return lengthOfArray((boolean[]) value);
+			} else if (c == double.class) {
+				return lengthOfArray((double[]) value);
+			} else if (c == float.class) {
+				return lengthOfArray((float[]) value);
+			} else if (c == char.class) {
+				throw new UnsupportedTypeException(value.getClass().getName());
 			} else {
 				return lengthOfArray((Object[]) value, cc);
 			}
@@ -351,7 +381,7 @@ public class EncodingRule {
 
 	public static void encodeInt(ByteBuffer bb, int value) {
 		bb.put(ZINT32_TYPE);
-		long zvalue = ((long)value << 1) ^ ((long)value >> 31);
+		long zvalue = ((long) value << 1) ^ ((long) value >> 31);
 		encodeRawNumber(bb, int.class, zvalue);
 	}
 
@@ -366,7 +396,7 @@ public class EncodingRule {
 
 	public static void encodeShort(ByteBuffer bb, short value) {
 		bb.put(ZINT16_TYPE);
-		long zvalue = ((long)value << 1) ^ ((long)value >> 15);
+		long zvalue = ((long) value << 1) ^ ((long) value >> 15);
 		encodeRawNumber(bb, short.class, zvalue);
 	}
 
@@ -577,6 +607,83 @@ public class EncodingRule {
 			} else
 				encode(bb, obj, cc);
 		}
+	}
+
+	public static void encodeArray(ByteBuffer bb, int[] array) {
+		bb.put(ARRAY_TYPE);
+
+		int contentLength = 0;
+		for (int i : array)
+			contentLength += lengthOfInt(i);
+
+		encodeRawNumber(bb, int.class, contentLength);
+
+		for (int i : array)
+			encodeInt(bb, i);
+	}
+
+	public static void encodeArray(ByteBuffer bb, long[] array) {
+		bb.put(ARRAY_TYPE);
+
+		int contentLength = 0;
+		for (long i : array)
+			contentLength += lengthOfLong(i);
+
+		encodeRawNumber(bb, int.class, contentLength);
+
+		for (long i : array)
+			encodeLong(bb, i);
+	}
+
+	public static void encodeArray(ByteBuffer bb, short[] array) {
+		bb.put(ARRAY_TYPE);
+
+		int contentLength = 0;
+		for (short i : array)
+			contentLength += lengthOfShort(i);
+
+		encodeRawNumber(bb, int.class, contentLength);
+
+		for (short i : array)
+			encodeShort(bb, i);
+	}
+
+	public static void encodeArray(ByteBuffer bb, double[] array) {
+		bb.put(ARRAY_TYPE);
+
+		int contentLength = 0;
+		for (double i : array)
+			contentLength += lengthOfDouble(i);
+
+		encodeRawNumber(bb, int.class, contentLength);
+
+		for (double i : array)
+			encodeDouble(bb, i);
+	}
+
+	public static void encodeArray(ByteBuffer bb, float[] array) {
+		bb.put(ARRAY_TYPE);
+
+		int contentLength = 0;
+		for (float i : array)
+			contentLength += lengthOfFloat(i);
+
+		encodeRawNumber(bb, int.class, contentLength);
+		for (float i : array)
+			encodeFloat(bb, i);
+	}
+
+	public static void encodeArray(ByteBuffer bb, boolean[] array) {
+		bb.put(ARRAY_TYPE);
+
+		int contentLength = 0;
+		for (boolean i : array)
+			contentLength += lengthOfBoolean(i);
+
+		encodeRawNumber(bb, int.class, contentLength);
+
+		for (boolean i : array)
+			encodeBoolean(bb, i);
 	}
 
 	/**
@@ -794,6 +901,54 @@ public class EncodingRule {
 
 	public static int lengthOfArray(List<?> value) {
 		return lengthOfArray(value, null);
+	}
+
+	public static int lengthOfArray(int[] value) {
+		int contentLength = 0;
+		for (int obj : value) {
+			contentLength += lengthOfInt(obj);
+		}
+		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
+	}
+
+	public static int lengthOfArray(long[] value) {
+		int contentLength = 0;
+		for (long obj : value) {
+			contentLength += lengthOfLong(obj);
+		}
+		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
+	}
+
+	public static int lengthOfArray(short[] value) {
+		int contentLength = 0;
+		for (short obj : value) {
+			contentLength += lengthOfShort(obj);
+		}
+		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
+	}
+
+	public static int lengthOfArray(boolean[] value) {
+		int contentLength = 0;
+		for (boolean obj : value) {
+			contentLength += lengthOfBoolean(obj);
+		}
+		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
+	}
+
+	public static int lengthOfArray(double[] value) {
+		int contentLength = 0;
+		for (double obj : value) {
+			contentLength += lengthOfDouble(obj);
+		}
+		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
+	}
+
+	public static int lengthOfArray(float[] value) {
+		int contentLength = 0;
+		for (float obj : value) {
+			contentLength += lengthOfFloat(obj);
+		}
+		return 1 + lengthOfRawNumber(int.class, contentLength) + contentLength;
 	}
 
 	public static int lengthOfArray(List<?> value, CustomCodec cc) {
