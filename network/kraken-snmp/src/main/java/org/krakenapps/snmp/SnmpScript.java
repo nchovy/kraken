@@ -24,6 +24,7 @@ import java.util.Vector;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptContext;
+import org.krakenapps.api.ScriptUsage;
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -54,6 +55,80 @@ public class SnmpScript implements Script {
 		context.println("---------------");
 		for (String name : trap.getBindingNames())
 			context.println(name + " => " + trap.getBinding(name));
+	}
+
+	@ScriptUsage(description = "trace snmp trap packet")
+	public void trace(String[] args) {
+		Map<String, String> filters = new HashMap<String, String>();
+
+		for (String arg : args) {
+			int p = arg.indexOf("=");
+			String key = arg.substring(0, p);
+			String value = arg.substring(p + 1);
+			filters.put(key, value);
+
+			context.println("applying filter " + key + " => " + value);
+		}
+
+		context.println("press ctrl-c to stop");
+		context.println("----------------------");
+
+		Tracer tracer = new Tracer(filters);
+		trap.addReceiver(tracer);
+
+		try {
+			while (true) {
+				context.readLine();
+			}
+		} catch (InterruptedException e) {
+			context.println("interrupted");
+		} finally {
+			trap.removeReceiver(tracer);
+		}
+
+	}
+
+	private class Tracer implements SnmpTrapReceiver {
+		private Map<String, String> filters;
+
+		public Tracer(Map<String, String> filters) {
+			this.filters = filters;
+		}
+
+		@Override
+		public void handle(SnmpTrap trap) {
+			String remote = trap.getRemoteAddress().getAddress().getHostAddress() + ":" + trap.getRemoteAddress().getPort();
+
+			if (filters != null && !checkFilter(trap))
+				return;
+
+			context.println(remote + " " + trap.getVariableBindings());
+		}
+
+		private boolean checkFilter(SnmpTrap trap) {
+			for (String key : filters.keySet()) {
+				String expected = filters.get(key);
+				Object value = trap.getVariableBindings().get(key);
+				String actual = null;
+				if (value != null)
+					actual = value.toString();
+
+				if ((expected == null || expected.isEmpty())) {
+					if (actual == null)
+						continue;
+					else
+						return false;
+				}
+
+				if (actual == null)
+					return false;
+
+				if (!expected.equals(actual))
+					return false;
+			}
+
+			return true;
+		}
 	}
 
 	public void get(String[] args) {
