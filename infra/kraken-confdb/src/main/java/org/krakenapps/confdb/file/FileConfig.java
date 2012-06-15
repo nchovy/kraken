@@ -15,8 +15,17 @@
  */
 package org.krakenapps.confdb.file;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.api.PrimitiveParseCallback;
+import org.krakenapps.codec.UnsupportedTypeException;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
@@ -109,5 +118,92 @@ class FileConfig implements Config {
 	@Override
 	public String toString() {
 		return "id=" + id + ", rev=" + rev + ", prev=" + prevRev + ", doc=" + doc;
+	}
+
+	@Override
+	public Config duplicate() {
+		return new FileConfig(db, col, id, rev, prevRev, duplicateDoc(doc));
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object duplicateDoc(Object doc) {
+		if (doc == null)
+			return null;
+
+		if (doc instanceof Map) {
+			Map<String, Object> m = (Map<String, Object>) doc;
+			HashMap<String, Object> n = new HashMap<String, Object>(m.size());
+
+			for (Entry<String, Object> pair : m.entrySet())
+				n.put(pair.getKey(), duplicateDoc(pair.getValue()));
+
+			return n;
+		} else if (doc instanceof Collections) {
+			Collection<Object> c = (Collection<Object>) doc;
+			ArrayList<Object> n = new ArrayList<Object>(c.size());
+
+			for (Object o : c)
+				n.add(duplicateDoc(o));
+
+			return n;
+
+		} else if (doc.getClass().isArray()) {
+			Class c = doc.getClass().getComponentType();
+			if (c == byte.class) {
+				byte[] arr = (byte[]) doc;
+				byte[] n = new byte[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+			} else if (c == int.class) {
+				int[] arr = (int[]) doc;
+				int[] n = new int[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+
+			} else if (c == double.class) {
+				double[] arr = (double[]) doc;
+				double[] n = new double[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+			} else if (c == float.class) {
+				float[] arr = (float[]) doc;
+				float[] n = new float[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+			} else if (c == boolean.class) {
+				boolean[] arr = (boolean[]) doc;
+				boolean[] n = new boolean[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+			} else if (c == char.class) {
+				throw new UnsupportedTypeException("unsupported data type [" + c.getName() + "]");
+			} else if (c == long.class) {
+				long[] arr = (long[]) doc;
+				long[] n = new long[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+			} else if (c == short.class) {
+				short[] arr = (short[]) doc;
+				short[] n = new short[arr.length];
+				n = Arrays.copyOf(arr, arr.length);
+
+				return n;
+			} else {
+				Object[] os = (Object[]) doc;
+				Object[] n = new Object[os.length];
+
+				for (int i = 0; i < os.length; i++)
+					n[i] = duplicateDoc(os[i]);
+
+				return n;
+			}
+		} else
+			return doc;
 	}
 }

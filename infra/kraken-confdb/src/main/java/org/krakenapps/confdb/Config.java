@@ -39,4 +39,6 @@ public interface Config {
 	void update();
 
 	void remove();
+	
+	Config duplicate();
 }

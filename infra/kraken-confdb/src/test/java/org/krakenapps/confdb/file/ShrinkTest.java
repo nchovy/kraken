@@ -224,6 +224,7 @@ public class ShrinkTest {
 		Object[] os = new Object[2];
 		os[0] = o1;
 		os[1] = o2;
+		int[] i = new int[]{1,2,3};
 
 		Map<String, Object> m = new HashMap<String, Object>();
 
@@ -240,6 +241,7 @@ public class ShrinkTest {
 		m.put("object", os);
 		m.put("long", longData);
 		m.put("short", shortData);
+		m.put("int_array", i);
 
 		return m;
 	}
