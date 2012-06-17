@@ -58,6 +58,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	private long blockLogCount;
 
 	private List<LogRecord> bufferedLogs;
+	private volatile Date lastFlush = new Date();
 
 	public LogFileWriterV1(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this(indexPath, dataPath, DEFAULT_MAX_LOG_BUFFERING);
@@ -186,6 +187,8 @@ public class LogFileWriterV1 extends LogFileWriter {
 
 	@Override
 	public void flush() throws IOException {
+		lastFlush = new Date();
+
 		List<LogRecord> b = bufferedLogs;
 		bufferedLogs = new ArrayList<LogRecord>(maxLogBuffering * 2);
 
@@ -268,6 +271,11 @@ public class LogFileWriterV1 extends LogFileWriter {
 	private void prepareLong(long l, byte[] b) {
 		for (int i = 0; i < 8; i++)
 			b[i] = (byte) ((l >> ((7 - i) * 8)) & 0xff);
+	}
+
+	@Override
+	public Date getLastFlush() {
+		return lastFlush;
 	}
 
 	@Override

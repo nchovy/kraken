@@ -27,6 +27,8 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import org.krakenapps.logstorage.engine.LogFileHeader;
+import org.krakenapps.logstorage.engine.LogRecord;
+import org.krakenapps.logstorage.engine.LogRecordCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,8 +58,12 @@ public class LogFileRepairer {
 			List<LogIndexBlock> indexBlocks = readIndexBlocks(indexFile);
 			List<LogDataBlockHeader> dataBlockHeaders = readDataBlockHeaders(dataFile, dataPath);
 
-			if (indexBlocks.size() == dataBlockHeaders.size())
+			// check broken data file
+			truncateBrokenDataBlock(dataPath, dataFile, dataBlockHeaders);
+
+			if (indexBlocks.size() == dataBlockHeaders.size()) {
 				return null;
+			}
 
 			if (indexBlocks.size() < dataBlockHeaders.size())
 				return generate(indexPath, dataPath, indexFile, dataFile, indexBlocks, dataBlockHeaders);
@@ -71,8 +77,22 @@ public class LogFileRepairer {
 		}
 	}
 
-	private LogFileFixReport generate(File indexPath, File dataPath, RandomAccessFile indexFile, RandomAccessFile dataFile,
-			List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders) throws IOException {
+	private void truncateBrokenDataBlock(File dataPath, RandomAccessFile dataFile,
+			List<LogDataBlockHeader> dataBlockHeaders) throws IOException {
+		LogDataBlockHeader lastDataBlockHeader = dataBlockHeaders.get(dataBlockHeaders.size() - 1);
+		long logicalEndOfData = lastDataBlockHeader.getFilePointer() + 24 + lastDataBlockHeader.getCompressedLength();
+
+		long dataOver = dataFile.length() - logicalEndOfData;
+		if (dataOver > 0) {
+			dataFile.setLength(logicalEndOfData);
+			logger.info("kraken logstorage: truncated immature last data block [{}], removed [{}] bytes", dataPath,
+					dataOver);
+		}
+	}
+
+	private LogFileFixReport generate(File indexPath, File dataPath, RandomAccessFile indexFile,
+			RandomAccessFile dataFile, List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders)
+			throws IOException {
 		logger.trace("kraken logstorage: checking incomplete index block, file [{}]", indexPath);
 
 		// truncate data file
@@ -108,8 +128,8 @@ public class LogFileRepairer {
 			int offset = indexBlocks.size();
 			int missingBlockCount = dataBlockHeaders.size() - indexBlocks.size();
 			byte[] intbuf = new byte[4];
-			logger.info("kraken logstorage: index block [{}], data block [{}], missing count [{}]",
-					new Object[] { indexBlocks.size(), dataBlockHeaders.size(), missingBlockCount });
+			logger.info("kraken logstorage: index block [{}], data block [{}], missing count [{}]", new Object[] {
+					indexBlocks.size(), dataBlockHeaders.size(), missingBlockCount });
 
 			for (int i = 0; i < missingBlockCount; i++) {
 				LogDataBlockHeader blockHeader = dataBlockHeaders.get(offset + i);
@@ -125,8 +145,8 @@ public class LogFileRepairer {
 				}
 
 				addedLogs += logOffsets.size();
-				logger.info("kraken logstorage: rewrite index block for {}, log count [{}], index file [{}]", new Object[] {
-						blockHeader, logOffsets.size(), indexPath });
+				logger.info("kraken logstorage: rewrite index block for {}, log count [{}], index file [{}]",
+						new Object[] { blockHeader, logOffsets.size(), indexPath });
 			}
 
 			LogFileFixReport report = new LogFileFixReport();
@@ -182,8 +202,9 @@ public class LogFileRepairer {
 		return output;
 	}
 
-	private LogFileFixReport truncate(File indexPath, File dataPath, RandomAccessFile indexFile, RandomAccessFile dataFile,
-			List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders) throws IOException {
+	private LogFileFixReport truncate(File indexPath, File dataPath, RandomAccessFile indexFile,
+			RandomAccessFile dataFile, List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders)
+			throws IOException {
 		// truncate index file
 		int validLogCount = 0;
 
@@ -259,13 +280,16 @@ public class LogFileRepairer {
 				break;
 
 			header.setIndex(index++);
-			headers.add(header);
+			System.out.println(header);
 			pos += header.getCompressedLength() + 24;
-			if (pos > fileLength)
+			if (pos > fileLength || pos < 0)
 				break;
 
+			headers.add(header);
 			dataFile.seek(pos);
 		}
+
+		System.out.println("file length " + fileLength);
 
 		return headers;
 	}
@@ -292,6 +316,7 @@ public class LogFileRepairer {
 		if (readBytes < 24)
 			return null;
 
+		System.out.println("read bytes " + readBytes);
 		LogDataBlockHeader h = new LogDataBlockHeader();
 		h.setMinDate(new Date(bb.getLong()));
 		h.setMaxDate(new Date(bb.getLong()));
@@ -299,5 +324,20 @@ public class LogFileRepairer {
 		h.setCompressedLength(bb.getInt());
 		h.setFilePointer(pos);
 		return h;
+	}
+
+	public static void main(String[] args) throws IOException, InterruptedException {
+		File indexPath = new File("broken/2012-06-14.idx");
+		File dataPath = new File("broken/2012-06-14.dat");
+		new LogFileRepairer().fix(indexPath, dataPath);
+		LogFileReaderV2 reader = new LogFileReaderV2(indexPath, dataPath);
+
+		reader.traverse(Integer.MAX_VALUE, new LogRecordCallback() {
+
+			@Override
+			public boolean onLog(LogRecord logData) throws InterruptedException {
+				return true;
+			}
+		});
 	}
 }

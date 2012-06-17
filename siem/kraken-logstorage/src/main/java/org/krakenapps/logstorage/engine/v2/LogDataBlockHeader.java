@@ -78,7 +78,8 @@ public class LogDataBlockHeader {
 	@Override
 	public String toString() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		return "data block " + index + " [min date=" + dateFormat.format(minDate) + ", max date=" + dateFormat.format(maxDate)
-				+ ", original=" + originalLength + ", compressed=" + compressedLength + "]";
+		return "data block " + index + " [min date=" + dateFormat.format(minDate) + ", max date="
+				+ dateFormat.format(maxDate) + ", original=" + originalLength + ", compressed=" + compressedLength
+				+ ", fp=" + filePointer + "]";
 	}
 }

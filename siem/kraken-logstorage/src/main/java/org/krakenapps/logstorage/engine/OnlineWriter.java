@@ -17,6 +17,7 @@ package org.krakenapps.logstorage.engine;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -96,6 +97,10 @@ public class OnlineWriter {
 	public Date getLastAccess() {
 		return lastAccess;
 	}
+	
+	public Date getLastFlush() {
+		return writer.getLastFlush();
+	}
 
 	public void write(LogRecord record) throws IOException {
 		synchronized (this) {
@@ -130,6 +135,11 @@ public class OnlineWriter {
 	}
 
 	public void flush() throws IOException {
+		if (logger.isTraceEnabled()) {
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+			logger.trace("kraken logstorage: flushing log table [{}], day [{}]", tableId, dateFormat.format(day));
+		}
+
 		synchronized (this) {
 			writer.flush();
 			notifyAll();

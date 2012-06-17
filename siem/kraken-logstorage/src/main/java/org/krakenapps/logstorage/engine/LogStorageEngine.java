@@ -797,8 +797,6 @@ public class LogStorageEngine implements LogStorage {
 		private volatile boolean isStopped = true;
 		private volatile boolean forceFlush = false;
 
-		private Date lastFlushTime = new Date();
-
 		public WriterSweeper(int checkInterval, int maxIdleTime, int flushInterval) {
 			this.checkInterval = checkInterval;
 			this.maxIdleTime = maxIdleTime;
@@ -848,14 +846,13 @@ public class LogStorageEngine implements LogStorage {
 		}
 
 		private void sweep() {
-			// check flush
-			boolean doFlush = new Date().getTime() - lastFlushTime.getTime() > flushInterval;
-
 			List<OnlineWriterKey> evicts = new ArrayList<OnlineWriterKey>();
+			long now = new Date().getTime();
 			try {
 				// periodic log flush
 				for (OnlineWriterKey key : onlineWriters.keySet()) {
 					OnlineWriter writer = onlineWriters.get(key);
+					boolean doFlush = (now - writer.getLastFlush().getTime()) > flushInterval;
 					if (doFlush) {
 						try {
 							logger.trace("kraken logstorage: flushing writer [{}]", key);
@@ -866,7 +863,7 @@ public class LogStorageEngine implements LogStorage {
 					}
 
 					// close file if writer is in idle state
-					int interval = (int) (new Date().getTime() - writer.getLastAccess().getTime());
+					int interval = (int) (now - writer.getLastAccess().getTime());
 					if (interval > maxIdleTime)
 						evicts.add(key);
 				}

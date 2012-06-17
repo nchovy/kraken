@@ -62,6 +62,10 @@ public class LogFileWriterV2 extends LogFileWriter {
 	private byte[] compressed;
 	private Deflater compresser;
 
+	private File indexPath;
+	private File dataPath;
+	private volatile Date lastFlush = new Date();
+
 	private List<LogRecord> buffer = new ArrayList<LogRecord>();
 
 	public LogFileWriterV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
@@ -69,8 +73,11 @@ public class LogFileWriterV2 extends LogFileWriter {
 	}
 
 	// TODO: block size modification does not work
-	private LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException, InvalidLogFileHeaderException {
+	private LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException,
+			InvalidLogFileHeaderException {
 		this(indexPath, dataPath, blockSize, DEFAULT_LEVEL);
+		this.indexPath = indexPath;
+		this.dataPath = dataPath;
 	}
 
 	private LogFileWriterV2(File indexPath, File dataPath, int blockSize, int level) throws IOException,
@@ -155,14 +162,16 @@ public class LogFileWriterV2 extends LogFileWriter {
 	public void write(LogRecord data) throws IOException {
 		// do not remove this condition (date.toString() takes many CPU time)
 		if (logger.isDebugEnabled())
-			logger.debug("kraken logstorage: write new log id {}, time {}", data.getId(), data.getDate().toString());
+			logger.debug("kraken logstorage: write new log, idx [{}], dat [{}], id {}, time {}", new Object[] {
+					indexPath.getAbsolutePath(), dataPath.getAbsolutePath(), data.getId(), data.getDate().toString() });
 
 		// check validity
 		long newKey = data.getId();
 		if (newKey <= lastKey)
 			throw new IllegalArgumentException("invalid key: " + newKey + ", last key was " + lastKey);
 
-		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime()) || indexBuffer.remaining() < INDEX_ITEM_SIZE
+		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime())
+				|| indexBuffer.remaining() < INDEX_ITEM_SIZE
 				|| dataBuffer.remaining() < 20 + data.getData().remaining())
 			flush();
 
@@ -208,7 +217,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 			try {
 				write(log);
 			} catch (IllegalArgumentException e) {
-				logger.error("log storage: write failed", e.getMessage());
+				logger.error("log storage: write failed " + dataPath.getAbsolutePath(), e.getMessage());
 			}
 		}
 	}
@@ -223,7 +232,11 @@ public class LogFileWriterV2 extends LogFileWriter {
 		if (indexBuffer.position() == 0)
 			return;
 
-		logger.trace("kraken logstorage: flush");
+		if (logger.isTraceEnabled())
+			logger.trace("kraken logstorage: flush idx [{}], dat [{}] files", indexPath, dataPath);
+
+		// mark last flush
+		lastFlush = new Date();
 
 		// write start date
 		prepareLong(blockStartLogTime, longbuf);
@@ -278,6 +291,10 @@ public class LogFileWriterV2 extends LogFileWriter {
 	private void prepareLong(long l, byte[] b) {
 		for (int i = 0; i < 8; i++)
 			b[i] = (byte) ((l >> ((7 - i) * 8)) & 0xff);
+	}
+
+	public Date getLastFlush() {
+		return lastFlush;
 	}
 
 	@Override

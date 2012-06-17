@@ -62,6 +62,8 @@ public abstract class LogFileWriter {
 
 	public abstract Date getLastDate();
 
+	public abstract Date getLastFlush();
+
 	public abstract int getCount();
 
 	public abstract void write(LogRecord data) throws IOException;
