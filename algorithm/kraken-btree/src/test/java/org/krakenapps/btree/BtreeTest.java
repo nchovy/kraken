@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.krakenapps.btree.types.CompositeKey;
 import org.krakenapps.btree.types.IntegerKey;
@@ -353,22 +352,20 @@ public class BtreeTest {
 
 		btree.sync();
 		trace();
-		
 
-		int index = 1;
+		// int index = 1;
 		Cursor c = btree.openCursor(Cursor.ASC);
 		do {
 			// should be 1, 2, 5, 6, 8
 			System.out.println(c.getKey() + " " + c.getValue());
-//			assertEquals(new IntegerKey(index), c.getKey());
-//			assertEquals(new IntegerValue(index * 100), c.getValue());
-			index++;
+			// assertEquals(new IntegerKey(index), c.getKey());
+			// assertEquals(new IntegerValue(index * 100), c.getValue());
+			// index++;
 		} while (c.next());
 
 		c.close();
 	}
 
-	@SuppressWarnings("unused")
 	private void trace() throws IOException {
 		PageFile pf = btree.getPageFile();
 		System.out.println("ROOT=" + pf.getRootPage());

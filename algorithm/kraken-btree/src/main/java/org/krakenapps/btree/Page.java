@@ -52,7 +52,7 @@
  * +-------------------+-------------------------------------------+ 
  * 
  */
-	
+
 package org.krakenapps.btree;
 
 import java.nio.ByteBuffer;
@@ -68,7 +68,7 @@ public class Page {
 	//
 	@Deprecated
 	public static final int RECORD_HEADER_SIZE = 4;
-	
+
 	private boolean dirty;
 	private int number;
 	private Schema schema;
@@ -151,12 +151,12 @@ public class Page {
 		int recordPos = getPhysicalOffset(offset, recordLength);
 		initialRecordPos = recordPos;
 		bb.position(recordPos);
-		
+
 		recordPos += encodeVarNumber(bb, recordPos, valueLength);
 		recordPos += encodeVarNumber(bb, recordPos, keyLength);
 		recordPos += encodeBytes(bb, recordPos, key.getBytes());
 		recordPos += encodeBytes(bb, recordPos, valueBytes);
-		
+
 		assert initialRecordPos - recordPos != recordLength : "buffer overflow";
 
 		setRecordCount(getRecordCount() + 1);
@@ -289,7 +289,8 @@ public class Page {
 			throw new IllegalStateException("corrupted value length: " + valueLength);
 
 		byte[] b = new byte[valueLength];
-		int valuePosition = phyOffset + NumberEncoder.lengthOf(valueLength) + NumberEncoder.lengthOf(keyLength) + keyLength;
+		int valuePosition = phyOffset + NumberEncoder.lengthOf(valueLength) + NumberEncoder.lengthOf(keyLength)
+				+ keyLength;
 		bb.position(valuePosition);
 		bb.get(b);
 		return schema.getRowValueFactory().newValue(b);
@@ -298,14 +299,16 @@ public class Page {
 	private static int getVarInt(ByteBuffer bb, int phyOffset) {
 		return (int) NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset, bb.limit() - phyOffset));
 	}
-	
-	private static long getVarLong(ByteBuffer bb, int phyOffset) {
-		return NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset, bb.limit() - phyOffset));
-	}
 
-	private static short getVarShort(ByteBuffer bb, int phyOffset) {
-		return (short) NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset, bb.limit() - phyOffset));
-	}
+	// private static long getVarLong(ByteBuffer bb, int phyOffset) {
+	// return NumberEncoder.decode(ByteBuffer.wrap(bb.array(), phyOffset,
+	// bb.limit() - phyOffset));
+	// }
+	//
+	// private static short getVarShort(ByteBuffer bb, int phyOffset) {
+	// return (short) NumberEncoder.decode(ByteBuffer.wrap(bb.array(),
+	// phyOffset, bb.limit() - phyOffset));
+	// }
 
 	private int getSlotPosition(int slot) {
 		// slot size = payload offset (2) + length (2)
@@ -315,38 +318,38 @@ public class Page {
 	//
 	// page header
 	//
-	
+
 	public boolean leaf() {
-		return (bb.getShort(0) & PageType.LEAF) != 0; 
+		return (bb.getShort(0) & PageType.LEAF) != 0;
 	}
-	
+
 	public boolean intKey() {
 		return (bb.getShort(0) & PageType.INTKEY) != 0;
 	}
-	
+
 	public boolean overflowPage() {
 		return (bb.getShort(0) & PageType.OVERFLOW) != 0;
 	}
-	
+
 	public short getFlag() {
 		return bb.getShort(0);
 	}
-	
+
 	public boolean getFlag(short type) {
 		return (bb.getShort(0) & type) != 0;
 	}
 
 	public void setFlag(short type, boolean flag) {
 		if (flag)
-			bb.putShort(0, (short)(getFlag() | type));
+			bb.putShort(0, (short) (getFlag() | type));
 		else
-			bb.putShort(0, (short)(getFlag() & ~type));
+			bb.putShort(0, (short) (getFlag() & ~type));
 	}
-	
+
 	public void clearAllFlag() {
 		bb.putShort(0, (short) 0);
 	}
-	
+
 	public void setFlag(short flag) {
 		bb.putShort(0, flag);
 	}
@@ -400,19 +403,19 @@ public class Page {
 	public String toString() {
 		return "Page " + getNumber();
 	}
-	
+
 	private int encodeBytes(ByteBuffer bb, int recordPos, byte[] array) {
 		int encodedLen = array.length;
 		ByteBuffer.wrap(bb.array(), recordPos, encodedLen).put(array);
 		return encodedLen;
 	}
-	
+
 	private int encodeVarNumber(ByteBuffer bb, int recordPos, int valueLength) {
 		int encodedLen = NumberEncoder.lengthOf(valueLength);
 		NumberEncoder.encode(ByteBuffer.wrap(bb.array(), recordPos, encodedLen), valueLength);
 		return encodedLen;
 	}
-	
+
 	private int getRecordHeaderSize(int keyLength, int valueLength) {
 		return NumberEncoder.lengthOf(keyLength) + NumberEncoder.lengthOf(valueLength);
 	}
