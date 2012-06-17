@@ -27,8 +27,6 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import org.krakenapps.logstorage.engine.LogFileHeader;
-import org.krakenapps.logstorage.engine.LogRecord;
-import org.krakenapps.logstorage.engine.LogRecordCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -320,20 +318,5 @@ public class LogFileRepairer {
 		h.setCompressedLength(bb.getInt());
 		h.setFilePointer(pos);
 		return h;
-	}
-
-	public static void main(String[] args) throws IOException, InterruptedException {
-		File indexPath = new File("broken/2012-06-14.idx");
-		File dataPath = new File("broken/2012-06-14.dat");
-		new LogFileRepairer().fix(indexPath, dataPath);
-		LogFileReaderV2 reader = new LogFileReaderV2(indexPath, dataPath);
-
-		reader.traverse(Integer.MAX_VALUE, new LogRecordCallback() {
-
-			@Override
-			public boolean onLog(LogRecord logData) throws InterruptedException {
-				return true;
-			}
-		});
 	}
 }
