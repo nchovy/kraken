@@ -280,7 +280,6 @@ public class LogFileRepairer {
 				break;
 
 			header.setIndex(index++);
-			System.out.println(header);
 			pos += header.getCompressedLength() + 24;
 			if (pos > fileLength || pos < 0)
 				break;
@@ -288,8 +287,6 @@ public class LogFileRepairer {
 			headers.add(header);
 			dataFile.seek(pos);
 		}
-
-		System.out.println("file length " + fileLength);
 
 		return headers;
 	}
@@ -316,7 +313,6 @@ public class LogFileRepairer {
 		if (readBytes < 24)
 			return null;
 
-		System.out.println("read bytes " + readBytes);
 		LogDataBlockHeader h = new LogDataBlockHeader();
 		h.setMinDate(new Date(bb.getLong()));
 		h.setMaxDate(new Date(bb.getLong()));
