@@ -15,7 +15,7 @@
 	<modules>
 		<module>kraken-isc-api</module>
 		<module>kraken-log-api</module>
-		<module>kraken-event-api</module>`
+		<module>kraken-event-api</module>
 		<module>kraken-siem</module>
 		<module>kraken-base</module>
 		<module>kraken-sentry</module>
