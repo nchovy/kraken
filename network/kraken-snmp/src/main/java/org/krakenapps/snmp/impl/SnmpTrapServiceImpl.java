@@ -62,14 +62,14 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 	private final Logger logger = LoggerFactory.getLogger(SnmpTrapServiceImpl.class.getName());
 	private final Charset charset = Charset.forName("utf-8");
 	private ConcurrentMap<String, SnmpTrapBinding> bindings;
-	private ConcurrentMap<String, Snmp> listeners;
+	private ConcurrentMap<String, SnmpListener> listeners;
 
 	private CopyOnWriteArraySet<SnmpTrapReceiver> callbacks;
 	private ConcurrentMap<String, CopyOnWriteArraySet<SnmpTrapReceiver>> bindingCallbacks;
 
 	public SnmpTrapServiceImpl() {
 		bindings = new ConcurrentHashMap<String, SnmpTrapBinding>();
-		listeners = new ConcurrentHashMap<String, Snmp>();
+		listeners = new ConcurrentHashMap<String, SnmpListener>();
 		callbacks = new CopyOnWriteArraySet<SnmpTrapReceiver>();
 		bindingCallbacks = new ConcurrentHashMap<String, CopyOnWriteArraySet<SnmpTrapReceiver>>();
 	}
@@ -80,6 +80,17 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 
 	@Invalidate
 	public void stop() {
+		// close all listeners
+		for (SnmpListener listener : listeners.values()) {
+			try {
+				listener.snmp.close();
+				listener.threadPool.stop();
+			} catch (IOException e) {
+				logger.error("kraken snmp: close failed", e);
+			}
+		}
+
+		listeners.clear();
 		bindings.clear();
 		callbacks.clear();
 		bindingCallbacks.clear();
@@ -117,7 +128,8 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 		int port = binding.getListenAddress().getPort();
 		UdpAddress udpAddress = new UdpAddress(addr + "/" + port);
 		try {
-			ThreadPool threadPool = ThreadPool.create("Trap", binding.getThreadCount());
+			String threadPoolName = "SNMP Trap [" + binding.getName() + "]";
+			ThreadPool threadPool = ThreadPool.create(threadPoolName, binding.getThreadCount());
 			MessageDispatcher dispatcher = new MultiThreadedMessageDispatcher(threadPool, new MessageDispatcherImpl());
 			TransportMapping transport = new DefaultUdpTransportMapping(udpAddress);
 
@@ -127,7 +139,7 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 			snmp.addCommandResponder(this);
 			snmp.listen();
 
-			listeners.put(binding.getName(), snmp);
+			listeners.put(binding.getName(), new SnmpListener(snmp, threadPool));
 			logger.info("kraken snmp: opened {} [{}]", binding.getName(), binding.getListenAddress());
 		} catch (IOException e) {
 			bindings.remove(binding.getName());
@@ -137,9 +149,11 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 
 	@Override
 	public void close(String name) throws IOException {
-		Snmp snmp = listeners.remove(name);
-		if (snmp != null)
-			snmp.close();
+		SnmpListener listener = listeners.remove(name);
+		if (listener != null) {
+			listener.snmp.close();
+			listener.threadPool.stop();
+		}
 
 		SnmpTrapBinding binding = bindings.remove(name);
 		if (binding == null)
@@ -265,6 +279,16 @@ public class SnmpTrapServiceImpl implements SnmpTrapService, CommandResponder {
 			return null;
 		default:
 			return null;
+		}
+	}
+
+	private class SnmpListener {
+		private Snmp snmp;
+		private ThreadPool threadPool;
+
+		public SnmpListener(Snmp snmp, ThreadPool threadPool) {
+			this.snmp = snmp;
+			this.threadPool = threadPool;
 		}
 	}
 }
