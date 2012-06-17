@@ -15,7 +15,7 @@
 	<modules>
 		<module>kraken-isc-api</module>
 		<module>kraken-log-api</module>
-		<module>kraken-event-api</module>
+		<module>kraken-event-api</module>`
 		<module>kraken-siem</module>
 		<module>kraken-base</module>
 		<module>kraken-sentry</module>
@@ -40,7 +40,7 @@
 		<module>kraken-http-rule</module>
 		<module>kraken-winapi</module>
 		<module>kraken-linux-api</module>
-		<module>kraken-ipmanager</module>
+		<!--module>kraken-ipmanager</module-->
 		<module>kraken-snmptrap-parser</module>
 	</modules>
 </project>
