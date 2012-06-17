@@ -33,6 +33,6 @@ public class ResourceApiImpl implements ResourceApi {
 	public void unregister(String groupId, ResourceHandler handler) {
 		ResourceHandler old = handlers.get(groupId);
 		if (old == handler)
-			handlers.remove(handler);
+			handlers.remove(groupId);
 	}
 }
