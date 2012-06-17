@@ -40,12 +40,12 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	/**
 	 * msgbus session id to waiting async context mappings
 	 */
-	private ConcurrentMap<Integer, AsyncContext> contexts;
+	private ConcurrentMap<String, AsyncContext> contexts;
 
 	/**
 	 * msgbus session id to pending messages mappings
 	 */
-	private ConcurrentMap<Integer, Queue<String>> pendingQueues;
+	private ConcurrentMap<String, Queue<String>> pendingQueues;
 
 	@Requires
 	private MessageBus msgbus;
@@ -61,8 +61,8 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	private boolean doStop;
 
 	public MsgbusServlet() {
-		contexts = new ConcurrentHashMap<Integer, AsyncContext>();
-		pendingQueues = new ConcurrentHashMap<Integer, Queue<String>>();
+		contexts = new ConcurrentHashMap<String, AsyncContext>();
+		pendingQueues = new ConcurrentHashMap<String, Queue<String>>();
 	}
 
 	public void setMessageBus(MessageBus msgbus) {
@@ -98,9 +98,9 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 		Session session = ensureSession(req, resp, true);
 
 		if (req.getPathInfo().equals("/trap")) {
-			logger.trace("kraken webconsole: waiting msgbus response/trap [session={}]", session.getId());
+			logger.trace("kraken webconsole: waiting msgbus response/trap [session={}]", session.getGuid());
 			AsyncContext aCtx = req.startAsync();
-			contexts.put(session.getId(), aCtx);
+			contexts.put(session.getGuid(), aCtx);
 		}
 	}
 
@@ -133,9 +133,9 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			msgbus.execute(session, msg);
 		} else if (req.getPathInfo().equals("/trap")) {
 			Session session = ensureSession(req, resp, true);
-			logger.trace("kraken webconsole: waiting msgbus response/trap [session={}]", session.getId());
+			logger.trace("kraken webconsole: waiting msgbus response/trap [session={}]", session.getGuid());
 			AsyncContext aCtx = req.startAsync();
-			contexts.put(session.getId(), aCtx);
+			contexts.put(session.getGuid(), aCtx);
 		}
 	}
 
@@ -174,7 +174,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 	}
 
 	private void runOnce() throws InterruptedException {
-		for (Integer sessionId : contexts.keySet()) {
+		for (String sessionId : contexts.keySet()) {
 			Queue<String> frames = pendingQueues.get(sessionId);
 			if (frames == null || frames.size() == 0)
 				continue;
@@ -183,7 +183,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 		}
 	}
 
-	private void flushTraps(int sessionId, Queue<String> frames) {
+	private void flushTraps(String sessionId, Queue<String> frames) {
 		AsyncContext ctx = contexts.get(sessionId);
 		if (ctx == null)
 			return;

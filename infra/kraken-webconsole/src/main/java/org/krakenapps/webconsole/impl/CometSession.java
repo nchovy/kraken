@@ -52,6 +52,11 @@ public class CometSession implements Session {
 		return channel.getId();
 	}
 
+	@Override
+	public String getGuid() {
+		return sessionKey;
+	}
+
 	// TODO:
 	@Override
 	public boolean has(String key) {
@@ -81,16 +86,6 @@ public class CometSession implements Session {
 	@Override
 	public String getAdminLoginName() {
 		return getString("admin_login_name");
-	}
-
-	@Override
-	public Integer getOrgId() {
-		return getInt("org");
-	}
-
-	@Override
-	public Integer getAdminId() {
-		return getInt("admin");
 	}
 
 	@Override

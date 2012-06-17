@@ -1,5 +1,7 @@
 package org.krakenapps.msgbus;
 
+import java.util.HashMap;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.msgbus.Request;
@@ -21,7 +23,7 @@ public class PushPlugin {
 		String method = req.getString("callback");
 		String orgDomain = getOrgDomain(req.getSession());
 
-		pushApi.subscribe(orgDomain, req.getSession().getId(), processId, method);
+		pushApi.subscribe(orgDomain, req.getSession().getGuid(), processId, method, new HashMap<String, Object>());
 	}
 
 	@MsgbusMethod
@@ -30,7 +32,7 @@ public class PushPlugin {
 		String method = req.getString("callback");
 		String orgDomain = getOrgDomain(req.getSession());
 
-		pushApi.unsubscribe(orgDomain, req.getSession().getId(), processId, method);
+		pushApi.unsubscribe(orgDomain, req.getSession().getGuid(), processId, method);
 	}
 
 	@MsgbusMethod(type = CallbackType.SessionClosed)
@@ -38,18 +40,10 @@ public class PushPlugin {
 		String orgDomain = getOrgDomain(session);
 
 		if (pushApi != null && session != null && orgDomain != null)
-			pushApi.sessionClosed(orgDomain, session.getId());
+			pushApi.sessionClosed(orgDomain, session.getGuid());
 	}
 
-	@SuppressWarnings("deprecation")
 	private String getOrgDomain(Session session) {
-		String orgDomain = session.getOrgDomain();
-
-		// for backward compatibility
-		Integer orgId = session.getOrgId();
-		if (orgDomain == null && orgId != null)
-			orgDomain = orgId.toString();
-
-		return orgDomain;
+		return session.getOrgDomain();
 	}
 }

@@ -11,29 +11,24 @@ import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.msgbus.AbstractSession;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
+import org.krakenapps.msgbus.ResourceApi;
+import org.krakenapps.msgbus.ResourceHandler;
 import org.krakenapps.msgbus.Session;
 import org.krakenapps.msgbus.Message.Type;
 
 public class MsgbusScript implements Script {
 	private MessageBus msgbus;
+	private ResourceApi resourceApi;
 	private ScriptContext context;
 
-	public MsgbusScript(MessageBus msgbus) {
+	public MsgbusScript(MessageBus msgbus, ResourceApi resourceApi) {
 		this.msgbus = msgbus;
+		this.resourceApi = resourceApi;
 	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
-	}
-
-	public void packages(String[] args) {
-		context.println("Msgbus Packages");
-		context.println("-------------------");
-
-		for (String key : msgbus.getPackageKeys()) {
-			context.println(key + ": " + msgbus.getPackageName(key));
-		}
 	}
 
 	public void plugins(String[] args) {
@@ -111,11 +106,11 @@ public class MsgbusScript implements Script {
 	}
 
 	@ScriptUsage(description = "send", arguments = {
-			@ScriptArgument(name = "session id", type = "int", description = "session id"),
+			@ScriptArgument(name = "session guid", type = "string", description = "session guid"),
 			@ScriptArgument(name = "callback name", type = "string", description = "callback name"),
 			@ScriptArgument(name = "data string", type = "string", description = "data string") })
 	public void send(String[] args) {
-		Session session = msgbus.getSession(Integer.valueOf(args[0]));
+		Session session = msgbus.getSession(args[0]);
 		if (session == null) {
 			context.println("session not found");
 			return;
@@ -127,11 +122,20 @@ public class MsgbusScript implements Script {
 
 		Message msg = new Message();
 		msg.setType(Type.Trap);
-		msg.setSession(session.getId());
+		msg.setSession(session.getGuid());
 		msg.setMethod(args[1]);
 		msg.setParameters(params);
 		session.send(msg);
 		context.println("sent trap message");
+	}
+
+	public void resourceHandlers(String[] args) {
+		context.println("Resource Handlers");
+		context.println("-------------------");
+		for (String key : resourceApi.getResourceHandlerKeys()) {
+			ResourceHandler handler = resourceApi.getResourceHandler(key);
+			context.println("[" + key + "] " + handler);
+		}
 	}
 
 	private class ScriptSession extends AbstractSession {

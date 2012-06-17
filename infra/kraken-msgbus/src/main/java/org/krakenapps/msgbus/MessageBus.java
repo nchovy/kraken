@@ -1,10 +1,8 @@
 package org.krakenapps.msgbus;
 
 import java.util.Collection;
-import java.util.Locale;
 
 public interface MessageBus {
-	Collection<String> getPackageKeys();
 
 	Collection<String> getPluginNames();
 
@@ -12,11 +10,10 @@ public interface MessageBus {
 
 	Collection<Session> getSessions();
 
-	String getPackageName(String key);
-
-	String getPackageName(String key, Locale locale);
-
+	@Deprecated
 	Session getSession(int id);
+
+	Session getSession(String guid);
 
 	boolean checkPermission(Session session, String group, String code);
 
@@ -37,8 +34,4 @@ public interface MessageBus {
 	void register(SessionEventHandler callback);
 
 	void unregister(SessionEventHandler callback);
-
-	void register(PackageMetadataProvider provider);
-
-	void unregister(PackageMetadataProvider provider);
 }

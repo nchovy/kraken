@@ -146,12 +146,7 @@ public class MsgbusPluginHandler extends PrimitiveHandler implements MessageHand
 		handler.method.invoke(handler.plugin, new Object[] { req, resp });
 	}
 
-	@SuppressWarnings("deprecation")
 	private boolean isGuest(Session session) {
-		// for backward compatiebility
-		if (session.getOrgId() != null && session.getAdminId() != null)
-			return false;
-
 		if (session.getOrgDomain() != null && session.getAdminLoginName() != null)
 			return false;
 

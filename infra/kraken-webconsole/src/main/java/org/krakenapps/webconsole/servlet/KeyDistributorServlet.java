@@ -15,7 +15,6 @@
  */
 package org.krakenapps.webconsole.servlet;
 
-
 import java.io.IOException;
 import java.util.UUID;
 
@@ -64,14 +63,14 @@ public class KeyDistributorServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		String key = UUID.randomUUID().toString();
 
-		int id = Integer.valueOf(req.getParameter("session_id"));
+		String id = req.getParameter("session_id");
 		Session session = msgbus.getSession(id);
 		if (session == null) {
 			logger.warn("kraken webconsole: cannot issue enc key, unknown session {}", id);
 			return;
 		}
 
-		logger.trace("kraken webconsole: session [{}] new enc key [{}]", session.getId(), key);
+		logger.trace("kraken webconsole: session [{}] new enc key [{}]", session.getGuid(), key);
 
 		session.setProperty("enc_key", key);
 		resp.getWriter().write(key);

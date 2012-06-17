@@ -27,7 +27,6 @@ import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.MessageHandler;
 import org.krakenapps.msgbus.MsgbusException;
-import org.krakenapps.msgbus.PackageMetadataProvider;
 import org.krakenapps.msgbus.PermissionChecker;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.ResourceApi;
@@ -47,10 +46,9 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	private final Logger logger = LoggerFactory.getLogger(MessageBusImpl.class.getName());
 
 	private ConcurrentMap<String, Set<String>> pluginMessageMap;
-	private ConcurrentMap<Integer, Session> sessionMap;
+	private ConcurrentMap<String, Session> sessionMap;
 	private Set<SessionEventHandler> sessionEventListeners;
 	private ConcurrentMap<String, Set<MessageHandler>> messageHandlerMap;
-	private ConcurrentMap<String, PackageMetadataProvider> packageProviderMap;
 	private Set<PermissionChecker> permissionCheckers = Collections
 			.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
 	private final ExecutorService threadPool;
@@ -62,10 +60,9 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 		super(bc, PermissionChecker.class.getName(), null);
 
 		pluginMessageMap = new ConcurrentHashMap<String, Set<String>>();
-		sessionMap = new ConcurrentHashMap<Integer, Session>();
+		sessionMap = new ConcurrentHashMap<String, Session>();
 		sessionEventListeners = Collections.newSetFromMap(new ConcurrentHashMap<SessionEventHandler, Boolean>());
 		messageHandlerMap = new ConcurrentHashMap<String, Set<MessageHandler>>();
-		packageProviderMap = new ConcurrentHashMap<String, PackageMetadataProvider>();
 
 		threadPool = Executors.newCachedThreadPool();
 	}
@@ -107,11 +104,6 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 		super.removedService(reference, service);
 	}
 
-	@Override
-	public Collection<String> getPackageKeys() {
-		return new ArrayList<String>(packageProviderMap.keySet());
-	}
-
 	public Collection<String> getPluginNames() {
 		Set<String> set = new HashSet<String>();
 		for (String pluginName : pluginMessageMap.keySet())
@@ -135,7 +127,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	public Collection<Session> getSessions() {
 		Set<Session> sessions = new HashSet<Session>();
 
-		for (Integer key : sessionMap.keySet()) {
+		for (String key : sessionMap.keySet()) {
 			Session session = sessionMap.get(key);
 			if (session != null)
 				sessions.add(session);
@@ -145,25 +137,13 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	}
 
 	@Override
+	public Session getSession(String guid) {
+		return null;
+	}
+
+	@Override
 	public Session getSession(int id) {
 		return sessionMap.get(id);
-	}
-
-	@Override
-	public String getPackageName(String key) {
-		return getPackageName(key, null);
-	}
-
-	@Override
-	public String getPackageName(String key, Locale locale) {
-		PackageMetadataProvider provider = packageProviderMap.get(key);
-		if (provider == null)
-			return null;
-
-		if (locale == null)
-			return provider.getName();
-
-		return provider.getName(locale.getLanguage());
 	}
 
 	@Override
@@ -253,7 +233,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	}
 
 	public void openSession(Session session) {
-		sessionMap.put(session.getId(), session);
+		sessionMap.put(session.getGuid(), session);
 
 		for (SessionEventHandler handler : sessionEventListeners) {
 			handler.sessionOpened(session);
@@ -264,7 +244,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 		if (session == null)
 			return;
 
-		sessionMap.remove(session.getId());
+		sessionMap.remove(session.getGuid());
 
 		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed", new Object[] { session,
 				session.getOrgDomain(), session.getAdminLoginName() });
@@ -304,16 +284,6 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 	public void unregister(SessionEventHandler handler) {
 		sessionEventListeners.remove(handler);
-	}
-
-	@Override
-	public void register(PackageMetadataProvider provider) {
-		packageProviderMap.putIfAbsent(provider.getKey(), provider);
-	}
-
-	@Override
-	public void unregister(PackageMetadataProvider provider) {
-		packageProviderMap.remove(provider.getKey());
 	}
 
 	private void reduceStackTrace(InvocationTargetException e) {

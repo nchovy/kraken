@@ -12,7 +12,7 @@ public class Message {
 
 	private String guid;
 	private Type type;
-	private int session;
+	private String session;
 	private String requestId;
 	private String source;
 	private String target;
@@ -26,7 +26,7 @@ public class Message {
 		Message resp = new Message();
 		resp.setRequestId(msg.getGuid());
 		resp.setType(Type.Response);
-		resp.setSession(session.getId());
+		resp.setSession(session.getGuid());
 		resp.setTarget(msg.getSource());
 		resp.setMethod(msg.getMethod());
 		return resp;
@@ -64,11 +64,11 @@ public class Message {
 		this.type = type;
 	}
 
-	public int getSession() {
+	public String getSession() {
 		return session;
 	}
 
-	public void setSession(int session) {
+	public void setSession(String session) {
 		this.session = session;
 	}
 
@@ -111,11 +111,11 @@ public class Message {
 	public void setParameters(Map<String, Object> parameters) {
 		this.parameters = parameters;
 	}
-	
+
 	public Object getParameter(String key) {
-		return parameters.get(key); 
+		return parameters.get(key);
 	}
-	
+
 	public Integer getIntParameter(String key) {
 		if (!parameters.containsKey(key))
 			return null;

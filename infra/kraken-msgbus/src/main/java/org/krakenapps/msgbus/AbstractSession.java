@@ -3,12 +3,15 @@ package org.krakenapps.msgbus;
 import java.net.InetAddress;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractSession implements Session {
+	private String guid;
 	private Map<String, Object> params;
 
 	public AbstractSession() {
+		this.guid = UUID.randomUUID().toString();
 		this.params = new ConcurrentHashMap<String, Object>();
 	}
 
@@ -18,16 +21,6 @@ public abstract class AbstractSession implements Session {
 			return new Locale("en");
 
 		return new Locale((String) params.get("locale"));
-	}
-
-	@Override
-	public Integer getOrgId() {
-		return getInt("org_id");
-	}
-
-	@Override
-	public Integer getAdminId() {
-		return getInt("admin_id");
 	}
 
 	@Override
@@ -66,8 +59,13 @@ public abstract class AbstractSession implements Session {
 	}
 
 	@Override
+	public String getGuid() {
+		return guid;
+	}
+
+	@Override
 	public int getId() {
-		return 0;
+		return guid.hashCode();
 	}
 
 	@Override

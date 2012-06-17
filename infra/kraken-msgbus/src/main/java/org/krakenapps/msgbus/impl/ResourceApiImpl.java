@@ -1,5 +1,7 @@
 package org.krakenapps.msgbus.impl;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -15,6 +17,11 @@ public class ResourceApiImpl implements ResourceApi {
 
 	public ResourceApiImpl() {
 		handlers = new ConcurrentHashMap<String, ResourceHandler>();
+	}
+
+	@Override
+	public Collection<String> getResourceHandlerKeys() {
+		return new ArrayList<String>(handlers.keySet());
 	}
 
 	@Override

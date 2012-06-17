@@ -16,7 +16,6 @@
 package org.krakenapps.webconsole.impl;
 
 import java.net.InetAddress;
-import java.util.Random;
 
 import org.krakenapps.httpd.WebSocket;
 import org.krakenapps.msgbus.AbstractSession;
@@ -26,16 +25,10 @@ import org.slf4j.LoggerFactory;
 
 public class WebSocketSession extends AbstractSession {
 	private final Logger logger = LoggerFactory.getLogger(WebSocketSession.class.getName());
-	private int id;
 	private WebSocket socket;
 
 	public WebSocketSession(WebSocket socket) {
-		this.id = Math.abs(new Random().nextInt(Integer.MAX_VALUE));
 		this.socket = socket;
-	}
-
-	public int getId() {
-		return id;
 	}
 
 	@Override

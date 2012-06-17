@@ -7,11 +7,16 @@ public class PushCondition {
 	private Map<String, Object> options;
 
 	public PushCondition(Integer orgId, int sessionId, int processId, String callback, Map<String, Object> options) {
-		this.k = new Key(orgId, sessionId, processId, callback);
+		this.k = new Key(orgId, Integer.toString(sessionId), processId, callback);
 		this.options = options;
 	}
 
 	public PushCondition(String orgDomain, int sessionId, int processId, String callback, Map<String, Object> options) {
+		this.k = new Key(orgDomain, Integer.toString(sessionId), processId, callback);
+		this.options = options;
+	}
+
+	public PushCondition(String orgDomain, String sessionId, int processId, String callback, Map<String, Object> options) {
 		this.k = new Key(orgDomain, sessionId, processId, callback);
 		this.options = options;
 	}
@@ -33,11 +38,11 @@ public class PushCondition {
 		this.k.orgId = orgId;
 	}
 
-	public int getSessionId() {
+	public String getSessionId() {
 		return k.sessionId;
 	}
 
-	public void setSessionId(int sessionId) {
+	public void setSessionId(String sessionId) {
 		this.k.sessionId = sessionId;
 	}
 
@@ -68,18 +73,18 @@ public class PushCondition {
 	public static class Key {
 		private Integer orgId;
 		private String orgDomain;
-		private int sessionId;
+		private String sessionId;
 		private int processId;
 		private String callback;
 
-		public Key(Integer orgId, int sessionId, int processId, String callback) {
+		public Key(Integer orgId, String sessionId, int processId, String callback) {
 			this.orgId = orgId;
 			this.sessionId = sessionId;
 			this.processId = processId;
 			this.callback = callback;
 		}
 
-		public Key(String orgDomain, int sessionId, int processId, String callback) {
+		public Key(String orgDomain, String sessionId, int processId, String callback) {
 			this.orgDomain = orgDomain;
 			this.sessionId = sessionId;
 			this.processId = processId;
@@ -95,7 +100,7 @@ public class PushCondition {
 			return orgDomain;
 		}
 
-		public int getSessionId() {
+		public String getSessionId() {
 			return sessionId;
 		}
 
@@ -115,7 +120,7 @@ public class PushCondition {
 			result = prime * result + ((orgDomain == null) ? 0 : orgDomain.hashCode());
 			result = prime * result + ((orgId == null) ? 0 : orgId.hashCode());
 			result = prime * result + processId;
-			result = prime * result + sessionId;
+			result = prime * result + ((sessionId == null) ? 0 : sessionId.hashCode());
 			return result;
 		}
 

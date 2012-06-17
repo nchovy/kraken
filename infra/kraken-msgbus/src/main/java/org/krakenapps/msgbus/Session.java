@@ -4,15 +4,12 @@ import java.net.InetAddress;
 import java.util.Locale;
 
 public interface Session {
+	@Deprecated
 	int getId();
 
-	@Deprecated
-	Integer getOrgId();
+	String getGuid();
 
 	String getOrgDomain();
-
-	@Deprecated
-	Integer getAdminId();
 
 	String getAdminLoginName();
 
