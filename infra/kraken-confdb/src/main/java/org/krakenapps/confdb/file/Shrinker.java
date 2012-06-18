@@ -35,7 +35,7 @@ public class Shrinker {
 		db.lock();
 
 		try {
-			logger.debug("kraken confdb: start shrink for " + count + " logs");
+			logger.debug("kraken confdb: start shrink for {} logs", count);
 			List<CommitLog> logs = getSortedCommitLogs(count);
 
 			TreeSet<Integer> manifestIds = new TreeSet<Integer>();
@@ -57,6 +57,7 @@ public class Shrinker {
 			writeNewChangeLog(logs, writeNewManifestLog(newManifests));
 
 			renameFiles(configEntries);
+			removeOldFiles();
 		} catch (IOException e) {
 			revertFileNames();
 			logger.error("kraken confdb: shrink fail", e);
@@ -67,8 +68,15 @@ public class Shrinker {
 		logger.debug("kraken confdb: shrink complete");
 	}
 
-	private void loadManifests(TreeSet<Integer> manifestIds, TreeSet<ConfigEntry> configEntries,
-			List<Manifest> manifests) throws IOException {
+	private void removeOldFiles() {
+		for (File f : new File(dbDir.getAbsolutePath()).listFiles()) {
+			if (f.getName().startsWith("old_") && (f.getName().endsWith(".log") || f.getName().endsWith(".dat")))
+				f.delete();
+		}
+	}
+
+	private void loadManifests(TreeSet<Integer> manifestIds, TreeSet<ConfigEntry> configEntries, List<Manifest> manifests)
+			throws IOException {
 		ManifestIterator it = null;
 		try {
 			it = db.getManifestIterator(manifestIds);
@@ -182,9 +190,8 @@ public class Shrinker {
 			changeLogWriter = new RevLogWriter(changeLogFile, changeDatFile);
 			for (CommitLog c : logs) {
 				ChangeLog changeLog = (ChangeLog) c;
-				ChangeSetWriter.log(changeLogWriter, changeLog.getChangeSet(),
-						manifestIds.get(changeLog.getManifestId()), changeLog.getCommitter(), changeLog.getMessage(),
-						changeLog.getCreated());
+				ChangeSetWriter.log(changeLogWriter, changeLog.getChangeSet(), manifestIds.get(changeLog.getManifestId()),
+						changeLog.getCommitter(), changeLog.getMessage(), changeLog.getCreated());
 			}
 		} finally {
 			if (changeLogWriter != null)
@@ -226,8 +233,8 @@ public class Shrinker {
 						reader.close();
 					if (writer != null)
 						writer.close();
-					writer = new RevLogWriter(new File(dbDir, "new_col" + c.getColId() + ".log"), new File(dbDir,
-							"new_col" + c.getColId() + ".dat"));
+					writer = new RevLogWriter(new File(dbDir, "new_col" + c.getColId() + ".log"), new File(dbDir, "new_col"
+							+ c.getColId() + ".dat"));
 					reader = new RevLogReader(new File(dbDir, "col" + c.getColId() + ".log"), new File(dbDir, "col"
 							+ c.getColId() + ".dat"));
 					collectionId = c.getColId();

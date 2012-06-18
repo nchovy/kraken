@@ -14,6 +14,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.cron.PeriodicJob;
 import org.krakenapps.logstorage.DiskLackAction;
 import org.krakenapps.logstorage.DiskLackCallback;
 import org.krakenapps.logstorage.DiskSpaceType;
@@ -23,6 +24,7 @@ import org.krakenapps.logstorage.LogTableRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@PeriodicJob("* * * * *")
 @Component(name = "logstorage-monitor")
 @Provides
 public class LogStorageMonitorEngine implements LogStorageMonitor {
@@ -130,6 +132,14 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 
 	@Override
 	public void run() {
+		try {
+			runOnce();
+		} catch (Exception e) {
+			logger.error("kraken logstorage: storage monitor error", e);
+		}
+	}
+
+	private void runOnce() {
 		if (isDiskLack()) {
 			logger.warn("kraken logstorage: not enough disk space");
 			if (diskLackAction == DiskLackAction.StopLogging) {
