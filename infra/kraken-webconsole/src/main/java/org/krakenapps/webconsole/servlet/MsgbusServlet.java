@@ -2,6 +2,8 @@ package org.krakenapps.webconsole.servlet;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Queue;
@@ -123,8 +125,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 
 			String text = os.toString("utf-8");
 			if (text != null && text.trim().isEmpty()) {
-				logger.debug("kraken webconsole: empty text from [{}], request [{}]", req.getRemoteAddr(),
-						req.getRequestURI());
+				logger.debug("kraken webconsole: empty text from [{}], request [{}]", req.getRemoteAddr(), req.getRequestURI());
 				resp.sendError(500);
 				return;
 			}
@@ -231,6 +232,24 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 		}
 
 		@Override
+		public InetAddress getLocalAddress() {
+			try {
+				return InetAddress.getByName(req.getLocalAddr());
+			} catch (UnknownHostException e) {
+				return null;
+			}
+		}
+
+		@Override
+		public InetAddress getRemoteAddress() {
+			try {
+				return InetAddress.getByName(req.getRemoteAddr());
+			} catch (UnknownHostException e) {
+				return null;
+			}
+		}
+
+		@Override
 		public void send(Message msg) {
 			Session session = ensureSession(req, resp, false);
 			String payload = KrakenMessageEncoder.encode(session, msg);
@@ -271,8 +290,7 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			frames.add(payload);
 
 			if (contexts.containsKey(msg.getSession())) {
-				logger.debug("kraken webconsole: sending trap immediately [session={}, payload={}]", msg.getSession(),
-						payload);
+				logger.debug("kraken webconsole: sending trap immediately [session={}, payload={}]", msg.getSession(), payload);
 				flushTraps(msg.getSession(), frames);
 			} else
 				logger.debug("kraken webconsole: queueing trap [session={}, payload={}]", msg.getSession(), payload);
@@ -291,8 +309,8 @@ public class MsgbusServlet extends HttpServlet implements Runnable {
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			Date since = new Date(session.getCreationTime());
 			Date lastAccess = new Date(session.getLastAccessedTime());
-			sessiondata = String.format(", jsession=%s, since=%s, lastaccess=%s", session.getId(),
-					dateFormat.format(since), dateFormat.format(lastAccess));
+			sessiondata = String.format(", jsession=%s, since=%s, lastaccess=%s", session.getId(), dateFormat.format(since),
+					dateFormat.format(lastAccess));
 		}
 		return sessiondata;
 	}
