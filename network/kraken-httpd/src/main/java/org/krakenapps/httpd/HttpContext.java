@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletResponse;
@@ -95,10 +94,9 @@ public class HttpContext {
 			servlet.service(request, response);
 		} catch (FileNotFoundException e) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-		} catch (IOException e) {
+		} catch (Throwable t) {
+			logger.error("kraken httpd: servlet error", t);
 			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-		} catch (ServletException e) {
-			logger.error("kraken httpd: servlet service error.", e);
 		} finally {
 			if (response != null && !request.isAsyncStarted())
 				response.close();
@@ -133,7 +131,6 @@ public class HttpContext {
 
 	@Override
 	public String toString() {
-		return "HTTP Context [" + name + ", sessions=" + httpSessions.size() + "]\n>>\n" + servletContext
-				+ webSocketManager;
+		return "HTTP Context [" + name + ", sessions=" + httpSessions.size() + "]\n>>\n" + servletContext + webSocketManager;
 	}
 }
