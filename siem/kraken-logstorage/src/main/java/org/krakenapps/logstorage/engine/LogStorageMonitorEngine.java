@@ -116,13 +116,11 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 		if (minFreeSpaceType == DiskSpaceType.Percentage) {
 			int percent = (int) (usable * 100 / total);
 			if (percent < minFreeSpaceValue) {
-				logger.warn("kraken logstorage: setted minimum free space {}%, now free space {}%", minFreeSpaceValue, percent);
 				return true;
 			}
 		} else if (minFreeSpaceType == DiskSpaceType.Megabyte) {
 			int mega = (int) (usable / 1048576);
 			if (mega < minFreeSpaceValue) {
-				logger.warn("kraken logstorage: setted minimum free space {} MB, now free space {} MB", minFreeSpaceValue, mega);
 				return true;
 			}
 		}
@@ -141,7 +139,8 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 
 	private void runOnce() {
 		if (isDiskLack()) {
-			logger.warn("kraken logstorage: not enough disk space");
+			logger.warn("kraken logstorage: not enough disk space, current minimum free space config [{}] {}", minFreeSpaceValue,
+					(minFreeSpaceType == DiskSpaceType.Percentage ? "%" : "MB"));
 			if (diskLackAction == DiskLackAction.StopLogging) {
 				logger.info("kraken logstorage: stop logging");
 				storage.stop();
@@ -154,6 +153,7 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 				Collections.sort(files, new LogFileComparator());
 				int index = 0;
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
 				do {
 					if (index >= files.size()) {
 						logger.info("kraken logstorage: stop logging");
