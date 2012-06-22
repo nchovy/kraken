@@ -138,12 +138,12 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 	@Override
 	public Session getSession(String guid) {
-		return null;
+		return sessionMap.get(guid);
 	}
 
 	@Override
 	public Session getSession(int id) {
-		return sessionMap.get(id);
+		return getSession(Integer.toString(id));
 	}
 
 	@Override
@@ -246,8 +246,8 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 		sessionMap.remove(session.getGuid());
 
-		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed", new Object[] { session,
-				session.getOrgDomain(), session.getAdminLoginName() });
+		logger.trace("kraken msgbus: session={}, org domain={}, admin login name={} closed",
+				new Object[] { session, session.getOrgDomain(), session.getAdminLoginName() });
 
 		for (SessionEventHandler handler : sessionEventListeners) {
 			handler.sessionClosed(session);
@@ -333,8 +333,8 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 				handler.handleMessage(request, response);
 				respondMessage.setParameters(response);
 			} catch (SecurityException e) {
-				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]",
-						new Object[] { session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
+				logger.warn("kraken msgbus: security violation [domain={}, admin_login_name={}, method={}]", new Object[] {
+						session.getOrgDomain(), session.getAdminLoginName(), message.getMethod() });
 				logger.debug("kraken msgbus: security violation stacktrace", e);
 				respondMessage = Message.createError(session, message, "security", "Security Violation");
 			} catch (IllegalArgumentException e) {
@@ -368,8 +368,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 					respondMessage = Message.createError(session, message, errorCode, errorMessage);
 					respondMessage.setParameters(wce.getParameters());
 				} else {
-					respondMessage = Message.createError(session, message, "general-error",
-							"invocation target exception");
+					respondMessage = Message.createError(session, message, "general-error", "invocation target exception");
 				}
 
 				reduceStackTrace(e);

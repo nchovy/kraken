@@ -45,6 +45,14 @@ public class KeyDistributorServlet extends HttpServlet {
 	@Requires
 	private MessageBus msgbus;
 
+	public void setHttpService(HttpService httpd) {
+		this.httpd = httpd;
+	}
+
+	public void setMessageBus(MessageBus msgbus) {
+		this.msgbus = msgbus;
+	}
+
 	/**
 	 * Register servlet to servlet registry of webconsole
 	 */

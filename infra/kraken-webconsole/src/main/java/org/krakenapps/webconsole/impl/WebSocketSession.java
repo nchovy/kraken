@@ -59,7 +59,7 @@ public class WebSocketSession extends AbstractSession {
 
 	@Override
 	public String toString() {
-		return socket.toString();
+		return "websocket session, guid=" + getGuid() + ", remote=" + socket.getRemoteAddress();
 	}
 
 }
