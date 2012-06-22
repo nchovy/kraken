@@ -75,22 +75,23 @@ public class LogFileRepairer {
 		}
 	}
 
-	private void truncateBrokenDataBlock(File dataPath, RandomAccessFile dataFile,
-			List<LogDataBlockHeader> dataBlockHeaders) throws IOException {
+	private void truncateBrokenDataBlock(File dataPath, RandomAccessFile dataFile, List<LogDataBlockHeader> dataBlockHeaders)
+			throws IOException {
+		if (dataBlockHeaders.size() == 0)
+			return;
+
 		LogDataBlockHeader lastDataBlockHeader = dataBlockHeaders.get(dataBlockHeaders.size() - 1);
 		long logicalEndOfData = lastDataBlockHeader.getFilePointer() + 24 + lastDataBlockHeader.getCompressedLength();
 
 		long dataOver = dataFile.length() - logicalEndOfData;
 		if (dataOver > 0) {
 			dataFile.setLength(logicalEndOfData);
-			logger.info("kraken logstorage: truncated immature last data block [{}], removed [{}] bytes", dataPath,
-					dataOver);
+			logger.info("kraken logstorage: truncated immature last data block [{}], removed [{}] bytes", dataPath, dataOver);
 		}
 	}
 
-	private LogFileFixReport generate(File indexPath, File dataPath, RandomAccessFile indexFile,
-			RandomAccessFile dataFile, List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders)
-			throws IOException {
+	private LogFileFixReport generate(File indexPath, File dataPath, RandomAccessFile indexFile, RandomAccessFile dataFile,
+			List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders) throws IOException {
 		logger.trace("kraken logstorage: checking incomplete index block, file [{}]", indexPath);
 
 		// truncate data file
@@ -126,8 +127,8 @@ public class LogFileRepairer {
 			int offset = indexBlocks.size();
 			int missingBlockCount = dataBlockHeaders.size() - indexBlocks.size();
 			byte[] intbuf = new byte[4];
-			logger.info("kraken logstorage: index block [{}], data block [{}], missing count [{}]", new Object[] {
-					indexBlocks.size(), dataBlockHeaders.size(), missingBlockCount });
+			logger.info("kraken logstorage: index block [{}], data block [{}], missing count [{}]",
+					new Object[] { indexBlocks.size(), dataBlockHeaders.size(), missingBlockCount });
 
 			for (int i = 0; i < missingBlockCount; i++) {
 				LogDataBlockHeader blockHeader = dataBlockHeaders.get(offset + i);
@@ -143,8 +144,8 @@ public class LogFileRepairer {
 				}
 
 				addedLogs += logOffsets.size();
-				logger.info("kraken logstorage: rewrite index block for {}, log count [{}], index file [{}]",
-						new Object[] { blockHeader, logOffsets.size(), indexPath });
+				logger.info("kraken logstorage: rewrite index block for {}, log count [{}], index file [{}]", new Object[] {
+						blockHeader, logOffsets.size(), indexPath });
 			}
 
 			LogFileFixReport report = new LogFileFixReport();
@@ -200,9 +201,8 @@ public class LogFileRepairer {
 		return output;
 	}
 
-	private LogFileFixReport truncate(File indexPath, File dataPath, RandomAccessFile indexFile,
-			RandomAccessFile dataFile, List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders)
-			throws IOException {
+	private LogFileFixReport truncate(File indexPath, File dataPath, RandomAccessFile indexFile, RandomAccessFile dataFile,
+			List<LogIndexBlock> indexBlocks, List<LogDataBlockHeader> dataBlockHeaders) throws IOException {
 		// truncate index file
 		int validLogCount = 0;
 
