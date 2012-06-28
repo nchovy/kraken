@@ -109,7 +109,7 @@ public class RpcSessionImpl implements RpcSession {
 		// send rpc call message
 		RpcConnection conn = getConnection();
 		if (!method.equals("peering-request") && !method.equals("authenticate"))
-			conn.waitPeering();
+			conn.waitPeering(timeout);
 
 		RpcBlockingTable table = conn.getBlockingTable();
 

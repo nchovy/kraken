@@ -341,7 +341,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 				if (logger.isTraceEnabled())
 					logger.trace("kraken rpc: binding service [{}] to new connection [{}]", serviceName, newConnection);
 			} catch (Throwable t) {
-				logger.error("kraken rpc: cannot bind service [{}] to connection [{}]", serviceName, newConnection);
+				logger.error("kraken rpc: cannot bind service [" + serviceName + "] to connection [" + newConnection + "]", t);
 			}
 		}
 

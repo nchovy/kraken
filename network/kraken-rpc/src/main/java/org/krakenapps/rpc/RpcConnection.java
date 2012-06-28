@@ -106,5 +106,7 @@ public interface RpcConnection {
 	
 	void waitPeering();
 	
+	void waitPeering(long timeout);
+	
 	void setControlReady();
 }

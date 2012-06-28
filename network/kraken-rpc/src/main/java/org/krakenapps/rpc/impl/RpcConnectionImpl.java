@@ -176,9 +176,6 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 	@Override
 	public void bind(String name, RpcService service) {
-		if (bindingMap.containsKey(name))
-			throw new IllegalStateException("duplicated service name: " + name);
-
 		logger.trace("kraken rpc: binding {}:{} to {}", new Object[] { channel.getId(), name, service.getClass().getName() });
 		bindingMap.put(name, new RpcServiceBindingImpl(name, service));
 	}
@@ -406,13 +403,18 @@ public class RpcConnectionImpl implements RpcConnection, RpcSessionEventCallback
 
 	@Override
 	public void waitPeering() {
+		waitPeering(0);
+	}
+
+	@Override
+	public void waitPeering(long timeout) {
 		try {
 			long begin = new Date().getTime();
 			peeringLock.lock();
 			while (trustedLevel == null) {
-				if (new Date().getTime() - begin > 5000) {
+				if (timeout > 0 && new Date().getTime() - begin > timeout) {
 					logger.error("kraken rpc: give up waiting peering [{}] response", peerGuid);
-					break;
+					throw new RpcException("peering timeout: " + timeout);
 				}
 
 				peeringReady.await(200, TimeUnit.MILLISECONDS);
