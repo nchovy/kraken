@@ -325,7 +325,7 @@ public class AdminApiImpl implements AdminApi {
 
 						Map<String, Object> m = new HashMap<String, Object>();
 						m.put("login_name", peek.loginName);
-						m.put("session_id", peek.session.getId());
+						m.put("session_id", peek.session.getGuid());
 						m.put("ip", peek.session.getRemoteAddress().getHostAddress());
 						throw new DOMException("max-session", m);
 					}

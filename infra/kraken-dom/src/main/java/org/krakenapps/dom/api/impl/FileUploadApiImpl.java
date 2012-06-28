@@ -76,7 +76,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	private Logger logger = LoggerFactory.getLogger(FileUploadApiImpl.class);
 	private ConcurrentMap<String, UploadItem> uploadTokens = new ConcurrentHashMap<String, FileUploadApiImpl.UploadItem>();
-	private ConcurrentMap<Integer, String> sessionDownloadTokens = new ConcurrentHashMap<Integer, String>(); // session-token
+	private ConcurrentMap<String, String> sessionDownloadTokens = new ConcurrentHashMap<String, String>(); // session-token
 	private ConcurrentMap<String, DownloadToken> downloadTokens = new ConcurrentHashMap<String, DownloadToken>(); // session-token
 
 	private EntityEventListener<User> userEventListener = new DefaultEntityEventListener<User>() {
@@ -341,7 +341,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	public String setDownloadToken(Session session) {
 		userApi.getUser(session.getOrgDomain(), session.getAdminLoginName());
 		DownloadToken token = new DownloadToken(session);
-		String old = sessionDownloadTokens.putIfAbsent(session.getId(), token.guid);
+		String old = sessionDownloadTokens.putIfAbsent(session.getGuid(), token.guid);
 		if (old != null)
 			return old;
 
@@ -365,7 +365,7 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Override
 	public void removeDownloadToken(Session session) {
-		String token = sessionDownloadTokens.remove(session.getId());
+		String token = sessionDownloadTokens.remove(session.getGuid());
 		if (token != null)
 			downloadTokens.remove(token);
 

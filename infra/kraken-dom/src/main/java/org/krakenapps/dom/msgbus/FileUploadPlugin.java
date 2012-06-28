@@ -59,7 +59,8 @@ public class FileUploadPlugin {
 	@MsgbusMethod
 	public void updateFileSpace(Request req, Response resp) {
 		FileSpace before = fileUploadApi.getFileSpace(req.getOrgDomain(), req.getString("guid"));
-		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(before, req.getParams(), conf.getParseCallback(req.getOrgDomain()));
+		FileSpace space = (FileSpace) PrimitiveConverter.overwrite(before, req.getParams(),
+				conf.getParseCallback(req.getOrgDomain()));
 		fileUploadApi.updateFileSpace(req.getOrgDomain(), req.getAdminLoginName(), space);
 	}
 
@@ -78,7 +79,7 @@ public class FileUploadPlugin {
 		String token = fileUploadApi.setUploadToken(uploadToken, null);
 
 		final String template = "kraken dom: set upload info, session [{}], token [{}], space [{}], filename [{}], size [{}]";
-		logger.info(template, new Object[] { req.getSession().getId(), token, spaceGuid, fileName, fileSize });
+		logger.info(template, new Object[] { req.getSession().getGuid(), token, spaceGuid, fileName, fileSize });
 
 		resp.put("token", token);
 		resp.put("file_guid", uploadToken.getFileGuid());
@@ -109,7 +110,7 @@ public class FileUploadPlugin {
 		if (session == null)
 			return;
 
-		logger.trace("kraken dom: clearing download token for session {}", session.getId());
+		logger.trace("kraken dom: clearing download token for session {}", session.getGuid());
 		if (fileUploadApi != null)
 			fileUploadApi.removeDownloadToken(session);
 	}
