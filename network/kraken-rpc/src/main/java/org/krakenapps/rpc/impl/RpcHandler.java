@@ -84,7 +84,8 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 		scheduler = new Thread(this, "Kraken RPC Scheduler");
 		queue = new LinkedBlockingQueue<Runnable>();
-		executor = new ThreadPoolExecutor(1, 8, 10, TimeUnit.SECONDS, queue, new ThreadFactory() {
+		int cpuCount = Runtime.getRuntime().availableProcessors();
+		executor = new ThreadPoolExecutor(cpuCount, cpuCount, 10, TimeUnit.SECONDS, queue, new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
 				return new Thread(r, "Kraken RPC Handler");
@@ -300,6 +301,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			return;
 
 		// passively close
+		logger.trace("kraken rpc: received channel closed event [{}]", connection);
 		connection.close();
 	}
 
@@ -430,7 +432,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		String methodName = msg.getString("method");
 
 		if (logger.isTraceEnabled())
-			logger.trace("kraken rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
+			logger.trace("kraken rpc: handle msg - connection: {}, session: {}, message id: {}, type: {}, method: {}",
 					new Object[] { conn.getId(), sessionId, id, type, methodName });
 
 		RpcSession session = conn.findSession(sessionId);
@@ -505,6 +507,14 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
 		Channel channel = ctx.getChannel();
 		RpcMessage msg = new RpcMessage((Object[]) event.getMessage());
+		if (logger.isDebugEnabled()) {
+			Integer sessionId = (Integer) msg.getHeader("session");
+			Integer id = (Integer) msg.getHeader("id");
+			String methodName = msg.getString("method");
+			String type = (String) msg.getHeader("type");
+			logger.debug("kraken rpc: msg received - connection: {}, session: {}, message id: {}, type: {}, method: {}",
+					new Object[] { channel.getId(), sessionId, id, type, methodName });
+		}
 
 		// handle return or exception (fast and short path)
 		String type = (String) msg.getHeader("type");
@@ -640,6 +650,8 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 	@Override
 	public void connectionClosed(RpcConnection connection) {
+		logger.trace("kraken rpc: connection closed [{}], removed from connection map", connection);
+
 		// remove connection
 		connMap.remove(connection.getId());
 
