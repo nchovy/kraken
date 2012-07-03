@@ -374,7 +374,7 @@ public class CertificateAuthorityScript implements Script {
 			return;
 		}
 
-		for (RevokedCertificate c : authority.getRevokedCertifcates()) {
+		for (RevokedCertificate c : authority.getRevokedCertificates()) {
 			context.println(c);
 		}
 	}
