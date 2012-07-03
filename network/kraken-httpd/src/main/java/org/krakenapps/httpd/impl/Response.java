@@ -41,11 +41,11 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
-import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.slf4j.Logger;
@@ -174,17 +174,14 @@ public class Response implements HttpServletResponse {
 				if (logger.isDebugEnabled())
 					logger.debug("kraken httpd: channel [{}], flush chunk [{}]", ctx.getChannel(), buf.readableBytes());
 
-				ChannelBuffer dup = buf.duplicate();
-				ctx.getChannel().write(new DefaultHttpChunk(dup));
-				buf.clear();
+				ctx.getChannel().write(new DefaultHttpChunk(buf));
+				buf = ChannelBuffers.dynamicBuffer();
 			} else if (sentHeader) {
 				if (logger.isDebugEnabled())
-					logger.debug("kraken httpd: channel [{}], flush response [{}]", ctx.getChannel(),
-							buf.readableBytes());
+					logger.debug("kraken httpd: channel [{}], flush response [{}]", ctx.getChannel(), buf.readableBytes());
 
-				ChannelBuffer dup = buf.duplicate();
-				ctx.getChannel().write(dup);
-				buf.clear();
+				ctx.getChannel().write(buf);
+				buf = ChannelBuffers.dynamicBuffer();
 			}
 		}
 
@@ -281,14 +278,11 @@ public class Response implements HttpServletResponse {
 			msg = "";
 
 		String body = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n" //
-				+ "<html><head><title>" + sc + " "
-				+ status.getReasonPhrase()
+				+ "<html><head><title>" + sc + " " + status.getReasonPhrase()
 				+ "</title></head>\n" //
-				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>"
-				+ msg
+				+ "<body><h1>" + sc + " " + status.getReasonPhrase() + "</h1><pre>" + msg
 				+ "</pre><hr/><address>Kraken HTTPd/"
-				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION)
-				+ "</address></body></html>";
+				+ bc.getBundle().getHeaders().get(Constants.BUNDLE_VERSION) + "</address></body></html>";
 
 		writer.append(body);
 		writer.close();

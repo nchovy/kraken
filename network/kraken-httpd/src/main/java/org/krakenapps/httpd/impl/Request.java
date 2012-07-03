@@ -22,8 +22,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -647,8 +645,7 @@ public class Request implements HttpServletRequest {
 	}
 
 	@Override
-	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-			throws IllegalStateException {
+	public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
 		// TODO Auto-generated method stub
 		return null;
 	}
