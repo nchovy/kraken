@@ -17,6 +17,10 @@ public abstract class EmptyLogQueryCallback implements LogQueryCallback {
 	}
 
 	@Override
+	public void onQueryStatusChange() {
+	}
+
+	@Override
 	public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
 	}
 

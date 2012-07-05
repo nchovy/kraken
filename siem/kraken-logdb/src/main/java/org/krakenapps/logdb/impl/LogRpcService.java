@@ -218,6 +218,20 @@ public class LogRpcService extends SimpleRpcService {
 		}
 
 		@Override
+		public void onQueryStatusChange() {
+			try {
+				logger.info("kraken logdb: status change for query [{}], offset [{}], limit [{}]", new Object[] { query,
+						offset, limit });
+
+				Map<String, Object> params = getMetadata();
+				ClientContext ctx = contexts.get(session);
+				ctx.clientSession.post("onStatusChange", new Object[] { params });
+			} catch (Exception e) {
+				logger.error("kraken logdb: cannot post onPageLoaded", e);
+			}
+		}
+
+		@Override
 		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
 			try {
 				logger.info("kraken logdb: page loaded for query [{}], offset [{}], limit [{}]", new Object[] { query,

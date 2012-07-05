@@ -23,6 +23,8 @@ public interface LogQueryCallback {
 	int offset();
 
 	int limit();
+	
+	void onQueryStatusChange();
 
 	void onPageLoaded(FileBufferList<Map<String, Object>> result);
 
