@@ -220,7 +220,7 @@ public class ShrinkTest {
 		Object o1 = "object1";
 		Object o2 = "object2";
 		long longData = Long.MAX_VALUE;
-		Short shortData = 3276;
+		Short shortData = Short.MAX_VALUE;
 		Object[] os = new Object[2];
 		os[0] = o1;
 		os[1] = o2;
