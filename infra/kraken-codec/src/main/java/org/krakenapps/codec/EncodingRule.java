@@ -825,9 +825,11 @@ public class EncodingRule {
 	public static <T> int lengthOfRawNumber(Class<T> clazz, long value) {
 		if (value < 0) {
 			if (long.class == clazz)
-				return 10; // max length for length
-			else
+				return 10; // max length for long
+			else if (int.class == clazz)
 				return 5; // max length for int
+			else
+				return 3; // max length for short
 		}
 		if (value == 0)
 			return 1;
