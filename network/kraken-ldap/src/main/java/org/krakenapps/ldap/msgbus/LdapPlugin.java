@@ -15,19 +15,32 @@
  */
 package org.krakenapps.ldap.msgbus;
 
-import java.io.UnsupportedEncodingException;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.codec.Base64;
 import org.krakenapps.ldap.DomainUserAccount;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
+import org.krakenapps.ldap.impl.JLdapService;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -40,6 +53,8 @@ import org.slf4j.LoggerFactory;
 
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPException;
+import com.novell.ldap.LDAPJSSESecureSocketFactory;
+import com.novell.ldap.LDAPSocketFactory;
 
 @Component(name = "ldap-plugin")
 @MsgbusPlugin
@@ -163,24 +178,35 @@ public class LdapPlugin {
 	}
 
 	@MsgbusMethod
-	public void testConnection(Request req, Response resp) throws LDAPException, UnsupportedEncodingException {
+	public void testConnection(Request req, Response resp) throws GeneralSecurityException, IOException {
 		String dc = req.getString("dc");
 		Integer port = req.getInteger("port");
 		String account = req.getString("account");
 		String password = req.getString("password");
+		String baseDn = req.getString("base_dn");
 
-		if (port == null)
-			port = LDAPConnection.DEFAULT_PORT;
+		LdapProfile profile = new LdapProfile();
+		profile.setName("test_connection");
+		profile.setDc(dc);
+		profile.setPort(port);
+		profile.setAccount(account);
+		profile.setPassword(password);
+		profile.setBaseDn(baseDn);
 
-		LDAPConnection lc = new LDAPConnection();
-		try {
-			logger.trace("kraken ldap: trying to connect to dc [{}], port [{}]", dc, port);
-			lc.connect(dc, port);
-			lc.bind(LDAPConnection.LDAP_V3, account, password.getBytes("utf-8"));
-		} finally {
-			if (lc.isConnected())
-				lc.disconnect();
+		if (req.has("cert_type") && req.has("cert_base64")) {
+			String type = req.getString("cert_type");
+			String base64 = req.getString("cert_base64");
+			logger.debug("kraken-ldap: user certificate type [{}], base64 [{}]", type, base64);
+			profile.setTrustStore(CertificateType.valueOf(type), base64);
+			if (port == null)
+				profile.setPort(LDAPConnection.DEFAULT_SSL_PORT);
+		} else {
+			if (port == null)
+				profile.setPort(LDAPConnection.DEFAULT_PORT);
 		}
+
+		logger.trace("kraken ldap: create test ldap profile [{}]", profile.toString());
+		ldap.testLdapConnection(profile, req.getInteger("timeout"));
 	}
 
 	@MsgbusMethod

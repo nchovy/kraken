@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,6 +56,7 @@ import com.novell.ldap.LDAPSocketFactory;
 @Component(name = "ldap-service")
 @Provides
 public class JLdapService implements LdapService {
+	private static final int DEFAULT_TIMEOUT = 5000;
 	private final Logger logger = LoggerFactory.getLogger(JLdapService.class);
 
 	@Requires
@@ -262,6 +264,24 @@ public class JLdapService implements LdapService {
 		}
 	}
 
+	@Override
+	public void testLdapConnection(LdapProfile profile, Integer timeout) {
+		if (timeout == null)
+			timeout = DEFAULT_TIMEOUT;
+
+		LDAPConnection conn = null;
+		try {
+			conn = openLdapConnection(profile, timeout);
+		} finally {
+			if (conn != null && conn.isConnected())
+				try {
+					conn.disconnect();
+				} catch (LDAPException e) {
+				}
+		}
+
+	}
+
 	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
 		if (profile.getDc() == null)
 			throw new IllegalArgumentException("ldap domain controller should be not null");
@@ -276,10 +296,12 @@ public class JLdapService implements LdapService {
 			throw new IllegalArgumentException("ldap password should be not null");
 
 		try {
-			if (profile.getTrustStore() != null) {
+			KeyStore ks = profile.getTrustStore();
+
+			if (ks != null) {
 				SSLContext ctx = SSLContext.getInstance("SSL");
 				TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-				tmf.init(profile.getTrustStore());
+				tmf.init(ks);
 				ctx.init(null, tmf.getTrustManagers(), new SecureRandom());
 				LDAPConnection.setSocketFactory(new LDAPJSSESecureSocketFactory(ctx.getSocketFactory()));
 			} else
