@@ -33,6 +33,12 @@ public interface Logger {
 
 	String getDescription();
 
+	boolean isPassive();
+
+	void setPassive(boolean isPassive);
+
+	Date getLastStartDate();
+
 	Date getLastRunDate();
 
 	Date getLastLogDate();
@@ -44,6 +50,8 @@ public interface Logger {
 	LoggerStatus getStatus();
 
 	int getInterval();
+
+	void start();
 
 	void start(int interval);
 
