@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -64,19 +65,41 @@ public class SnmpQueryLogger extends AbstractLogger {
 	private static final int ethernetCsmacd = 6;
 	private static final int timeout = 3000;
 
+	private Snmp snmp;
+	private CommunityTarget commTarget = new CommunityTarget();
+	private PDU pdu = new PDU();
+	private OID ifEntryOid = new OID(Interface.oidInterfaces);
+
 	private long loggerCreated;
 	private SnmpAgent target;
 
 	public SnmpQueryLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, Properties config) {
 		super(hostGuid, name, description, loggerFactory, config);
 		parseConfig(config);
-		loggerCreated = new Date().getTime();
+		init();
 	}
 
 	public SnmpQueryLogger(String hostGuid, String name, String description, LoggerFactory loggerFactory, SnmpAgent agent) {
 		super(hostGuid, name, description, loggerFactory);
 		target = agent;
+		init();
+	}
+
+	private void init() {
 		loggerCreated = new Date().getTime();
+		pdu.add(new VariableBinding(new OID(ifEntryOid)));
+		pdu.setType(PDU.GETBULK);
+		pdu.setMaxRepetitions(10);
+
+		commTarget.setCommunity(new OctetString(target.getCommunity()));
+		commTarget.setVersion(getSnmpVersionContstant(target.getSnmpVersion()));
+		commTarget.setAddress(new UdpAddress(target.getIp() + "/" + Integer.toString(target.getPort())));
+		commTarget.setRetries(2);
+		commTarget.setTimeout(timeout);
+	}
+
+	public void setSnmp(Snmp snmp) {
+		this.snmp = snmp;
 	}
 
 	private void parseConfig(Properties config) {
@@ -105,11 +128,11 @@ public class SnmpQueryLogger extends AbstractLogger {
 
 		// parse versions
 		String version = config.getProperty(SnmpQueryLoggerFactory.ConfigOption.SnmpVersion.getConfigKey());
-		target.setSnmpVersion(getSnmpVersion(Integer.valueOf(version)));
+		target.setSnmpVersion(getSnmpVersion(version));
 	}
 
-	private int getSnmpVersion(Integer version) {
-		if (version == 1) {
+	private int getSnmpVersion(String version) {
+		if (version != null && Integer.valueOf(version) == 1) {
 			return SnmpConstants.version1;
 		} else {
 			return SnmpConstants.version2c;
@@ -119,7 +142,7 @@ public class SnmpQueryLogger extends AbstractLogger {
 	@Override
 	protected void runOnce() {
 		try {
-			ArrayList<VariableBinding> results = query(target);
+			List<VariableBinding> results = query(target);
 			buildLog(target, results);
 		} catch (Exception e) {
 			String targetStr = String.format("for %s:%d", target.getIp(), target.getPort());
@@ -251,7 +274,7 @@ public class SnmpQueryLogger extends AbstractLogger {
 		logParamKeys.put(IfEntry.ifOutQLen, "tx_queue_length");
 	}
 
-	private void buildLog(SnmpAgent target, ArrayList<VariableBinding> results) {
+	private void buildLog(SnmpAgent target, List<VariableBinding> results) {
 		Map<String, Object> data = new HashMap<String, Object>();
 
 		VariableBinding vbIfNumber = results.get(0);
@@ -397,7 +420,6 @@ public class SnmpQueryLogger extends AbstractLogger {
 
 			Log log = new SimpleLog(new Date(), getFullName(), "network-usage", totalMsg, data);
 			write(log);
-
 		} finally {
 			oldValues = newOldValues;
 		}
@@ -445,10 +467,10 @@ public class SnmpQueryLogger extends AbstractLogger {
 			pkt_delta += ((Number) params.get(nucastPkts)).longValue();
 		}
 		long bandwidth = ((Number) params.get(logParamKeys.get(IfEntry.ifSpeed))).longValue();
-		long seconds = (Long) params.get("interval") / 1000;
+		long interval = (Long) params.get("interval");
 
-		bps = (int) ((double) octet_delta / seconds * 8.0);
-		fps = (int) ((double) pkt_delta / seconds);
+		bps = (int) ((double) octet_delta / interval * 8.0 * 1000);
+		fps = (int) ((double) pkt_delta / interval * 1000);
 		if (bandwidth == 0)
 			utilization = 0;
 		else
@@ -457,11 +479,11 @@ public class SnmpQueryLogger extends AbstractLogger {
 			logger.warn("minus utilization: {}, {}, {}, {}", new Object[] { utilization, bps, fps, bandwidth });
 		}
 		if (utilization > 100) {
-			logger.warn("max_ts utilization > 100 !");
+			logger.warn("max_ts utilization > 100 ! ({})", utilization);
 			logger.warn(String.format(
-					"ifIndex: %d, physAddress: %s, interval: %d, octet_delta: %d, pkt_delta: %d, bandwidth: %d",
+					"ifIndex: %d, physAddress: %s, interval(ms): %d, octet_delta: %d, pkt_delta: %d, bandwidth: %d",
 					(Number) params.get(logParamKeys.get(IfEntry.ifIndex)),
-					(String) params.get(logParamKeys.get(IfEntry.ifPhysAddress)), seconds, octet_delta, pkt_delta, bandwidth));
+					(String) params.get(logParamKeys.get(IfEntry.ifPhysAddress)), interval, octet_delta, pkt_delta, bandwidth));
 		}
 
 		return new TrafficSummary(type, utilization, bps, fps);
@@ -529,82 +551,57 @@ public class SnmpQueryLogger extends AbstractLogger {
 		}
 	}
 
-	private ArrayList<VariableBinding> query(SnmpAgent target) throws Exception {
-		Snmp snmp = null;
-		ArrayList<VariableBinding> results = null;
+	private List<VariableBinding> query(SnmpAgent target) throws Exception {
+		List<VariableBinding> results = new ArrayList<VariableBinding>();
 		TransportMapping transport = null;
-		try {
-			CommunityTarget commTarget = new CommunityTarget();
-			commTarget.setCommunity(new OctetString(target.getCommunity()));
-			commTarget.setVersion(getSnmpVersionContstant(target.getSnmpVersion()));
-			commTarget.setAddress(new UdpAddress(target.getIp() + "/" + Integer.toString(target.getPort())));
-			commTarget.setRetries(2);
-			commTarget.setTimeout(timeout);
 
+		if (snmp == null) {
 			transport = new DefaultUdpTransportMapping(new UdpAddress());
 			transport.listen();
-
 			snmp = new Snmp(transport);
+		}
 
-			OID ifEntryOid = new OID(Interface.oidInterfaces);
+		try {
+			ResponseEvent response = snmp.getBulk(pdu, commTarget);
+			PDU responsePdu = response.getResponse();
+			if (responsePdu == null)
+				throw new TimeoutException();
 
-			PDU pdu = new PDU();
-			pdu.add(new VariableBinding(new OID(ifEntryOid)));
-			pdu.setType(PDU.GETBULK);
-			pdu.setMaxRepetitions(10);
+			@SuppressWarnings("unchecked")
+			Vector<VariableBinding> variableBindings = responsePdu.getVariableBindings();
+			results.addAll(variableBindings);
 
-			results = new ArrayList<VariableBinding>();
+			VariableBinding lastElement = variableBindings.lastElement();
+			while (lastElement != null && lastElement.getOid().startsWith(ifEntryOid)) {
+				VariableBinding newBinding = new VariableBinding(lastElement.getOid());
+				pdu.add(newBinding);
 
-			while (true) {
-				ResponseEvent response = null;
-				response = snmp.getBulk(pdu, commTarget);
+				PDU p = new PDU();
+				p.add(newBinding);
 
-				PDU responsePdu = response.getResponse();
-				if (responsePdu == null) {
-					throw new TimeoutException();
-				}
+				PDU rp = snmp.getBulk(p, commTarget).getResponse();
+				if (rp == null)
+					break;
 
 				@SuppressWarnings("unchecked")
-				Vector<VariableBinding> variableBindings = responsePdu.getVariableBindings();
-				VariableBinding lastElement = variableBindings.lastElement();
-				if (lastElement != null && lastElement.getOid().startsWith(ifEntryOid)) {
-					results.addAll(variableBindings);
-					// continue to retrieve next bulk
-					pdu.remove(0);
-					pdu.add(new VariableBinding(lastElement.getOid()));
-					continue;
-				} else {
-					// break loop.
-					// find last element startsWith ifEntryOid
-					for (VariableBinding vb : variableBindings) {
-						if (vb.getOid().startsWith(ifEntryOid))
-							results.add(vb);
-						else {
-							break;
-						}
-					}
-					// break while loop
-					break;
-				}
+				Vector<VariableBinding> bindings = rp.getVariableBindings();
+				results.addAll(bindings);
+				lastElement = bindings.lastElement();
 			}
-		} catch (Exception e) {
-			throw e;
 		} finally {
-			if (transport != null) {
-				try {
+			try {
+				if (transport != null)
 					transport.close();
-				} catch (IOException e) {
-				}
+			} catch (IOException e) {
 			}
 
-			if (snmp != null) {
-				try {
+			try {
+				if (transport != null && snmp != null)
 					snmp.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+			} catch (IOException e) {
 			}
 		}
+
 		return results;
 	}
 
