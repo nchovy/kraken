@@ -1,8 +1,11 @@
 package org.krakenapps.ca;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -55,8 +58,8 @@ public class CrlServlet extends HttpServlet {
 		String authorityName = req.getPathInfo().substring(1); // remove slash
 
 		if (logger.isDebugEnabled())
-			logger.debug("kraken ca: crl [{}] request from [{}, {}]", new Object[] { authorityName,
-					req.getRequestURI(), req.getRemoteAddr() });
+			logger.debug("kraken ca: crl [{}] request from [{}, {}]",
+					new Object[] { authorityName, req.getRequestURI(), req.getRemoteAddr() });
 
 		CertificateAuthority authority = ca.getAuthority(authorityName);
 		if (authority == null) {
@@ -67,7 +70,18 @@ public class CrlServlet extends HttpServlet {
 		X509Certificate caCert = authority.getRootCertificate().getCertificate();
 		RSAPrivateKey caKey = authority.getRootCertificate().getPrivateKey(authority.getRootKeyPassword());
 
-		List<RevokedCertificate> revokes = authority.getRevokedCertifcates();
+		List<RevokedCertificate> revokes = null;
+		String serial = req.getParameter("serial");
+		if (serial != null) {
+			RevokedCertificate rc = authority.getRevokedCertificate(serial);
+
+			if (rc == null)
+				revokes = new ArrayList<RevokedCertificate>();
+			else
+				revokes = Arrays.asList(rc);
+		} else
+			revokes = authority.getRevokedCertificates();
+		
 		try {
 			byte[] b = CrlBuilder.getCrl(caCert, caKey, revokes);
 			resp.setStatus(HttpServletResponse.SC_OK);

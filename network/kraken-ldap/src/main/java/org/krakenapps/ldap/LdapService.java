@@ -37,4 +37,6 @@ public interface LdapService {
 	boolean verifyPassword(LdapProfile profile, String account, String password);
 
 	boolean verifyPassword(LdapProfile profile, String account, String password, int timeout);
+	
+	void testLdapConnection(LdapProfile profile, Integer timeout);
 }

@@ -257,9 +257,24 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public List<RevokedCertificate> getRevokedCertifcates() {
+	public RevokedCertificate getRevokedCertificate(String serial) {
 		ConfigCollection revoked = db.ensureCollection("revoked");
+		Config config = revoked.findOne(Predicates.field("serial", serial));
+
+		if (config == null)
+			return null;
+
+		RevokedCertificate rc = PrimitiveConverter.parse(RevokedCertificate.class, config.getDocument());		
+
+		return rc;
+	}
+
+	@Override
+	public List<RevokedCertificate> getRevokedCertificates() {
+		ConfigCollection revoked = db.ensureCollection("revoked");
+
 		ConfigIterator it = revoked.findAll();
+
 		List<RevokedCertificate> l = new LinkedList<RevokedCertificate>();
 
 		try {

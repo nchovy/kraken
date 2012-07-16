@@ -101,7 +101,15 @@ public interface CertificateAuthority {
 	/**
 	 * @return all revoked certificate list
 	 */
-	List<RevokedCertificate> getRevokedCertifcates();
+	List<RevokedCertificate> getRevokedCertificates();
+
+	/**
+	 * @param serial
+	 *            the revoked certificate serial
+	 * 
+	 * @return revoked certificate
+	 */
+	RevokedCertificate getRevokedCertificate(String serial);
 
 	/**
 	 * Revoke a certificate

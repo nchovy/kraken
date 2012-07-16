@@ -53,7 +53,7 @@ public class CertificateBuilder {
 
 			CRLDistPoint crlDp = new CRLDistPoint(l.toArray(new DistributionPoint[0]));
 
-			certGen.addExtension(X509Extension.cRLDistributionPoints.getId(), false, crlDp);
+			certGen.addExtension(new DERObjectIdentifier("2.5.29.31"), false, crlDp);
 		}
 
 		return certGen.generate(req.getIssuerKey(), "BC");
