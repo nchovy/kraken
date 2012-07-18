@@ -9,3 +9,4 @@ kraken-util-directoryfile/test/ds/ttt/ttt.jdi
 kraken-util-directoryfile/test/ds/ttt/ttt.jdf
 kraken-rrd/instantiationTest.bin
 kraken-rrd/equalityTest.bin
+.*.swp
