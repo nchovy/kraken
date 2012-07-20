@@ -1,6 +1,6 @@
 package org.krakenapps.docxcod.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -40,13 +40,17 @@ public class UseCaseScenarios {
 		}
 	}
 
-@Test
+	@Test
 	public void testScenario1() throws Exception {
-		String inputFile = "testScenario1_Input.docx";
+		File inputFile = new File("testScenario1_Input.docx");
 		File outputFile = File.createTempFile("KrakenDocxcodTest_", "_Output.docx");
 		outputFiles.add(outputFile);
+		
+		Config config = new Config();
+		config.workingDir = new File("."); 
 
-		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
+
+		RptTemplateProcessor tmplProc = new RptTemplateProcessor(config);
 		tmplProc.setDocumentSource(new FileDocumentSource(inputFile));
 		RptOutput output = tmplProc.generateOutput();
 
@@ -57,7 +61,7 @@ public class UseCaseScenarios {
 		assertTrue(outputFile.exists());
 	}
 
-	//	@Test
+	// @Test
 	public void testScenario2() throws Exception {
 		String fSection1Template = "testScenario2_Input.docx";
 
@@ -67,19 +71,18 @@ public class UseCaseScenarios {
 
 		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
 		tmplProc.mergeDataSource(varMap);
-		tmplProc.setDocumentSource(new FileDocumentSource(fSection1Template));
+		tmplProc.setDocumentSource(new FileDocumentSource(new File(fSection1Template)));
 		RptOutput output = tmplProc.generateOutput();
-
 
 		if (output != null)
 			Utils.saveReport(output, new File("testScenario2_Output.docx"));
 	}
 
-	//	@Test
+	// @Test
 	public void testScenarioOfSomeDay() throws Exception {
 		String fSection1Template = "section1_template.docx";
 
-		DocumentSourceInformation docInfo = new DocumentSourceInformation(new FileDocumentSource(fSection1Template));
+		DocumentSourceInformation docInfo = new DocumentSourceInformation(new FileDocumentSource(new File(fSection1Template)));
 		docInfo.load();
 		ArrayList<TextDataSource.Reference> refs = docInfo.getTextReferences();
 		ArrayList<TableDataSource.Reference> tblRefs = docInfo.getTableReferences();
@@ -89,11 +92,11 @@ public class UseCaseScenarios {
 		tmplProc.mergeDataSource(new HashMap<String, DataSource>());
 		tmplProc.addDataSource("table1", new TableDataSource());
 		tmplProc.addDataSource("table2", new TableDataSource());
-		tmplProc.setDocumentSource(new FileDocumentSource(fSection1Template));
+		tmplProc.setDocumentSource(new FileDocumentSource(new File(fSection1Template)));
 		RptOutput output = tmplProc.generateOutput();
 
 		DocumentMerger merger = new DocumentMerger();
-		merger.addDocumentSource(new FileDocumentSource("cover.docx"));
+		merger.addDocumentSource(new FileDocumentSource(new File("cover.docx")));
 		merger.addDocumentSource(output.createDocumentSource());
 		merger.addDocumentSource(output.createDocumentSource());
 		RptOutput mergedOutput = merger.generateOutput();

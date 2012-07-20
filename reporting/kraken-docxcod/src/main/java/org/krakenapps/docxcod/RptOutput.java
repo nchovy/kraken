@@ -8,8 +8,14 @@ import java.nio.ByteBuffer;
 public class RptOutput {
 	private File outputFile;
 
+	public void file(){}
+	
 	public FileDocumentSource createDocumentSource() {
 		return null;
+	}
+	
+	public void setFile(File file){
+		outputFile = file;
 	}
 
 	public InputStream createInputStream() {
