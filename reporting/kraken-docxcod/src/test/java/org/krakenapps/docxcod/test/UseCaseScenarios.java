@@ -3,25 +3,9 @@ package org.krakenapps.docxcod.test;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathFactory;
-
-import org.custommonkey.xmlunit.XMLTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,10 +20,6 @@ import org.krakenapps.docxcod.RptTemplateProcessor;
 import org.krakenapps.docxcod.TableDataSource;
 import org.krakenapps.docxcod.TextDataSource;
 import org.krakenapps.docxcod.Utils;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
 public class UseCaseScenarios {
 
@@ -123,5 +103,7 @@ public class UseCaseScenarios {
 
 		Utils.saveReport(mergedOutput, new File("test.docx"));
 	}
+	
+	
 
 }
