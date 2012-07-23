@@ -17,9 +17,7 @@ package org.krakenapps.dom.api.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -37,7 +35,6 @@ import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
-import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.EntityEventListener;
@@ -90,41 +87,22 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	@Requires
 	private OrganizationUnitApi orgUnitApi;
 
-	private UserCacheSync cacheSync;
-	private ConcurrentMap<String, List<User>> domainUserCache;
-
 	private UserExtensionProviderTracker tracker;
 	private ConcurrentMap<String, UserExtensionProvider> userExtensionProviders = new ConcurrentHashMap<String, UserExtensionProvider>();
 
 	public UserApiImpl(BundleContext bc) {
-		this.cacheSync = new UserCacheSync();
 		this.tracker = new UserExtensionProviderTracker(bc);
-		domainUserCache = new ConcurrentHashMap<String, List<User>>();
 	}
 
 	@Validate
 	public void validate() {
 		cfg.setParser(User.class, new UserConfigParser());
 		orgUnitApi.addEntityEventListener(orgUnitEventListener);
-		this.addEntityEventListener(cacheSync);
 		tracker.open();
-
-		// load localhost (TODO: load all other domains)
-		try {
-			List<User> cachedUsers = Collections.synchronizedList(new ArrayList<User>());
-			cachedUsers.addAll(cfg.all("localhost", cls));
-			domainUserCache.put("localhost", cachedUsers);
-		} catch (DOMException e) {
-			if (e.getErrorCode().equals("organization-not-found"))
-				return;
-
-			logger.error("kraken-dom: cannot cache users", e);
-		}
 	}
 
 	@Invalidate
 	public void invalidate() {
-		removeEntityEventListener(cacheSync);
 		if (orgUnitApi != null)
 			orgUnitApi.removeEntityEventListener(orgUnitEventListener);
 		tracker.close();
@@ -144,54 +122,30 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		return preds;
 	}
 
-	private List<User> ensureDomainUserCache(String domain) {
-		List<User> userCache = domainUserCache.get(domain);
-		if (userCache == null) {
-			userCache = Collections.synchronizedList(new ArrayList<User>());
-			domainUserCache.put(domain, userCache);
-		}
-		return userCache;
-	}
-
 	@Override
 	public Collection<User> getUsers(String domain) {
-		return new ArrayList<User>(ensureDomainUserCache(domain));
+		return cfg.all(domain, cls);
 	}
 
 	@Override
 	public Collection<User> getUsers(String domain, Collection<String> loginNames) {
-		List<User> filteredUsers = new ArrayList<User>();
-		for (User user : ensureDomainUserCache(domain)) {
-			if (loginNames.contains(user.getLoginName()))
-				filteredUsers.add(user);
-		}
-		return filteredUsers;
+		return cfg.all(domain, cls, Predicates.in("loginName", loginNames));
 	}
 
 	@Override
 	public Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren) {
-		List<User> cachedUsers = ensureDomainUserCache(domain);
-		List<User> filteredUsers = new ArrayList<User>();
-
-		for (User user : cachedUsers) {
-			if (orgUnitGuid == null && user.getOrgUnit() == null)
-				filteredUsers.add(user);
-			else if (orgUnitGuid != null && user.getOrgUnit() != null && orgUnitGuid.equals(user.getOrgUnit().getGuid()))
-				filteredUsers.add(user);
-		}
-
+		Collection<User> users = cfg.all(domain, cls, Predicates.field("orgUnit/guid", orgUnitGuid));
 		if (includeChildren) {
 			if (orgUnitGuid == null)
 				return getUsers(domain);
 
 			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
 			for (OrganizationUnit ou : parent.getChildren())
-				filteredUsers.addAll(getUsers(domain, ou.getGuid(), includeChildren));
+				users.addAll(getUsers(domain, ou.getGuid(), includeChildren));
 		}
-		return filteredUsers;
+		return users;
 	}
 
-	// TODO: remove this broken func
 	@Override
 	public Collection<User> getUsers(String domain, String domainController) {
 		return cfg.all(domain, cls, Predicates.field("domainController", domainController));
@@ -199,20 +153,12 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public User findUser(String domain, String loginName) {
-		List<User> cachedUsers = ensureDomainUserCache(domain);
-		for (User user : cachedUsers)
-			if (user.getLoginName().equals(loginName))
-				return user;
-
-		return null;
+		return cfg.find(domain, cls, getPred(loginName));
 	}
 
 	@Override
 	public User getUser(String domain, String loginName) {
-		User user = findUser(domain, loginName);
-		if (user == null)
-			throw new DOMException(NOT_FOUND);
-		return user;
+		return cfg.get(domain, cls, getPred(loginName), NOT_FOUND);
 	}
 
 	@Override
@@ -391,34 +337,6 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			user.setUpdated((Date) m.get("updated"));
 			user.setLastPasswordChange((Date) m.get("last_password_change"));
 			return user;
-		}
-	}
-
-	private class UserCacheSync extends DefaultEntityEventListener<User> {
-
-		@Override
-		public void entityAdded(String domain, User obj, Object state) {
-			List<User> cachedUsers = ensureDomainUserCache(domain);
-			cachedUsers.add(obj);
-		}
-
-		@Override
-		public void entityUpdated(String domain, User obj, Object state) {
-			List<User> cachedUsers = ensureDomainUserCache(domain);
-			for (User cachedUser : cachedUsers)
-				if (cachedUser.getLoginName().equals(obj.getLoginName()))
-					User.shallowCopy(obj, cachedUser);
-		}
-
-		@Override
-		public void entityRemoved(String domain, User obj, Object state) {
-			List<User> cachedUsers = ensureDomainUserCache(domain);
-			Iterator<User> it = cachedUsers.iterator();
-			while (it.hasNext()) {
-				User user = it.next();
-				if (obj.getLoginName().equals(user.getLoginName()))
-					it.remove();
-			}
 		}
 	}
 }
