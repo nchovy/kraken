@@ -22,20 +22,6 @@ import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
 
 public class FreeMarkerTest {
-	@Test
-	public void test1() throws Exception {
-		Configuration cfg = new Configuration();
-		cfg.setObjectWrapper(new DefaultObjectWrapper());
-
-		Template t = new Template("test", new StringReader("Hello ${user}"), cfg);
-		StringWriter out = new StringWriter();
-
-		HashMap<String, Object> rootMap = new HashMap<String, Object>();
-		rootMap.put("user", "stania");
-		t.process(rootMap, out);
-
-		System.out.println(out.toString());
-	}
 
 	private static Map<String, Object> parse(JSONObject obj) {
 		Map<String, Object> m = new HashMap<String, Object>();
@@ -81,7 +67,7 @@ public class FreeMarkerTest {
 		}
 		return list;
 	}
-	
+
 	@Test
 	public void nestedListTest() throws Exception {
 		Configuration cfg = new Configuration();
@@ -107,6 +93,49 @@ public class FreeMarkerTest {
 			safeClose(templateReader);
 			safeClose(inputReader);
 		}
+	}
+
+	@Test
+	public void test1() throws Exception {
+		Configuration cfg = new Configuration();
+		cfg.setObjectWrapper(new DefaultObjectWrapper());
+
+		InputStreamReader templateReader = new InputStreamReader(getClass().getResourceAsStream("/test1.fpl"));
+		// XXX: close templateReader using try..finally
+		try {
+			Template t = new Template("test", templateReader, cfg);
+			StringWriter out = new StringWriter();
+
+			Map<String, Object> rootMap = new HashMap<String, Object>();
+			ArrayList<Object> beings = new ArrayList<Object>();
+			rootMap.put("title", "개발자들");
+			rootMap.put("data", beings);
+
+			{
+				HashMap<String, Object> being = new HashMap<String, Object>();
+				beings.add(being);
+				being.put("name", "준상");
+				being.put("tel", "010-1111-2222");
+			}
+			{
+				HashMap<String, Object> being = new HashMap<String, Object>();
+				beings.add(being);
+				being.put("name", "상");
+				being.put("tel", "010-3333-2222");
+			}
+			{
+				HashMap<String, Object> being = new HashMap<String, Object>();
+				beings.add(being);
+				being.put("name", "준");
+				being.put("tel", "010-4444-2222");
+			}
+
+			t.process(rootMap, out);
+			System.out.print(out.toString());
+		} finally {
+			templateReader.close();
+		}
+
 	}
 
 	private void safeClose(InputStreamReader templateReader) {
