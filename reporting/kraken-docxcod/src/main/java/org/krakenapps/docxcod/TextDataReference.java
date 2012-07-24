@@ -1,10 +1,10 @@
 package org.krakenapps.docxcod;
 
-public class TextDataSource implements DataSource {
+public class TextDataReference implements DataReference {
 	
 	private String value;
 
-	public TextDataSource(String s) {
+	public TextDataReference(String s) {
 		this.value = s;
 	}
 

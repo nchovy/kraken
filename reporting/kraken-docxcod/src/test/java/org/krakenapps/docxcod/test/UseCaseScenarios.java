@@ -9,16 +9,16 @@ import java.util.HashMap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.krakenapps.docxcod.ChartDataSource;
+import org.krakenapps.docxcod.ChartDataReference;
 import org.krakenapps.docxcod.Config;
-import org.krakenapps.docxcod.DataSource;
+import org.krakenapps.docxcod.DataReference;
 import org.krakenapps.docxcod.DocumentMerger;
 import org.krakenapps.docxcod.DocumentSourceInformation;
 import org.krakenapps.docxcod.FileDocumentSource;
 import org.krakenapps.docxcod.RptOutput;
 import org.krakenapps.docxcod.RptTemplateProcessor;
-import org.krakenapps.docxcod.TableDataSource;
-import org.krakenapps.docxcod.TextDataSource;
+import org.krakenapps.docxcod.TableDataReference;
+import org.krakenapps.docxcod.TextDataReference;
 import org.krakenapps.docxcod.Utils;
 
 public class UseCaseScenarios {
@@ -65,12 +65,12 @@ public class UseCaseScenarios {
 	public void testScenario2() throws Exception {
 		String fSection1Template = "testScenario2_Input.docx";
 
-		HashMap<String, DataSource> varMap = new HashMap<String, DataSource>();
-		varMap.put("key1", new TextDataSource("value1"));
-		varMap.put("key2", new TextDataSource("value2"));
+		HashMap<String, Object> varMap = new HashMap<String, Object>();
+		varMap.put("key1", "value1");
+		varMap.put("key2", "value2");
 
 		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
-		tmplProc.mergeDataSource(varMap);
+		tmplProc.setDataSource(varMap);
 		tmplProc.setDocumentSource(new FileDocumentSource(new File(fSection1Template)));
 		RptOutput output = tmplProc.generateOutput();
 
@@ -84,24 +84,24 @@ public class UseCaseScenarios {
 
 		DocumentSourceInformation docInfo = new DocumentSourceInformation(new FileDocumentSource(new File(fSection1Template)));
 		docInfo.load();
-		ArrayList<TextDataSource.Reference> refs = docInfo.getTextReferences();
-		ArrayList<TableDataSource.Reference> tblRefs = docInfo.getTableReferences();
-		ArrayList<ChartDataSource.Reference> chartRefs = docInfo.getChartReferences();
-
-		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
-		tmplProc.mergeDataSource(new HashMap<String, DataSource>());
-		tmplProc.addDataSource("table1", new TableDataSource());
-		tmplProc.addDataSource("table2", new TableDataSource());
-		tmplProc.setDocumentSource(new FileDocumentSource(new File(fSection1Template)));
-		RptOutput output = tmplProc.generateOutput();
+		ArrayList<TextDataReference> refs = docInfo.getTextReferences();
+		ArrayList<TableDataReference> tblRefs = docInfo.getTableReferences();
+		ArrayList<ChartDataReference> chartRefs = docInfo.getChartReferences();
 
 		DocumentMerger merger = new DocumentMerger();
 		merger.addDocumentSource(new FileDocumentSource(new File("cover.docx")));
-		merger.addDocumentSource(output.createDocumentSource());
-		merger.addDocumentSource(output.createDocumentSource());
-		RptOutput mergedOutput = merger.generateOutput();
+		merger.addDocumentSource(new FileDocumentSource(new File(fSection1Template)));
+		merger.addDocumentSource(new FileDocumentSource(new File(fSection1Template)));
+		RptOutput mergedTmpl = merger.generateOutput();
 
-		Utils.saveReport(mergedOutput, new File("test.docx"));
+		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
+		HashMap<String, Object> rootObj = new HashMap<String, Object>();
+		tmplProc.setDataSource(rootObj);
+		tmplProc.setDocumentSource(mergedTmpl.createDocumentSource());
+		RptOutput output = tmplProc.generateOutput();
+
+
+		Utils.saveReport(mergedTmpl, new File("test.docx"));
 	}
 	
 	

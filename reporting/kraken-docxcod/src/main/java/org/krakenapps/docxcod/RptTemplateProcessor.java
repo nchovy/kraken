@@ -2,29 +2,23 @@ package org.krakenapps.docxcod;
 
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
-
-import javax.swing.text.Document;
 
 
 public class RptTemplateProcessor {
 
 	private static final int BUFFER_SIZE = 1024 * 8;
 	
-	private HashMap<String, DataSource> dsMap = new HashMap<String, DataSource>();
+	private HashMap<String, Object> dataSource = new HashMap<String, Object>();
 	private FileDocumentSource docSource;
 	private Config docConfig;
 
@@ -33,15 +27,8 @@ public class RptTemplateProcessor {
 		// 작업 디렉토리를 로컬에 저장.
 	}
 
-	public void mergeDataSource(HashMap<String, DataSource> hashMap) {
-		// 갖고 있는 데이터 소스 맵에 새 맵을 합성.
-		// 이미 String key 가 dsMap 에 존재할 경우 덮어쓴다.
-
-	}
-
-	public void addDataSource(String string, TableDataSource tableDataSource) {
-		// dsMap 에 요소를 추가.
-
+	public void setDataSource(HashMap<String, Object> rootObj) {
+		dataSource = rootObj;
 	}
 
 	public void setDocumentSource(FileDocumentSource fileDocumentSource) {

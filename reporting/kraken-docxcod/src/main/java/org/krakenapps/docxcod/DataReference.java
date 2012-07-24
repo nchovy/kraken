@@ -1,5 +1,5 @@
 package org.krakenapps.docxcod;
 
-public interface DataSource {
+public interface DataReference {
 
 }

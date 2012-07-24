@@ -8,17 +8,17 @@ public class DocumentSourceInformation {
 		// TODO Auto-generated constructor stub
 	}
 
-	public ArrayList<TextDataSource.Reference> getTextReferences() {
+	public ArrayList<TextDataReference> getTextReferences() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	public ArrayList<TableDataSource.Reference> getTableReferences() {
+	public ArrayList<TableDataReference> getTableReferences() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	public ArrayList<ChartDataSource.Reference> getChartReferences() {
+	public ArrayList<ChartDataReference> getChartReferences() {
 		// TODO Auto-generated method stub
 		return null;
 	}

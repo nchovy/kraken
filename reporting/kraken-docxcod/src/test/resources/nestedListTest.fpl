@@ -1,0 +1,11 @@
+disk-usage-summary
+
+<#list diskUsageSummary as u>
+===========
+Host: ${u.host}
+-----------
+<#list u.diskUsage as d>
+${d.diskName}: ${d.usage}%
+</#list>
+</#list>
+===========
