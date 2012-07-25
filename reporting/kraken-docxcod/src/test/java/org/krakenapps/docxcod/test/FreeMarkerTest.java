@@ -108,7 +108,7 @@ public class FreeMarkerTest {
 			safeClose(inputReader);
 		}
 	}
-
+	
 	private void safeClose(InputStreamReader templateReader) {
 		if (templateReader == null)
 			return;

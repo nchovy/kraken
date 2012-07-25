@@ -1,24 +1,24 @@
 {
-	"diskUsageSummary": 
+	"disk-usage-summary": 
 	[
 		{ 
 			"host": "SAN Management",
-			"diskUsage": [
-				{ "diskName": "C:\\", "usage": 10 },
-				{ "diskName": "D:\\", "usage": 0 },
-				{ "diskName": "E:\\", "usage": 30 }
+			"disk-usage": [
+				{ "disk-name": "C:\\", "usage": 10 },
+				{ "disk-name": "D:\\", "usage": 0 },
+				{ "disk-name": "E:\\", "usage": 30 }
 			]
 		},
 		{
 			"host": "GMS Server 02",
-			"diskUsage": [
+			"disk-usage": [
 			]
 		},
 		{
 			"host": "IIS_1",
-			"diskUsage": [
-				{ "diskName": "C:\\", "usage": 20 },
-				{ "diskName": "D:\\", "usage": 0 }
+			"disk-usage": [
+				{ "disk-name": "C:\\", "usage": 20 },
+				{ "disk-name": "D:\\", "usage": 0 }
 			]
 		}
 	]

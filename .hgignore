@@ -10,3 +10,4 @@ kraken-util-directoryfile/test/ds/ttt/ttt.jdf
 kraken-rrd/instantiationTest.bin
 kraken-rrd/equalityTest.bin
 .*.swp
+reporting/kraken-docxcod/saveTest

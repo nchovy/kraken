@@ -1,11 +1,11 @@
 disk-usage-summary
 
-<#list diskUsageSummary as u>
+<#list .vars["disk-usage-summary"] as u>
 ===========
-Host: ${u.host}
+Host: ${u["host"]}
 -----------
-<#list u.diskUsage as d>
-${d.diskName}: ${d.usage}%
+<#list u["disk-usage"] as d>
+${d["disk-name"]}: ${d["usage"]}%
 </#list>
 </#list>
 ===========

@@ -23,7 +23,7 @@ import org.krakenapps.docxcod.Utils;
 
 public class UseCaseScenarios {
 
-	public ArrayList<File> outputFiles = new ArrayList<File>();
+	private TearDownHelper tearDownHelper = new TearDownHelper();
 
 	@Before
 	public void setUp() throws Exception {
@@ -31,24 +31,17 @@ public class UseCaseScenarios {
 
 	@After
 	public void tearDown() throws Exception {
-		for (File f : outputFiles) {
-			try {
-				f.delete();
-			} catch (Exception e) {
-				// ignore
-			}
-		}
+		tearDownHelper.tearDown();
 	}
 
-	@Test
+	//	@Test
 	public void testScenario1() throws Exception {
 		File inputFile = new File("testScenario1_Input.docx");
 		File outputFile = File.createTempFile("KrakenDocxcodTest_", "_Output.docx");
-		outputFiles.add(outputFile);
+		tearDownHelper.add(outputFile);
 		
 		Config config = new Config();
 		config.workingDir = new File("."); 
-
 
 		RptTemplateProcessor tmplProc = new RptTemplateProcessor(config);
 		tmplProc.setDocumentSource(new FileDocumentSource(inputFile));
@@ -99,7 +92,6 @@ public class UseCaseScenarios {
 		tmplProc.setDataSource(rootObj);
 		tmplProc.setDocumentSource(mergedTmpl.createDocumentSource());
 		RptOutput output = tmplProc.generateOutput();
-
 
 		Utils.saveReport(mergedTmpl, new File("test.docx"));
 	}
