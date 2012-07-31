@@ -32,5 +32,7 @@ public class Environment {
 			System.setProperty("kraken.download.dir", new File(krakenDirProp, "download").getAbsolutePath());
 		if (System.getProperty("kraken.cert.dir") == null)
 			System.setProperty("kraken.cert.dir", new File(krakenDirProp, "cert").getAbsolutePath());
+		if (System.getProperty("kraken.home.dir") == null)
+			System.setProperty("kraken.home.dir", new File(krakenDirProp, "home").getAbsolutePath());
 	}
 }

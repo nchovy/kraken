@@ -29,7 +29,7 @@ public class SshFileSystemView extends NativeFileSystemView {
 
 	public SshFileSystemView(Session session) {
 		super(session.getUsername());
-		File f = new File(System.getProperty("user.dir"), "/home/" + session.getUsername());
+		File f = new File(System.getProperty("kraken.home.dir"), session.getUsername());
 		if (f.mkdirs())
 			logger.info("kraken core: created ssh user directory [{}]", f.getAbsolutePath());
 
