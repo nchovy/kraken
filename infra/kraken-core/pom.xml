@@ -8,7 +8,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-core</artifactId>
-	<version>1.15.9</version>
+	<version>1.16.0</version>
 	<name>Kraken Core</name>
 	<packaging>jar</packaging>
 	<dependencies>
@@ -20,7 +20,7 @@
 		<dependency>
 			<groupId>org.apache.sshd</groupId>
 			<artifactId>sshd-core</artifactId>
-			<version>0.5.0</version>
+			<version>0.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
