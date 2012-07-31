@@ -1,6 +1,5 @@
 package org.krakenapps.docxcod;
 
-import static org.junit.Assert.assertTrue;
 import static org.krakenapps.docxcod.util.XMLDocHelper.evaluateXPath;
 import static org.krakenapps.docxcod.util.XMLDocHelper.newDocumentBuilder;
 import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
@@ -18,9 +17,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 
-import org.krakenapps.docxcod.util.XMLDocHelper.NodeListWrapper;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class TableDirectiveParser implements OOXMLProcessor {
@@ -38,7 +35,6 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		try {
 			f = new FileInputStream(new File(pkg.getDataDir(), "word/document.xml"));
 			Document doc = newDocumentBuilder().parse(f);
-			assertTrue(doc != null);
 
 			XPath xpath = newXPath(doc);
 			NodeList nodeList = evaluateXPath(xpath, "//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
