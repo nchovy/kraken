@@ -40,13 +40,21 @@ public class XMLDocHelper {
 
 	private static class DocumentNamespaceContext implements NamespaceContext {
 		Document doc;
+		String unnamedPrefix = null;
+		String unnamedURI = null;
 
 		public DocumentNamespaceContext(Document doc) {
 			this.doc = doc;
+			if (doc.lookupNamespaceURI(null) != null) {
+				unnamedPrefix = "DEF";
+				unnamedURI = doc.lookupNamespaceURI(null);
+			}
 		}
 
 		@Override
 		public String getNamespaceURI(String prefix) {
+			if (prefix.equals(unnamedPrefix))
+				return unnamedURI;
 			return doc.lookupNamespaceURI(prefix);
 		}
 

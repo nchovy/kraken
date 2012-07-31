@@ -1,30 +1,25 @@
 package org.krakenapps.docxcod;
 
-
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.StringTokenizer;
+import java.util.List;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import javax.swing.text.Document;
-
+import org.krakenapps.docxcod.util.ZipHelper;
 
 public class RptTemplateProcessor {
 
 	private static final int BUFFER_SIZE = 1024 * 8;
-	
-	private HashMap<String, DataSource> dsMap = new HashMap<String, DataSource>();
+
+	private HashMap<String, Object> dataSource = new HashMap<String, Object>();
 	private FileDocumentSource docSource;
 	private Config docConfig;
 
@@ -33,15 +28,8 @@ public class RptTemplateProcessor {
 		// 작업 디렉토리를 로컬에 저장.
 	}
 
-	public void mergeDataSource(HashMap<String, DataSource> hashMap) {
-		// 갖고 있는 데이터 소스 맵에 새 맵을 합성.
-		// 이미 String key 가 dsMap 에 존재할 경우 덮어쓴다.
-
-	}
-
-	public void addDataSource(String string, TableDataSource tableDataSource) {
-		// dsMap 에 요소를 추가.
-
+	public void setDataSource(HashMap<String, Object> rootObj) {
+		dataSource = rootObj;
 	}
 
 	public void setDocumentSource(FileDocumentSource fileDocumentSource) {
@@ -80,65 +68,16 @@ public class RptTemplateProcessor {
 			return;
 		}
 
-		ZipInputStream zipIs = new ZipInputStream(is);
-
 		File baseDir = new File(docConfig.workingDir, Integer.toString(docSource.hashCode()));
 		baseDir.mkdirs();
 
 		try {
-			ZipEntry nextEntry = zipIs.getNextEntry();
-			while (nextEntry != null) {
-				String filename = nextEntry.getName();
-				String dir = filename;
-
-				if (dir.lastIndexOf("/") != -1) {
-					dir = dir.substring(0, dir.lastIndexOf("/"));
-					File parentDir = new File(baseDir, dir);
-					parentDir.mkdirs();
-				}
-
-				System.err.println(dir);
-				System.err.println(filename);
-
-				File file = new File(baseDir, filename);
-				FileOutputStream fileOutputStream = null;
-				try {
-					fileOutputStream = new FileOutputStream(file);
-	
-					int readCnt = 0;
-	
-					byte[] buf = new byte[BUFFER_SIZE];
-					do {
-						readCnt = zipIs.read(buf);
-						if (readCnt == -1)
-							break;
-						else {
-							fileOutputStream.write(buf, 0, readCnt);
-						}
-					} while (readCnt != 0);
-				} catch (IOException e) {
-					e.printStackTrace();
-				} finally {
-					if (fileOutputStream != null)
-						fileOutputStream.close();
-					zipIs.closeEntry();
-				}
-				nextEntry = zipIs.getNextEntry();
-			}
-		} catch (IOException e) {
+			ZipHelper.extract(is, baseDir);
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		} finally {
-			if (zipIs != null)
-				try {
-					zipIs.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-					// ignore
-				}
 		}
-
 	}
-	
+
 	//압축하기	
 	private RptOutput makeRptOutput() throws Exception {
 		RptOutput output = new RptOutput();
@@ -146,8 +85,7 @@ public class RptTemplateProcessor {
 		if (outputFile != null) {
 			output.setFile(outputFile);
 			return output;
-		}
-		else
+		} else
 			return null;
 	}
 
@@ -160,7 +98,12 @@ public class RptTemplateProcessor {
 			fos = new FileOutputStream(outputFile);
 			zos = new ZipOutputStream(fos);
 
-			zipDir(baseDir, Integer.toString(docSource.hashCode()), zos);
+			
+			List<File> files = new ArrayList<File>();
+			ZipHelper.getFilesRecursivelyIn(baseDir, files);
+			ZipHelper.archive(zos, files, baseDir);
+
+//			zipDir(baseDir, Integer.toString(docSource.hashCode()), zos);
 
 			zos.finish();
 			return outputFile;
@@ -173,15 +116,16 @@ public class RptTemplateProcessor {
 			if (fos != null)
 				fos.close();
 		}
-		
+
 		return null;
 	}
-	
+
 	private File getDocxOutputFile() throws IOException {
 		return new File(docConfig.workingDir, File.createTempFile("docxcod", ".docx").getName());
 	}
 
 	private static void zipDir(File entry, String basePath, ZipOutputStream zos) throws Exception {
+
 		if (entry.isDirectory()) {
 			File[] fileList = entry.listFiles();
 			for (int i = 0; i < fileList.length; i++) {
@@ -213,10 +157,7 @@ public class RptTemplateProcessor {
 		}
 	}
 
-
-	private void cleanUp()
-	{
-
+	private void cleanUp() {
 		File baseDirName = new File(docConfig.workingDir, Integer.toString(docSource.hashCode()));
 
 		System.err.println(baseDirName);
