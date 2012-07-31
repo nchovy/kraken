@@ -8,6 +8,7 @@ import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.List;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -40,21 +41,9 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			assertTrue(doc != null);
 
 			XPath xpath = newXPath(doc);
-			{
-				NodeList nodeList = evaluateXPath(xpath, "//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
-				System.out.printf("instrText cnt: %d\n", nodeList.getLength());
-				for (Node n : new NodeListWrapper(nodeList)) {
-					if (n.getNodeName().equals("w:fldChar"))
-						System.out.printf("%s %s\n", n.getNodeName(), n.getAttributes().getNamedItem("w:fldCharType").getNodeValue());
-					else if (n.getNodeName().equals("w:instrText")) {
-						System.out.printf("%s [%s]\n", n.getNodeName(), n.getTextContent());
-					} else if (n.getNodeName().equals("w:fldSimple")) {
-						System.out.printf("%s [%s]\n", n.getNodeName(), n.getAttributes().getNamedItem("w:instr").getNodeValue());
-					} else {
-						System.out.printf("%s\n", n.getNodeName());
-					}
-				}
-			}
+			NodeList nodeList = evaluateXPath(xpath, "//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
+
+			List<Directive> directives = DirectiveExtractor.parseNodeList(nodeList);
 
 			Transformer transformer = TransformerFactory.newInstance().newTransformer();
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");

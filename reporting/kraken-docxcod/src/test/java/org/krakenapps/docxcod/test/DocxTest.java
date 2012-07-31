@@ -14,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.krakenapps.docxcod.ChartDirectiveParser;
 import org.krakenapps.docxcod.Directive;
+import org.krakenapps.docxcod.DirectiveExtractor;
 import org.krakenapps.docxcod.OOXMLProcessor;
 import org.krakenapps.docxcod.FreeMarkerRunner;
 import org.krakenapps.docxcod.OOXMLPackage;
