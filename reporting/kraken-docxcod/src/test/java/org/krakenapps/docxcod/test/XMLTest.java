@@ -144,8 +144,6 @@ public class XMLTest {
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 			transformer.setOutputProperty(OutputKeys.CDATA_SECTION_ELEMENTS, "yes");
 			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-			transformer.transform(new DOMSource(doc), new StreamResult("test4.xml"));
-			tearDownHelper.add(new File("test4.xml"));
 
 		} catch (Exception e) {
 			e.printStackTrace();

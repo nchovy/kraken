@@ -74,17 +74,15 @@ public class DocxTest {
 	public void mainTest() throws IOException {
 		File targetDir = new File("mainTest");
 		targetDir.mkdirs();
-		tearDownHelper.add(targetDir);
+		//tearDownHelper.add(targetDir);
 
 		OOXMLPackage docx = new OOXMLPackage();
-		docx.load(getClass().getResourceAsStream("/fieldTest.docx"), targetDir);
+		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
 		
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
 		processors.add(new TableDirectiveParser());
 		processors.add(new ChartDirectiveParser());
 		processors.add(new FreeMarkerRunner());
-
-		tearDownHelper.add(new File("test4.xml"));
 
 		for (OOXMLProcessor processor: processors) {
 			processor.process(docx);
