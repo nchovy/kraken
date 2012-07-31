@@ -7,12 +7,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.krakenapps.docxcod.Docx;
+import org.krakenapps.docxcod.ChartDirectiveParser;
+import org.krakenapps.docxcod.Directive;
+import org.krakenapps.docxcod.OOXMLProcessor;
+import org.krakenapps.docxcod.FreeMarkerRunner;
+import org.krakenapps.docxcod.OOXMLPackage;
+import org.krakenapps.docxcod.TableDirectiveParser;
 import org.krakenapps.docxcod.util.ZipHelper;
+import org.w3c.dom.Node;
 
 public class DocxTest {
 	private TearDownHelper tearDownHelper = new TearDownHelper();
@@ -25,16 +32,78 @@ public class DocxTest {
 	public void tearDown() throws Exception {
 		tearDownHelper.tearDown();
 	}
+	
+	@Test
+	public void fieldTest() throws IOException {
+		File targetDir = new File("fieldTest");
+		targetDir.mkdirs();
+		tearDownHelper.add(targetDir);
+		
+		OOXMLPackage docx = new OOXMLPackage();
+		docx.load(getClass().getResourceAsStream("/fieldTest.docx"), targetDir);
+		
+		List<OOXMLProcessor> parsers = new ArrayList<OOXMLProcessor>();
+		DirectiveExtractor directiveExtractor = new DirectiveExtractor();
+		parsers.add(directiveExtractor);
+
+		for (OOXMLProcessor parser: parsers) {
+			parser.process(docx);
+		}
+		
+		String[] expected = new String[] {
+				"@before-row#list data as a asdfasdfasdsfd",
+				"asdsfdadsfadsfsdfa",
+				"aslasdfasdfasdfddkfj",
+				"asdfasdfasdf",
+				"@before-row #list .vars[\"stania\"] as a",
+				"asdfadfasdf",
+				"ahsdfl;aksjdflksdjf",
+				"#list asdf as qwer"
+		};
+		
+		int cnt = 0;
+		for (Directive dir: directiveExtractor.getDirectives()) {
+			Node n = dir.getPosition();
+			String dirStr = dir.getDirectiveString();
+			
+			assertTrue(dirStr.equals(expected[cnt++]));
+		}
+	}
+	
+	@Test
+	public void mainTest() throws IOException {
+		File targetDir = new File("mainTest");
+		targetDir.mkdirs();
+		tearDownHelper.add(targetDir);
+
+		OOXMLPackage docx = new OOXMLPackage();
+		docx.load(getClass().getResourceAsStream("/fieldTest.docx"), targetDir);
+		
+		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
+		processors.add(new TableDirectiveParser());
+		processors.add(new ChartDirectiveParser());
+		processors.add(new FreeMarkerRunner());
+
+		tearDownHelper.add(new File("test4.xml"));
+
+		for (OOXMLProcessor processor: processors) {
+			processor.process(docx);
+		}
+		
+		File saveFile = new File("saveTest.docx");
+		docx.save(new FileOutputStream(saveFile));
+		tearDownHelper.add(saveFile);
+	}
 
 	@Test
 	public void saveTest() throws IOException {
 		File targetDir = new File("saveTest");
 		targetDir.mkdirs();
-//		tearDownHelper.add(targetDir);
+		tearDownHelper.add(targetDir);
 
-		Docx docx = new Docx();
+		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
-
+		
 		File saveFile = new File("saveTest.docx");
 		docx.save(new FileOutputStream(saveFile));
 		tearDownHelper.add(saveFile);
@@ -48,7 +117,7 @@ public class DocxTest {
 		targetDir.mkdirs();
 		tearDownHelper.add(targetDir);
 
-		Docx docx = new Docx();
+		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
 
 		String[] relPaths = { "", "customXml", "customXml/item1.xml", "customXml/itemProps1.xml", "customXml/_rels",

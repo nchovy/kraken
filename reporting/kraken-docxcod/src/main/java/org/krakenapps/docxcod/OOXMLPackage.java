@@ -10,11 +10,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.zip.ZipOutputStream;
@@ -41,7 +39,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-public class Docx {
+public class OOXMLPackage {
 
 	private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
@@ -49,9 +47,11 @@ public class Docx {
 
 	private Relationship rootRel = null;
 
-	public Docx() {
+	public OOXMLPackage() {
 
 	}
+	
+	public File getDataDir() { return dataDir; }
 
 	public void load(InputStream is, File targetDir) throws IOException {
 		this.dataDir = targetDir;
@@ -69,27 +69,6 @@ public class Docx {
 				e.printStackTrace();
 				// ignore
 			}
-		}
-	}
-
-	public static class Relationship {
-		public Relationship parent;
-		public String id;
-		public String target;
-		public String type;
-		public List<Relationship> children;
-
-		public Relationship() {
-			parent = null;
-			children = new ArrayList<Relationship>();
-		}
-
-		public Relationship(Relationship p, NamedNodeMap m) {
-			parent = p;
-			id = m.getNamedItem("Id").getNodeValue();
-			target = m.getNamedItem("Target").getNodeValue();
-			type = m.getNamedItem("Type").getNodeValue();
-			children = new ArrayList<Relationship>();
 		}
 	}
 
@@ -132,8 +111,8 @@ public class Docx {
 			}
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
-			printRelationship(rootRel, new PrintWriter(out));
-			logger.info(out.toString("ascii"));
+			//printRelationship(rootRel, new PrintWriter(out));
+			logger.info(rootRel.toSummaryString());
 
 		} catch (SAXException e) {
 			logger.error("invalid XML doc", e);
@@ -147,7 +126,7 @@ public class Docx {
 
 	private void printRelationship(Relationship rootRel, PrintWriter writer) {
 		Stack<SimpleEntry<Integer, Relationship>> r = new Stack<SimpleEntry<Integer, Relationship>>();
-		r.push(new SimpleEntry<Integer, Docx.Relationship>(0, rootRel));
+		r.push(new SimpleEntry<Integer, Relationship>(0, rootRel));
 		while (!r.empty()) {
 			SimpleEntry<Integer, Relationship> entry = r.pop();
 			int depth = entry.getKey();
@@ -156,10 +135,10 @@ public class Docx {
 			String prefix = "";
 			while (depth-- > 0)
 				prefix += "\t";
-			writer.println(prefix + rel.target);
+			writer.println(prefix + rel.toString());
 
 			for (Relationship c : rel.children) {
-				r.push(new SimpleEntry<Integer, Docx.Relationship>(entry.getKey() + 1, c));
+				r.push(new SimpleEntry<Integer, Relationship>(entry.getKey() + 1, c));
 			}
 		}
 		writer.flush();
@@ -254,6 +233,25 @@ public class Docx {
 				}
 			}
 		}
+	}
+
+	public String addPart(String string, String string2) {
+		return "";
+	}
+
+	public String getRelationId(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public String findPart(String string, String string2) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Relationship getRelationship(String string) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }
