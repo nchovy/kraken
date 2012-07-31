@@ -66,7 +66,8 @@ public class DocxTest {
 		for (Directive dir: directiveExtractor.getDirectives()) {
 			Node n = dir.getPosition();
 			String dirStr = dir.getDirectiveString();
-			
+			System.out.println(dirStr);
+
 			assertTrue(dirStr.equals(expected[cnt++]));
 		}
 	}

@@ -1,6 +1,7 @@
 package org.krakenapps.docxcod;
 
 import java.util.Scanner;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.w3c.dom.Node;
@@ -23,20 +24,20 @@ public class Directive {
 		return directiveStr;
 	}
 	
-	private static Pattern quotedString = Pattern.compile("\"([^\\\\\"]+|\\\\([btnfr\"'\\\\]|[0-3]?[0-7]{1,2}|u[0-9a-fA-F]{4}))*\""); 
+	private static Pattern quotedString = Pattern.compile("[^\\s\"]*\"([^\\\\\"]+|\\\\([btnfr\"'\\\\]|[0-3]?[0-7]{1,2}|u[0-9a-fA-F]{4}))*\"[^\\s\"]*");
+	private static Pattern MERGEFIELD_PATTERN = Pattern.compile("MERGEFIELD\\s+(?:\"(.*)\"|([^\"].*[^\"]))(|\\s+\\?\\[*bf#@mv].*)");
 	
 	private static String parseMergeField(String in) {
 		in = replaceUnicodeQuote(in.trim());
-		Scanner sc = new Scanner(in);
-		sc.hasNext("MERGEFIELD");
-		String f = sc.findInLine(quotedString);
-		if (f != null) {
-			f = f.substring(1, f.length() - 1);
+		Matcher matcher = MERGEFIELD_PATTERN.matcher(in);
+		if (matcher.find() && matcher.groupCount() > 0) {
+			String f = matcher.group(1);
+			if (f == null)
+				f = matcher.group(2);
 			f = f.replaceAll("\\\\(.)", "$1");
 			return f;
-		} else {
+		} else
 			return null;
-		}
 	}
 	
 	private static String replaceUnicodeQuote(String in) {

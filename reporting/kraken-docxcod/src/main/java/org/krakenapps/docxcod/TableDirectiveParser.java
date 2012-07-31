@@ -40,6 +40,9 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			NodeList nodeList = evaluateXPath(xpath, "//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
 
 			List<Directive> directives = DirectiveExtractor.parseNodeList(nodeList);
+			for (Directive d: directives) {
+				System.out.printf("%s\n", d.getDirectiveString());
+			}
 
 			Transformer transformer = TransformerFactory.newInstance().newTransformer();
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
