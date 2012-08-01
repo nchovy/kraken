@@ -66,6 +66,17 @@ public class User {
 	@FieldOption(nullable = true)
 	private Date lastPasswordChange;
 
+	@FieldOption(nullable = true)
+	private String sourceType;
+
+	public String getSourceType() {
+		return sourceType;
+	}
+
+	public void setSourceType(String sourceType) {
+		this.sourceType = sourceType;
+	}
+
 	public String getLoginName() {
 		return loginName;
 	}
