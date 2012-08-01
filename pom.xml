@@ -488,7 +488,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-logdb</artifactId>
-				<version>0.5.9</version>
+				<version>0.5.12</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
