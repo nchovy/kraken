@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>kraken-siem-pom</artifactId>
+		<groupId>org.krakenapps</groupId>
+		<version>1.0.0</version>
+	</parent>
+	<artifactId>kraken-eventstorage</artifactId>
+	<version>0.1.0</version>
+	<packaging>bundle</packaging>
+	<name>Kraken Event Storage</name>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-SymbolicName>org.krakenapps.eventstorage</Bundle-SymbolicName>
+						<Export-Package>org.krakenapps.eventstorage;version=${project.version}</Export-Package>
+						<Private-Package>
+							org.krakenapps.eventstorage.engine,
+							org.krakenapps.eventstorage.engine.file,
+							org.krakenapps.eventstorage.script</Private-Package>
+						<Import-Package>*</Import-Package>
+					</instructions>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-ipojo-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>ipojo-bundle</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-confdb</artifactId>
+		</dependency>
+	</dependencies>
+</project>
