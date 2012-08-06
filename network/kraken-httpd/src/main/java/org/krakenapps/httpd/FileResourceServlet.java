@@ -22,7 +22,11 @@ import java.io.InputStream;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class FileResourceServlet extends ResourceServlet {
+	private final Logger logger = LoggerFactory.getLogger(FileResourceServlet.class.getName());
 	private static final long serialVersionUID = 1L;
 	private File basePath;
 
@@ -33,8 +37,10 @@ public class FileResourceServlet extends ResourceServlet {
 	@Override
 	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
+			logger.trace("kraken httpd: file servlet base path [{}], path [{}]", basePath, req.getPathInfo());
 			return new FileInputStream(new File(basePath, req.getPathInfo()));
 		} catch (FileNotFoundException e) {
+			logger.trace("kraken httpd: file not found", e);
 			return null;
 		}
 	}

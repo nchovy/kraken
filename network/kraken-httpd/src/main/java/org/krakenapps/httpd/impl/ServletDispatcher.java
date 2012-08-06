@@ -15,8 +15,9 @@
  */
 package org.krakenapps.httpd.impl;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -162,10 +163,7 @@ public class ServletDispatcher {
 			int pos = mapping.lastIndexOf("*");
 
 			if (pos >= 0) {
-				if (pos > 0 && mapping.charAt(pos - 1) == '/')
-					p = mapping.substring(0, pos - 1);
-				else
-					p = mapping.substring(0, pos);
+				p = mapping.substring(0, pos);
 
 				if (mapping.length() > (pos + 1) && mapping.charAt(pos + 1) == '.')
 					ext = mapping.substring(pos + 1);
@@ -174,7 +172,7 @@ public class ServletDispatcher {
 			logger.debug("kraken httpd: check name [{}], mapping [{}] ext [{}] for input path [{}], match path [{}]",
 					new Object[] { reg.getName(), mapping, ext, path, p });
 
-			if (path.contains(p)) {
+			if (matchPath(path, p)) {
 				if (ext != null && !path.endsWith(ext))
 					continue;
 
@@ -183,12 +181,29 @@ public class ServletDispatcher {
 				else if (longest.length() < p.length())
 					longest = p;
 			}
-
 		}
 
 		logger.trace("kraken httpd: returning longest mapping [{}]", longest);
 
+		if (longest != null && longest.endsWith("/"))
+			return longest.substring(0, longest.length() - 1);
+
 		return longest;
+	}
+
+	private boolean matchPath(String path, String mapping) {
+		if (mapping.isEmpty())
+			return true;
+
+		if (mapping.endsWith("/")) {
+			if (path.startsWith(mapping))
+				return true;
+			else if (path.equals(mapping.substring(0, mapping.length() - 1)))
+				return true;
+			return false;
+		}
+
+		return path.startsWith(mapping);
 	}
 
 	public Collection<String> getMappings(String name) {
@@ -196,15 +211,23 @@ public class ServletDispatcher {
 	}
 
 	public Set<String> addMapping(String name, String[] urlPatterns) {
+		Set<String> failPatterns = new HashSet<String>();
+		Set<String> normalizedUrlPatterns = new HashSet<String>();
+
+		for (String p : urlPatterns) {
+			if (countAsterisk(p) > 1)
+				failPatterns.add(p);
+			else
+				normalizedUrlPatterns.add(normalizePattern(p));
+		}
+
 		ServletRegistration reg = regs.get(name);
 		// cannot add mappings, return failed patterns
 		if (reg == null)
-			return new HashSet<String>(Arrays.asList(urlPatterns));
-
-		Set<String> failPatterns = new HashSet<String>();
+			return new HashSet<String>(normalizedUrlPatterns);
 
 		// check other url patterns
-		for (String urlPattern : urlPatterns) {
+		for (String urlPattern : normalizedUrlPatterns) {
 			for (CopyOnWriteArraySet<String> mappings : urlMappings.values()) {
 				if (mappings.contains(urlPattern))
 					failPatterns.add(urlPattern);
@@ -216,7 +239,7 @@ public class ServletDispatcher {
 		if (old != null)
 			target = old;
 
-		for (String urlPattern : urlPatterns) {
+		for (String urlPattern : normalizedUrlPatterns) {
 			if (failPatterns.contains(urlPattern))
 				continue;
 
@@ -227,6 +250,27 @@ public class ServletDispatcher {
 		}
 
 		return failPatterns;
+	}
+
+	private int countAsterisk(String pattern) {
+		int count = 0;
+		for (int i = 0; i < pattern.length(); i++)
+			if (pattern.charAt(i) == '*')
+				count++;
+		return count;
+	}
+
+	private String normalizePattern(String mapping) {
+		int pos = mapping.lastIndexOf('/');
+
+		String front = mapping.substring(0, pos + 1);
+		String rear = mapping.substring(pos + 1);
+
+		try {
+			return new URI("file://", front, null).normalize().getPath() + rear;
+		} catch (URISyntaxException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Override

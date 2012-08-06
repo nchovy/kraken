@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletRegistration;
@@ -78,8 +79,7 @@ public class HttpdScript implements Script {
 			HttpServer server = httpd.getServer(binding);
 			HttpConfiguration config = server.getConfiguration();
 
-			String ssl = config.isSsl() ? " (ssl: key " + config.getKeyAlias() + ", trust " + config.getTrustAlias()
-					+ ")" : "";
+			String ssl = config.isSsl() ? " (ssl: key " + config.getKeyAlias() + ", trust " + config.getTrustAlias() + ")" : "";
 			String virtualHosts = "";
 			if (config.getVirtualHosts().size() > 0) {
 				for (VirtualHost h : config.getVirtualHosts())
@@ -89,11 +89,10 @@ public class HttpdScript implements Script {
 			String idleTime = "idle timeout: " + config.getIdleTimeout() + "seconds";
 			String defaultHttpContext = config.getDefaultHttpContext();
 
-			String additional = defaultHttpContext == null ? idleTime : "default context: "
-					+ config.getDefaultHttpContext() + ", " + idleTime;
+			String additional = defaultHttpContext == null ? idleTime : "default context: " + config.getDefaultHttpContext()
+					+ ", " + idleTime;
 
-			String information = config.getListenAddress() + ssl + (server.isOpened() ? ", opened, " : ", closed, ")
-					+ additional;
+			String information = config.getListenAddress() + ssl + (server.isOpened() ? ", opened, " : ", closed, ") + additional;
 
 			context.println(information + virtualHosts);
 		}
@@ -201,11 +200,16 @@ public class HttpdScript implements Script {
 
 	@ScriptUsage(description = "attach filesystem path", arguments = {
 			@ScriptArgument(name = "context", type = "string", description = "http context name"),
-			@ScriptArgument(name = "prefix", type = "string", description = "path prefix"),
+			@ScriptArgument(name = "prefix", type = "string", description = "path prefix without asterisk"),
 			@ScriptArgument(name = "filesystem path", type = "string", description = "filesystem path") })
 	public void attachDirectory(String[] args) {
 		String prefix = args[1];
 		String basePath = args[2];
+
+		if (prefix.contains("*")) {
+			context.println("prefix should not contain any asterisk");
+			return;
+		}
 
 		HttpContext ctx = httpd.ensureContext(args[0]);
 
@@ -224,12 +228,25 @@ public class HttpdScript implements Script {
 			ServletContext servletContext = ctx.getServletContext();
 			servletContext.addServlet("file", new FileResourceServlet(target));
 			ServletRegistration r = servletContext.getServletRegistration("file");
-			r.addMapping(prefix + "/*");
-			context.println("attached");
+			Set<String> failed = r.addMapping(buildUrlPattern(prefix));
+			if (failed != null && !failed.isEmpty()) {
+				context.println("cannot add following url patterns");
+				for (String fail : failed)
+					context.println(fail);
+			} else {
+				context.println("attached");
+			}
 		} catch (Throwable t) {
 			context.println("cannot attach filesystem path: " + t.getMessage());
 			logger.error("kraken httpd: cannot attach filesystem path", t);
 		}
+	}
+
+	private String buildUrlPattern(String prefix) {
+		if (prefix.isEmpty() || prefix.equals("/"))
+			return "/*";
+
+		return prefix + "/*";
 	}
 
 	@ScriptUsage(description = "remove servlet", arguments = {

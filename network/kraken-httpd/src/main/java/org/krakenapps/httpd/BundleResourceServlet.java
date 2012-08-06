@@ -38,10 +38,13 @@ public class BundleResourceServlet extends ResourceServlet {
 	@Override
 	protected InputStream getInputStream(HttpServletRequest req) {
 		try {
+			logger.trace("kraken httpd: trying to open bundle [{}] resource, base path [{}], path info [{}]", new Object[] {
+					bundle.getBundleId(), req.getRequestURI(), req.getPathInfo() });
+
 			URL url = bundle.getResource(basePath + req.getPathInfo());
 			return url.openStream();
 		} catch (Exception e) {
-			logger.trace("kraken webconsole: cannot open bundle [{}] resource [{}]", bundle.getBundleId(), req.getRequestURI());
+			logger.trace("kraken httpd: cannot open bundle [{}] resource [{}]", bundle.getBundleId(), req.getRequestURI());
 			return null;
 		}
 	}
