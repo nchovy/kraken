@@ -42,6 +42,12 @@ public class CertificateMetadata {
 	 */
 	private byte[] binary;
 
+	private Date issuedDate = new Date();
+
+	public Date getIssuedDate() {
+		return issuedDate;
+	}
+
 	public String getType() {
 		return type;
 	}
@@ -126,6 +132,6 @@ public class CertificateMetadata {
 	@Override
 	public String toString() {
 		return "type=" + type + ", serial=" + serial + ", subject=" + subjectDn + ", not_before=" + notBefore + ", not_after="
-				+ notAfter;
+				+ notAfter + ", issued_date=" + issuedDate;
 	}
 }
