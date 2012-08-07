@@ -15,32 +15,20 @@
  */
 package org.krakenapps.ldap.msgbus;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
-import org.krakenapps.codec.Base64;
-import org.krakenapps.ldap.DomainUserAccount;
+import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
-import org.krakenapps.ldap.impl.JLdapService;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.Response;
@@ -52,9 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.novell.ldap.LDAPConnection;
-import com.novell.ldap.LDAPException;
-import com.novell.ldap.LDAPJSSESecureSocketFactory;
-import com.novell.ldap.LDAPSocketFactory;
 
 @Component(name = "ldap-plugin")
 @MsgbusPlugin
@@ -157,7 +142,7 @@ public class LdapPlugin {
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
-		for (DomainUserAccount account : ldap.getDomainUserAccounts(profile))
+		for (LdapUser account : ldap.getUsers(profile))
 			users.add(PrimitiveConverter.serialize(account));
 
 		resp.put("users", users);

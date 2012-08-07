@@ -23,21 +23,24 @@ import com.novell.ldap.LDAPAttribute;
 import com.novell.ldap.LDAPAttributeSet;
 import com.novell.ldap.LDAPEntry;
 
-public class DomainOrganizationalUnit {
+public class LdapOrgUnit {
 	private String distinguishedName;
 	private String name;
 	private Date whenCreated;
 	private Date whenChanged;
 
 	@SuppressWarnings("unused")
-	private DomainOrganizationalUnit() {
+	private LdapOrgUnit() {
 		// for primitive parse
 	}
 
-	public DomainOrganizationalUnit(LDAPEntry entry) {
+	public LdapOrgUnit(LDAPEntry entry) {
 		LDAPAttributeSet attrs = entry.getAttributeSet();
 		this.distinguishedName = getString(attrs, "distinguishedName");
 		this.name = getString(attrs, "name");
+		if (this.name == null)
+			this.name = getString(attrs, "ou");
+		
 		this.whenCreated = getDate(attrs, "whenCreated");
 		this.whenChanged = getDate(attrs, "whenChanged");
 	}
@@ -70,7 +73,7 @@ public class DomainOrganizationalUnit {
 
 	@Override
 	public String toString() {
-		return String.format("name=%s, whenCreated=%s, whenChanged=%s", name, DateFormat.format("yyyy-MM-dd HH:mm:ss", whenCreated),
-				DateFormat.format("yyyy-MM-dd HH:mm:ss", whenChanged));
+		return String.format("name=%s, whenCreated=%s, whenChanged=%s", name,
+				DateFormat.format("yyyy-MM-dd HH:mm:ss", whenCreated), DateFormat.format("yyyy-MM-dd HH:mm:ss", whenChanged));
 	}
 }

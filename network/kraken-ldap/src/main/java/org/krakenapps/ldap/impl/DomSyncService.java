@@ -33,8 +33,8 @@ import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
-import org.krakenapps.ldap.DomainOrganizationalUnit;
-import org.krakenapps.ldap.DomainUserAccount;
+import org.krakenapps.ldap.LdapOrgUnit;
+import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
@@ -170,26 +170,26 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 	@Override
 	public void sync(LdapProfile profile) {
-		Collection<DomainOrganizationalUnit> orgUnits = ldap.getOrganizationUnits(profile);
-		Collection<DomainUserAccount> users = ldap.getDomainUserAccounts(profile);
+		Collection<LdapOrgUnit> orgUnits = ldap.getOrgUnits(profile);
+		Collection<LdapUser> users = ldap.getUsers(profile);
 
 		exportDom(orgUnits, users, profile);
 		profile.setLastSync(new Date());
 	}
 
-	private void exportDom(Collection<DomainOrganizationalUnit> orgUnits, Collection<DomainUserAccount> users, LdapProfile profile) {
+	private void exportDom(Collection<LdapOrgUnit> orgUnits, Collection<LdapUser> users, LdapProfile profile) {
 		Map<String, OrganizationUnit> domOrgUnits = exportOrgUnits(profile.getTargetDomain(), orgUnits);
 		exportUsers(profile.getTargetDomain(), profile.getBaseDn(), users, domOrgUnits);
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, OrganizationUnit> exportOrgUnits(String domain, Collection<DomainOrganizationalUnit> orgUnits) {
+	private Map<String, OrganizationUnit> exportOrgUnits(String domain, Collection<LdapOrgUnit> orgUnits) {
 		Map<String, OrganizationUnit> result = new HashMap<String, OrganizationUnit>();
 
 		// names-object map
-		Map<List<String>, DomainOrganizationalUnit> orgUnitsMap = new HashMap<List<String>, DomainOrganizationalUnit>();
+		Map<List<String>, LdapOrgUnit> orgUnitsMap = new HashMap<List<String>, LdapOrgUnit>();
 		Pattern p = Pattern.compile("OU=(.*?),");
-		for (DomainOrganizationalUnit orgUnit : orgUnits) {
+		for (LdapOrgUnit orgUnit : orgUnits) {
 			// only active directory has org unit distinguished name
 			String dn = orgUnit.getDistinguishedName();
 			if (dn == null)
@@ -208,7 +208,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Map<String, OrganizationUnit> createdRoot = new HashMap<String, OrganizationUnit>();
 		List<OrganizationUnit> update = new ArrayList<OrganizationUnit>();
 		for (List<String> names : orgUnitsMap.keySet()) {
-			DomainOrganizationalUnit orgUnit = orgUnitsMap.get(names);
+			LdapOrgUnit orgUnit = orgUnitsMap.get(names);
 			OrganizationUnit domOrgUnit = createOrgUnits(domain, create, createdRoot, names);
 			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(orgUnit);
 
@@ -311,11 +311,11 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void exportUsers(String domain, String baseDn, Collection<DomainUserAccount> users,
+	private void exportUsers(String domain, String baseDn, Collection<LdapUser> users,
 			Map<String, OrganizationUnit> orgUnits) {
 		// remove removed ldap users
 		Set<String> loginNames = new HashSet<String>();
-		for (DomainUserAccount user : users)
+		for (LdapUser user : users)
 			loginNames.add(user.getAccountName());
 		for (User user : userApi.getUsers(domain)) {
 			Map<String, Object> ext = user.getExt();
@@ -340,7 +340,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		List<User> create = new ArrayList<User>();
 		List<User> update = new ArrayList<User>();
 		List<Object[]> failed = new ArrayList<Object[]>();
-		for (DomainUserAccount user : users) {
+		for (LdapUser user : users) {
 			User domUser = userApi.findUser(domain, user.getAccountName());
 			boolean exist = (domUser != null);
 
@@ -388,7 +388,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 					"kraken dom: Importing some accounts failed and ignored while syncing in DomSyncService. failure report identifier: {}",
 					reportId);
 			for (Object[] f : failed) {
-				DomainUserAccount acc = (DomainUserAccount) f[0];
+				LdapUser acc = (LdapUser) f[0];
 				Exception e = (Exception) f[1];
 				logger.warn("kraken dom: {}: {}", reportId, String.format("%s: %s", acc.getDistinguishedName(), e.toString()));
 			}
@@ -401,7 +401,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	/**
 	 * @return true if user data updated
 	 */
-	private boolean updateDomUserFromDomainUser(Map<String, OrganizationUnit> orgUnits, DomainUserAccount user, User domUser) {
+	private boolean updateDomUserFromDomainUser(Map<String, OrganizationUnit> orgUnits, LdapUser user, User domUser) {
 		boolean updated = false;
 
 		if (domUser.getLoginName() == null || !domUser.getLoginName().equals(user.getAccountName())) {
@@ -455,7 +455,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 					domUser.getPhone()));
 	}
 
-	private boolean isSameDN(User domUser, DomainUserAccount user) {
+	private boolean isSameDN(User domUser, LdapUser user) {
 		if (domUser == null || user == null || user.getDistinguishedName() == null || domUser.getExt() == null)
 			return false;
 		@SuppressWarnings("unchecked")
