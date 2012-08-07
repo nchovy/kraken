@@ -19,14 +19,16 @@ public class Directive {
 	public Node getPosition() {
 		return position;
 	}
-	
+
 	public String getDirectiveString() {
 		return directiveStr;
 	}
-	
-	private static Pattern quotedString = Pattern.compile("[^\\s\"]*\"([^\\\\\"]+|\\\\([btnfr\"'\\\\]|[0-3]?[0-7]{1,2}|u[0-9a-fA-F]{4}))*\"[^\\s\"]*");
-	private static Pattern MERGEFIELD_PATTERN = Pattern.compile("MERGEFIELD\\s+(?:\"(.*)\"|([^\"].*[^\"]))(|\\s+\\?\\[*bf#@mv].*)");
-	
+
+	private static Pattern quotedString = Pattern
+			.compile("[^\\s\"]*\"([^\\\\\"]+|\\\\([btnfr\"'\\\\]|[0-3]?[0-7]{1,2}|u[0-9a-fA-F]{4}))*\"[^\\s\"]*");
+	private static Pattern MERGEFIELD_PATTERN = Pattern.compile("MERGEFIELD\\s+(?:\"(.*)\"|([^\"].*[^\"]))");
+
+
 	private static String parseMergeField(String in) {
 		in = replaceUnicodeQuote(in.trim());
 		Matcher matcher = MERGEFIELD_PATTERN.matcher(in);
@@ -34,17 +36,19 @@ public class Directive {
 			String f = matcher.group(1);
 			if (f == null)
 				f = matcher.group(2);
+			f = f.replaceAll("\\s*\\\\\\*\\s*MERGEFORMAT\\s*", "");
 			f = f.replaceAll("\\\\(.)", "$1");
 			return f;
 		} else
 			return null;
 	}
-	
+
+
 	private static String replaceUnicodeQuote(String in) {
 		StringBuilder builder = new StringBuilder();
 		for (int i = 0; i < in.length(); ++i) {
 			int type = Character.getType(in.codePointAt(i));
-			switch(type) {
+			switch (type) {
 			case Character.FINAL_QUOTE_PUNCTUATION:
 			case Character.INITIAL_QUOTE_PUNCTUATION:
 				builder.append('"');
@@ -64,6 +68,5 @@ public class Directive {
 		}
 		return result;
 	}
-
 
 }

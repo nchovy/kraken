@@ -59,7 +59,7 @@ public class DirectiveExtractor implements OOXMLProcessor {
 				String fldCharType = n.getAttributes().getNamedItem("w:fldCharType").getNodeValue();
 				if (fldCharType.equals("begin")) {
 					mergedDirective = "";
-					directivePosition = n.getParentNode(); 
+					directivePosition = n; 
 				} else if (fldCharType.equals("end") || fldCharType.equals("separate")) {
 					if (directivePosition != null) {
 						directives.add(new Directive(directivePosition, Directive.extractDirective(mergedDirective)));
@@ -76,7 +76,7 @@ public class DirectiveExtractor implements OOXMLProcessor {
 					mergedDirective += n.getTextContent();
 			} else if (n.getNodeName().equals("w:fldSimple")) {
 				String nodeValue = n.getAttributes().getNamedItem("w:instr").getNodeValue();
-				directives.add(new Directive(n.getParentNode(), Directive.extractDirective(nodeValue)));
+				directives.add(new Directive(n, Directive.extractDirective(nodeValue)));
 			} else {
 			}
 		}

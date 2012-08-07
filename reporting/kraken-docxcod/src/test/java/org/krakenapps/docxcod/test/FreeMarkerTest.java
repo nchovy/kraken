@@ -92,7 +92,7 @@ public class FreeMarkerTest {
 		}
 	}
 
-	@Test
+//	@Test
 	public void test1() throws Exception {
 		Configuration cfg = new Configuration();
 		cfg.setObjectWrapper(new DefaultObjectWrapper());
