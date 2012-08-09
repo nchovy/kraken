@@ -113,6 +113,7 @@ public class LogQueryImpl implements LogQuery {
 
 		try {
 			result = new Result();
+			result.setLogQuery(this);
 			commands.get(commands.size() - 1).setNextCommand(result);
 			for (LogQueryCallback callback : logQueryCallbacks)
 				result.registerCallback(callback);
