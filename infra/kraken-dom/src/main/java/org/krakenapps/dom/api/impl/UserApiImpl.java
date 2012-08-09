@@ -157,6 +157,11 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
+	public Collection<User> getUsers(String domain, Predicate pred) {
+		return cfg.all(domain, cls, pred);
+	}
+
+	@Override
 	public User getUser(String domain, String loginName) {
 		return cfg.get(domain, cls, getPred(loginName), NOT_FOUND);
 	}
