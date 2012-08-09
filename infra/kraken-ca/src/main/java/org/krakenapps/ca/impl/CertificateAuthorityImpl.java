@@ -24,8 +24,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.ca.CertEventListener;
 import org.krakenapps.ca.CertificateAuthority;
 import org.krakenapps.ca.CertificateMetadata;
 import org.krakenapps.ca.CertificateRequest;
@@ -63,9 +65,12 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	 */
 	private String name;
 
+	private CopyOnWriteArraySet<CertEventListener> listeners;
+
 	public CertificateAuthorityImpl(ConfigDatabase db, String name) {
 		this.db = db;
 		this.name = name;
+		listeners = new CopyOnWriteArraySet<CertEventListener>();
 	}
 
 	@Override
@@ -228,6 +233,15 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		certs.add(c, "kraken-ca", "issued certificate for " + req.getSubjectDn());
 
 		logger.info("kraken ca: generated new certificate [{}]", cert.getSubjectX500Principal().getName());
+
+		for (CertEventListener listener : listeners) {
+			try {
+				listener.onIssued(cm);
+			} catch (Throwable t) {
+				logger.error("kraken ca: certificate revoke callback should not throw any exception", t);
+			}
+		}
+
 		return cm;
 	}
 
@@ -254,6 +268,14 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 		RevokedCertificate r = new RevokedCertificate(cm.getSerial(), new Date(), reason);
 		revoked.add(PrimitiveConverter.serialize(r), "kraken-ca", "revoked " + cm);
+
+		for (CertEventListener listener : listeners) {
+			try {
+				listener.onRevoked(cm, reason);
+			} catch (Throwable t) {
+				logger.error("kraken ca: certificate revoke callback should not throw any exception", t);
+			}
+		}
 	}
 
 	@Override
@@ -264,7 +286,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 		if (config == null)
 			return null;
 
-		RevokedCertificate rc = PrimitiveConverter.parse(RevokedCertificate.class, config.getDocument());		
+		RevokedCertificate rc = PrimitiveConverter.parse(RevokedCertificate.class, config.getDocument());
 
 		return rc;
 	}
@@ -302,5 +324,15 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 		public CertSerial() {
 		}
+	}
+
+	@Override
+	public void addListener(CertEventListener listener) {
+		listeners.add(listener);
+	}
+
+	@Override
+	public void removeListener(CertEventListener listener) {
+		listeners.remove(listener);
 	}
 }
