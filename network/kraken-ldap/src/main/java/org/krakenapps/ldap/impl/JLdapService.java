@@ -323,11 +323,9 @@ public class JLdapService implements LdapService {
 
 		try {
 			// set filter
-			String filter = null;
-			if (profile.getServerType() == LdapServerType.ActiveDirectory)
-				filter = "(sAMAccountName=" + uid + ")";
-			else
-				filter = "(uid=" + uid + ")";
+			String filter = "(sAMAccountName=" + uid + ")";
+			if (profile.getServerType() != LdapServerType.ActiveDirectory)
+				filter = buildUserFilter(profile, uid);
 
 			String baseDn = buildBaseDN(profile);
 
@@ -354,20 +352,14 @@ public class JLdapService implements LdapService {
 				}
 
 				mod = new LDAPModification(LDAPModification.REPLACE, new LDAPAttribute("unicodePwd", quotedPasswordBytes));
-				logger.debug("kraken ldap: active directory modify request [{}]", mod.toString());
+				logger.debug("kraken ldap: active directory modify request [{}] for dn [{}]", mod.toString(), entry.getDN());
 			} else {
 				mod = new LDAPModification(LDAPModification.REPLACE, new LDAPAttribute("userPassword", newPassword));
-				logger.debug("kraken ldap: sun one modify request [{}]", mod.toString());
+				logger.debug("kraken ldap: sun one modify request [{}] for dn [{}]", mod.toString(), entry.getDN());
 			}
 
-			String dn = null;
-			if (profile.getServerType() == LdapServerType.ActiveDirectory)
-				dn = entry.getAttribute("distinguishedName").getStringValue();
-			else
-				dn = "cn=" + entry.getAttribute("cn").getStringValue() + "," + baseDn;
-
 			// modify
-			lc.modify(dn, mod);
+			lc.modify(entry.getDN(), mod);
 		} catch (LDAPException e) {
 			throw new IllegalStateException("cannot change password, profile=" + profile.getName() + ", uid=" + uid, e);
 		} finally {
