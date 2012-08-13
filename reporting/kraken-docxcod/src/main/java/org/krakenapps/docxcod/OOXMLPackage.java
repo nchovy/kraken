@@ -226,16 +226,8 @@ public class OOXMLPackage {
 
 			String[] listParts = listParts("");
 
-			for (String part : listParts) {
-				System.out.println(String.format("## %s", part));
-			}
-
 			final Set<String> setOfParts = new HashSet<String>(Arrays.asList(listParts));
 			
-			for (String p: setOfParts) {
-				System.out.printf("# %s\n", p);
-			}
-
 			for (String part : listParts) {
 				files.add(new File(dataDir, part));
 			}

@@ -4,8 +4,6 @@ import static org.krakenapps.docxcod.util.XMLDocHelper.*;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,11 +11,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.StringBufferInputStream;
-import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -35,6 +28,8 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -43,6 +38,8 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 public class TableDirectiveParser implements OOXMLProcessor {
+	private Logger logger = LoggerFactory.getLogger(getClass().getName());
+	
 	public void process(OOXMLPackage pkg) {
 		extractMergeField(pkg);
 		unwrapMagicNode(pkg);
@@ -105,7 +102,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 
 	private void unwrapMagicNode(OOXMLPackage pkg) {
 		fileRead(pkg);
-		System.out.println("aa");
+		logger.debug("aa");
 
 	}
 
@@ -176,7 +173,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 
 				Node n = d.getPosition();
 				String directive = d.getDirectiveString();
-				System.out.printf("%s %s\n", n.getNodeName(), directive);
+				logger.debug("{} {}", new Object[] { n.getNodeName(), directive });
 				Node targetPara = null;
 				Node parentOfPara = null;
 
@@ -196,7 +193,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 					parentOfPara.insertBefore(getMagicNode(doc, directive), targetPara);
 				} else {
 					if (n.getNodeName().equals("w:fldSimple")) {
-						System.out.println("fldSimple found");
+						logger.debug("fldSimple found");
 						NodeList t = evaluateXPathExpr(xpFldSimpleText, n);
 
 						t.item(0).setTextContent(directive);

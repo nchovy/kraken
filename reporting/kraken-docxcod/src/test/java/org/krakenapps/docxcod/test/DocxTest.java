@@ -21,9 +21,13 @@ import org.krakenapps.docxcod.OOXMLPackage;
 import org.krakenapps.docxcod.OOXMLProcessor;
 import org.krakenapps.docxcod.TableDirectiveParser;
 import org.krakenapps.docxcod.util.ZipHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Node;
 
 public class DocxTest {
+	private Logger logger = LoggerFactory.getLogger(getClass().getName());
+	
 	private TearDownHelper tearDownHelper = new TearDownHelper();
 
 	@Before
@@ -67,7 +71,7 @@ public class DocxTest {
 		for (Directive dir: directiveExtractor.getDirectives()) {
 			Node n = dir.getPosition();
 			String dirStr = dir.getDirectiveString();
-			System.out.println(dirStr);
+			logger.debug("extracted: " + dirStr);
 
 			assertTrue(dirStr.equals(expected[cnt++]));
 		}
