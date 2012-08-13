@@ -1,8 +1,6 @@
 package org.krakenapps.docxcod;
 
-import static org.krakenapps.docxcod.util.XMLDocHelper.evaluateXPath;
-import static org.krakenapps.docxcod.util.XMLDocHelper.newDocumentBuilder;
-import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
+import static org.krakenapps.docxcod.util.XMLDocHelper.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -29,6 +27,7 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 
+import org.apache.commons.io.FilenameUtils;
 import org.krakenapps.docxcod.util.XMLDocHelper.NodeListWrapper;
 import org.krakenapps.docxcod.util.ZipHelper;
 import org.slf4j.Logger;
@@ -50,8 +49,10 @@ public class OOXMLPackage {
 	public OOXMLPackage() {
 
 	}
-	
-	public File getDataDir() { return dataDir; }
+
+	public File getDataDir() {
+		return dataDir;
+	}
 
 	public void load(InputStream is, File targetDir) throws IOException {
 		this.dataDir = targetDir;
@@ -249,9 +250,31 @@ public class OOXMLPackage {
 		return null;
 	}
 
-	public Relationship getRelationship(String string) {
-		// TODO Auto-generated method stub
-		return null;
+	public Relationship getRootRelationship() {
+		return rootRel;
 	}
 
+	public String[] listParts(String prefix) {
+		if (rootRel == null)
+			return new String[0];
+
+		ArrayList<String> result = new ArrayList<String>();
+		Stack<Object[]> s = new Stack<Object[]>();
+		s.push(new Object[] { rootRel, "" });
+		while (!s.empty()) {
+			Object[] args = s.pop();
+			Relationship currRel = (Relationship) args[0];
+			String currPrefix = (String) args[1];
+
+			for (Relationship r : currRel.children) {
+				String combinedPath = FilenameUtils.concat(currPrefix, r.target);
+				if (combinedPath.startsWith(prefix))
+					result.add(combinedPath);
+				s.push(new Object[] { r,
+						FilenameUtils.normalize(FilenameUtils.getFullPath(combinedPath)) });
+			}
+		}
+
+		return (String[]) result.toArray(new String[0]);
+	}
 }
