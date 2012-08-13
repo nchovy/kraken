@@ -2,6 +2,7 @@ package org.krakenapps.docxcod.util;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -33,7 +34,8 @@ public class ZipHelper {
 					System.err.println("not in basedir. omitted: " + f);
 					continue;
 				}
-				String zipEntryName = filePath.substring(baseDir.getAbsolutePath().length() + 1, filePath.length());
+//				String zipEntryName = filePath.substring(baseDir.getAbsolutePath().length() + 1, filePath.length());
+				String zipEntryName = extractSubPath(f, baseDir);
 
 				try {
 					ZipEntry zEntry = new ZipEntry(zipEntryName);
@@ -132,14 +134,34 @@ public class ZipHelper {
 	}
 
 	public static void getFilesRecursivelyIn(File entry, List<File> files) {
+		getFilesRecursivelyIn(entry, files, null);
+	}
+	
+	public static void getFilesRecursivelyIn(File entry, List<File> files, FileFilter filter) {
 		if (entry.exists()) {
-			files.add(entry);
+			if (filter == null || filter.accept(entry))
+				files.add(entry);
 			if (entry.isDirectory()) {
 				File[] fileList = entry.listFiles();
 				for (int i = 0; i < fileList.length; ++i) {
-					getFilesRecursivelyIn(fileList[i], files);
+					getFilesRecursivelyIn(fileList[i], files, filter);
 				}
 			}
 		}
 	}
+	
+	public static String extractSubPath(File pathname, File baseDir) {
+		String src = pathname.getAbsolutePath();
+		String base = baseDir.getAbsolutePath();
+
+		if (src.startsWith(base)) {
+			if (src.equals(base))
+				return "";
+			else
+				return src.substring(base.length() + 1);
+		} else
+			return src;
+	}
+
+
 }
