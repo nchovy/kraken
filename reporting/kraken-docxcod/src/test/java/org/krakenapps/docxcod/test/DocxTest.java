@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import org.junit.After;
@@ -15,9 +16,9 @@ import org.junit.Test;
 import org.krakenapps.docxcod.ChartDirectiveParser;
 import org.krakenapps.docxcod.Directive;
 import org.krakenapps.docxcod.DirectiveExtractor;
-import org.krakenapps.docxcod.OOXMLProcessor;
 import org.krakenapps.docxcod.FreeMarkerRunner;
 import org.krakenapps.docxcod.OOXMLPackage;
+import org.krakenapps.docxcod.OOXMLProcessor;
 import org.krakenapps.docxcod.TableDirectiveParser;
 import org.krakenapps.docxcod.util.ZipHelper;
 import org.w3c.dom.Node;
@@ -84,7 +85,7 @@ public class DocxTest {
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
 		processors.add(new TableDirectiveParser());
 		processors.add(new ChartDirectiveParser());
-		processors.add(new FreeMarkerRunner());
+		processors.add(new FreeMarkerRunner(new HashMap<String, Object>()));
 
 		for (OOXMLProcessor processor: processors) {
 			processor.process(docx);
