@@ -120,10 +120,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			xmlString = xmlString.replaceAll("@before-row", "");
 			xmlString = xmlString.replaceAll("@after-row", "");
 
-			System.out.println(xmlString);
-
-			InputStream in = new ByteArrayInputStream(xmlString.toString().getBytes("UTF-8"));
-
+			InputStream in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
 			FileOutputStream fos = new FileOutputStream(new File(pkg.getDataDir(), "word/document.xml"));
 
 			BufferedInputStream bis = new BufferedInputStream(in);
@@ -169,7 +166,8 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			Document doc = newDocumentBuilder().parse(f);
 
 			XPath xpath = newXPath(doc);
-			NodeList nodeList = evaluateXPath(xpath, "//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
+			NodeList nodeList = evaluateXPath(xpath,
+					"//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
 
 			XPathExpression xpFldSimpleText = xpath.compile("w:r/w:t");
 
@@ -211,7 +209,8 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 			transformer.setOutputProperty(OutputKeys.CDATA_SECTION_ELEMENTS, "yes");
 			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-			transformer.transform(new DOMSource(doc), new StreamResult(new File(pkg.getDataDir(), "word/document.xml")));
+			transformer
+					.transform(new DOMSource(doc), new StreamResult(new File(pkg.getDataDir(), "word/document.xml")));
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

@@ -91,7 +91,7 @@ public class DocxTest {
 			processor.process(docx);
 		}
 		
-		File saveFile = new File("saveTest.docx");
+		File saveFile = new File("mainTest-save.docx");
 		docx.save(new FileOutputStream(saveFile));
 		tearDownHelper.add(saveFile);
 	}

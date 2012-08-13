@@ -4,13 +4,16 @@ import static org.krakenapps.docxcod.util.XMLDocHelper.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.zip.ZipOutputStream;
@@ -217,8 +220,46 @@ public class OOXMLPackage {
 		ZipOutputStream zipOs = null;
 		try {
 			zipOs = new ZipOutputStream(os);
-			ArrayList<File> files = new ArrayList<File>();
-			ZipHelper.getFilesRecursivelyIn(dataDir, files);
+			List<File> files = new ArrayList<File>();
+
+			files.add(new File(dataDir, "[Content_Types].xml"));
+
+			String[] listParts = listParts("");
+
+			for (String part : listParts) {
+				System.out.println(String.format("## %s", part));
+			}
+
+			final Set<String> setOfParts = new HashSet<String>(Arrays.asList(listParts));
+			
+			for (String p: setOfParts) {
+				System.out.printf("# %s\n", p);
+			}
+
+			for (String part : listParts) {
+				files.add(new File(dataDir, part));
+			}
+
+			ZipHelper.getFilesRecursivelyIn(dataDir, files, new FileFilter() {
+				@Override
+				public boolean accept(File pathname) {
+					if (pathname.getName().equals(".rels") || isRelsForParts(pathname))
+						return true;
+					else
+						return false;
+				}
+
+				private boolean isRelsForParts(File pathname) {
+					String path = pathname.getPath();
+					if (path.endsWith(".rels")) {
+						String relParent = path.substring(0, path.length() - ".rels".length());
+						relParent = relParent.replace("_rels" + File.separator, "");
+						return setOfParts.contains(ZipHelper.extractSubPath(new File(relParent), dataDir));
+					}
+					return false;
+				}
+			});
+
 			ZipHelper.archive(zipOs, files, dataDir);
 			zipOs.close();
 		} catch (IOException e) {
