@@ -303,10 +303,11 @@ public class OOXMLPackage {
 				String combinedPath = FilenameUtils.concat(currPrefix, r.target);
 				if (combinedPath.startsWith(prefix))
 					result.add(combinedPath);
-				s.push(new Object[] { r,
-						FilenameUtils.normalize(FilenameUtils.getFullPath(combinedPath)) });
+					s.push(new Object[] { r,
+							FilenameUtils.normalize(FilenameUtils.getFullPath(combinedPath)) });
 			}
 		}
+		System.out.println("result : " +result);
 
 		return (String[]) result.toArray(new String[0]);
 	}

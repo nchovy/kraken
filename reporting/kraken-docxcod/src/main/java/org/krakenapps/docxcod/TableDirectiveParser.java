@@ -1,6 +1,9 @@
 package org.krakenapps.docxcod;
 
-import static org.krakenapps.docxcod.util.XMLDocHelper.*;
+import static org.krakenapps.docxcod.util.XMLDocHelper.evaluateXPath;
+import static org.krakenapps.docxcod.util.XMLDocHelper.evaluateXPathExpr;
+import static org.krakenapps.docxcod.util.XMLDocHelper.newDocumentBuilder;
+import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -11,6 +14,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -27,11 +31,14 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
 
+import org.krakenapps.docxcod.util.XMLDocHelper.NodeListWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -39,7 +46,7 @@ import org.xml.sax.SAXException;
 
 public class TableDirectiveParser implements OOXMLProcessor {
 	private Logger logger = LoggerFactory.getLogger(getClass().getName());
-	
+
 	public void process(OOXMLPackage pkg) {
 		extractMergeField(pkg);
 		unwrapMagicNode(pkg);
@@ -114,8 +121,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 
 			xmlString = xmlString.replaceAll("<KMagicNode><!\\[CDATA\\[", "<");
 			xmlString = xmlString.replaceAll("\\]\\]></KMagicNode>", ">");
-			xmlString = xmlString.replaceAll("@before-row", "");
-			xmlString = xmlString.replaceAll("@after-row", "");
+
 
 			InputStream in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
 			FileOutputStream fos = new FileOutputStream(new File(pkg.getDataDir(), "word/document.xml"));
@@ -139,22 +145,6 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		}
 	}
 
-	/*
-	 * private void fileWrite(OOXMLPackage pkg){ try{ BufferedWriter UniOutput =
-	 * new BufferedWriter(new OutputStreamWriter(new
-	 * FileOutputStream("out.txt"),"UTF-8"));
-	 * 
-	 * UniOutput.write(65279);
-	 * 
-	 * UniOutput.write("abcfgdfgdf"); UniOutput.newLine();
-	 * UniOutput.write("abbbbbbb");
-	 * 
-	 * UniOutput.close();
-	 * 
-	 * } catch (UnsupportedEncodingException e){ System.err.println(e);
-	 * System.exit(1); } catch (IOException e){ System.err.println(e);
-	 * System.exit(1); } }
-	 */
 
 	private void extractMergeField(OOXMLPackage pkg) throws TransformerFactoryConfigurationError {
 		InputStream f = null;
@@ -172,32 +162,14 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			for (Directive d : directives) {
 
 				Node n = d.getPosition();
+
 				String directive = d.getDirectiveString();
 				logger.debug("{} {}", new Object[] { n.getNodeName(), directive });
-				Node targetPara = null;
-				Node parentOfPara = null;
 
 				if (directive.charAt(0) == '@') {
-					targetPara = n.getParentNode().getParentNode();
-					parentOfPara = targetPara;
-
-					do {
-						targetPara = targetPara.getParentNode();
-					} while (!targetPara.getNodeName().equals("w:tr"));
-
-					parentOfPara = targetPara.getParentNode();
-
-					if (directive.startsWith("@after-row")) {
-						targetPara = targetPara.getNextSibling();
-					}
-					parentOfPara.insertBefore(getMagicNode(doc, directive), targetPara);
+					handleAugmentedDirective(doc, n, directive);
 				} else {
-					if (n.getNodeName().equals("w:fldSimple")) {
-						logger.debug("fldSimple found");
-						NodeList t = evaluateXPathExpr(xpFldSimpleText, n);
-
-						t.item(0).setTextContent(directive);
-					}
+					handleFreemarkerDirective(xpFldSimpleText, n, directive);
 				}
 
 			}
@@ -213,6 +185,214 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		} finally {
 			safeClose(f);
 		}
+	}
+
+	private void handleFreemarkerDirective(XPathExpression xpFldSimpleText, Node n, String directive) throws XPathExpressionException {
+		if (n.getNodeName().equals("w:fldSimple")) {
+			logger.debug("fldSimple found");
+			NodeList t = evaluateXPathExpr(xpFldSimpleText, n);
+
+			System.out.println(directive);
+			t.item(0).setTextContent(directive);
+
+			// n : w:fldSimple can contain many w:r in its children
+			Node parent = n.getParentNode();
+			for (Node c : new NodeListWrapper(n.getChildNodes())) {
+				if (c.getNodeName() != null)
+					parent.insertBefore(c.cloneNode(true), n);
+			}
+			parent.removeChild(n);
+		} else if (n.getNodeName().equals("w:fldChar")) {
+			Node firstRun = n.getParentNode();
+			Node sibling = firstRun.getNextSibling();
+			Node lastRun = null;
+			Node newRun = null;
+			ArrayList<Node> willBeRemoved = new ArrayList<Node>();
+			willBeRemoved.add(firstRun);
+			
+			while (sibling != null)
+			{
+			
+				if (sibling.getNodeName().equals("w:r"))
+				{
+					willBeRemoved.add(sibling);
+					Node fldCharNode = findFldCharNode(sibling);
+					if (fldCharNode == null) {
+						sibling = sibling.getNextSibling();
+						continue;
+					}
+					NamedNodeMap attributes = fldCharNode.getAttributes();
+					Node namedItem = attributes.getNamedItem("w:fldCharType");
+					if (namedItem == null) {
+						sibling = sibling.getNextSibling();
+						continue;
+					}
+					if (namedItem.getNodeValue().equals("separate")){
+						newRun = sibling.getNextSibling();
+						sibling = sibling.getNextSibling();
+						continue;//live
+					} 
+					if (namedItem.getNodeValue().equals("end")) {
+						lastRun = sibling;
+						break;
+					}
+				}
+				sibling = sibling.getNextSibling();
+			}
+			willBeRemoved.remove(newRun);
+			
+			if (lastRun != null) { // found matching "end" fldChar
+				Node parentNode = firstRun.getParentNode();
+				for (Node node : willBeRemoved) {
+					parentNode.removeChild(node);
+				}
+			} else {
+				logger.warn("no matching \"end\" fldChar found");
+			}
+		}
+	}
+
+	static String[] augmentedDirectives = {
+			"@before-row",
+			"@after-row",
+			"@before-paragraph",
+			"@after-paragraph"
+	};
+
+	private void handleAugmentedDirective(Document doc, Node n, String directive) {
+		if (n.getNodeName().equals("w:fldSimple"))
+		{
+			Node targetPara = n.getParentNode().getParentNode();
+			Node parentOfPara = targetPara;
+
+			String prefix = findPrefix(directive);
+
+			if (prefix == null) {
+				logger.debug("unsupported augmented directive: {}", directive);
+				return;
+			}
+
+			if (prefix.contains("row"))
+				do {
+					targetPara = targetPara.getParentNode();
+				} while (!targetPara.getNodeName().equals("w:tr"));
+			else if (prefix.contains("paragraph"))
+			{
+				logger.debug("not supported yet");
+				return;
+			}
+
+			parentOfPara = targetPara.getParentNode();
+
+			if (directive.startsWith("@after-row")) {
+				targetPara = targetPara.getNextSibling();
+			}
+
+			parentOfPara.insertBefore(getMagicNode(doc, unwrapAugmentedDirective(directive)), targetPara);
+
+			n.getParentNode().removeChild(n);
+		}
+		else if (n.getNodeName().equals("w:fldChar"))
+		{
+			// insert magic node
+			Node targetPara = n;
+			Node parentOfPara = targetPara;
+
+			String prefix = findPrefix(directive);
+
+			if (prefix == null) {
+				logger.debug("unsupported augmented directive: {}", directive);
+				return;
+			}
+
+			if (prefix.contains("row"))
+				do {
+					targetPara = targetPara.getParentNode();
+				} while (!targetPara.getNodeName().equals("w:tr"));
+			else if (prefix.contains("paragraph"))
+			{
+				logger.debug("not supported yet");
+				return;
+			}
+
+			parentOfPara = targetPara.getParentNode();
+
+			if (directive.startsWith("@after-row")) {
+				targetPara = targetPara.getNextSibling();
+			}
+
+			parentOfPara.insertBefore(getMagicNode(doc, unwrapAugmentedDirective(directive)), targetPara);
+
+			// remove annotated node
+			Node firstRun = n.getParentNode();
+			Node sibling = firstRun.getNextSibling();
+			Node lastRun = null;
+			ArrayList<Node> willBeRemoved = new ArrayList<Node>();
+			willBeRemoved.add(firstRun);
+
+			while (sibling != null)
+			{
+				if (sibling.getNodeName().equals("w:r"))
+				{
+					willBeRemoved.add(sibling);
+					Node fldCharNode = findFldCharNode(sibling);
+					if (fldCharNode == null) {
+						sibling = sibling.getNextSibling();
+						continue;
+					}
+					NamedNodeMap attributes = fldCharNode.getAttributes();
+					Node namedItem = attributes.getNamedItem("w:fldCharType");
+					if (namedItem == null) {
+						sibling = sibling.getNextSibling();
+						continue;
+					}
+					if (namedItem.getNodeValue().equals("end")) {
+						lastRun = sibling;
+						break;
+					}
+				}
+				sibling = sibling.getNextSibling();
+			}
+			if (lastRun != null) { // found matching "end" fldChar
+				Node parentNode = firstRun.getParentNode();
+				for (Node node : willBeRemoved) {
+					parentNode.removeChild(node);
+				}
+			} else {
+				logger.warn("no matching \"end\" fldChar found");
+			}
+		}
+		else
+		{
+			logger.warn("not supported yet: {}", n.getNodeName());
+		}
+	}
+
+	private Node findFldCharNode(Node sibling) {
+		for (Node n : new NodeListWrapper(sibling.getChildNodes())) {
+			if (n.getNodeName().equals("w:fldChar")) {
+				return n;
+			}
+		}
+		return null;
+	}
+
+	private String findPrefix(String directive) {
+		for (String ad : augmentedDirectives) {
+			if (directive.startsWith(ad)) {
+				return ad;
+			}
+		}
+		return null;
+	}
+
+	private String unwrapAugmentedDirective(String directive) {
+		for (String ad : augmentedDirectives) {
+			if (directive.startsWith(ad)) {
+				return directive.substring(ad.length()).trim();
+			}
+		}
+		return directive;
 	}
 
 	private void safeClose(InputStream f) {

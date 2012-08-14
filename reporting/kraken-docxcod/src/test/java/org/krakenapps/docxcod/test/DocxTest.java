@@ -39,11 +39,11 @@ public class DocxTest {
 		tearDownHelper.tearDown();
 	}
 	
-	@Test
+//	@Test
 	public void fieldTest() throws IOException {
 		File targetDir = new File("fieldTest");
 		targetDir.mkdirs();
-		tearDownHelper.add(targetDir);
+	//	tearDownHelper.add(targetDir);
 		
 		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/fieldTest.docx"), targetDir);
@@ -97,7 +97,7 @@ public class DocxTest {
 		
 		File saveFile = new File("mainTest-save.docx");
 		docx.save(new FileOutputStream(saveFile));
-		tearDownHelper.add(saveFile);
+	//	tearDownHelper.add(saveFile);
 	}
 
 	@Test

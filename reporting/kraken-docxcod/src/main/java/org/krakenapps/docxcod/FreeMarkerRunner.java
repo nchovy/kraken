@@ -42,8 +42,8 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 			try {	
 				templateReader = new InputStreamReader(new FileInputStream(sf));
 				writer = new PrintWriter(new FileOutputStream(outf));
-				Template t = new Template(s, templateReader, cfg);
 				logger.info("process: try freemarker template processing: {}", sf);
+				Template t = new Template(s, templateReader, cfg);
 				t.process(data, writer);
 				logger.trace("process: freemarker template processing completed");
 				safeClose(writer);
