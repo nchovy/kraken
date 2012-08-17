@@ -5,11 +5,16 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +22,7 @@ import org.krakenapps.docxcod.ChartDirectiveParser;
 import org.krakenapps.docxcod.Directive;
 import org.krakenapps.docxcod.DirectiveExtractor;
 import org.krakenapps.docxcod.FreeMarkerRunner;
+import org.krakenapps.docxcod.JsonHelper;
 import org.krakenapps.docxcod.OOXMLPackage;
 import org.krakenapps.docxcod.OOXMLProcessor;
 import org.krakenapps.docxcod.TableDirectiveParser;
@@ -78,7 +84,7 @@ public class DocxTest {
 	}
 	
 	@Test
-	public void mainTest() throws IOException {
+	public void mainTest() throws IOException, JSONException {
 		File targetDir = new File("mainTest");
 		targetDir.mkdirs();
 		//tearDownHelper.add(targetDir);
@@ -86,10 +92,14 @@ public class DocxTest {
 		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
 		
+		InputStreamReader inputReader = new InputStreamReader(getClass().getResourceAsStream("/nestedListTest.in"));
+		JSONTokener tokener = new JSONTokener(inputReader);
+		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
+		
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
 		processors.add(new TableDirectiveParser());
 		processors.add(new ChartDirectiveParser());
-		processors.add(new FreeMarkerRunner(new HashMap<String, Object>()));
+		processors.add(new FreeMarkerRunner(rootMap));
 
 		for (OOXMLProcessor processor: processors) {
 			processor.process(docx);

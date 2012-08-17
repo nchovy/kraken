@@ -106,6 +106,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void adds(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String alreadyExistMessage,
 			DefaultEntityEventProvider<T> provider, Object state) {
+		if (docs.isEmpty())
+			return;
+
 		ConfigDatabase db = getDatabase(domain);
 		Transaction xact = new Transaction(domain, db);
 		xact.addEventProvider(cls, provider);
@@ -206,6 +209,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void updateForGuids(String domain, Class<T> cls, List<String> guids, List<T> docs, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider, Object state) {
+		if (docs.isEmpty())
+			return;
+
 		ConfigDatabase db = getDatabase(domain);
 		Transaction xact = new Transaction(domain, db);
 		xact.addEventProvider(cls, provider);
@@ -287,6 +293,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> void updates(String domain, Class<T> cls, List<Predicate> preds, List<T> docs, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider, Object state) {
+		if (docs.isEmpty())
+			return;
+
 		ConfigDatabase db = getDatabase(domain);
 		Transaction xact = new Transaction(domain, db);
 		xact.addEventProvider(cls, provider);
@@ -379,6 +388,9 @@ public class ConfigManagerImpl implements ConfigManager {
 	@Override
 	public <T> Collection<T> removes(String domain, Class<T> cls, List<Predicate> preds, String notFoundMessage,
 			DefaultEntityEventProvider<T> provider, Object removingState, Object removedState) {
+		if (preds.isEmpty())
+			return new ArrayList<T>();
+
 		ConfigDatabase db = getDatabase(domain);
 		Transaction xact = new Transaction(domain, db);
 
