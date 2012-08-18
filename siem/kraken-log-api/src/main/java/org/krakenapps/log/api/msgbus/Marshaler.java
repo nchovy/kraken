@@ -45,10 +45,12 @@ public class Marshaler {
 		m.put("name", logger.getName());
 		m.put("factory_full_name", logger.getFactoryFullName());
 		m.put("description", logger.getDescription());
+		m.put("is_passive", logger.isPassive());
 		m.put("interval", logger.getInterval());
 		m.put("status", logger.isRunning() ? "running" : "stopped");
-		m.put("last_log", dateFormatting(logger.getLastLogDate()));
+		m.put("last_start", dateFormatting(logger.getLastStartDate()));
 		m.put("last_run", dateFormatting(logger.getLastRunDate()));
+		m.put("last_log", dateFormatting(logger.getLastLogDate()));
 		m.put("log_count", logger.getLogCount());
 		return m;
 	}

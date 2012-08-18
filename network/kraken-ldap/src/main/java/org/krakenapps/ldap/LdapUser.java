@@ -23,7 +23,7 @@ import com.novell.ldap.LDAPAttribute;
 import com.novell.ldap.LDAPAttributeSet;
 import com.novell.ldap.LDAPEntry;
 
-public class DomainUserAccount {
+public class LdapUser {
 	private String accountName;
 	private boolean domainAdmin;
 	private boolean allowDialIn;
@@ -45,15 +45,15 @@ public class DomainUserAccount {
 	private Date accountExpires;
 
 	@SuppressWarnings("unused")
-	private DomainUserAccount() {
+	private LdapUser() {
 		// for primitive parse
 	}
 
-	public DomainUserAccount(LDAPEntry entry) {
+	public LdapUser(LDAPEntry entry, String idAttr) {
 		LDAPAttributeSet attrs = entry.getAttributeSet();
 		this.accountName = getString(attrs, "sAMAccountName");
 		if (accountName == null)
-			accountName = getString(attrs, "uid");
+			accountName = getString(attrs, idAttr);
 		this.domainAdmin = getInt(attrs, "adminCount") > 0;
 		this.allowDialIn = "TRUE".equals(getString(attrs, "msNPAllowDialin"));
 		this.logonCount = getInt(attrs, "logonCount");

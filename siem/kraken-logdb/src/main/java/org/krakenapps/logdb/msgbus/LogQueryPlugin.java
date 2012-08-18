@@ -252,11 +252,22 @@ public class LogQueryPlugin {
 		}
 
 		@Override
+		public void onQueryStatusChange() {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("id", query.getId());
+			m.put("type", "status_change");
+			m.put("count", query.getResult().size());
+			pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
+		}
+
+		@Override
 		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
 			Map<String, Object> m = LogQueryHelper.getResultData(service, query.getId(), offset, limit);
 			m.put("id", query.getId());
 			m.put("type", "page_loaded");
-			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
 		}
 
 		@Override
@@ -265,7 +276,8 @@ public class LogQueryPlugin {
 			m.put("id", query.getId());
 			m.put("type", "eof");
 			m.put("total_count", query.getResult().size());
-			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
+			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
 			query.unregisterQueryCallback(this);
 		}
 	}
@@ -299,14 +311,15 @@ public class LogQueryPlugin {
 			m.put("span_amount", spanValue.getAmount());
 			m.put("begin", beginTime);
 			m.put("values", values);
-			m.put("count", query.getResult().size());
-			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m);
+			pushApi.push(orgDomain, "logdb-query-timeline-" + query.getId(), m);
 
-			logger.trace(
-					"kraken logstorage: timeline callback => "
-							+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}",
-					new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
-							Arrays.toString(values), query.getResult().size() });
+			m.put("count", query.getResult().size());
+			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m); // deprecated
+
+			Object[] trace = new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
+					Arrays.toString(values), query.getResult().size() };
+			logger.trace("kraken logstorage: timeline callback => "
+					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}", trace);
 		}
 	}
 }

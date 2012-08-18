@@ -15,13 +15,14 @@
  */
 package org.krakenapps.log.api;
 
-import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.krakenapps.api.DateFormat;
 
 public abstract class AbstractLogger implements Logger, Runnable {
 	private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AbstractLogger.class.getName());
@@ -33,6 +34,7 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	private String factoryNamespace;
 	private String factoryName;
 	private String description;
+	private boolean isPassive;
 	private volatile LogPipe[] pipes;
 	private Object updateLock = new Object();
 	private Thread t;
@@ -43,9 +45,10 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	private volatile boolean doStop = false;
 	private volatile boolean stopped = true;
 
-	protected volatile Date lastLogDate = null;
-	protected volatile Date lastRunDate = null;
-	protected AtomicLong logCounter;
+	private volatile Date lastStartDate;
+	private volatile Date lastRunDate;
+	private volatile Date lastLogDate;
+	private AtomicLong logCounter;
 
 	private Set<LoggerEventListener> eventListeners;
 
@@ -61,28 +64,26 @@ public abstract class AbstractLogger implements Logger, Runnable {
 		this(namespace, name, description, loggerFactory, new Properties());
 	}
 
-	public AbstractLogger(String namespace, String name, String description, LoggerFactory loggerFactory,
-			Properties config) {
+	public AbstractLogger(String namespace, String name, String description, LoggerFactory loggerFactory, Properties config) {
 		this(namespace, name, loggerFactory.getNamespace(), loggerFactory.getName(), description, config);
 	}
 
-	public AbstractLogger(String namespace, String name, String description, LoggerFactory loggerFactory,
-			long logCount, Date lastLogDate, Properties config) {
-		this(namespace, name, loggerFactory.getNamespace(), loggerFactory.getName(), description, logCount,
-				lastLogDate, config);
+	public AbstractLogger(String namespace, String name, String description, LoggerFactory loggerFactory, long logCount,
+			Date lastLogDate, Properties config) {
+		this(namespace, name, loggerFactory.getNamespace(), loggerFactory.getName(), description, logCount, lastLogDate, config);
 	}
 
 	public AbstractLogger(String namespace, String name, String factoryNamespace, String factoryName, Properties config) {
 		this(namespace, name, factoryNamespace, factoryName, "", config);
 	}
 
-	public AbstractLogger(String namespace, String name, String factoryNamespace, String factoryName,
-			String description, Properties config) {
+	public AbstractLogger(String namespace, String name, String factoryNamespace, String factoryName, String description,
+			Properties config) {
 		this(namespace, name, factoryNamespace, factoryName, description, 0, null, config);
 	}
 
-	public AbstractLogger(String namespace, String name, String factoryNamespace, String factoryName,
-			String description, long logCount, Date lastLogDate, Properties config) {
+	public AbstractLogger(String namespace, String name, String factoryNamespace, String factoryName, String description,
+			long logCount, Date lastLogDate, Properties config) {
 		// logger info
 		this.namespace = namespace;
 		this.name = name;
@@ -138,13 +139,33 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	}
 
 	@Override
-	public Date getLastLogDate() {
-		return lastLogDate;
+	public boolean isPassive() {
+		return isPassive;
+	}
+
+	@Override
+	public void setPassive(boolean isPassive) {
+		if (!stopped)
+			throw new IllegalStateException("logger is running");
+
+		this.isPassive = isPassive;
+		if (isPassive)
+			lastRunDate = null;
+	}
+
+	@Override
+	public Date getLastStartDate() {
+		return lastStartDate;
 	}
 
 	@Override
 	public Date getLastRunDate() {
 		return lastRunDate;
+	}
+
+	@Override
+	public Date getLastLogDate() {
+		return lastLogDate;
 	}
 
 	@Override
@@ -168,20 +189,37 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	}
 
 	@Override
-	public void start(int interval) {
+	public void start() { // Passive
+		if (!isPassive)
+			throw new IllegalStateException("not passive mode. use start(interval)");
+
+		stopped = false;
+		invokeStartCallback();
+	}
+
+	@Override
+	public void start(int interval) { // Active
+		if (isPassive) {
+			start();
+			return;
+		}
+
 		if (!stopped)
 			throw new IllegalStateException("logger is already running");
 
 		status = LoggerStatus.Starting;
-
 		this.interval = interval;
 
 		t = new Thread(this, "Logger [" + fullName + "]");
 		t.start();
 
+		invokeStartCallback();
+	}
+
+	private void invokeStartCallback() {
+		lastStartDate = new Date();
 		status = LoggerStatus.Running;
 
-		// invoke event callbacks
 		for (LoggerEventListener callback : eventListeners) {
 			try {
 				callback.onStart(this);
@@ -193,21 +231,29 @@ public abstract class AbstractLogger implements Logger, Runnable {
 
 	@Override
 	public void stop() {
-		stop(INFINITE);
+		if (isPassive) {
+			stopped = true;
+			status = LoggerStatus.Stopped;
+			invokeStopCallback();
+		} else
+			stop(INFINITE);
 	}
 
 	@Override
 	public void stop(int maxWaitTime) {
+		if (isPassive) {
+			stop();
+			return;
+		}
+
 		if (t == null || t.isAlive() == false)
 			return;
-
-		status = LoggerStatus.Stopping;
-
-		doStop = true;
 		t.interrupt();
 
-		long begin = new Date().getTime();
+		status = LoggerStatus.Stopping;
+		doStop = true;
 
+		long begin = new Date().getTime();
 		try {
 			while (true) {
 				if (stopped)
@@ -221,7 +267,10 @@ public abstract class AbstractLogger implements Logger, Runnable {
 		} catch (InterruptedException e) {
 		}
 
-		// invoke event callbacks
+		invokeStopCallback();
+	}
+
+	private void invokeStopCallback() {
 		for (LoggerEventListener callback : eventListeners) {
 			try {
 				callback.onStop(this);
@@ -239,6 +288,7 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	@Override
 	public void run() {
 		stopped = false;
+
 		try {
 			while (true) {
 				try {
@@ -271,6 +321,9 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	}
 
 	protected void write(Log log) {
+		if (stopped)
+			return;
+
 		// update last log date
 		lastLogDate = log.getDate();
 		logCounter.incrementAndGet();
@@ -385,18 +438,11 @@ public abstract class AbstractLogger implements Logger, Runnable {
 
 	@Override
 	public String toString() {
-		String a = toString(getLastLogDate());
-		String b = toString(getLastRunDate());
-		return String.format("name=%s, factory=%s, status=%s, log count=%d, last log=%s, last run=%s", getFullName(),
-				factoryFullName, getStatus().toString().toLowerCase(), getLogCount(), a, b);
+		String format = "yyyy-MM-dd HH:mm:ss";
+		String start = DateFormat.format(format, lastStartDate);
+		String run = DateFormat.format(format, lastRunDate);
+		String log = DateFormat.format(format, lastLogDate);
+		return String.format("name=%s, factory=%s, status=%s, log count=%d, last start=%s, last run=%s, last log=%s",
+				getFullName(), factoryFullName, getStatus().toString().toLowerCase(), getLogCount(), start, run, log);
 	}
-
-	private String toString(Date d) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		if (d == null)
-			return null;
-
-		return dateFormat.format(d);
-	}
-
 }

@@ -65,6 +65,8 @@ public class LdapProfile {
 
 	private LdapServerType serverType = LdapServerType.ActiveDirectory;
 
+	private String idAttr;
+
 	@FieldOption(skip = true)
 	private Date lastSync;
 
@@ -195,6 +197,14 @@ public class LdapProfile {
 
 	public Date getLastSync() {
 		return lastSync;
+	}
+
+	public String getIdAttr() {
+		return idAttr;
+	}
+
+	public void setIdAttr(String idAttr) {
+		this.idAttr = idAttr;
 	}
 
 	public void setLastSync(Date lastSync) {

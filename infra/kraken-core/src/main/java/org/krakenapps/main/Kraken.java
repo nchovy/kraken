@@ -47,7 +47,12 @@ import org.apache.log4j.PatternLayout;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import org.apache.sshd.SshServer;
+import org.apache.sshd.common.NamedFactory;
+import org.apache.sshd.server.Command;
+import org.apache.sshd.server.UserAuth;
+import org.apache.sshd.server.auth.UserAuthPassword;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.sftp.SftpSubsystem;
 import org.krakenapps.account.AccountScriptFactory;
 import org.krakenapps.api.Environment;
 import org.krakenapps.api.InstrumentationService;
@@ -83,6 +88,7 @@ import org.krakenapps.script.RegistryScriptFactory;
 import org.krakenapps.script.SunPerfScriptFactory;
 import org.krakenapps.script.batch.BatchScriptFactory;
 import org.krakenapps.ssh.SshCommandFactory;
+import org.krakenapps.ssh.SshFileSystemFactory;
 import org.krakenapps.ssh.SshPasswordAuthenticator;
 import org.krakenapps.thread.ThreadScriptFactory;
 import org.osgi.framework.BundleActivator;
@@ -197,7 +203,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void boot(StartOptions startOptions) throws Exception {
-		File jarPath = new File(URLDecoder.decode(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath(), "utf-8"));
+		File jarPath = new File(URLDecoder.decode(Kraken.class.getProtectionDomain().getCodeSource().getLocation().getPath(),
+				"utf-8"));
 		File dir = jarPath.getParentFile();
 
 		Environment.setKrakenSystemProperties(dir.getAbsolutePath());
@@ -264,7 +271,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 */
 	private String getSystemPackages() throws FileNotFoundException {
 		StringBuffer buffer = new StringBuffer(4096);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
+		BufferedReader reader = new BufferedReader(
+				new InputStreamReader(ClassLoader.getSystemResourceAsStream("system.packages")));
 		String s = null;
 		try {
 			while ((s = reader.readLine()) != null) {
@@ -445,8 +453,8 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * connected log monitor.
 	 */
 	private void startLogging() {
-		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() }, new KrakenLogService(),
-				null);
+		context.registerService(new String[] { LogService.class.getName(), LoggerControlService.class.getName() },
+				new KrakenLogService(), null);
 
 		KrakenLoggerFactory krakenLoggerFactory = (KrakenLoggerFactory) StaticLoggerBinder.getSingleton().getLoggerFactory();
 		krakenLoggerFactory.start();
@@ -505,6 +513,16 @@ public class Kraken implements BundleActivator, SignalHandler {
 		sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider("hostkey.pem"));
 		sshd.setShellFactory(new SshCommandFactory());
 		sshd.setPasswordAuthenticator(new SshPasswordAuthenticator());
+
+		List<NamedFactory<UserAuth>> userAuthFactories = new ArrayList<NamedFactory<UserAuth>>();
+		userAuthFactories.add(new UserAuthPassword.Factory());
+		sshd.setUserAuthFactories(userAuthFactories);
+
+		List<NamedFactory<Command>> namedFactories = new ArrayList<NamedFactory<Command>>();
+		namedFactories.add(new SftpSubsystem.Factory());
+		sshd.setSubsystemFactories(namedFactories);
+		sshd.setFileSystemFactory(new SshFileSystemFactory());
+
 		sshd.start();
 	}
 }

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.snmpmon;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.krakenapps.log.api.AbstractLoggerFactory;
 import org.krakenapps.log.api.IntegerConfigType;
@@ -31,6 +33,11 @@ import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
 import org.krakenapps.log.api.LoggerSpecification;
 import org.krakenapps.log.api.StringConfigType;
+import org.slf4j.LoggerFactory;
+import org.snmp4j.Snmp;
+import org.snmp4j.TransportMapping;
+import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 /**
  * @author stania
@@ -38,6 +45,34 @@ import org.krakenapps.log.api.StringConfigType;
 @Component(name = "snmpmon-query-logger-factory")
 @Provides
 public class SnmpQueryLoggerFactory extends AbstractLoggerFactory {
+	private org.slf4j.Logger logger = LoggerFactory.getLogger(SnmpQueryLoggerFactory.class);
+	private TransportMapping transport;
+	private Snmp snmp;
+
+	public SnmpQueryLoggerFactory() {
+		try {
+			this.transport = new DefaultUdpTransportMapping(new UdpAddress());
+			transport.listen();
+			this.snmp = new Snmp(transport);
+		} catch (IOException e) {
+			logger.error("kraken snmpmon: ", e);
+		}
+	}
+
+	@Invalidate
+	public void invalidate() {
+		try {
+			if (transport != null)
+				transport.close();
+		} catch (IOException e) {
+		}
+		try {
+			if (snmp != null)
+				snmp.close();
+		} catch (IOException e) {
+		}
+	}
+
 	@Override
 	public String getName() {
 		return "snmpmon";
@@ -134,11 +169,16 @@ public class SnmpQueryLoggerFactory extends AbstractLoggerFactory {
 	}
 
 	public Logger createLogger(String name, String description, Properties config) {
-		return new SnmpQueryLogger("local", name, description, this, config);
+		SnmpQueryLogger logger = new SnmpQueryLogger("local", name, description, this, config);
+		logger.setSnmp(snmp);
+		return logger;
 	}
 
 	@Override
 	protected Logger createLogger(LoggerSpecification spec) {
-		return new SnmpQueryLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this, spec.getConfig());
+		SnmpQueryLogger logger = new SnmpQueryLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this,
+				spec.getConfig());
+		logger.setSnmp(snmp);
+		return logger;
 	}
 }

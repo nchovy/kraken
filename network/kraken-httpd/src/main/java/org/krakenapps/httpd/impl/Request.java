@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -226,7 +227,13 @@ public class Request implements HttpServletRequest {
 			int pos = param.indexOf("=");
 			if (pos > 0) {
 				String name = param.substring(0, pos);
-				String value = param.substring(pos + 1);
+				String value = null;
+				try {
+					String encodedValue = param.substring(pos + 1);
+					value = URLDecoder.decode(encodedValue, "utf-8");
+				} catch (UnsupportedEncodingException e) {
+				}
+
 				if (value.isEmpty())
 					value = null;
 

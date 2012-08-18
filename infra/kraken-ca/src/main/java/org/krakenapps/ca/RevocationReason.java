@@ -15,6 +15,6 @@ public enum RevocationReason {
 	CessationOfOperation,
 	CertificateHold,
 	RemoveFromCrl,
-	PrivilegeWithDrawn,
+	PrivilegeWithdrawn,
 	AaCompromise
 }

@@ -159,6 +159,7 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 		try {
 			Logger newLogger = factory.newLogger(model.namespace, model.name, model.description, model.count, model.lastLogDate,
 					model.getConfigs());
+			newLogger.setPassive(model.isPassive);
 			slog.info("kraken log api: logger [{}] restored", model.fullname);
 			if (newLogger != null && model.isRunning && model.interval != -1) {
 				newLogger.start(model.interval);
@@ -201,6 +202,7 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 		private String fullname;
 		private String name;
 		private String description;
+		private boolean isPassive;
 		private boolean isRunning;
 		private int interval;
 
@@ -223,6 +225,7 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 			this.fullname = logger.getFullName();
 			this.name = logger.getName();
 			this.description = logger.getDescription();
+			this.isPassive = logger.isPassive();
 			this.isRunning = logger.isRunning();
 			this.interval = logger.getInterval();
 			this.count = logger.getLogCount();

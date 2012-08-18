@@ -28,13 +28,19 @@ public interface LdapService {
 
 	void removeProfile(String name);
 
-	Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile);
+	Collection<LdapUser> getUsers(LdapProfile profile);
 
-	DomainUserAccount findDomainUserAccount(LdapProfile profile, String account);
+	LdapUser findUser(LdapProfile profile, String uid);
 
-	Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile);
+	Collection<LdapOrgUnit> getOrgUnits(LdapProfile profile);
 
-	boolean verifyPassword(LdapProfile profile, String account, String password);
+	boolean verifyPassword(LdapProfile profile, String uid, String password);
 
-	boolean verifyPassword(LdapProfile profile, String account, String password, int timeout);
+	boolean verifyPassword(LdapProfile profile, String uid, String password, int timeout);
+
+	void testLdapConnection(LdapProfile profile, Integer timeout);
+
+	void changePassword(LdapProfile profile, String uid, String newPassword);
+
+	void changePassword(LdapProfile profile, String uid, String newPassword, int timeout);
 }

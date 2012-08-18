@@ -130,4 +130,8 @@ public interface CertificateAuthority {
 	 *            the revocation reason
 	 */
 	void revoke(CertificateMetadata cm, RevocationReason reason);
+	
+	void addListener(CertEventListener listener);
+
+	void removeListener(CertEventListener listener);
 }

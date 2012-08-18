@@ -23,8 +23,8 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.ldap.DomainOrganizationalUnit;
-import org.krakenapps.ldap.DomainUserAccount;
+import org.krakenapps.ldap.LdapOrgUnit;
+import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapService;
@@ -32,8 +32,11 @@ import org.krakenapps.ldap.LdapSyncService;
 import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LdapScript implements Script {
+	private final Logger logger = LoggerFactory.getLogger(LdapScript.class.getName());
 	private BundleContext bc;
 	private LdapService ldap;
 	private ScriptContext context;
@@ -58,7 +61,8 @@ public class LdapScript implements Script {
 
 	@ScriptUsage(description = "create ldap profile", arguments = {
 			@ScriptArgument(name = "name", type = "string", description = "ldap profile name"),
-			@ScriptArgument(name = "dc", type = "string", description = "domain name of domain controller "),
+			@ScriptArgument(name = "address", type = "string", description = "ip address or domain name of ldap server"),
+			@ScriptArgument(name = "port", type = "int", description = "port number of ldap server"),
 			@ScriptArgument(name = "account", type = "string", description = "admin account name for simple bind (e.g. OFFICE\\xeraph"),
 			@ScriptArgument(name = "password", type = "string", description = "admin password"),
 			@ScriptArgument(name = "server type", type = "string", description = "ActiveDirectory or SunOneDirectory", optional = true),
@@ -69,14 +73,15 @@ public class LdapScript implements Script {
 			LdapProfile profile = new LdapProfile();
 			profile.setName(args[0]);
 			profile.setDc(args[1]);
-			profile.setAccount(args[2]);
-			profile.setPassword(args[3]);
-			if (args.length > 4)
-				profile.setServerType(LdapServerType.valueOf(args[4]));
+			profile.setPort(Integer.valueOf(args[2]));
+			profile.setAccount(args[3]);
+			profile.setPassword(args[4]);
 			if (args.length > 5)
-				profile.setBaseDn(args[5]);
-			if (args.length > 6) {
-				File file = new File(args[6]);
+				profile.setServerType(LdapServerType.valueOf(args[5]));
+			if (args.length > 6)
+				profile.setBaseDn(args[6]);
+			if (args.length > 7) {
+				File file = new File(args[7]);
 				if (!file.exists())
 					throw new IllegalArgumentException("file not found");
 				profile.setTrustStore(CertificateType.X509, new FileInputStream(file));
@@ -96,8 +101,8 @@ public class LdapScript implements Script {
 		context.println("removed");
 	}
 
-	@ScriptUsage(description = "print all domain users", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
-	public void domainUsers(String[] args) {
+	@ScriptUsage(description = "print all users", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
+	public void users(String[] args) {
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
 		if (profile == null) {
@@ -105,16 +110,18 @@ public class LdapScript implements Script {
 			return;
 		}
 
-		Collection<DomainUserAccount> accounts = ldap.getDomainUserAccounts(profile);
+		Collection<LdapUser> accounts = ldap.getUsers(profile);
 		if (accounts == null) {
 			context.println("domain users not found");
 			return;
 		}
 
-		context.println("Domain Users");
-		context.println("--------------------");
-		for (DomainUserAccount account : accounts)
+		context.println("Users");
+		context.println("-------");
+		for (LdapUser account : accounts)
 			context.println(account.toString());
+
+		context.println("total " + accounts.size() + " users");
 	}
 
 	@ScriptUsage(description = "search by user", arguments = {
@@ -128,7 +135,7 @@ public class LdapScript implements Script {
 			return;
 		}
 
-		DomainUserAccount account = ldap.findDomainUserAccount(profile, args[1]);
+		LdapUser account = ldap.findUser(profile, args[1]);
 		if (account == null) {
 			context.println("account not found");
 		} else {
@@ -137,7 +144,7 @@ public class LdapScript implements Script {
 	}
 
 	@ScriptUsage(description = "print all organization units", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
-	public void organizationUnits(String[] args) {
+	public void orgUnits(String[] args) {
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
 		if (profile == null) {
@@ -145,7 +152,7 @@ public class LdapScript implements Script {
 			return;
 		}
 
-		Collection<DomainOrganizationalUnit> ous = ldap.getOrganizationUnits(profile);
+		Collection<LdapOrgUnit> ous = ldap.getOrgUnits(profile);
 		if (ous == null) {
 			context.println("organization units not found");
 			return;
@@ -153,7 +160,7 @@ public class LdapScript implements Script {
 
 		context.println("Organization Units");
 		context.println("--------------------");
-		for (DomainOrganizationalUnit ou : ous)
+		for (LdapOrgUnit ou : ous)
 			context.println(ou);
 	}
 
@@ -179,6 +186,31 @@ public class LdapScript implements Script {
 			context.println("invalid password");
 	}
 
+	@ScriptUsage(description = "change password", arguments = {
+			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
+			@ScriptArgument(name = "account", type = "string", description = "account name without domain prefix (e.g. xeraph)"),
+			@ScriptArgument(name = "password", type = "string", description = "new password") })
+	public void changePassword(String[] args) {
+		String profileName = args[0];
+		String account = args[1];
+		String newPassword = args[2];
+
+		LdapProfile profile = ldap.getProfile(profileName);
+
+		if (profile == null) {
+			context.println("profile not found.");
+			return;
+		}
+
+		try {
+			ldap.changePassword(profile, account, newPassword);
+			context.println("password changed");
+		} catch (Throwable t) {
+			context.println("cannot change password, " + t.getMessage());
+			logger.error("cannot change ldap password", t);
+		}
+	}
+
 	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
 	public void sync(String args[]) {
 		LdapSyncService ldapSync = getSyncService();
@@ -201,6 +233,25 @@ public class LdapScript implements Script {
 	public void setPeriodicSync(String[] args) {
 		LdapSyncService ldapSync = getSyncService();
 		ldapSync.setPeriodicSync(Boolean.parseBoolean(args[0]));
+		context.println("set");
+	}
+
+	@ScriptUsage(description = "set id attribute name. if id attribute name is not passed, it will be unset", arguments = {
+			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
+			@ScriptArgument(name = "id attribute name", type = "string", description = "id attribute name (e.g. uid)", optional = true) })
+	public void setIdAttr(String[] args) {
+		LdapProfile p = ldap.getProfile(args[0]);
+		if (p == null) {
+			context.println("profile not found");
+			return;
+		}
+
+		if (args.length > 1)
+			p.setIdAttr(args[1]);
+		else
+			p.setIdAttr(null);
+
+		ldap.updateProfile(p);
 		context.println("set");
 	}
 

@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,18 +36,20 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.ldap.DomainOrganizationalUnit;
-import org.krakenapps.ldap.DomainUserAccount;
+import org.krakenapps.ldap.LdapOrgUnit;
+import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.novell.ldap.LDAPAttribute;
 import com.novell.ldap.LDAPConnection;
 import com.novell.ldap.LDAPEntry;
 import com.novell.ldap.LDAPException;
 import com.novell.ldap.LDAPJSSESecureSocketFactory;
+import com.novell.ldap.LDAPModification;
 import com.novell.ldap.LDAPReferralException;
 import com.novell.ldap.LDAPSearchConstraints;
 import com.novell.ldap.LDAPSearchResults;
@@ -55,6 +58,7 @@ import com.novell.ldap.LDAPSocketFactory;
 @Component(name = "ldap-service")
 @Provides
 public class JLdapService implements LdapService {
+	private static final int DEFAULT_TIMEOUT = 5000;
 	private final Logger logger = LoggerFactory.getLogger(JLdapService.class);
 
 	@Requires
@@ -103,28 +107,37 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public Collection<DomainUserAccount> getDomainUserAccounts(LdapProfile profile) {
-		List<DomainUserAccount> accounts = new ArrayList<DomainUserAccount>();
+	public Collection<LdapUser> getUsers(LdapProfile profile) {
+		List<LdapUser> users = new ArrayList<LdapUser>();
 
 		LDAPConnection lc = openLdapConnection(profile, null);
+		int count = 0;
 		try {
 			String filter = "(&(userPrincipalName=*))";
 			if (profile.getServerType() != LdapServerType.ActiveDirectory)
-				filter = "(&(uid=*))";
+				filter = "(&(objectClass=inetOrgPerson))";
 
+			String idAttr = profile.getIdAttr() == null ? "uid" : profile.getIdAttr();
 			LDAPSearchConstraints cons = new LDAPSearchConstraints();
 			cons.setTimeLimit(20000);
-			cons.setMaxResults(5000);
+			cons.setMaxResults(0);
 			LDAPSearchResults r = lc.search(buildBaseDN(profile), LDAPConnection.SCOPE_SUB, filter, null, false, cons);
 
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
 					logger.debug("kraken-ldap: fetch entry [{}]", entry.getDN());
-					accounts.add(new DomainUserAccount(entry));
+					users.add(new LdapUser(entry, idAttr));
+					count++;
 				} catch (LDAPReferralException e) {
 				}
 			}
+
+			logger.info("kraken-ldap: profile [{}], total {} ldap entries", profile.getName(), count);
+		} catch (LDAPException e) {
+			if (e.getResultCode() == LDAPException.SIZE_LIMIT_EXCEEDED)
+				logger.error("kraken-ldap: profile [{}], size limit, fetched only {} ldap entries", profile.getName(), count);
+			throw new IllegalStateException(e);
 		} catch (Exception e) {
 			logger.error("kraken-ldap: cannot fetch domain users", e);
 			throw new IllegalStateException(e);
@@ -137,17 +150,18 @@ public class JLdapService implements LdapService {
 			}
 		}
 
-		return accounts;
+		return users;
 	}
 
 	@Override
-	public DomainUserAccount findDomainUserAccount(LdapProfile profile, String account) {
+	public LdapUser findUser(LdapProfile profile, String uid) {
 		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
-			String filter = "(&(sAMAccountName=" + account + "))";
+			String filter = "(&(sAMAccountName=" + uid + "))";
 			if (profile.getServerType() != LdapServerType.ActiveDirectory)
-				filter = "(&(uid=" + account + "))";
+				filter = buildUserFilter(profile, uid);
 
+			String idAttr = profile.getIdAttr() == null ? "uid" : profile.getIdAttr();
 			LDAPSearchConstraints cons = new LDAPSearchConstraints();
 			cons.setTimeLimit(20000);
 			cons.setMaxResults(1);
@@ -157,7 +171,7 @@ public class JLdapService implements LdapService {
 					LDAPEntry entry = r.next();
 					if (logger.isDebugEnabled())
 						logger.debug("kraken-ldap: fetch entry [{}]", entry);
-					return new DomainUserAccount(entry);
+					return new LdapUser(entry, idAttr);
 				} catch (LDAPReferralException e) {
 				}
 			}
@@ -177,19 +191,19 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public Collection<DomainOrganizationalUnit> getOrganizationUnits(LdapProfile profile) {
-		List<DomainOrganizationalUnit> ous = new ArrayList<DomainOrganizationalUnit>();
+	public Collection<LdapOrgUnit> getOrgUnits(LdapProfile profile) {
+		List<LdapOrgUnit> ous = new ArrayList<LdapOrgUnit>();
 
 		LDAPConnection lc = openLdapConnection(profile, null);
 		try {
-			String filter = "(&(objectClass=organizationalUnit)(!(isCriticalSystemObject=*)))";
+			String filter = "(objectClass=organizationalUnit)";
 			LDAPSearchResults r = lc.search(buildBaseDN(profile), LDAPConnection.SCOPE_SUB, filter, null, false);
 
 			while (r.hasMore()) {
 				try {
 					LDAPEntry entry = r.next();
 					logger.debug("kraken-ldap: fetch org unit entry [{}]", entry.getDN());
-					ous.add(new DomainOrganizationalUnit(entry));
+					ous.add(new LdapOrgUnit(entry));
 				} catch (LDAPReferralException e) {
 				}
 			}
@@ -209,12 +223,12 @@ public class JLdapService implements LdapService {
 	}
 
 	@Override
-	public boolean verifyPassword(LdapProfile profile, String account, String password) {
-		return verifyPassword(profile, account, password, 0);
+	public boolean verifyPassword(LdapProfile profile, String uid, String password) {
+		return verifyPassword(profile, uid, password, 0);
 	}
 
 	@Override
-	public boolean verifyPassword(LdapProfile profile, String account, String password, int timeout) {
+	public boolean verifyPassword(LdapProfile profile, String uid, String password, int timeout) {
 		boolean bindStatus = false;
 		if (password == null || password.isEmpty())
 			return false;
@@ -224,9 +238,9 @@ public class JLdapService implements LdapService {
 		try {
 			String filter = null;
 			if (profile.getServerType() == LdapServerType.ActiveDirectory) {
-				filter = "(sAMAccountName=" + account + ")";
+				filter = "(sAMAccountName=" + uid + ")";
 			} else {
-				filter = "(uid=" + account + ")";
+				filter = buildUserFilter(profile, uid);
 			}
 
 			String baseDn = buildBaseDN(profile);
@@ -239,12 +253,8 @@ public class JLdapService implements LdapService {
 			logger.trace("kraken ldap: verify password for {}", entry);
 
 			// try bind
-			if (profile.getServerType() == LdapServerType.ActiveDirectory) {
-				String dn = entry.getAttribute("distinguishedName").getStringValue();
-				lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
-			} else {
-				lc.bind(LDAPConnection.LDAP_V3, "uid=" + account + "," + baseDn, password.getBytes("utf-8"));
-			}
+			logger.trace("kraken ldap: trying to bind using dn [{}]", entry.getDN());
+			lc.bind(LDAPConnection.LDAP_V3, entry.getDN(), password.getBytes("utf-8"));
 			return true;
 		} catch (Exception e) {
 			if (!bindStatus)
@@ -262,6 +272,110 @@ public class JLdapService implements LdapService {
 		}
 	}
 
+	private String buildUserFilter(LdapProfile profile, String uid) {
+		String filter;
+		String idAttr = "uid";
+		if (profile.getIdAttr() != null)
+			idAttr = profile.getIdAttr();
+
+		filter = "(" + idAttr + "=" + uid + ")";
+		return filter;
+	}
+
+	@Override
+	public void testLdapConnection(LdapProfile profile, Integer timeout) {
+		if (timeout == null)
+			timeout = DEFAULT_TIMEOUT;
+
+		LDAPConnection conn = null;
+		try {
+			conn = openLdapConnection(profile, timeout);
+		} finally {
+			if (conn != null && conn.isConnected())
+				try {
+					conn.disconnect();
+				} catch (LDAPException e) {
+				}
+		}
+
+	}
+
+	@Override
+	public void changePassword(LdapProfile profile, String uid, String newPassword) {
+		changePassword(profile, uid, newPassword, DEFAULT_TIMEOUT);
+	}
+
+	@Override
+	public void changePassword(LdapProfile profile, String uid, String newPassword, int timeout) {
+
+		// newPassword null check
+		if (newPassword == null || newPassword.isEmpty())
+			throw new IllegalArgumentException("password should be not null and not empty");
+
+		// connection server
+		LDAPConnection lc = openLdapConnection(profile, timeout);
+
+		try {
+			// set filter
+			String filter = "(sAMAccountName=" + uid + ")";
+			if (profile.getServerType() != LdapServerType.ActiveDirectory)
+				filter = buildUserFilter(profile, uid);
+
+			String baseDn = buildBaseDN(profile);
+
+			LDAPSearchResults r = lc.search(baseDn, LDAPConnection.SCOPE_SUB, filter, null, false);
+
+			// query for verification
+			LDAPEntry entry = r.next();
+			logger.trace("kraken ldap: change password for {}", entry);
+
+			// set mod
+			LDAPModification mod = null;
+			if (profile.getServerType() == LdapServerType.ActiveDirectory) {
+				// ActiveDirectory - newPassword enclosed in quotation marks and
+				// UTF-16LE encoding
+				byte[] quotedPasswordBytes = null;
+
+				String tmpPassword = ldapPasswordEscape(newPassword);
+
+				try {
+					String quotedPassword = '"' + tmpPassword + '"';
+					quotedPasswordBytes = quotedPassword.getBytes("UTF-16LE");
+				} catch (UnsupportedEncodingException e) {
+					throw new IllegalStateException(e);
+				}
+
+				mod = new LDAPModification(LDAPModification.REPLACE, new LDAPAttribute("unicodePwd", quotedPasswordBytes));
+				logger.debug("kraken ldap: active directory modify request [{}] for dn [{}]", mod.toString(), entry.getDN());
+			} else {
+				mod = new LDAPModification(LDAPModification.REPLACE, new LDAPAttribute("userPassword", newPassword));
+				logger.debug("kraken ldap: sun one modify request [{}] for dn [{}]", mod.toString(), entry.getDN());
+			}
+
+			// modify
+			lc.modify(entry.getDN(), mod);
+		} catch (LDAPException e) {
+			throw new IllegalStateException("cannot change password, profile=" + profile.getName() + ", uid=" + uid, e);
+		} finally {
+			if (lc.isConnected()) {
+				try {
+					lc.disconnect();
+				} catch (LDAPException e) {
+					logger.error("kraken ldap: disconnect failed", e);
+				}
+			}
+		}
+	}
+
+	public static String ldapPasswordEscape(String s) {
+
+		for (int i = 0; i < s.length(); i++) {
+			s.replaceAll("\"", "\\\"");
+		}
+
+		return s;
+	}
+
 	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
 		if (profile.getDc() == null)
 			throw new IllegalArgumentException("ldap domain controller should be not null");
@@ -276,10 +390,12 @@ public class JLdapService implements LdapService {
 			throw new IllegalArgumentException("ldap password should be not null");
 
 		try {
-			if (profile.getTrustStore() != null) {
+			KeyStore ks = profile.getTrustStore();
+
+			if (ks != null) {
 				SSLContext ctx = SSLContext.getInstance("SSL");
 				TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-				tmf.init(profile.getTrustStore());
+				tmf.init(ks);
 				ctx.init(null, tmf.getTrustManagers(), new SecureRandom());
 				LDAPConnection.setSocketFactory(new LDAPJSSESecureSocketFactory(ctx.getSocketFactory()));
 			} else
@@ -295,10 +411,10 @@ public class JLdapService implements LdapService {
 			return conn;
 		} catch (UnsupportedEncodingException e) {
 			logger.error("kraken ldap: JVM unsupported utf-8 encoding");
-			throw new IllegalStateException("invalid profile");
+			throw new IllegalStateException("invalid profile [" + profile.getName() + "]", e);
 		} catch (Exception e) {
 			logger.error("kraken ldap: ldap profile [" + profile.getName() + "] connection failed", e);
-			throw new IllegalStateException("invalid profile");
+			throw new IllegalStateException("invalid profile [" + profile.getName() + "]", e);
 		}
 	}
 

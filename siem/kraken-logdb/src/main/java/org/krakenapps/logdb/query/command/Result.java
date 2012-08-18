@@ -33,6 +33,7 @@ public class Result extends LogQueryCommand {
 	private Set<LogQueryCallback> callbacks;
 	private Queue<LogQueryCallbackInfo> callbackQueue;
 	private Integer nextCallback;
+	private long nextStatusChangeCallback;
 
 	public Result() throws IOException {
 		result = new FileBufferList<Map<String, Object>>();
@@ -103,6 +104,12 @@ public class Result extends LogQueryCommand {
 				nextCallback = null;
 			else
 				nextCallback = callbackQueue.peek().size;
+		}
+
+		if (nextStatusChangeCallback < System.currentTimeMillis()) {
+			for (LogQueryCallback callback : logQuery.getLogQueryCallback())
+				callback.onQueryStatusChange();
+			nextStatusChangeCallback = System.currentTimeMillis() + 2000;
 		}
 	}
 

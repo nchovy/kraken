@@ -22,6 +22,25 @@ import static org.junit.Assert.*;
 
 public class ServletDispatcherTest {
 	@Test
+	public void testSubstringPath() {
+		ServletDispatcher d = new ServletDispatcher();
+		MockServlet s1 = new MockServlet(1);
+		MockServlet s2 = new MockServlet(2);
+
+		ServletRegistration reg1 = d.addServlet("s1", s1);
+		reg1.addMapping("/log/*");
+
+		ServletRegistration reg2 = d.addServlet("s2", s2);
+		reg2.addMapping("//*");
+
+		ServletMatchResult r = d.matches("/page/login_start.html");
+		assertEquals(2, id(r));
+
+		ServletMatchResult r2 = d.matches("/logger.html");
+		assertEquals(2, id(r2));
+	}
+
+	@Test
 	public void test() {
 		ServletDispatcher d = new ServletDispatcher();
 
@@ -78,7 +97,7 @@ public class ServletDispatcherTest {
 		assertNotNull(r);
 		assertEquals("/foo", r.getServletPath());
 		assertEquals("/bar", r.getPathInfo());
-		
+
 		r = d.matches("/foo/bar");
 		assertNotNull(r);
 		assertEquals("/foo", r.getServletPath());

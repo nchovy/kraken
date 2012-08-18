@@ -3,11 +3,11 @@ package org.krakenapps.ldap.impl;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -33,11 +33,11 @@ import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
-import org.krakenapps.ldap.DomainOrganizationalUnit;
-import org.krakenapps.ldap.DomainUserAccount;
+import org.krakenapps.ldap.LdapOrgUnit;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapService;
 import org.krakenapps.ldap.LdapSyncService;
+import org.krakenapps.ldap.LdapUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,13 +104,13 @@ public class DomSyncService implements LdapSyncService, Runnable {
 					syncAll();
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
-					logger.debug("kraken dom: sync interrupted");
+					logger.debug("kraken ldap: sync interrupted");
 				}
 			}
 		} catch (Exception e) {
-			logger.error("kraken dom: sync error", e);
+			logger.error("kraken ldap: sync error", e);
 		} finally {
-			logger.info("kraken dom: sync thread stopped");
+			logger.info("kraken ldap: sync thread stopped");
 		}
 	}
 
@@ -129,17 +129,17 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 				if (span == -1 || span > profile.getSyncInterval()) {
 					try {
-						logger.debug("kraken dom: try to sync using profile [{}]", profile.getName());
+						logger.debug("kraken ldap: try to sync using profile [{}]", profile.getName());
 						sync(profile);
 					} catch (Exception e) {
-						logger.error("kraken dom: periodic sync failed", e);
+						logger.error("kraken ldap: periodic sync failed", e);
 					}
 
 					profile.setLastSync(now);
 					ldap.updateProfile(profile);
 				}
 			} catch (Exception e) {
-				logger.error("kraken dom: sync profile " + profile.getName() + " failed", e);
+				logger.error("kraken ldap: sync profile " + profile.getName() + " failed", e);
 			}
 		}
 	}
@@ -170,51 +170,60 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 	@Override
 	public void sync(LdapProfile profile) {
-		Collection<DomainOrganizationalUnit> orgUnits = ldap.getOrganizationUnits(profile);
-		Collection<DomainUserAccount> users = ldap.getDomainUserAccounts(profile);
+		Collection<LdapOrgUnit> orgUnits = ldap.getOrgUnits(profile);
+		Collection<LdapUser> users = ldap.getUsers(profile);
 
 		exportDom(orgUnits, users, profile);
 		profile.setLastSync(new Date());
 	}
 
-	private void exportDom(Collection<DomainOrganizationalUnit> orgUnits, Collection<DomainUserAccount> users, LdapProfile profile) {
-		Map<String, OrganizationUnit> domOrgUnits = exportOrgUnits(profile.getTargetDomain(), orgUnits);
-		exportUsers(profile.getTargetDomain(), profile.getBaseDn(), users, domOrgUnits);
+	private void exportDom(Collection<LdapOrgUnit> orgUnits, Collection<LdapUser> users, LdapProfile profile) {
+		Map<List<String>, OrganizationUnit> domOrgUnits = exportOrgUnits(profile, orgUnits);
+		exportUsers(profile, users, domOrgUnits);
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, OrganizationUnit> exportOrgUnits(String domain, Collection<DomainOrganizationalUnit> orgUnits) {
-		Map<String, OrganizationUnit> result = new HashMap<String, OrganizationUnit>();
+	private Map<List<String>, OrganizationUnit> exportOrgUnits(LdapProfile profile, Collection<LdapOrgUnit> orgUnits) {
+		String domain = profile.getTargetDomain();
+		Map<List<String>, OrganizationUnit> result = new HashMap<List<String>, OrganizationUnit>();
 
 		// names-object map
-		Map<List<String>, DomainOrganizationalUnit> orgUnitsMap = new HashMap<List<String>, DomainOrganizationalUnit>();
-		Pattern p = Pattern.compile("OU=(.*?),");
-		for (DomainOrganizationalUnit orgUnit : orgUnits) {
+		Map<List<String>, LdapOrgUnit> orgUnitsMap = new HashMap<List<String>, LdapOrgUnit>();
+		for (LdapOrgUnit orgUnit : orgUnits) {
 			// only active directory has org unit distinguished name
 			String dn = orgUnit.getDistinguishedName();
 			if (dn == null)
 				continue;
-
-			Matcher m = p.matcher(dn);
-			List<String> names = new ArrayList<String>();
-			while (m.find())
-				names.add(m.group(1));
-			Collections.reverse(names);
-			orgUnitsMap.put(names, orgUnit);
+			orgUnitsMap.put(getOUs(dn), orgUnit);
 		}
 
 		// sync
+		Set<OrganizationUnit> remove = new HashSet<OrganizationUnit>();
+		Set<String> removeGuids = new HashSet<String>();
+		for (OrganizationUnit ou : orgUnitApi.getOrganizationUnits(domain)) {
+			Object ext = ou.getExt().get(extProvider.getExtensionName());
+			if (ext != null && ext instanceof Map && profile.getName().equals(((Map<String, Object>) ext).get("profile"))) {
+				remove.add(ou);
+				removeGuids.add(ou.getGuid());
+			}
+		}
+
 		List<OrganizationUnit> create = new ArrayList<OrganizationUnit>();
-		Map<String, OrganizationUnit> createdRoot = new HashMap<String, OrganizationUnit>();
+		Map<String, OrganizationUnit> roots = new HashMap<String, OrganizationUnit>();
 		List<OrganizationUnit> update = new ArrayList<OrganizationUnit>();
 		for (List<String> names : orgUnitsMap.keySet()) {
-			DomainOrganizationalUnit orgUnit = orgUnitsMap.get(names);
-			OrganizationUnit domOrgUnit = createOrgUnits(domain, create, createdRoot, names);
+			LdapOrgUnit orgUnit = orgUnitsMap.get(names);
+			OrganizationUnit domOrgUnit = createOrgUnits(domain, create, roots, names);
 			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(orgUnit);
+			ext.put("profile", profile.getName());
 
 			Map<String, Object> domOrgUnitExt = domOrgUnit.getExt();
 			if (domOrgUnitExt == null)
 				domOrgUnitExt = new HashMap<String, Object>();
+			else if (!create.contains(domOrgUnit) && !domOrgUnitExt.containsKey(extProvider.getExtensionName())) {
+				logger.trace("kraken ldap: skip local org unit [{}, {}]", domOrgUnit.getName(), domOrgUnit.getGuid());
+				continue;
+			}
 			domOrgUnitExt.put(extProvider.getExtensionName(), ext);
 
 			Object before = domOrgUnit.getExt().get(extProvider.getExtensionName());
@@ -222,41 +231,71 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			boolean equals = after.equals(before);
 
 			domOrgUnit.setExt(domOrgUnitExt);
+
 			if (!create.contains(domOrgUnit)) {
 				if (!equals)
 					update.add(domOrgUnit);
 			}
-			result.put(domOrgUnit.getName(), domOrgUnit);
+			result.put(names, domOrgUnit);
+			removeGuids.remove(domOrgUnit.getGuid());
+		}
+
+		for (OrganizationUnit ou : remove) {
+			if (!removeGuids.contains(ou.getGuid()))
+				continue;
+
+			if (hasLocalOU(ou, profile.getName())) {
+				removeGuids.remove(ou.getGuid());
+				ou.getExt().remove(extProvider.getExtensionName());
+				update.add(ou);
+			}
 		}
 
 		orgUnitApi.createOrganizationUnits(domain, create);
 		orgUnitApi.updateOrganizationUnits(domain, update);
+		orgUnitApi.removeOrganizationUnits(domain, removeGuids, true);
 
 		return result;
 	}
 
-	private OrganizationUnit createOrgUnits(String domain, List<OrganizationUnit> create,
-			Map<String, OrganizationUnit> createdRoot, List<String> names) {
+	@SuppressWarnings("unchecked")
+	private boolean hasLocalOU(OrganizationUnit ou, String profile) {
+		Map<String, Object> ext = ou.getExt();
+		if (ext == null || !ext.containsKey(extProvider.getExtensionName()))
+			return true;
+
+		Object ldap = ext.get(extProvider.getExtensionName());
+		if (!(ldap instanceof Map) || profile.equals(((Map<String, Object>) ldap).get("profile")))
+			return true;
+
+		for (OrganizationUnit child : ou.getChildren()) {
+			if (hasLocalOU(child, profile))
+				return true;
+		}
+
+		return false;
+	}
+
+	private OrganizationUnit createOrgUnits(String domain, List<OrganizationUnit> create, Map<String, OrganizationUnit> roots,
+			List<String> names) {
 		if (names.isEmpty())
 			return null;
 
-		Map<String, Object> ext = new HashMap<String, Object>();
-		ext.put(extProvider.getExtensionName(), new HashMap<String, Object>());
-
-		OrganizationUnit orgUnit = orgUnitApi.findOrganizationUnitByName(domain, names.get(0));
+		ListIterator<String> nameit = names.listIterator(names.size());
+		String rootname = nameit.previous();
+		OrganizationUnit orgUnit = roots.get(rootname);
 		if (orgUnit == null) {
-			orgUnit = createdRoot.get(names.get(0));
+			orgUnit = orgUnitApi.findOrganizationUnitByName(domain, rootname);
 			if (orgUnit == null) {
 				orgUnit = new OrganizationUnit();
-				orgUnit.setName(names.get(0));
-				orgUnit.setExt(ext);
+				orgUnit.setName(rootname);
 				create.add(orgUnit);
-				createdRoot.put(names.get(0), orgUnit);
 			}
+			roots.put(rootname, orgUnit);
 		}
 
-		for (int i = 1; i < names.size(); i++) {
-			String name = names.get(i);
+		while (nameit.hasPrevious()) {
+			String name = nameit.previous();
 
 			OrganizationUnit parent = orgUnit;
 			orgUnit = null;
@@ -271,7 +310,6 @@ public class DomSyncService implements LdapSyncService, Runnable {
 				orgUnit = new OrganizationUnit();
 				orgUnit.setName(name);
 				orgUnit.setParent(parent.getGuid());
-				orgUnit.setExt(ext);
 				create.add(orgUnit);
 				parent.getChildren().add(orgUnit);
 			}
@@ -294,9 +332,9 @@ public class DomSyncService implements LdapSyncService, Runnable {
 				lenEmail = getLength("email");
 				lenPhone = getLength("phone");
 			} catch (SecurityException e) {
-				e.printStackTrace();
+				LoggerFactory.getLogger(DomSyncService.class).warn("kraken ldap: can't load field length limit", e);
 			} catch (NoSuchFieldException e) {
-				e.printStackTrace();
+				LoggerFactory.getLogger(DomSyncService.class).warn("kraken ldap: can't load field length limit", e);
 			}
 		}
 
@@ -311,18 +349,24 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void exportUsers(String domain, String baseDn, Collection<DomainUserAccount> users,
-			Map<String, OrganizationUnit> orgUnits) {
+	private void exportUsers(LdapProfile profile, Collection<LdapUser> users, Map<List<String>, OrganizationUnit> orgUnits) {
+		String domain = profile.getTargetDomain();
+
 		// remove removed ldap users
 		Set<String> loginNames = new HashSet<String>();
-		for (DomainUserAccount user : users)
+		List<String> remove = new ArrayList<String>();
+		Map<String, User> domUsers = new HashMap<String, User>();
+		for (LdapUser user : users)
 			loginNames.add(user.getAccountName());
 		for (User user : userApi.getUsers(domain)) {
-			Map<String, Object> ext = user.getExt();
-			if (ext == null || !ext.containsKey(extProvider.getExtensionName()))
+			domUsers.put(user.getLoginName(), user);
+
+			Object ext = user.getExt().get(extProvider.getExtensionName());
+			if (ext == null || !(ext instanceof Map) || !profile.getName().equals(((Map<String, Object>) ext).get("profile")))
 				continue;
+
 			if (!loginNames.contains(user.getLoginName()))
-				userApi.removeUser(domain, user.getLoginName());
+				remove.add(user.getLoginName());
 		}
 
 		Admin defaultAdmin = new Admin();
@@ -340,25 +384,27 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		List<User> create = new ArrayList<User>();
 		List<User> update = new ArrayList<User>();
 		List<Object[]> failed = new ArrayList<Object[]>();
-		for (DomainUserAccount user : users) {
-			User domUser = userApi.findUser(domain, user.getAccountName());
+		for (LdapUser user : users) {
+			User domUser = domUsers.get(user.getAccountName());
 			boolean exist = (domUser != null);
 
 			Map<String, Object> ext = (Map<String, Object>) PrimitiveConverter.serialize(user);
+			ext.put("profile", profile.getName());
 			ext.remove("account_name");
 			ext.remove("logon_count");
 			ext.remove("last_logon");
 
 			boolean basicInfoUpdated = false;
 			try {
-				if (domUser == null) {
+				if (domUser == null)
 					domUser = new User();
-					basicInfoUpdated = updateDomUserFromDomainUser(orgUnits, user, domUser);
-				} else if (isSameDN(domUser, user)) {
-					basicInfoUpdated = updateDomUserFromDomainUser(orgUnits, user, domUser);
+				else if (domUser.getExt() == null || !domUser.getExt().containsKey(extProvider.getExtensionName())) {
+					logger.trace("kraken ldap: skip local user [{}]", domUser.getLoginName());
+					continue;
 				}
+				basicInfoUpdated = updateDomUserFromDomainUser(orgUnits, user, domUser);
 			} catch (Exception e) {
-				logger.trace("update failed", e);
+				logger.trace("kraken ldap: update failed", e);
 				failed.add(new Object[] { user, e });
 				continue;
 			}
@@ -384,49 +430,82 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 		if (!failed.isEmpty()) {
 			int reportId = new Object().hashCode();
-			logger.warn(
-					"kraken dom: Importing some accounts failed and ignored while syncing in DomSyncService. failure report identifier: {}",
+			logger.trace(
+					"kraken ldap: Importing some accounts failed and ignored while syncing in DomSyncService. failure report identifier: {}",
 					reportId);
 			for (Object[] f : failed) {
-				DomainUserAccount acc = (DomainUserAccount) f[0];
+				LdapUser acc = (LdapUser) f[0];
 				Exception e = (Exception) f[1];
-				logger.warn("kraken dom: {}: {}", reportId, String.format("%s: %s", acc.getDistinguishedName(), e.toString()));
+				logger.trace("kraken ldap: {}: {}", reportId, String.format("%s: %s", acc.getDistinguishedName(), e.toString()));
 			}
 		}
 
 		userApi.createUsers(domain, create);
 		userApi.updateUsers(domain, update, false);
+		userApi.removeUsers(domain, remove);
+	}
+
+	private static Pattern p = Pattern.compile("OU=(.*?),");
+
+	private List<String> getOUs(String dn) {
+		Matcher m = p.matcher(dn);
+		List<String> ous = new ArrayList<String>();
+		while (m.find())
+			ous.add(m.group(1));
+		return ous;
 	}
 
 	/**
 	 * @return true if user data updated
 	 */
-	private boolean updateDomUserFromDomainUser(Map<String, OrganizationUnit> orgUnits, DomainUserAccount user, User domUser) {
+	private boolean updateDomUserFromDomainUser(Map<List<String>, OrganizationUnit> orgUnits, LdapUser user, User domUser) {
 		boolean updated = false;
 
 		if (domUser.getLoginName() == null || !domUser.getLoginName().equals(user.getAccountName())) {
 			domUser.setLoginName(user.getAccountName());
 			updated = true;
 		}
-		if (domUser.getOrgUnit() == null || !domUser.getOrgUnit().equals(orgUnits.get(user.getOrganizationUnitName()))) {
-			domUser.setOrgUnit(orgUnits.get(user.getOrganizationUnitName()));
-			updated = true;
+		List<String> ou = getOUs(user.getDistinguishedName());
+		String ouguid = orgUnits.containsKey(ou) ? orgUnits.get(ou).getGuid() : null;
+		if (domUser.getOrgUnit() == null || !domUser.getOrgUnit().getGuid().equals(ouguid)) {
+			if (ouguid != null) {
+				domUser.setOrgUnit(orgUnits.get(ou));
+				updated = true;
+			}
 		}
 		if (domUser.getName() == null || !domUser.getName().equals(user.getDisplayName())) {
 			domUser.setName(user.getDisplayName());
 			updated = true;
 		}
 		if (domUser.getTitle() == null || !domUser.getTitle().equals(user.getTitle())) {
-			domUser.setName(user.getDisplayName());
-			updated = true;
+			if (user.getTitle() != null) {
+				if (DomUserConstraints.lenTitle < user.getTitle().length())
+					logger.trace("kraken ldap: title longer than {}: {}", DomUserConstraints.lenTitle, domUser.getTitle());
+				else {
+					domUser.setTitle(user.getTitle());
+					updated = true;
+				}
+			}
 		}
 		if (domUser.getEmail() == null || !domUser.getEmail().equals(user.getMail())) {
-			domUser.setEmail(user.getMail());
-			updated = true;
+			if (user.getMail() != null) {
+				if (DomUserConstraints.lenEmail < user.getMail().length())
+					logger.trace("kraken ldap: email longer than {}: {}", DomUserConstraints.lenEmail, domUser.getEmail());
+				else {
+					domUser.setEmail(user.getMail());
+					updated = true;
+				}
+			}
 		}
 		if (domUser.getPhone() == null || !domUser.getPhone().equals(user.getMobile())) {
-			domUser.setPhone(user.getMobile());
-			updated = true;
+			if (user.getMobile() != null) {
+				if (DomUserConstraints.lenPhone < user.getMobile().length())
+					logger.trace("kraken ldap: phone longer than {}: {}", DomUserConstraints.lenPhone, domUser.getPhone());
+				else {
+					domUser.setPhone(user.getMobile());
+					updated = true;
+				}
+			}
 		}
 
 		if (updated) {
@@ -444,28 +523,5 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		if (domUser.getName() != null && DomUserConstraints.lenName < domUser.getName().length())
 			throw new IllegalArgumentException(String.format("getName longer than %d: %s", DomUserConstraints.lenName,
 					domUser.getName()));
-		if (domUser.getTitle() != null && DomUserConstraints.lenTitle < domUser.getTitle().length())
-			throw new IllegalArgumentException(String.format("getTitle longer than %d: %s", DomUserConstraints.lenTitle,
-					domUser.getTitle()));
-		if (domUser.getEmail() != null && DomUserConstraints.lenEmail < domUser.getEmail().length())
-			throw new IllegalArgumentException(String.format("getEmail longer than %d: %s", DomUserConstraints.lenEmail,
-					domUser.getEmail()));
-		if (domUser.getPhone() != null && DomUserConstraints.lenPhone < domUser.getPhone().length())
-			throw new IllegalArgumentException(String.format("getPhone longer than %d: %s", DomUserConstraints.lenPhone,
-					domUser.getPhone()));
 	}
-
-	private boolean isSameDN(User domUser, DomainUserAccount user) {
-		if (domUser == null || user == null || user.getDistinguishedName() == null || domUser.getExt() == null)
-			return false;
-		@SuppressWarnings("unchecked")
-		Map<String, String> ldapExt = (Map<String, String>) domUser.getExt().get("ldap");
-		if (ldapExt == null)
-			return false;
-		String existDn = ldapExt.get("distinguished_name");
-		if (existDn == null)
-			return false;
-		return user.getDistinguishedName().equals(existDn);
-	}
-
 }

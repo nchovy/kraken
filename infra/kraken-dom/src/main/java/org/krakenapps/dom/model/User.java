@@ -66,20 +66,15 @@ public class User {
 	@FieldOption(nullable = true)
 	private Date lastPasswordChange;
 
-	public static void shallowCopy(User from, User to) {
-		to.loginName = from.loginName;
-		to.orgUnit = from.orgUnit;
-		to.name = from.name;
-		to.description = from.description;
-		to.password = from.password;
-		to.salt = from.salt;
-		to.title = from.title;
-		to.email = from.email;
-		to.phone = from.phone;
-		to.ext = from.ext;
-		to.created = from.created;
-		to.updated = from.updated;
-		to.lastPasswordChange = from.lastPasswordChange;
+	@FieldOption(nullable = true)
+	private String sourceType;
+
+	public String getSourceType() {
+		return sourceType;
+	}
+
+	public void setSourceType(String sourceType) {
+		this.sourceType = sourceType;
 	}
 
 	public String getLoginName() {

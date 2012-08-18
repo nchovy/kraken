@@ -17,6 +17,7 @@ package org.krakenapps.dom.api;
 
 import java.util.Collection;
 
+import org.krakenapps.confdb.Predicate;
 import org.krakenapps.dom.model.User;
 
 public interface UserApi extends EntityEventProvider<User> {
@@ -27,6 +28,8 @@ public interface UserApi extends EntityEventProvider<User> {
 	Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren);
 
 	Collection<User> getUsers(String domain, String domainController);
+
+	Collection<User> getUsers(String domain, Predicate pred);
 
 	User findUser(String domain, String loginName);
 
