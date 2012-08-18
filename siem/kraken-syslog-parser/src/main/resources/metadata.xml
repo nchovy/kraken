@@ -16,4 +16,5 @@
 	<instance component="tippingpoint-log-parser-factory" />
 	<instance component="trusguard-log-parser-factory" />
 	<instance component="srx-log-parser-factory" />
+	<instance component="spectraguard-log-parser-factory" />
 </ipojo>
