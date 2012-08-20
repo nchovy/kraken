@@ -8,7 +8,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -22,7 +21,7 @@ import freemarker.template.TemplateException;
 public class FreeMarkerRunner implements OOXMLProcessor {
 	private Logger logger = LoggerFactory.getLogger(getClass().getName());
 	private final Map<String, Object> data;
-	
+
 	public FreeMarkerRunner(Map<String, Object> data)
 	{
 		this.data = data;
@@ -31,7 +30,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 	@Override
 	public void process(OOXMLPackage docx) {
 		// TODO Auto-generated method stub
-				Configuration cfg = new Configuration();
+		Configuration cfg = new Configuration();
 		cfg.setObjectWrapper(new DefaultObjectWrapper());
 
 		for (String s : docx.listParts("")) {
@@ -39,7 +38,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 			PrintWriter writer = null;
 			File sf = new File(docx.getDataDir(), s);
 			File outf = new File(sf.getPath() + ".new");
-			try {	
+			try {
 				templateReader = new InputStreamReader(new FileInputStream(sf));
 				writer = new PrintWriter(new FileOutputStream(outf));
 				logger.info("process: try freemarker template processing: {}", sf);
@@ -80,6 +79,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 			// ignore
 		}
 	}
+
 	private void safeClose(Reader o) {
 		try {
 			if (o != null)

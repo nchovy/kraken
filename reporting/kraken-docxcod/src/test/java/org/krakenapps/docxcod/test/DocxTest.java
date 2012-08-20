@@ -5,11 +5,15 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +21,7 @@ import org.krakenapps.docxcod.ChartDirectiveParser;
 import org.krakenapps.docxcod.Directive;
 import org.krakenapps.docxcod.DirectiveExtractor;
 import org.krakenapps.docxcod.FreeMarkerRunner;
+import org.krakenapps.docxcod.JsonHelper;
 import org.krakenapps.docxcod.OOXMLPackage;
 import org.krakenapps.docxcod.OOXMLProcessor;
 import org.krakenapps.docxcod.TableDirectiveParser;
@@ -27,7 +32,7 @@ import org.w3c.dom.Node;
 
 public class DocxTest {
 	private Logger logger = LoggerFactory.getLogger(getClass().getName());
-	
+
 	private TearDownHelper tearDownHelper = new TearDownHelper();
 
 	@Before
@@ -38,24 +43,24 @@ public class DocxTest {
 	public void tearDown() throws Exception {
 		tearDownHelper.tearDown();
 	}
-	
-//	@Test
+
+	// @Test
 	public void fieldTest() throws IOException {
 		File targetDir = new File("fieldTest");
 		targetDir.mkdirs();
-	//	tearDownHelper.add(targetDir);
-		
+		// tearDownHelper.add(targetDir);
+
 		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/fieldTest.docx"), targetDir);
-		
+
 		List<OOXMLProcessor> parsers = new ArrayList<OOXMLProcessor>();
 		DirectiveExtractor directiveExtractor = new DirectiveExtractor();
 		parsers.add(directiveExtractor);
 
-		for (OOXMLProcessor parser: parsers) {
+		for (OOXMLProcessor parser : parsers) {
 			parser.process(docx);
 		}
-		
+
 		String[] expected = new String[] {
 				"@before-row#list data as a asdfasdfasdsfd",
 				"asdsfdadsfadsfsdfa",
@@ -66,9 +71,9 @@ public class DocxTest {
 				"ahsdfl;aksjdflksdjf",
 				"#list asdf as qwer"
 		};
-		
+
 		int cnt = 0;
-		for (Directive dir: directiveExtractor.getDirectives()) {
+		for (Directive dir : directiveExtractor.getDirectives()) {
 			Node n = dir.getPosition();
 			String dirStr = dir.getDirectiveString();
 			logger.debug("extracted: " + dirStr);
@@ -76,28 +81,32 @@ public class DocxTest {
 			assertTrue(dirStr.equals(expected[cnt++]));
 		}
 	}
-	
+
 	@Test
-	public void mainTest() throws IOException {
+	public void mainTest() throws IOException, JSONException {
 		File targetDir = new File("mainTest");
 		targetDir.mkdirs();
-		//tearDownHelper.add(targetDir);
+		// tearDownHelper.add(targetDir);
 
 		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
-		
+
+		InputStreamReader inputReader = new InputStreamReader(getClass().getResourceAsStream("/nestedListTest.in"));
+		JSONTokener tokener = new JSONTokener(inputReader);
+		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
+
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
 		processors.add(new TableDirectiveParser());
 		processors.add(new ChartDirectiveParser());
-		processors.add(new FreeMarkerRunner(new HashMap<String, Object>()));
+		processors.add(new FreeMarkerRunner(rootMap));
 
-		for (OOXMLProcessor processor: processors) {
+		for (OOXMLProcessor processor : processors) {
 			processor.process(docx);
 		}
-		
+
 		File saveFile = new File("mainTest-save.docx");
 		docx.save(new FileOutputStream(saveFile));
-	//	tearDownHelper.add(saveFile);
+		// tearDownHelper.add(saveFile);
 	}
 
 	@Test
@@ -108,15 +117,15 @@ public class DocxTest {
 
 		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
-		
+
 		File saveFile = new File("saveTest.docx");
 		docx.save(new FileOutputStream(saveFile));
 		tearDownHelper.add(saveFile);
-		
+
 		// diff word file
 	}
 
-	@Test
+	// @Test
 	public void extractingTest() throws IOException {
 		File targetDir = new File("extractingTest");
 		targetDir.mkdirs();

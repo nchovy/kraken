@@ -115,7 +115,7 @@ public class OOXMLPackage {
 			}
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
-			//printRelationship(rootRel, new PrintWriter(out));
+			// printRelationship(rootRel, new PrintWriter(out));
 			logger.info(rootRel.toSummaryString());
 
 		} catch (SAXException e) {
@@ -227,7 +227,7 @@ public class OOXMLPackage {
 			String[] listParts = listParts("");
 
 			final Set<String> setOfParts = new HashSet<String>(Arrays.asList(listParts));
-			
+
 			for (String part : listParts) {
 				files.add(new File(dataDir, part));
 			}
@@ -303,11 +303,11 @@ public class OOXMLPackage {
 				String combinedPath = FilenameUtils.concat(currPrefix, r.target);
 				if (combinedPath.startsWith(prefix))
 					result.add(combinedPath);
-					s.push(new Object[] { r,
-							FilenameUtils.normalize(FilenameUtils.getFullPath(combinedPath)) });
+				s.push(new Object[] { r,
+						FilenameUtils.normalize(FilenameUtils.getFullPath(combinedPath)) });
 			}
 		}
-		System.out.println("result : " +result);
+		logger.debug("result : " + result);
 
 		return (String[]) result.toArray(new String[0]);
 	}

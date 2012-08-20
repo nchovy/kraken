@@ -11,18 +11,13 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -41,8 +36,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 public class TableDirectiveParser implements OOXMLProcessor {
 	private Logger logger = LoggerFactory.getLogger(getClass().getName());
@@ -57,6 +50,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 	private static String parseMagicNode(String in) {
 		in = replaceUnicodeQuote(in.trim());
 		Matcher matcher = MAGICNODE_PATTERN.matcher(in);
+
 		System.out.println(matcher.group(1));
 		if (matcher.find() && matcher.groupCount() > 0) {
 			String f = matcher.group(1);
@@ -94,22 +88,10 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		return result;
 	}
 
-	// ///
-	public static Document stringToDom(InputStream input)
-			throws SAXException, ParserConfigurationException, IOException {
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder builder = factory.newDocumentBuilder();
-
-		return builder.parse(new InputSource(new InputStreamReader(input)));
-	}
-
-	// //
-
 	public static final String UTF8_BOM = "\uFEFF";
 
 	private void unwrapMagicNode(OOXMLPackage pkg) {
 		fileRead(pkg);
-		logger.debug("aa");
 
 	}
 
@@ -121,7 +103,6 @@ public class TableDirectiveParser implements OOXMLProcessor {
 
 			xmlString = xmlString.replaceAll("<KMagicNode><!\\[CDATA\\[", "<");
 			xmlString = xmlString.replaceAll("\\]\\]></KMagicNode>", ">");
-
 
 			InputStream in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
 			FileOutputStream fos = new FileOutputStream(new File(pkg.getDataDir(), "word/document.xml"));
@@ -144,7 +125,6 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			System.exit(1);
 		}
 	}
-
 
 	private void extractMergeField(OOXMLPackage pkg) throws TransformerFactoryConfigurationError {
 		InputStream f = null;
@@ -209,10 +189,9 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			Node newRun = null;
 			ArrayList<Node> willBeRemoved = new ArrayList<Node>();
 			willBeRemoved.add(firstRun);
-			
+
 			while (sibling != null)
 			{
-			
 				if (sibling.getNodeName().equals("w:r"))
 				{
 					willBeRemoved.add(sibling);
@@ -227,11 +206,24 @@ public class TableDirectiveParser implements OOXMLProcessor {
 						sibling = sibling.getNextSibling();
 						continue;
 					}
-					if (namedItem.getNodeValue().equals("separate")){
-						newRun = sibling.getNextSibling();
+					if (namedItem.getNodeValue().equals("separate")) {
 						sibling = sibling.getNextSibling();
-						continue;//live
-					} 
+
+						newRun = sibling;
+						while (!newRun.getNodeName().equals("w:r")) {
+							newRun = newRun.getNextSibling();
+						}
+
+						Node textNode = findTextNode(newRun);
+						if (textNode == null) {
+							logger.warn("no text-containing run element found with directive. skipped. : {}", directive);
+							continue;
+						}
+
+						textNode.setTextContent(directive);
+
+						continue;// live
+					}
 					if (namedItem.getNodeValue().equals("end")) {
 						lastRun = sibling;
 						break;
@@ -240,7 +232,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 				sibling = sibling.getNextSibling();
 			}
 			willBeRemoved.remove(newRun);
-			
+
 			if (lastRun != null) { // found matching "end" fldChar
 				Node parentNode = firstRun.getParentNode();
 				for (Node node : willBeRemoved) {
@@ -371,6 +363,15 @@ public class TableDirectiveParser implements OOXMLProcessor {
 	private Node findFldCharNode(Node sibling) {
 		for (Node n : new NodeListWrapper(sibling.getChildNodes())) {
 			if (n.getNodeName().equals("w:fldChar")) {
+				return n;
+			}
+		}
+		return null;
+	}
+
+	private Node findTextNode(Node sibling) {
+		for (Node n : new NodeListWrapper(sibling.getChildNodes())) {
+			if (n.getNodeName().equals("w:t")) {
 				return n;
 			}
 		}
