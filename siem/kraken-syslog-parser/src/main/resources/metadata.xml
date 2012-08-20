@@ -17,4 +17,5 @@
 	<instance component="trusguard-log-parser-factory" />
 	<instance component="srx-log-parser-factory" />
 	<instance component="spectraguard-log-parser-factory" />
+	<instance component="secureworks-log-parser-factory" />
 </ipojo>
