@@ -8,7 +8,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-syslog-parser</artifactId>
-	<version>1.6.0</version>
+	<version>1.7.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Syslog Parser</name>
 	<build>
@@ -29,7 +29,8 @@
 							org.krakenapps.logparser.syslog.xnsystems;version=${project.version},
 							org.krakenapps.logparser.syslog.radware;version=${project.version},
 							org.krakenapps.logparser.syslog.paloaltonetworks;version=${project.version},
-							org.krakenapps.logparser.syslog.hp;version=${project.version}
+							org.krakenapps.logparser.syslog.hp;version=${project.version},
+							org.krakenapps.logparser.syslog.airtight;version=${project.version}
 						</Export-Package>
 						<Import-Package>!org.junit,*</Import-Package>
 					</instructions>

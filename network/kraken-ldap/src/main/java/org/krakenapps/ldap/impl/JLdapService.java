@@ -253,14 +253,8 @@ public class JLdapService implements LdapService {
 			logger.trace("kraken ldap: verify password for {}", entry);
 
 			// try bind
-			if (profile.getServerType() == LdapServerType.ActiveDirectory) {
-				String dn = entry.getAttribute("distinguishedName").getStringValue();
-				lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
-			} else {
-				String dn = "cn=" + uid + "," + baseDn;
-				logger.trace("kraken ldap: trying to bind using dn [{}]", dn);
-				lc.bind(LDAPConnection.LDAP_V3, dn, password.getBytes("utf-8"));
-			}
+			logger.trace("kraken ldap: trying to bind using dn [{}]", entry.getDN());
+			lc.bind(LDAPConnection.LDAP_V3, entry.getDN(), password.getBytes("utf-8"));
 			return true;
 		} catch (Exception e) {
 			if (!bindStatus)
