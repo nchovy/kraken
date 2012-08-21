@@ -8,4 +8,6 @@ public interface LdapSyncService {
 	void sync(LdapProfile profile);
 	
 	void unsync(LdapProfile profile);
+
+	void unsyncAll();
 }

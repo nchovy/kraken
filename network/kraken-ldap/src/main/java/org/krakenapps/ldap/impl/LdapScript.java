@@ -250,6 +250,18 @@ public class LdapScript implements Script {
 		ldapSync.unsync(profile);
 		context.println("unsync success");
 	}
+	
+	@ScriptUsage(description = "unsync all organization units with kraken-dom")
+	public void unsyncAll(String[] args) {
+		LdapSyncService ldapSync = getSyncService();
+		if (ldapSync == null) {
+			context.println("kraken-dom not found");
+			return;
+		}
+				
+		ldapSync.unsyncAll();
+		context.println("unsync success");
+	}	
 
 	public void periodicSync(String[] args) {
 		LdapSyncService ldapSync = getSyncService();

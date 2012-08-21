@@ -187,10 +187,25 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			if (ext.containsKey("ldap")) {
 				Map<String, Object> ldap = (Map<String, Object>) ext.get("ldap");
 				if (ldap.get("profile").toString().equals(profile.getName().toString())) {
-					logger.debug("kraken-ldap: ext ldap profile name=[{}], ldap profile name=[{}]", ldap.get("profile"), profile.getName());
+					logger.debug("kraken-ldap: ext ldap profile name=[{}], ldap profile name=[{}]", ldap.get("profile"),
+							profile.getName());
 					String guid = orgUnit.getGuid();
 					guids.add(guid);
 				}
+			}
+		}
+		orgUnitApi.removeOrganizationUnits("localhost", guids);
+	}
+
+	@Override
+	public void unsyncAll() {
+		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits("localhost");
+		Collection<String> guids = new ArrayList<String>();
+		for (OrganizationUnit orgUnit : orgUnits) {
+			Map<String, Object> ext = orgUnit.getExt();
+			if (ext.containsKey("ldap")) {
+				String guid = orgUnit.getGuid();
+				guids.add(guid);
 			}
 		}
 		orgUnitApi.removeOrganizationUnits("localhost", guids);
