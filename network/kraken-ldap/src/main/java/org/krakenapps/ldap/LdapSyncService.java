@@ -6,4 +6,6 @@ public interface LdapSyncService {
 	void setPeriodicSync(boolean activate);
 
 	void sync(LdapProfile profile);
+	
+	void unsync(LdapProfile profile);
 }

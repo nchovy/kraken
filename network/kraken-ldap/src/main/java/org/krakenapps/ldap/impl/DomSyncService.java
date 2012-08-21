@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 @Component(name = "ldap-sync-service")
 @Provides
 public class DomSyncService implements LdapSyncService, Runnable {
+
 	private static final String DEFAULT_ROLE_NAME = "admin";
 	private static final String DEFAULT_PROFILE_NAME = "all";
 
@@ -175,6 +176,24 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 		exportDom(orgUnits, users, profile);
 		profile.setLastSync(new Date());
+	}
+
+	@Override
+	public void unsync(LdapProfile profile) {
+		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits("localhost");
+		Collection<String> guids = new ArrayList<String>();
+		for (OrganizationUnit orgUnit : orgUnits) {
+			Map<String, Object> ext = orgUnit.getExt();
+			if (ext.containsKey("ldap")) {
+				Map<String, Object> ldap = (Map<String, Object>) ext.get("ldap");
+				if (ldap.get("profile").toString().equals(profile.getName().toString())) {
+					logger.debug("kraken-ldap: ext ldap profile name=[{}], ldap profile name=[{}]", ldap.get("profile"), profile.getName());
+					String guid = orgUnit.getGuid();
+					guids.add(guid);
+				}
+			}
+		}
+		orgUnitApi.removeOrganizationUnits("localhost", guids);
 	}
 
 	private void exportDom(Collection<LdapOrgUnit> orgUnits, Collection<LdapUser> users, LdapProfile profile) {

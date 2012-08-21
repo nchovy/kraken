@@ -212,7 +212,7 @@ public class LdapScript implements Script {
 	}
 
 	@ScriptUsage(description = "sync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
-	public void sync(String args[]) {
+	public void sync(String[] args) {
 		LdapSyncService ldapSync = getSyncService();
 		if (ldapSync == null) {
 			context.println("kraken-dom not found");
@@ -221,7 +221,34 @@ public class LdapScript implements Script {
 
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
+		
+		if(profile == null){
+			context.println("ldap profile not found");
+			return;
+		}
+			
 		ldapSync.sync(profile);
+		context.println("sync success");
+	}
+	
+	@ScriptUsage(description = "unsync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name")})
+	public void unsync(String[] args) {
+		LdapSyncService ldapSync = getSyncService();
+		if (ldapSync == null) {
+			context.println("kraken-dom not found");
+			return;
+		}
+		
+		String profileName = args[0];
+		LdapProfile profile = ldap.getProfile(profileName);
+		
+		if(profile == null){
+			context.println("ldap profile not found");
+			return;
+		}
+		
+		ldapSync.unsync(profile);
+		context.println("unsync success");
 	}
 
 	public void periodicSync(String[] args) {
@@ -281,4 +308,5 @@ public class LdapScript implements Script {
 
 		return (LdapSyncService) bc.getService(ref);
 	}
+
 }
