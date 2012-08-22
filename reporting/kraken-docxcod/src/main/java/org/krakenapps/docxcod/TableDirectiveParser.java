@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -91,12 +92,11 @@ public class TableDirectiveParser implements OOXMLProcessor {
 	public static final String UTF8_BOM = "\uFEFF";
 
 	private void unwrapMagicNode(OOXMLPackage pkg) {
-		fileRead(pkg);
-
-	}
-
-	private void fileRead(OOXMLPackage pkg) {
-
+		InputStream in = null;
+		FileOutputStream fos = null;
+		BufferedInputStream bis = null;
+		BufferedOutputStream bos = null;
+		
 		try {
 			FileInputStream fis = new FileInputStream(new File(pkg.getDataDir(), "word/document.xml"));
 			String xmlString = new Scanner(fis, "UTF-8").useDelimiter("\\A").next();
@@ -104,11 +104,11 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			xmlString = xmlString.replaceAll("<KMagicNode><!\\[CDATA\\[", "<");
 			xmlString = xmlString.replaceAll("\\]\\]></KMagicNode>", ">");
 
-			InputStream in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
-			FileOutputStream fos = new FileOutputStream(new File(pkg.getDataDir(), "word/document.xml"));
+			in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
+			fos = new FileOutputStream(new File(pkg.getDataDir(), "word/document.xml"));
 
-			BufferedInputStream bis = new BufferedInputStream(in);
-			BufferedOutputStream bos = new BufferedOutputStream(fos);
+			bis = new BufferedInputStream(in);
+			bos = new BufferedOutputStream(fos);
 
 			int len = 0;
 			byte[] buf = new byte[1024];
@@ -116,13 +116,13 @@ public class TableDirectiveParser implements OOXMLProcessor {
 				bos.write(buf, 0, len);
 			}
 
-			bos.close();
-			bis.close();
-			fos.close();
-			in.close();
 		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
+			logger.warn("Exception in unwrapMagicNode", e);
+		} finally {
+			safeCloseBOS(bos);
+			safeCloseBIS(bis);
+			safeCloseFOS(fos);
+			safeCloseIS(in);
 		}
 	}
 
@@ -163,7 +163,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			safeClose(f);
+			safeCloseIS(f);
 		}
 	}
 
@@ -396,7 +396,37 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		return directive;
 	}
 
-	private void safeClose(InputStream f) {
+	private void safeCloseIS(InputStream f) {
+		if (f == null)
+			return;
+		try {
+			f.close();
+		} catch (Exception e) {
+			// ignore
+		}
+	}
+	
+	private void safeCloseFOS(FileOutputStream f) {
+		if (f == null)
+			return;
+		try {
+			f.close();
+		} catch (Exception e) {
+			// ignore
+		}
+	}
+	
+	private void safeCloseBIS(BufferedInputStream f) {
+		if (f == null)
+			return;
+		try {
+			f.close();
+		} catch (Exception e) {
+			// ignore
+		}
+	}
+	
+	private void safeCloseBOS(BufferedOutputStream f) {
 		if (f == null)
 			return;
 		try {

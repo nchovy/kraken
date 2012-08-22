@@ -115,7 +115,7 @@ public class OOXMLPackage {
 			}
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
-			// printRelationship(rootRel, new PrintWriter(out));
+	//		 printRelationship(rootRel, new PrintWriter(out));
 			logger.info(rootRel.toSummaryString());
 
 		} catch (SAXException e) {
