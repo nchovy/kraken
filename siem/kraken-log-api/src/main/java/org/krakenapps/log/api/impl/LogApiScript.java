@@ -233,13 +233,13 @@ public class LogApiScript implements Script {
 			@ScriptArgument(name = "logger factory name", type = "string", description = "logger factory name. try logapi.loggerFactories command."),
 			@ScriptArgument(name = "logger namespace", type = "string", description = "new logger namespace"),
 			@ScriptArgument(name = "logger name", type = "string", description = "new logger name"),
-			@ScriptArgument(name = "description", type = "string", description = "the description of new logger") })
+			@ScriptArgument(name = "description", type = "string", description = "the description of new logger", optional = true) })
 	public void createLogger(String[] args) {
 		try {
 			String loggerFactoryName = args[0];
 			String loggerNamespace = args[1];
 			String loggerName = args[2];
-			String description = args[3];
+			String description = (args.length > 3) ? args[3] : null;
 
 			LoggerFactory loggerFactory = loggerFactoryRegistry.getLoggerFactory(loggerFactoryName);
 			if (loggerFactory == null) {
@@ -283,8 +283,7 @@ public class LogApiScript implements Script {
 
 			String[] tokens = fullName.split("\\\\");
 
-			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(),
-					logger.getFactoryName());
+			LoggerFactory factory = loggerFactoryRegistry.getLoggerFactory(logger.getFactoryNamespace(), logger.getFactoryName());
 			factory.deleteLogger(tokens[0], tokens[1]);
 			context.println("logger removed");
 		} catch (Exception e) {

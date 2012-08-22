@@ -20,6 +20,8 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.krakenapps.api.DateFormat;
@@ -38,6 +40,7 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	private volatile LogPipe[] pipes;
 	private Object updateLock = new Object();
 	private Thread t;
+	private Future<?> f;
 	private int interval;
 	private Properties config;
 
@@ -210,10 +213,18 @@ public abstract class AbstractLogger implements Logger, Runnable {
 		status = LoggerStatus.Starting;
 		this.interval = interval;
 
-		t = new Thread(this, "Logger [" + fullName + "]");
-		t.start();
+		if (getExecutor() == null) {
+			t = new Thread(this, "Logger [" + fullName + "]");
+			t.start();
+		} else {
+			f = getExecutor().submit(this);
+		}
 
 		invokeStartCallback();
+	}
+
+	protected ExecutorService getExecutor() {
+		return null;
 	}
 
 	private void invokeStartCallback() {
@@ -246,9 +257,17 @@ public abstract class AbstractLogger implements Logger, Runnable {
 			return;
 		}
 
-		if (t == null || t.isAlive() == false)
-			return;
-		t.interrupt();
+		if (t != null) {
+			if (!t.isAlive()) {
+				t = null;
+				return;
+			}
+			t.interrupt();
+			t = null;
+		} else if (f != null) {
+			f.cancel(true);
+			f = null;
+		}
 
 		status = LoggerStatus.Stopping;
 		doStop = true;
@@ -287,36 +306,70 @@ public abstract class AbstractLogger implements Logger, Runnable {
 
 	@Override
 	public void run() {
-		stopped = false;
+		if (getExecutor() == null) {
+			stopped = false;
+			try {
+				while (true) {
+					try {
+						if (doStop)
+							break;
+						long startedAt = System.currentTimeMillis();
+						runOnce();
+						updateConfig(config);
+						long elapsed = System.currentTimeMillis() - startedAt;
+						lastRunDate = new Date();
+						if (interval - elapsed < 0)
+							continue;
+						Thread.sleep(interval - elapsed);
+					} catch (InterruptedException e) {
+					}
+				}
+			} catch (Exception e) {
+				log.error("kraken log api: logger stopped", e);
+			} finally {
+				status = LoggerStatus.Stopped;
+				stopped = true;
+				doStop = false;
 
-		try {
-			while (true) {
 				try {
-					if (doStop)
-						break;
-					long startedAt = System.currentTimeMillis();
-					runOnce();
-					updateConfig(config);
-					long elapsed = System.currentTimeMillis() - startedAt;
-					lastRunDate = new Date();
-					if (interval - elapsed < 0)
-						continue;
-					Thread.sleep(interval - elapsed);
-				} catch (InterruptedException e) {
+					onStop();
+				} catch (Exception e) {
+					log.warn("krane log api: [" + fullName + "] stop callback should not throw any exception", e);
 				}
 			}
-		} catch (Exception e) {
-			log.error("kraken log api: logger stopped", e);
-		} finally {
-			status = LoggerStatus.Stopped;
-			stopped = true;
-			doStop = false;
+		} else {
+			stopped = false;
+			if (doStop) {
+				status = LoggerStatus.Stopped;
+				stopped = true;
+				doStop = false;
 
-			try {
-				onStop();
-			} catch (Exception e) {
-				log.warn("krane log api: [" + fullName + "] stop callback should not throw any exception", e);
+				try {
+					onStop();
+					return;
+				} catch (Exception e) {
+					log.warn("krane log api: [" + fullName + "] stop callback should not throw any exception", e);
+				}
 			}
+
+			if (lastRunDate != null) {
+				long millis = lastRunDate.getTime() + interval - System.currentTimeMillis();
+				if (millis > 0) {
+					try {
+						Thread.sleep(Math.min(millis, 500));
+					} catch (InterruptedException e) {
+					}
+					if (millis > 500) {
+						f = getExecutor().submit(this);
+						return;
+					}
+				}
+			}
+
+			runOnce();
+			updateConfig(config);
+			lastRunDate = new Date();
+			f = getExecutor().submit(this);
 		}
 	}
 
