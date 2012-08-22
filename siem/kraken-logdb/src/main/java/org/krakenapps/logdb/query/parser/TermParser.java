@@ -14,7 +14,7 @@ public class TermParser implements LogQueryParser {
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
 		syntax.add("term", this, new StringPlaceholder(), 
-				choice(rule(choice(k("=="), k("!="), k(">"), k("<"), k(">="), k("<="), k("contain"), k("regexp"), k("in")), 
+				choice(rule(choice(k("=="), k("!="), k(">="), k("<="), k(">"), k("<"), k("contain"), k("regexp"), k("in")), 
 				new StringPlaceholder()), rule(choice(k("is null"), k("not null")))));
 		// @formatter:on
 	}
@@ -31,7 +31,7 @@ public class TermParser implements LogQueryParser {
 		}
 
 		Object oper = v[1].getValue();
-		if(oper == null)
+		if (oper == null)
 			oper = v[1].getChildren()[0].getValue();
 		term.setOperator(Operator.find(oper.toString()));
 
