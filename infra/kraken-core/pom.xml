@@ -8,14 +8,14 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-core</artifactId>
-	<version>1.16.0</version>
+	<version>1.16.1</version>
 	<name>Kraken Core</name>
 	<packaging>jar</packaging>
 	<dependencies>
 		<dependency>
-			<groupId>jsch</groupId>
+			<groupId>com.jcraft</groupId>
 			<artifactId>jsch</artifactId>
-			<version>0.1.44</version>
+			<version>0.1.48</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.sshd</groupId>

@@ -159,4 +159,7 @@ org.bouncycastle.jce.provider.symmetric,
 org.bouncycastle.jce.provider.util,
 org.bouncycastle.jce.spec,
 sun.misc,
-sun.reflect
+sun.reflect,
+com.jcraft.jsch; version=0.1.48,
+com.jcraft.jsch.jce; version=0.1.48,
+com.jcraft.jsch.jcraft; version=0.1.48
