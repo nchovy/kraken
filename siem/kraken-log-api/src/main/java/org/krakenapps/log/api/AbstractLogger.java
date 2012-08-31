@@ -355,7 +355,9 @@ public abstract class AbstractLogger implements Logger, Runnable {
 					} catch (InterruptedException e) {
 					}
 					if (millis > 500) {
-						getExecutor().execute(this);
+						ExecutorService executor = getExecutor();
+						if (executor != null)
+							executor.execute(this);
 						return;
 					}
 				}
@@ -364,7 +366,9 @@ public abstract class AbstractLogger implements Logger, Runnable {
 			runOnce();
 			updateConfig(config);
 			lastRunDate = new Date();
-			getExecutor().execute(this);
+			ExecutorService executor = getExecutor();
+			if (executor != null)
+				executor.execute(this);
 		}
 	}
 
