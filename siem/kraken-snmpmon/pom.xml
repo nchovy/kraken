@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-snmpmon</artifactId>
-	<version>0.2.1</version>
+	<version>0.2.2</version>
 	<packaging>bundle</packaging>
 	<name>Kraken SNMP monitor</name>
 	<build>
@@ -54,9 +54,13 @@
 			<artifactId>kraken-snmp</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-rrd</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.snmp4j</groupId>
 			<artifactId>snmp4j</artifactId>
-			<version>1.9.3d</version>
+			<version>1.11.1</version>
 		</dependency>
 	</dependencies>
 </project>

@@ -27,6 +27,7 @@ import java.util.Properties;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.log.api.AbstractLoggerFactory;
 import org.krakenapps.log.api.IntegerConfigType;
 import org.krakenapps.log.api.Logger;
@@ -59,8 +60,14 @@ public class SnmpQueryLoggerFactory extends AbstractLoggerFactory {
 		}
 	}
 
+	@Validate
+	public void validate() {
+		SnmpQueryLogger.open();
+	}
+
 	@Invalidate
 	public void invalidate() {
+		SnmpQueryLogger.close();
 		try {
 			if (transport != null)
 				transport.close();
@@ -105,9 +112,9 @@ public class SnmpQueryLoggerFactory extends AbstractLoggerFactory {
 	public enum ConfigOption {
 		AgentIP("agent_ip"), AgentPort("agent_port"), SnmpCommunity("snmp_community"), SnmpVersion("snmp_version");
 
-		String configKey;
+		private String configKey;
 
-		ConfigOption(String configKey) {
+		private ConfigOption(String configKey) {
 			this.configKey = configKey;
 		}
 
@@ -176,9 +183,9 @@ public class SnmpQueryLoggerFactory extends AbstractLoggerFactory {
 
 	@Override
 	protected Logger createLogger(LoggerSpecification spec) {
-		SnmpQueryLogger logger = new SnmpQueryLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this,
-				spec.getConfig());
-		logger.setSnmp(snmp);
-		return logger;
+		 SnmpQueryLogger logger = new SnmpQueryLogger(spec.getNamespace(), spec.getName(), spec.getDescription(), this,
+		 spec.getConfig());
+		 logger.setSnmp(snmp);
+		 return logger;
 	}
 }

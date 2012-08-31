@@ -3,4 +3,5 @@
 	xmlns="org.apache.felix.ipojo">
 	<instance component="snmpmon-query-logger-factory" />
 	<instance component="snmptrap-logger-factory" />
+	<instance component="snmpmon-rrd-updater" />
 </ipojo>
