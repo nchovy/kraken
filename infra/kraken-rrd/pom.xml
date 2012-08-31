@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-rrd</artifactId>
-	<version>1.2.0</version>
+	<version>1.3.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken RRD</name>
 	<build>
@@ -22,8 +22,10 @@
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.rrd</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.rrd;version=${project.version}</Export-Package>
-						<!-- >Private-Package>org.krakenapps.rrd.impl</Private-Package-->
+						<Export-Package>org.krakenapps.rrd;version=${project.version},
+							org.krakenapps.rrd.exception;version=${project.version},
+							org.krakenapps.rrd.io;version=${project.version}</Export-Package>
+						<Private-Package>org.krakenapps.rrd.impl</Private-Package>
 						<Import-Package>*</Import-Package>
 					</instructions>
 				</configuration>
@@ -51,7 +53,6 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-lang</groupId>
@@ -64,6 +65,5 @@
 			<version>1.5.10</version>
 			<scope>test</scope>
 		</dependency>
-
 	</dependencies>
 </project>

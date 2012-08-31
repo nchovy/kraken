@@ -1,16 +1,28 @@
 package org.krakenapps.rrd;
 
-import java.util.*;
+import java.lang.ref.WeakReference;
+import java.util.List;
 
-public interface FetchResult {
-	public interface Row 
-	{
-		Date getDate();
-		long getTimeInSec();
-		double[] getColumns();
-		double getColumn(int columnIndex);
+import org.krakenapps.rrd.impl.Archive;
+import org.krakenapps.rrd.impl.RrdRaw;
+
+public class FetchResult {
+	private List<FetchRow> rows;
+	private WeakReference<RrdRaw> rrd;
+
+	public FetchResult(RrdRaw rrd, Archive archive, long start, long end) {
+		this.rrd = new WeakReference<RrdRaw>(rrd);
+		long step = rrd.getStep();
+		long normalizedStartTime = start / step * step;
+		long normalizedEndTime = end / step * step;
+		this.rows = archive.fetchRows(normalizedStartTime, normalizedEndTime);
 	}
-	
-	RrdRawImpl getRRD();
-	List<Row> getRows();
+
+	public List<FetchRow> getRows() {
+		return rows;
+	}
+
+	public RrdRaw getRrdRaw() {
+		return rrd.get();
+	}
 }

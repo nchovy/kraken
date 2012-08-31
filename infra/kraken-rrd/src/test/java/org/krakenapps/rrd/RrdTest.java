@@ -17,115 +17,113 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.Test;
-import org.krakenapps.rrd.FetchResult.Row;
+import org.krakenapps.rrd.impl.DataSource;
+import org.krakenapps.rrd.impl.RrdRaw;
+import org.krakenapps.rrd.impl.RrdUtil;
+import org.krakenapps.rrd.io.FilePersistentLayer;
+import org.krakenapps.rrd.io.MemoryPersistentLayer;
+import org.krakenapps.rrd.io.PersistentLayer;
 
 public class RrdTest {
 	// TODO: RRD memory persistent layer memory reallocation test.
-	
+
 	@Test
-	public void CompactMemoryRrdTest() throws InterruptedException, IllegalArgumentException, SecurityException, IllegalAccessException, NoSuchFieldException {
+	public void CompactMemoryRrdTest() throws InterruptedException, IllegalArgumentException, SecurityException,
+			IllegalAccessException, NoSuchFieldException {
 		try {
 			SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
 			df.setLenient(true);
-			CompactMemoryRrd cmr = new CompactMemoryRrd();
 			RrdConfig config = new RrdConfig(df.parse("Fri Jan 29 22:08:32 KST 2010"), 10);
-			config.addDataSource("asdf", DataSource.Type.ABSOLUTE2, 20, Double.NaN, Double.NaN);
-			config.addRoundRobinArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
-			cmr.init(config);
-			
-			while (getCompactMemoryRrdRawImpl(cmr) == null) { 
+			config.addDataSource("asdf", DataSourceType.ABSOLUTE2, 20, Double.NaN, Double.NaN);
+			config.addArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
+			CompactRrd cmr = new CompactRrd(new MemoryPersistentLayer(), config);
+
+			while (getCompactMemoryRrdRaw(cmr) != null) {
 				Runtime.getRuntime().gc();
 				Thread.sleep(100);
 			}
 			updateRrd(df, cmr);
-			
-			ConcurrentHashMap<String, CompactMemoryRrd> rrds = new ConcurrentHashMap<String, CompactMemoryRrd>();
+
+			ConcurrentHashMap<String, CompactRrd> rrds = new ConcurrentHashMap<String, CompactRrd>();
 			rrds.put("asdf", cmr);
-			
+
 			Runtime.getRuntime().gc();
 			try {
 				rrds.get("asdf").save(new FilePersistentLayer(new File("CompactMemoryRrdTest.bin")));
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 			cmr = null;
-			
+
 			// wait for gc-ed.
-			while (getCompactMemoryRrdRawImpl(rrds.get("asdf")) == null) { 
+			while (getCompactMemoryRrdRaw(rrds.get("asdf")) != null) {
 				Runtime.getRuntime().gc();
 				Thread.sleep(100);
 			}
-			
-			
-			
+
 			try {
 				rrds.get("asdf").save(new FilePersistentLayer(new File("CompactMemoryRrdTest.bin")));
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			FetchResult fetch = rrds.get("asdf").fetch(ConsolidateFunc.SUM,
-					df.parse("Fri Jan 29 22:10:00 KST 2010"),
+
+			FetchResult fetch = rrds.get("asdf").fetch(ConsolidateFunc.SUM, df.parse("Fri Jan 29 22:10:00 KST 2010"),
 					df.parse("Fri Jan 29 22:16:00 KST 2010"), 60);
 
-			for (Row row : fetch.getRows()) {
+			for (FetchRow row : fetch.getRows()) {
 				assertTrue(row.getColumn(0) == 1.0);
 			}
 
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private RrdRawImpl getCompactMemoryRrdRawImpl(CompactMemoryRrd cmr) throws NoSuchFieldException, IllegalAccessException {
-		Field pImplField = cmr.getClass().getDeclaredField("pImpl");
+	private RrdRaw getCompactMemoryRrdRaw(CompactRrd cmr) throws NoSuchFieldException, IllegalAccessException {
+		Field pImplField = cmr.getClass().getDeclaredField("rawref");
 		pImplField.setAccessible(true);
-		RrdRawImpl rawImpl = ((WeakReference<RrdRawImpl>)pImplField.get(cmr)).get();
+		RrdRaw rawImpl = ((WeakReference<RrdRaw>) pImplField.get(cmr)).get();
 		return rawImpl;
 	}
-	
+
 	@Test
 	public void persistentLayerEqualityTest() {
 		try {
 			String testfileName = "equalityTest.bin";
 			FilePersistentLayer fileLayer = new FilePersistentLayer(new File(testfileName));
 			MemoryPersistentLayer memoryLayer = new MemoryPersistentLayer();
-			
+
 			SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
 			df.setLenient(true);
 			RrdConfig config;
 
 			config = new RrdConfig(df.parse("Fri Jan 29 22:08:32 KST 2010"), 10);
-			config.addDataSource("asdf", DataSource.Type.ABSOLUTE2, 20, Double.NaN, Double.NaN);
-			config.addRoundRobinArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
-			Rrd fileRrd = new AutoPersistFileRrd(config, fileLayer);
-			
-			updateRrd(df, fileRrd);
-			
-			fileRrd.save();
-			fileRrd.save(new PersLayerOutputStream(memoryLayer));
-			
-			fileRrd = new AutoPersistFileRrd(new FilePersistentLayer(new File(testfileName)));
+			config.addDataSource("asdf", DataSourceType.ABSOLUTE2, 20, Double.NaN, Double.NaN);
+			config.addArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
+			Rrd fileRrd = new DefaultRrd(fileLayer, config);
 
-			FetchResult fetch = fileRrd.fetch(ConsolidateFunc.SUM,
-					df.parse("Fri Jan 29 22:10:00 KST 2010"),
+			updateRrd(df, fileRrd);
+
+			fileRrd.save();
+			fileRrd.save(memoryLayer);
+
+			fileRrd = new DefaultRrd(new FilePersistentLayer(new File(testfileName)));
+
+			FetchResult fetch = fileRrd.fetch(ConsolidateFunc.SUM, df.parse("Fri Jan 29 22:10:00 KST 2010"),
 					df.parse("Fri Jan 29 22:16:00 KST 2010"), 60);
 
-			for (Row row : fetch.getRows()) {
+			for (FetchRow row : fetch.getRows()) {
 				assertTrue(row.getColumns()[0] == 1.0);
-			}		
+			}
 
-			memoryLayer.flip();
-			memoryLayer.reopen();
 			ByteBuffer memoryData = ByteBuffer.allocate(8192), fileData = ByteBuffer.allocate(8192);
 			int memorySize = memoryLayer.read(memoryData.array(), 0, 8192);
 			memoryData.limit(memorySize);
@@ -134,15 +132,13 @@ public class RrdTest {
 			int fileSize = fis.read(fileData.array());
 			fileData.limit(fileSize);
 			fileData.flip();
-			assertTrue(memoryData.equals(fileData));			
+			assertTrue(memoryData.equals(fileData));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	private void updateRrd(SimpleDateFormat df, Rrd rrd) throws ParseException {
@@ -155,7 +151,7 @@ public class RrdTest {
 		rrd.update(df.parse("Fri Jan 29 22:15:04 KST 2010"), (Double[]) Arrays.asList(1.0).toArray());
 		rrd.update(df.parse("Fri Jan 29 22:16:04 KST 2010"), (Double[]) Arrays.asList(1.0).toArray());
 	}
-	
+
 	@Test
 	public void instantiationTest() {
 		try {
@@ -164,27 +160,24 @@ public class RrdTest {
 			RrdConfig config;
 
 			config = new RrdConfig(df.parse("Fri Jan 29 22:08:32 KST 2010"), 10);
-			config.addDataSource("asdf", DataSource.Type.ABSOLUTE2, 20, Double.NaN, Double.NaN);
-			config.addRoundRobinArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
+			config.addDataSource("asdf", DataSourceType.ABSOLUTE2, 20, Double.NaN, Double.NaN);
+			config.addArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
 			FilePersistentLayer persLayer = new FilePersistentLayer(new File("instantiationTest.bin"));
-			Rrd rrd = new AutoPersistFileRrd(config, persLayer);
+			Rrd rrd = new DefaultRrd(persLayer, config);
 			updateRrd(df, rrd);
-			
-			rrd = new AutoPersistFileRrd(new FilePersistentLayer(new File("instantiationTest.bin")));
 
-			FetchResult fetch = rrd.fetch(ConsolidateFunc.SUM,
-					df.parse("Fri Jan 29 22:10:00 KST 2010"),
+			rrd = new DefaultRrd(new FilePersistentLayer(new File("instantiationTest.bin")));
+
+			FetchResult fetch = rrd.fetch(ConsolidateFunc.SUM, df.parse("Fri Jan 29 22:10:00 KST 2010"),
 					df.parse("Fri Jan 29 22:16:00 KST 2010"), 60);
 
-			for (Row row : fetch.getRows()) {
+			for (FetchRow row : fetch.getRows()) {
 				assertTrue(row.getColumns()[0] == 1.0);
-			}		
-			
+			}
+
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -195,25 +188,22 @@ public class RrdTest {
 		df.setLenient(true);
 
 		try {
-			//			long start = df.parse("Fri Jan 29 22:08:04 KST 2010").getTime() / 1000;
+			// long start = df.parse("Fri Jan 29 22:08:04 KST 2010").getTime() / 1000;
 			RrdConfig config = new RrdConfig(df.parse("Fri Jan 29 22:08:32 KST 2010"), 10);
-			config.addDataSource("asdf", DataSource.Type.ABSOLUTE2, 20, Double.NaN, Double.NaN);
-			config.addRoundRobinArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
-//			RrdRawImpl rrd = new RrdRawImpl(new MemoryPersistentLayer());
-			MemoryRrd rrd = new MemoryRrd();
-			rrd.init(config);
+			config.addDataSource("asdf", DataSourceType.ABSOLUTE2, 20, Double.NaN, Double.NaN);
+			config.addArchive(ConsolidateFunc.SUM, 0.5, 6, 10);
+			// RrdRawImpl rrd = new RrdRawImpl(new MemoryPersistentLayer());
+			DefaultRrd rrd = new DefaultRrd(new MemoryPersistentLayer(), config);
 			updateRrd(df, rrd);
 
-			FetchResult fetch = rrd.fetch(ConsolidateFunc.SUM,
-					df.parse("Fri Jan 29 22:10:00 KST 2010"),
+			FetchResult fetch = rrd.fetch(ConsolidateFunc.SUM, df.parse("Fri Jan 29 22:10:00 KST 2010"),
 					df.parse("Fri Jan 29 22:16:00 KST 2010"), 60);
 
-			for (Row row : fetch.getRows()) {
+			for (FetchRow row : fetch.getRows()) {
 				assertTrue(row.getColumns()[0] == 1.0);
 			}
 
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -223,10 +213,10 @@ public class RrdTest {
 	@Test
 	public void testRrdSum() throws InterruptedException {
 		RrdConfig config = new RrdConfig(new Date(2010, 1, 22, 0, 59, 59), 10);
-		config.addDataSource("test", DataSource.Type.ABSOLUTE2, 10, Double.NaN, Double.NaN);
-		config.addRoundRobinArchive(ConsolidateFunc.SUM, 0.5, 3, 12);
+		config.addDataSource("test", DataSourceType.ABSOLUTE2, 10, Double.NaN, Double.NaN);
+		config.addArchive(ConsolidateFunc.SUM, 0.5, 3, 12);
 
-		RrdRawImpl rrd = new RrdRawImpl(config);
+		RrdRaw rrd = new RrdRaw(config);
 		Date start = new Date(2010, 1, 22, 1, 0, 0);
 		rrd.update(start, new Double[] { 1d });
 		rrd.update(new Date(2010, 1, 22, 1, 0, 10), (Double[]) Arrays.asList(2d).toArray());
@@ -235,7 +225,7 @@ public class RrdTest {
 		rrd.update(end, new Double[] { 3d });
 
 		FetchResult fetch = rrd.fetch(ConsolidateFunc.SUM, start, end, 30);
-		Row r = fetch.getRows().get(0);
+		FetchRow r = fetch.getRows().get(0);
 		assertTrue(8.0d == (double) r.getColumns()[0]);
 	}
 
@@ -248,40 +238,33 @@ public class RrdTest {
 		long step = 10;
 
 		RrdConfig config = new RrdConfig(makeDate(startTime - 1), step);
-		config.addDataSource("test", DataSource.Type.GAUGE, step * 2,
-				Double.NaN, Double.NaN);
-		config.addDataSource("test", DataSource.Type.COUNTER, step * 2,
-				Double.NaN, Double.NaN);
-		config.addDataSource("test", DataSource.Type.DERIVE, step * 2,
-				Double.NaN, Double.NaN);
-		config.addDataSource("test", DataSource.Type.ABSOLUTE, step * 2,
-				Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.GAUGE, step * 2, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.COUNTER, step * 2, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.DERIVE, step * 2, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.ABSOLUTE, step * 2, Double.NaN, Double.NaN);
 		// per a minute, during 10 minutes
-		config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 6, 10);
-		config.addRoundRobinArchive(ConsolidateFunc.MAX, 0.5, 6, 10);
-		config.addRoundRobinArchive(ConsolidateFunc.MIN, 0.5, 6, 10);
-		config.addRoundRobinArchive(ConsolidateFunc.LAST, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.AVERAGE, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.MAX, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.MIN, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.LAST, 0.5, 6, 10);
 		// per a 10 minutes, during 3 hours
-		config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 60, 18);
-		config.addRoundRobinArchive(ConsolidateFunc.MAX, 0.5, 60, 18);
-		config.addRoundRobinArchive(ConsolidateFunc.MIN, 0.5, 60, 18);
-		config.addRoundRobinArchive(ConsolidateFunc.LAST, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.AVERAGE, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.MAX, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.MIN, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.LAST, 0.5, 60, 18);
 
 		FilePersistentLayer pl;
 		try {
 			pl = new FilePersistentLayer(new File("rrd_perslayer_test.bin"));
 
-			RrdRawImpl rrd1, rrd2;
-
-			rrd1 = new RrdRawImpl(config);
 			long t = startTime;
-
 			ArrayList<DoubleSample> samples = new ArrayList<DoubleSample>();
 			samples.add(new SinSample(t));
 			samples.add(new SinCounterSample(t));
 			samples.add(new SinSample(t));
 			samples.add(new SinSample(t));
 
+			RrdRaw rrd1 = new RrdRaw(config);
 			for (t = startTime; t < startTime + 32 * 6 * step; t += step) {
 				Double row[] = new Double[samples.size()];
 				int colIndex = 0;
@@ -290,16 +273,12 @@ public class RrdTest {
 				}
 				rrd1.update(new Date(t * 1000), (Double[]) row);
 			}
-			pl.reopen();
-			rrd1.writeToPersLayer(new PersLayerOutputStream(pl));
+			rrd1.write(pl);
 			pl.close();
 
-			pl.reopen();
-			rrd2 = new RrdRawImpl();
-			assertTrue(rrd2.readFromPersLayer(new PersLayerInputStream(pl)));
+			RrdRaw rrd2 = new RrdRaw(pl);
 
 			assertTrue(rrd1.equals(rrd2));
-
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -307,7 +286,7 @@ public class RrdTest {
 
 	@Test
 	public void testPersistentLayer() {
-		RrdPersistentLayer persLayer = new MemoryPersistentLayer();
+		PersistentLayer persLayer = new MemoryPersistentLayer();
 		testPersistentLayer(persLayer);
 		try {
 			persLayer = new FilePersistentLayer(new File("test.bin"));
@@ -321,63 +300,34 @@ public class RrdTest {
 			assertTrue(file.exists());
 			assertTrue(file.delete());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			assert (false);
 		}
 	}
 
-	private void testPersistentLayerReading(RrdPersistentLayer persLayer)
-			throws IOException {
+	private void testPersistentLayerReading(PersistentLayer persLayer) throws IOException {
 		assertTrue(persLayer.readBoolean() == true);
 		assertTrue(persLayer.readBoolean() == false);
 		assertTrue(persLayer.readByte() == (byte) 0x7);
 		assertTrue(persLayer.readDouble() == 0.573);
 		assertTrue(persLayer.readLong() == 0x573765);
-		assertTrue(persLayer.readString().equals("stania"));
+		assertTrue(persLayer.readUTF().equals("stania"));
 		assertTrue(persLayer.readLong() == 0x765573);
 		assertTrue(persLayer.readLong() == 0x75595251);
 		assertTrue(persLayer.readEnum(ConsolidateFunc.class) == ConsolidateFunc.AVERAGE);
 	}
 
-	private void testPersistentLayer(RrdPersistentLayer persLayer) {
+	private void testPersistentLayer(PersistentLayer persLayer) {
 		try {
-			persLayer.seek(0);
-			persLayer.writeBoolean(true);
-			persLayer.sync();
-			persLayer.seek(0);
-			assertTrue("read/write Boolean test: true",
-					persLayer.readBoolean() == true);
-
-			persLayer.seek(0);
-			persLayer.writeBoolean(false);
-			persLayer.sync();
-			persLayer.seek(0);
-			assertTrue("read/write Boolean test: false", persLayer
-					.readBoolean() == false);
-
-			persLayer.seek(0);
-			persLayer.writeString("stania");
-			persLayer.sync();
-			persLayer.seek(0);
-			assertTrue("read/write string test 1", persLayer.readString()
-					.equals("stania"));
-
-			persLayer.seek(0);
 			persLayer.writeBoolean(true);
 			persLayer.writeBoolean(false);
 			persLayer.writeByte(0x7);
 			persLayer.writeDouble(0.573);
 			persLayer.writeLong(0x573765);
-			persLayer.writeString("stania");
+			persLayer.writeUTF("stania");
 			persLayer.writeLong(0x765573);
 			persLayer.writeLong(0x75595251);
 			persLayer.writeEnum(ConsolidateFunc.AVERAGE);
-			persLayer.sync();
-			persLayer.seek(0);
-
-			testPersistentLayerReading(persLayer);
-
 		} catch (IOException e) {
 			assertTrue(false);
 		}
@@ -385,30 +335,24 @@ public class RrdTest {
 
 	@Test
 	public void rrdBasicTest() {
-		assertTrue("long division test", (7 / 4) * 4 == 4);
-
 		Calendar cl = Calendar.getInstance();
 		cl.set(2009, Calendar.NOVEMBER, 14, 0, 0, 0);
 
 		long startTime = cl.getTime().getTime() / 1000;
 
 		RrdConfig config = new RrdConfig(new Date(startTime * 1000), 10);
-		config.addDataSource("test", DataSource.Type.GAUGE, 20, Double.NaN,
-				Double.NaN);
-		config.addDataSource("test", DataSource.Type.COUNTER, 20, Double.NaN,
-				Double.NaN);
-		config.addDataSource("test", DataSource.Type.DERIVE, 20, Double.NaN,
-				Double.NaN);
-		config.addDataSource("test", DataSource.Type.ABSOLUTE, 20, Double.NaN,
-				Double.NaN);
-		config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 1, 15);
-		config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 3, 5);
+		config.addDataSource("test", DataSourceType.GAUGE, 20, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.COUNTER, 20, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.DERIVE, 20, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.ABSOLUTE, 20, Double.NaN, Double.NaN);
+		config.addArchive(ConsolidateFunc.AVERAGE, 0.5, 1, 15);
+		config.addArchive(ConsolidateFunc.AVERAGE, 0.5, 3, 5);
 		// config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 60, 5);
 		// config.addRoundRobinArchive(ConsolidateFunc.MAX, 0.5, 12, 25);
 		// config.addRoundRobinArchive(ConsolidateFunc.MIN, 0.5, 12, 25);
 
 		{
-			RrdRawImpl rrd = new RrdRawImpl(config);
+			RrdRaw rrd = new RrdRaw(config);
 			long t = startTime;
 
 			rrd.update(new Date(t * 1000 + 3000), new Double[] { 2.0, 2.0, 2.0, 2.0 });
@@ -419,37 +363,24 @@ public class RrdTest {
 			ArrayList<DataSource> ds = getDataSource(rrd);
 			// assertTrue("dataSource time test", row.getDate().equals(new
 			// Date(t + 10)));
-			assertTrue("dataSource Test1: GAUGE", RrdRawImpl.doubleEqual(ds.get(0)
-					.getCurrentValue(), 2.7000000000e+01));
-			assertTrue("dataSource Test1: COUNTER", RrdRawImpl.doubleEqual(ds.get(1)
-					.getCurrentValue(), 2.0000000000e+00));
-			assertTrue("dataSource Test1: DERIVE", RrdRawImpl.doubleEqual(ds.get(2)
-					.getCurrentValue(), 2.0000000000e+00));
-			assertTrue("dataSource Test1: ABSOLUTE", RrdRawImpl.doubleEqual(ds.get(3)
-					.getCurrentValue(), 9.0000000000e+00));
+			assertTrue("dataSource Test1: GAUGE", RrdUtil.doubleEqual(ds.get(0).getCurrentValue(), 2.7000000000e+01));
+			assertTrue("dataSource Test1: COUNTER", RrdUtil.doubleEqual(ds.get(1).getCurrentValue(), 2.0000000000e+00));
+			assertTrue("dataSource Test1: DERIVE", RrdUtil.doubleEqual(ds.get(2).getCurrentValue(), 2.0000000000e+00));
+			assertTrue("dataSource Test1: ABSOLUTE", RrdUtil.doubleEqual(ds.get(3).getCurrentValue(), 9.0000000000e+00));
 
 			rrd.update(new Date(t * 1000 + 12000), new Double[] { 5.0, 5.0, 5.0, 5.0 });
-			assertTrue("dataSource Test2: GAUGE", RrdRawImpl.doubleEqual(ds.get(0)
-					.getCurrentValue(), 1.0000000000e+01));
-			assertTrue("dataSource Test2: COUNTER", RrdRawImpl.doubleEqual(ds.get(1)
-					.getCurrentValue(), 6.6666666667e-01));
-			assertTrue("dataSource Test2: DERIVE", RrdRawImpl.doubleEqual(ds.get(2)
-					.getCurrentValue(), 6.6666666667e-01));
-			assertTrue("dataSource Test2: ABSOLUTE", RrdRawImpl.doubleEqual(ds.get(3)
-					.getCurrentValue(), 3.3333333333e+00));
+			assertTrue("dataSource Test2: GAUGE", RrdUtil.doubleEqual(ds.get(0).getCurrentValue(), 1.0000000000e+01));
+			assertTrue("dataSource Test2: COUNTER", RrdUtil.doubleEqual(ds.get(1).getCurrentValue(), 6.6666666667e-01));
+			assertTrue("dataSource Test2: DERIVE", RrdUtil.doubleEqual(ds.get(2).getCurrentValue(), 6.6666666667e-01));
+			assertTrue("dataSource Test2: ABSOLUTE", RrdUtil.doubleEqual(ds.get(3).getCurrentValue(), 3.3333333333e+00));
 
-			FetchResult result = rrd.fetch(ConsolidateFunc.AVERAGE,
-					makeDate(t), makeDate(t + 20), 10);
-			FetchResult.Row row = result.getRows().get(0);
+			FetchResult result = rrd.fetch(ConsolidateFunc.AVERAGE, makeDate(t), makeDate(t + 20), 10);
+			FetchRow row = result.getRows().get(0);
 
-			assertTrue("dataSource fetch Test: GAUGE", RrdRawImpl.doubleEqual(row
-					.getColumns()[0], 3.2000000000e+00));
-			assertTrue("dataSource fetch Test: COUNTER", RrdRawImpl.doubleEqual(row
-					.getColumns()[1], 3.3333333333e-01));
-			assertTrue("dataSource fetch Test: DERIVE", RrdRawImpl.doubleEqual(row
-					.getColumns()[2], 3.3333333333e-01));
-			assertTrue("dataSource fetch Test: ABSOLUTE", RrdRawImpl.doubleEqual(row
-					.getColumns()[3], 1.0666666667e+00));
+			assertTrue("dataSource fetch Test: GAUGE", RrdUtil.doubleEqual(row.getColumns()[0], 3.2000000000e+00));
+			assertTrue("dataSource fetch Test: COUNTER", RrdUtil.doubleEqual(row.getColumns()[1], 3.3333333333e-01));
+			assertTrue("dataSource fetch Test: DERIVE", RrdUtil.doubleEqual(row.getColumns()[2], 3.3333333333e-01));
+			assertTrue("dataSource fetch Test: ABSOLUTE", RrdUtil.doubleEqual(row.getColumns()[3], 1.0666666667e+00));
 		}
 
 		// TODO implement tests
@@ -471,27 +402,23 @@ public class RrdTest {
 		long step = 10;
 
 		RrdConfig config = new RrdConfig(makeDate(startTime - 1), step);
-		config.addDataSource("test", DataSource.Type.GAUGE, step * 2,
-				Double.NaN, Double.NaN);
-		config.addDataSource("test", DataSource.Type.COUNTER, step * 2,
-				Double.NaN, Double.NaN);
-		config.addDataSource("test", DataSource.Type.DERIVE, step * 2,
-				Double.NaN, Double.NaN);
-		config.addDataSource("test", DataSource.Type.ABSOLUTE, step * 2,
-				Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.GAUGE, step * 2, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.COUNTER, step * 2, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.DERIVE, step * 2, Double.NaN, Double.NaN);
+		config.addDataSource("test", DataSourceType.ABSOLUTE, step * 2, Double.NaN, Double.NaN);
 		// per a minute, during 10 minutes
-		config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 6, 10);
-		config.addRoundRobinArchive(ConsolidateFunc.MAX, 0.5, 6, 10);
-		config.addRoundRobinArchive(ConsolidateFunc.MIN, 0.5, 6, 10);
-		config.addRoundRobinArchive(ConsolidateFunc.LAST, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.AVERAGE, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.MAX, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.MIN, 0.5, 6, 10);
+		config.addArchive(ConsolidateFunc.LAST, 0.5, 6, 10);
 		// per a 10 minutes, during 3 hours
-		config.addRoundRobinArchive(ConsolidateFunc.AVERAGE, 0.5, 60, 18);
-		config.addRoundRobinArchive(ConsolidateFunc.MAX, 0.5, 60, 18);
-		config.addRoundRobinArchive(ConsolidateFunc.MIN, 0.5, 60, 18);
-		config.addRoundRobinArchive(ConsolidateFunc.LAST, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.AVERAGE, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.MAX, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.MIN, 0.5, 60, 18);
+		config.addArchive(ConsolidateFunc.LAST, 0.5, 60, 18);
 
 		{
-			RrdRawImpl rrd = new RrdRawImpl(config);
+			RrdRaw rrd = new RrdRaw(config);
 			long t = startTime;
 
 			ArrayList<DoubleSample> samples = new ArrayList<DoubleSample>();
@@ -515,14 +442,12 @@ public class RrdTest {
 			long fetchStartTime = startTime + 32 * 6 * step - 10 * 6 * step;
 			long fetchEndTime = startTime + 32 * 6 * step;
 
-			FetchResult result = rrd.fetch(ConsolidateFunc.AVERAGE,
-					makeDate(fetchStartTime), makeDate(fetchEndTime), 10);
+			FetchResult result = rrd.fetch(ConsolidateFunc.AVERAGE, makeDate(fetchStartTime), makeDate(fetchEndTime), 10);
 
 			for (int i = 0; i < resultData.size(); ++i) {
-				FetchResult.Row row = result.getRows().get(i);
+				FetchRow row = result.getRows().get(i);
 				assertTrue(row.getTimeInSec() == resultData.get(i).time);
-				assertTrue(RrdRawImpl.doubleListEqual(row.getColumns(), resultData
-						.get(i).columns));
+				assertTrue(RrdUtil.doubleListEqual(row.getColumns(), resultData.get(i).columns));
 			}
 		}
 	}
@@ -538,8 +463,7 @@ public class RrdTest {
 
 		@Override
 		public String toString() {
-			return "Time:" + Long.toString(time) + ", Columns:"
-					+ columns.toString();
+			return "Time:" + Long.toString(time) + ", Columns:" + columns.toString();
 		}
 	}
 
@@ -547,8 +471,7 @@ public class RrdTest {
 		ArrayList<SampleRow> ret = new ArrayList<SampleRow>();
 		BufferedReader reader = null;
 		try {
-			reader = new BufferedReader(new FileReader(
-					"src/test/resources/AverageSample.txt"));
+			reader = new BufferedReader(new FileReader("src/test/resources/AverageSample.txt"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return null;
@@ -583,7 +506,6 @@ public class RrdTest {
 			}
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -638,7 +560,7 @@ public class RrdTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private ArrayList<DataSource> getDataSource(RrdRawImpl rrd) {
+	private ArrayList<DataSource> getDataSource(RrdRaw rrd) {
 		ArrayList<DataSource> dataSources = null;
 		try {
 			Field f = rrd.getClass().getDeclaredField("dataSources");
@@ -654,5 +576,37 @@ public class RrdTest {
 			e.printStackTrace();
 		}
 		return dataSources;
+	}
+
+	@Test
+	public void dynamicDataSources() {
+		long startTime = System.currentTimeMillis() - 10000;
+		RrdConfig config = new RrdConfig(new Date(startTime), 1);
+		config.addDataSource("ds1", DataSourceType.ABSOLUTE2, 20, Double.NaN, Double.NaN);
+		config.addArchive(ConsolidateFunc.SUM, 0.5, 1, 10);
+
+		Rrd rrd = new DefaultRrd(new MemoryPersistentLayer(), config);
+		Map<String, Double> data = new HashMap<String, Double>();
+		data.put("ds1", 1.0);
+		data.put("ds2", 1.0);
+		rrd.update(new Date(startTime + 1000), data);
+		rrd.update(new Date(startTime + 2000), data);
+		rrd.update(new Date(startTime + 3000), data);
+
+		rrd.addDataSource("ds2", DataSourceType.ABSOLUTE2, 20, Double.NaN, Double.NaN);
+		rrd.update(new Date(startTime + 4000), data);
+		rrd.update(new Date(startTime + 5000), data);
+		rrd.update(new Date(startTime + 6000), data);
+
+		// rrd.removeDataSource("ds1");
+		rrd.update(new Date(startTime + 7000), data);
+		rrd.update(new Date(startTime + 8000), data);
+		rrd.update(new Date(startTime + 9000), data);
+		rrd.update(new Date(startTime + 10000), data);
+
+		FetchResult fetch = rrd.fetch(ConsolidateFunc.SUM, new Date(startTime), new Date(startTime + 10000), 1);
+		for (FetchRow row : fetch.getRows()) {
+			System.out.println(row.getDate() + " " + row.getColumnsMap());
+		}
 	}
 }

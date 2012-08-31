@@ -1,12 +1,13 @@
 package org.krakenapps.rrd;
-class DataSourceConfig {
+
+public class DataSourceConfig {
 	private String name;
-	private DataSource.Type type;
+	private DataSourceType type;
 	private long minimalHeartbeat;
 	private double min;
 	private double max;
 
-	public DataSourceConfig(String name, DataSource.Type type, long minimalHeartbeat, double min, double max) {
+	public DataSourceConfig(String name, DataSourceType type, long minimalHeartbeat, double min, double max) {
 		this.name = name;
 		this.type = type;
 		this.minimalHeartbeat = minimalHeartbeat;
@@ -18,26 +19,23 @@ class DataSourceConfig {
 		return name;
 	}
 
-	public void setType(DataSource.Type type) {
+	public void setType(DataSourceType type) {
 		this.type = type;
 	}
 
-	public DataSource.Type getType() {
+	public DataSourceType getType() {
 		return type;
 	}
-	
-	public long getMinimalHeartbeat()
-	{
+
+	public long getMinimalHeartbeat() {
 		return minimalHeartbeat;
 	}
-	
-	public double getMin()
-	{
-		return this.min;
+
+	public double getMin() {
+		return min;
 	}
-	
-	public double getMax()
-	{
-		return this.max;
+
+	public double getMax() {
+		return max;
 	}
 }

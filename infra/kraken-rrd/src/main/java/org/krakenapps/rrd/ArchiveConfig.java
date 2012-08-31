@@ -1,22 +1,31 @@
 package org.krakenapps.rrd;
+
 public class ArchiveConfig {
 	private ConsolidateFunc cf;
-	public double xff;
-	public int steps;
-	public int rowCapacity;
+	private double xff;
+	private int steps;
+	private int rowCapacity;
 
 	public ArchiveConfig(ConsolidateFunc cf, double xff, int steps, int size) {
-		this.setCf(cf);
+		this.cf = cf;
 		this.xff = xff;
 		this.steps = steps;
 		this.rowCapacity = size;
 	}
 
-	public void setCf(ConsolidateFunc cf) {
-		this.cf = cf;
-	}
-
 	public ConsolidateFunc getCf() {
 		return cf;
+	}
+
+	public double getXff() {
+		return xff;
+	}
+
+	public int getSteps() {
+		return steps;
+	}
+
+	public int getRowCapacity() {
+		return rowCapacity;
 	}
 }

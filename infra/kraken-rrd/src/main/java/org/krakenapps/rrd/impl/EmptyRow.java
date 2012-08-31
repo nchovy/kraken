@@ -1,17 +1,21 @@
-package org.krakenapps.rrd;
+package org.krakenapps.rrd.impl;
 
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
-public class EmptyRow implements FetchResult.Row {
+import org.krakenapps.rrd.DataSourceConfig;
+import org.krakenapps.rrd.FetchRow;
+
+public class EmptyRow implements FetchRow {
 	private long time;
-	private int columnSize;
+	private RrdRaw rrd;
 	private static HashMap<Integer, double[]> cache = new HashMap<Integer, double[]>();
 
-	public EmptyRow(long time, int columnSize) {
+	public EmptyRow(long time, RrdRaw rrd) {
 		this.time = time;
-		this.columnSize = columnSize;
+		this.rrd = rrd;
 	}
 
 	@Override
@@ -26,7 +30,15 @@ public class EmptyRow implements FetchResult.Row {
 
 	@Override
 	public double[] getColumns() {
-		return getEmptyColumns(columnSize);
+		return getEmptyColumns(rrd.getDataSources().size());
+	}
+
+	@Override
+	public Map<DataSourceConfig, Double> getColumnsMap() {
+		Map<DataSourceConfig, Double> ret = new HashMap<DataSourceConfig, Double>();
+		for (DataSource ds : rrd.getDataSources())
+			ret.put(RrdUtil.dataSourceToConfig(ds), Double.NaN);
+		return ret;
 	}
 
 	private static double[] getEmptyColumns(int cs) {
@@ -42,4 +54,8 @@ public class EmptyRow implements FetchResult.Row {
 		return Double.NaN;
 	}
 
+	@Override
+	public double getColumn(String dataSourceName) {
+		return Double.NaN;
+	}
 }

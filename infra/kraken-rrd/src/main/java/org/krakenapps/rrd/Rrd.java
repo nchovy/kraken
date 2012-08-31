@@ -1,21 +1,32 @@
 package org.krakenapps.rrd;
 
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.krakenapps.rrd.io.PersistentLayer;
 
 public interface Rrd {
-	String LoggerPrefix = "Rrd-";
+	List<DataSourceConfig> getDataSources();
 
-	boolean load(InputStream istream);
+	List<ArchiveConfig> getArchives();
 
-	void save();
-	void save(OutputStream ostream);
+	void addDataSource(String name, DataSourceType type, long heartbeat, double min, double max);
+
+	void removeDataSource(String name);
+
+	void update(Date time, Map<String, Double> values);
 
 	void update(Date time, Double[] values);
 
+	int length();
+
+	void save();
+
+	void save(PersistentLayer persLayer);
+
 	FetchResult fetch(ConsolidateFunc f, Date start, Date end, long resolution);
 
-	void dump(OutputStream stream);
-
+	void dump(OutputStream os);
 }
