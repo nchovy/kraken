@@ -41,11 +41,10 @@ public class LoggerLoader implements LoggerFactoryRegistryEventListener, LoggerF
 	public void start() {
 		factoryRegistry.addListener(this);
 
-		for (LoggerFactory factory : factoryRegistry.getLoggerFactories()) {
-			factoryAdded(factory);
-		}
-
 		loadLoggers();
+		for (LoggerFactory factory : factoryRegistry.getLoggerFactories())
+			factoryAdded(factory);
+
 		slog.trace("kraken log api: logger loading completed");
 	}
 

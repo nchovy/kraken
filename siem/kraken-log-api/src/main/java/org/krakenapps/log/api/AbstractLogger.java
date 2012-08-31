@@ -21,7 +21,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.krakenapps.api.DateFormat;
@@ -40,7 +39,6 @@ public abstract class AbstractLogger implements Logger, Runnable {
 	private volatile LogPipe[] pipes;
 	private Object updateLock = new Object();
 	private Thread t;
-	private Future<?> f;
 	private int interval;
 	private Properties config;
 
@@ -217,7 +215,8 @@ public abstract class AbstractLogger implements Logger, Runnable {
 			t = new Thread(this, "Logger [" + fullName + "]");
 			t.start();
 		} else {
-			f = getExecutor().submit(this);
+			stopped = false;
+			getExecutor().execute(this);
 		}
 
 		invokeStartCallback();
@@ -264,26 +263,33 @@ public abstract class AbstractLogger implements Logger, Runnable {
 			}
 			t.interrupt();
 			t = null;
-		} else if (f != null) {
-			f.cancel(true);
-			f = null;
 		}
 
 		status = LoggerStatus.Stopping;
-		doStop = true;
 
-		long begin = new Date().getTime();
-		try {
-			while (true) {
-				if (stopped)
-					break;
+		if (getExecutor() == null) {
+			doStop = true;
+			long begin = new Date().getTime();
+			try {
+				while (true) {
+					if (stopped)
+						break;
 
-				if (maxWaitTime != 0 && new Date().getTime() - begin > maxWaitTime)
-					break;
+					if (maxWaitTime != 0 && new Date().getTime() - begin > maxWaitTime)
+						break;
 
-				Thread.sleep(50);
+					Thread.sleep(50);
+				}
+			} catch (InterruptedException e) {
 			}
-		} catch (InterruptedException e) {
+		} else {
+			status = LoggerStatus.Stopped;
+			stopped = true;
+			try {
+				onStop();
+			} catch (Exception e) {
+				log.warn("krane log api: [" + fullName + "] stop callback should not throw any exception", e);
+			}
 		}
 
 		invokeStopCallback();
@@ -338,29 +344,18 @@ public abstract class AbstractLogger implements Logger, Runnable {
 				}
 			}
 		} else {
-			stopped = false;
-			if (doStop) {
-				status = LoggerStatus.Stopped;
-				stopped = true;
-				doStop = false;
-
-				try {
-					onStop();
-					return;
-				} catch (Exception e) {
-					log.warn("krane log api: [" + fullName + "] stop callback should not throw any exception", e);
-				}
-			}
+			if (!isRunning())
+				return;
 
 			if (lastRunDate != null) {
-				long millis = lastRunDate.getTime() + interval - System.currentTimeMillis();
+				long millis = lastRunDate.getTime() + (long) interval - System.currentTimeMillis();
 				if (millis > 0) {
 					try {
 						Thread.sleep(Math.min(millis, 500));
 					} catch (InterruptedException e) {
 					}
 					if (millis > 500) {
-						f = getExecutor().submit(this);
+						getExecutor().execute(this);
 						return;
 					}
 				}
@@ -369,7 +364,7 @@ public abstract class AbstractLogger implements Logger, Runnable {
 			runOnce();
 			updateConfig(config);
 			lastRunDate = new Date();
-			f = getExecutor().submit(this);
+			getExecutor().execute(this);
 		}
 	}
 
