@@ -34,7 +34,6 @@ import com.novell.ldap.util.Base64;
 
 @CollectionName("profile")
 public class LdapProfile {
-	public static final long DEFAULT_SYNC_INTERVAL = 10 * 60 * 1000; // 10minute
 	public static final int DEFAULT_PORT = LDAPConnection.DEFAULT_PORT; // 389
 	public static final int DEFAULT_SSL_PORT = LDAPConnection.DEFAULT_SSL_PORT; // 636
 	public static final char[] DEFAULT_TRUSTSTORE_PASSWORD = "kraken".toCharArray();
@@ -59,7 +58,11 @@ public class LdapProfile {
 	private String password;
 
 	private byte[] trustStore;
-	private long syncInterval = DEFAULT_SYNC_INTERVAL;
+
+	/**
+	 * milliseconds unit
+	 */
+	private long syncInterval = 0;
 
 	private String baseDn;
 

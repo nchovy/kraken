@@ -16,20 +16,14 @@ import java.util.regex.Pattern;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.FieldOption;
 import org.krakenapps.api.PrimitiveConverter;
-import org.krakenapps.confdb.Config;
-import org.krakenapps.confdb.ConfigCollection;
-import org.krakenapps.confdb.ConfigDatabase;
-import org.krakenapps.confdb.ConfigService;
-import org.krakenapps.confdb.Predicates;
+import org.krakenapps.cron.PeriodicJob;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.ProgramApi;
 import org.krakenapps.dom.api.RoleApi;
 import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
@@ -41,20 +35,16 @@ import org.krakenapps.ldap.LdapUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@PeriodicJob("* * * * *")
 @Component(name = "ldap-sync-service")
 @Provides
 public class DomSyncService implements LdapSyncService, Runnable {
 
+	private static final String EXT_NAME = "ldap";
 	private static final String DEFAULT_ROLE_NAME = "admin";
 	private static final String DEFAULT_PROFILE_NAME = "all";
 
 	private final Logger logger = LoggerFactory.getLogger(DomSyncService.class);
-
-	private boolean syncState;
-	private Thread syncThread;
-
-	@Requires
-	private ConfigService conf;
 
 	@Requires
 	private LdapService ldap;
@@ -74,44 +64,12 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	@Requires
 	private ProgramApi programApi;
 
-	private UserExtensionProvider extProvider = new UserExtensionProvider() {
-		@Override
-		public String getExtensionName() {
-			return "ldap";
-		}
-	};
-
-	private ConfigDatabase getDatabase() {
-		return conf.ensureDatabase("kraken-ldap");
-	}
-
-	@Validate
-	public void start() {
-		setPeriodicSync(true);
-	}
-
-	private void startSyncThread() {
-		if (syncState) {
-			syncThread = new Thread(this, "LDAP User Sync");
-			syncThread.start();
-		}
-	}
-
 	@Override
 	public void run() {
 		try {
-			while (syncState) {
-				try {
-					syncAll();
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					logger.debug("kraken ldap: sync interrupted");
-				}
-			}
+			syncAll();
 		} catch (Exception e) {
 			logger.error("kraken ldap: sync error", e);
-		} finally {
-			logger.info("kraken ldap: sync thread stopped");
 		}
 	}
 
@@ -146,30 +104,6 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	}
 
 	@Override
-	public boolean getPeriodicSync() {
-		return syncState;
-	}
-
-	@Override
-	public void setPeriodicSync(boolean activate) {
-		ConfigCollection col = getDatabase().ensureCollection("config");
-		Config c = col.findOne(Predicates.field("name", "sync"));
-
-		Map<String, Object> m = null;
-		if (c == null) {
-			m = new HashMap<String, Object>();
-			m.put("name", "sync");
-			m.put("value", activate);
-			col.add(m);
-		}
-
-		if (syncState == false && activate)
-			startSyncThread();
-
-		syncState = activate;
-	}
-
-	@Override
 	public void sync(LdapProfile profile) {
 		Collection<LdapOrgUnit> orgUnits = ldap.getOrgUnits(profile);
 		Collection<LdapUser> users = ldap.getUsers(profile);
@@ -184,8 +118,8 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Collection<String> guids = new ArrayList<String>();
 		for (OrganizationUnit orgUnit : orgUnits) {
 			Map<String, Object> ext = orgUnit.getExt();
-			if (ext.containsKey("ldap")) {
-				Map<String, Object> ldap = (Map<String, Object>) ext.get("ldap");
+			if (ext.containsKey(EXT_NAME)) {
+				Map<String, Object> ldap = (Map<String, Object>) ext.get(EXT_NAME);
 				if (ldap.get("profile").toString().equals(profile.getName().toString())) {
 					logger.debug("kraken-ldap: ext ldap profile name=[{}], ldap profile name=[{}]", ldap.get("profile"),
 							profile.getName());
@@ -203,7 +137,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Collection<String> guids = new ArrayList<String>();
 		for (OrganizationUnit orgUnit : orgUnits) {
 			Map<String, Object> ext = orgUnit.getExt();
-			if (ext.containsKey("ldap")) {
+			if (ext.containsKey(EXT_NAME)) {
 				String guid = orgUnit.getGuid();
 				guids.add(guid);
 			}
@@ -235,7 +169,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		Set<OrganizationUnit> remove = new HashSet<OrganizationUnit>();
 		Set<String> removeGuids = new HashSet<String>();
 		for (OrganizationUnit ou : orgUnitApi.getOrganizationUnits(domain)) {
-			Object ext = ou.getExt().get(extProvider.getExtensionName());
+			Object ext = ou.getExt().get(EXT_NAME);
 			if (ext != null && ext instanceof Map && profile.getName().equals(((Map<String, Object>) ext).get("profile"))) {
 				remove.add(ou);
 				removeGuids.add(ou.getGuid());
@@ -254,14 +188,14 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			Map<String, Object> domOrgUnitExt = domOrgUnit.getExt();
 			if (domOrgUnitExt == null)
 				domOrgUnitExt = new HashMap<String, Object>();
-			else if (!create.contains(domOrgUnit) && !domOrgUnitExt.containsKey(extProvider.getExtensionName())) {
+			else if (!create.contains(domOrgUnit) && !domOrgUnitExt.containsKey(EXT_NAME)) {
 				logger.trace("kraken ldap: skip local org unit [{}, {}]", domOrgUnit.getName(), domOrgUnit.getGuid());
 				continue;
 			}
-			domOrgUnitExt.put(extProvider.getExtensionName(), ext);
+			domOrgUnitExt.put(EXT_NAME, ext);
 
-			Object before = domOrgUnit.getExt().get(extProvider.getExtensionName());
-			Object after = domOrgUnitExt.get(extProvider.getExtensionName());
+			Object before = domOrgUnit.getExt().get(EXT_NAME);
+			Object after = domOrgUnitExt.get(EXT_NAME);
 			boolean equals = after.equals(before);
 
 			domOrgUnit.setExt(domOrgUnitExt);
@@ -280,7 +214,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 			if (hasLocalOU(ou, profile.getName())) {
 				removeGuids.remove(ou.getGuid());
-				ou.getExt().remove(extProvider.getExtensionName());
+				ou.getExt().remove(EXT_NAME);
 				update.add(ou);
 			}
 		}
@@ -293,17 +227,20 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	}
 
 	@SuppressWarnings("unchecked")
-	private boolean hasLocalOU(OrganizationUnit ou, String profile) {
+	private boolean hasLocalOU(OrganizationUnit ou, String profileName) {
 		Map<String, Object> ext = ou.getExt();
-		if (ext == null || !ext.containsKey(extProvider.getExtensionName()))
+		if (ext == null || !ext.containsKey(EXT_NAME))
 			return true;
 
-		Object ldap = ext.get(extProvider.getExtensionName());
-		if (!(ldap instanceof Map) || profile.equals(((Map<String, Object>) ldap).get("profile")))
+		Object ldap = ext.get(EXT_NAME);
+		if (!(ldap instanceof Map))
+			return true;
+
+		if (!profileName.equals(((Map<String, Object>) ldap).get("profile")))
 			return true;
 
 		for (OrganizationUnit child : ou.getChildren()) {
-			if (hasLocalOU(child, profile))
+			if (hasLocalOU(child, profileName))
 				return true;
 		}
 
@@ -395,7 +332,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 		for (User user : userApi.getUsers(domain)) {
 			domUsers.put(user.getLoginName(), user);
 
-			Object ext = user.getExt().get(extProvider.getExtensionName());
+			Object ext = user.getExt().get(EXT_NAME);
 			if (ext == null || !(ext instanceof Map) || !profile.getName().equals(((Map<String, Object>) ext).get("profile")))
 				continue;
 
@@ -432,7 +369,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			try {
 				if (domUser == null)
 					domUser = new User();
-				else if (domUser.getExt() == null || !domUser.getExt().containsKey(extProvider.getExtensionName())) {
+				else if (domUser.getExt() == null || !domUser.getExt().containsKey(EXT_NAME)) {
 					logger.trace("kraken ldap: skip local user [{}]", domUser.getLoginName());
 					continue;
 				}
@@ -446,7 +383,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 			Map<String, Object> domUserExt = domUser.getExt();
 			if (domUserExt == null)
 				domUserExt = new HashMap<String, Object>();
-			domUserExt.put(extProvider.getExtensionName(), ext);
+			domUserExt.put(EXT_NAME, ext);
 			if (user.isDomainAdmin() && !domUserExt.containsKey(adminApi.getExtensionName()))
 				domUserExt.put(adminApi.getExtensionName(), defaultAdmin);
 
@@ -454,11 +391,14 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 			domUser.setExt(domUserExt);
 
-			if (!exist)
+			if (!exist) {
 				create.add(domUser);
-			else {
-				if (!equals || basicInfoUpdated)
+				logger.trace("kraken ldap: dom user [{}] will be created", domUser.getLoginName());
+			} else {
+				if (!equals || basicInfoUpdated) {
 					update.add(domUser);
+					logger.trace("kraken ldap: dom user [{}] will be updated", domUser.getLoginName());
+				}
 			}
 		}
 

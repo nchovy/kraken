@@ -18,8 +18,11 @@ package org.krakenapps.ldap.msgbus;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -134,18 +137,39 @@ public class LdapPlugin {
 		ldap.removeProfile(name);
 	}
 
+	@Deprecated
 	@MsgbusMethod
 	public void getDomainUserAccounts(Request req, Response resp) {
+		getUsers(req, resp);
+	}
+
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void getUsers(Request req, Response resp) {
 		List<Object> users = new ArrayList<Object>();
+		Set<String> fields = null;
+		if (req.has("fields"))
+			fields = new HashSet<String>((List<String>) req.get("fields"));
+
 		String name = req.getString("name");
 		LdapProfile profile = ldap.getProfile(name);
 		if (profile == null)
 			throw new MsgbusException("ldap", "profile not found");
 
 		for (LdapUser account : ldap.getUsers(profile))
-			users.add(PrimitiveConverter.serialize(account));
+			users.add(filt((Map<String, Object>) PrimitiveConverter.serialize(account), fields));
 
 		resp.put("users", users);
+	}
+
+	private Map<String, Object> filt(Map<String, Object> m, Set<String> fields) {
+		if (fields == null)
+			return m;
+
+		Map<String, Object> filtered = new HashMap<String, Object>();
+		for (String field : fields)
+			filtered.put(field, m.get(field));
+		return filtered;
 	}
 
 	@MsgbusMethod

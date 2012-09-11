@@ -263,18 +263,6 @@ public class LdapScript implements Script {
 		context.println("unsync success");
 	}	
 
-	public void periodicSync(String[] args) {
-		LdapSyncService ldapSync = getSyncService();
-		context.println(ldapSync.getPeriodicSync() ? "enabled" : "disabled");
-	}
-
-	@ScriptUsage(description = "activate or deactivate periodic sync", arguments = { @ScriptArgument(name = "activate flag", type = "string", description = "true or false") })
-	public void setPeriodicSync(String[] args) {
-		LdapSyncService ldapSync = getSyncService();
-		ldapSync.setPeriodicSync(Boolean.parseBoolean(args[0]));
-		context.println("set");
-	}
-
 	@ScriptUsage(description = "set id attribute name. if id attribute name is not passed, it will be unset", arguments = {
 			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),
 			@ScriptArgument(name = "id attribute name", type = "string", description = "id attribute name (e.g. uid)", optional = true) })
