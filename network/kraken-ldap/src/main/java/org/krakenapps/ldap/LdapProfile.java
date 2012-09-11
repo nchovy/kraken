@@ -70,7 +70,6 @@ public class LdapProfile {
 
 	private String idAttr;
 
-	@FieldOption(skip = true)
 	private Date lastSync;
 
 	public String getName() {
