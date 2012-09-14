@@ -54,15 +54,14 @@ public class Predicates {
 		return new Not(pred);
 	}
 
-	private static Object getValue(Config c, String key) {
-		return getValue(c, key, false);
+	private static Object getValue(Config c, String[] keys) {
+		return getValue(c, keys, false);
 	}
 
 	@SuppressWarnings("unchecked")
-	private static Object getValue(Config c, String key, boolean throwException) {
-		key = PrimitiveConverter.toUnderscoreName(key);
+	private static Object getValue(Config c, String[] keys, boolean throwException) {
 		Object value = c.getDocument();
-		for (String k : key.split("/")) {
+		for (String k : keys) {
 			if (!(value instanceof Map)) {
 				if (throwException)
 					throw new IllegalArgumentException();
@@ -104,7 +103,7 @@ public class Predicates {
 		@Override
 		public boolean eval(Config c) {
 			try {
-				getValue(c, key, true);
+				getValue(c, key.split("/"), true);
 				return true;
 			} catch (IllegalArgumentException e) {
 				return false;
@@ -114,14 +113,18 @@ public class Predicates {
 
 	private static class KeyMatch implements Predicate {
 		private Map<String, Object> terms;
+		private Map<String, String[]> underscoreMap = new HashMap<String, String[]>();
 
 		public KeyMatch(String key, Object value) {
 			this.terms = new HashMap<String, Object>();
 			this.terms.put(key, value);
+			underscoreMap.put(key, PrimitiveConverter.toUnderscoreName(key).split("/"));
 		}
 
 		public KeyMatch(Map<String, Object> terms) {
 			this.terms = terms;
+			for (String term : terms.keySet())
+				underscoreMap.put(term, PrimitiveConverter.toUnderscoreName(term).split("/"));
 		}
 
 		@Override
@@ -131,7 +134,7 @@ public class Predicates {
 				return false;
 
 			for (String k : terms.keySet()) {
-				Object value = getValue(c, k);
+				Object value = getValue(c, underscoreMap.get(k));
 				Object comp = terms.get(k);
 
 				if (value == null && comp != null)
@@ -149,17 +152,17 @@ public class Predicates {
 	}
 
 	private static class KeyContains implements Predicate {
-		private String key;
+		private String[] keys;
 		private Collection<? extends Object> values;
 
 		public KeyContains(String key, Collection<? extends Object> values) {
-			this.key = key;
+			this.keys = PrimitiveConverter.toUnderscoreName(key).split("/");
 			this.values = values;
 		}
 
 		@Override
 		public boolean eval(Config c) {
-			Object v = getValue(c, key);
+			Object v = getValue(c, keys);
 			return values.contains(v);
 		}
 	}

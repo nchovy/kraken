@@ -88,6 +88,17 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	@Override
+	public int count(Predicate pred) {
+		try {
+			ConfigIterator it = getIterator(pred);
+			return it.count();
+		} catch (IOException e) {
+			throw new IllegalStateException("cannot count " + col.getName() + " of database " + db.getName(), e);
+		}
+
+	}
+
+	@Override
 	public int count(ConfigTransaction xact) {
 		Manifest manifest = xact.getManifest();
 		return manifest.getConfigEntries(col.getName()).size();
@@ -121,6 +132,7 @@ public class FileConfigCollection implements ConfigCollection {
 			return getIterator(pred);
 		} catch (FileNotFoundException e) {
 			// collection has no data
+			logger.debug("kraken confdb: returns empty iterator, db [{}] col [{}]", db.getName(), col.getName());
 			return new EmptyIterator();
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot open collection file", e);
@@ -130,6 +142,10 @@ public class FileConfigCollection implements ConfigCollection {
 	private ConfigIterator getIterator(Predicate pred) throws IOException {
 		RevLogReader reader = new RevLogReader(logFile, datFile);
 		List<RevLog> snapshot = getSnapshot(reader);
+		if (logger.isDebugEnabled())
+			logger.debug("kraken confdb: db [{}], col [{}], snapshot size [{}]", new Object[] { db.getName(), col.getName(),
+					snapshot.size() });
+
 		return new FileConfigIterator(db, this, reader, snapshot, pred);
 	}
 
@@ -138,6 +154,9 @@ public class FileConfigCollection implements ConfigCollection {
 
 		List<RevLog> snapshot = db.getSnapshotCache(col.getId(), manifest.getId());
 		if (snapshot != null) {
+			if (logger.isDebugEnabled())
+				logger.debug("kraken confdb: return cached snapshot, db [{}], col [{}], manifest [{}], snapshot size [{}]",
+						new Object[] { db.getName(), col.getName(), manifest.getId(), snapshot.size() });
 			return snapshot;
 		}
 
@@ -156,6 +175,10 @@ public class FileConfigCollection implements ConfigCollection {
 			for (ConfigEntry c : configs) {
 				RevLog log = reader.read(c.getIndex());
 				snapshot.add(log);
+
+				if (logger.isDebugEnabled())
+					logger.debug("kraken confdb: db [{}], col [{}], manifest [{}], revlog [{}]",
+							new Object[] { db.getName(), col.getName(), manifest.getId(), log });
 			}
 
 			db.setSnapshotCache(col.getId(), manifest.getId(), snapshot);
@@ -258,6 +281,11 @@ public class FileConfigCollection implements ConfigCollection {
 			int id = writer.write(revlog);
 			int index = writer.count() - 1;
 			xact.log(CommitOp.UpdateDoc, col.getName(), id, revlog.getRev(), index);
+
+			if (logger.isDebugEnabled())
+				logger.debug("kraken confdb: updated db [{}] col [{}] doc [{}]",
+						new Object[] { db.getName(), col.getName(), c.getDocument() });
+
 			return new FileConfig(db, this, id, revlog.getRev(), revlog.getPrevRev(), c.getDocument());
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot update object", e);

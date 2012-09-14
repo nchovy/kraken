@@ -40,6 +40,11 @@ public class UnmodifiableConfigCollection implements ConfigCollection {
 	}
 
 	@Override
+	public int count(Predicate pred) {
+		return col.count(pred);
+	}
+
+	@Override
 	public int count(ConfigTransaction xact) {
 		return col.count(xact);
 	}

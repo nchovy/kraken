@@ -20,6 +20,8 @@ public interface ConfigCollection {
 
 	int count();
 
+	int count(Predicate pred);
+
 	int count(ConfigTransaction xact);
 
 	ConfigIterator findAll();

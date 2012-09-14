@@ -43,6 +43,16 @@ class EmptyIterator implements ConfigIterator {
 	}
 
 	@Override
+	public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback, int offset, int limit) {
+		return new ArrayList<T>();
+	}
+
+	@Override
+	public int count() {
+		return 0;
+	}
+
+	@Override
 	public void close() {
 	}
 }

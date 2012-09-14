@@ -21,11 +21,17 @@ import org.krakenapps.confdb.Predicate;
 import org.krakenapps.dom.model.User;
 
 public interface UserApi extends EntityEventProvider<User> {
+	int countUsers(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred);
+
 	Collection<User> getUsers(String domain);
+	
+	Collection<User> getUsers(String domain, int offset, int length);
 
 	Collection<User> getUsers(String domain, Collection<String> loginNames);
 
 	Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren);
+
+	Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred, int offset, int limit);
 
 	Collection<User> getUsers(String domain, String domainController);
 

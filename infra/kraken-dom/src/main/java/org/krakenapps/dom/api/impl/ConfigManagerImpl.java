@@ -70,6 +70,12 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
+	public <T> int count(String domain, Class<T> cls, Predicate pred) {
+		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
+		return it.count();
+	}
+
+	@Override
 	public <T> Collection<T> all(String domain, Class<T> cls) {
 		return all(domain, cls, null);
 	}
@@ -79,6 +85,13 @@ public class ConfigManagerImpl implements ConfigManager {
 		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
 		it.setParser(parsers.get(cls));
 		return it.getDocuments(cls, getCallback(domain));
+	}
+
+	@Override
+	public <T> Collection<T> all(String domain, Class<T> cls, Predicate pred, int offset, int limit) {
+		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
+		it.setParser(parsers.get(cls));
+		return it.getDocuments(cls, getCallback(domain), offset, limit);
 	}
 
 	@Override
@@ -330,10 +343,16 @@ public class ConfigManagerImpl implements ConfigManager {
 
 			Iterator<T> docIterator = docs.iterator();
 			while (docIterator.hasNext()) {
-				if (!confIt.hasNext())
+				if (!confIt.hasNext()) {
+					logger.debug("kraken dom: updates(), no config for update [{}]", docIterator.next());
 					throw new DOMException(notFoundMessage);
+				}
+
 				Config c = confIt.next();
-				xact.update(c, docIterator.next(), state);
+				T nextDoc = docIterator.next();
+
+				logger.debug("kraken dom: updates(), found config [{}] update to [{}]", c.getDocument(), nextDoc);
+				xact.update(c, nextDoc, state);
 			}
 		} finally {
 			if (confIt != null) {

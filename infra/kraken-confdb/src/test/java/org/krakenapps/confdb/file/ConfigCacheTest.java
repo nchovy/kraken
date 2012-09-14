@@ -82,32 +82,6 @@ public class ConfigCacheTest {
 		assertEquals("hello", customMap.get("field1"));
 	}
 
-	@Test
-	public void testCacheImmutability() {
-		putConfig();
-
-		Config before = cache.findEntry(col.getName(), 0, 1);
-
-		Object o = before.getDocument();
-		int[] i = (int[]) o;
-
-		assertEquals(i[0], 0);
-		assertEquals(i[1], 1);
-		assertEquals(i[2], 2);
-
-		i[0] = 2;
-		o = i;
-
-		Config after = cache.findEntry(col.getName(), 0, 1);
-
-		Object o2 = after.getDocument();
-		int[] i2 = (int[]) o2;
-
-		assertEquals(i2[0], 0);
-		assertEquals(i2[1], 1);
-		assertEquals(i2[2], 2);
-	}
-
 	private void putConfig() {
 		int[] intArr = new int[3];
 		intArr[0] = 0;

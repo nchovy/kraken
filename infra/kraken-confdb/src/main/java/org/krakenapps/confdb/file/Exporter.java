@@ -26,6 +26,11 @@ public class Exporter {
 	private final Logger logger = LoggerFactory.getLogger(Exporter.class.getName());
 	private FileConfigDatabase db;
 
+	/**
+	 * CAUTION: thread unsafe for performance reason.
+	 */
+	private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+
 	public Exporter(FileConfigDatabase db) {
 		this.db = db;
 	}
@@ -37,12 +42,10 @@ public class Exporter {
 			Comparator<String> reverseOrder = new Comparator<String>() {
 				@Override
 				public int compare(String s1, String s2) {
-
 					return s2.compareTo(s1);
 				}
 			};
 
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 			StringWriter writer = new StringWriter(10240);
 			JSONWriter jsonWriter = new JSONWriter(writer);
 			Map<String, Object> m = new TreeMap<String, Object>(reverseOrder);
@@ -101,7 +104,6 @@ public class Exporter {
 	}
 
 	private Object insertType(Object doc) {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
 		if (doc instanceof String) {
 			return createList("string", doc);
 		} else if (doc instanceof Integer) {

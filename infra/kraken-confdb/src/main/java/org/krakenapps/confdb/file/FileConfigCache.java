@@ -22,6 +22,9 @@ public class FileConfigCache implements ConfigCache {
 		this.cache = new ConcurrentHashMap<Integer, SoftReference<ConcurrentMap<ConfigKey, Config>>>();
 	}
 
+	/**
+	 * CAUTION: you should NOT MODIFY config object. mutable for iterator performance
+	 */
 	@Override
 	public Config findEntry(String colName, int docId, long rev) {
 		Integer colId = getCollectionId(colName);
@@ -38,7 +41,7 @@ public class FileConfigCache implements ConfigCache {
 
 		Config c = map.get(new ConfigKey(docId, rev));
 		if (c != null) {
-			return c.duplicate();
+			return c;
 		}
 		return null;
 	}

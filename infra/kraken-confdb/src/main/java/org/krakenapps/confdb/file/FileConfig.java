@@ -15,6 +15,11 @@
  */
 package org.krakenapps.confdb.file;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -134,8 +139,16 @@ class FileConfig implements Config {
 			Map<String, Object> m = (Map<String, Object>) doc;
 			HashMap<String, Object> n = new HashMap<String, Object>(m.size());
 
-			for (Entry<String, Object> pair : m.entrySet())
-				n.put(pair.getKey(), duplicateDoc(pair.getValue()));
+			for (Entry<String, Object> pair : m.entrySet()) {
+				Object v = pair.getValue();
+				// fast path
+				if (v == null)
+					n.put(pair.getKey(), null);
+				else if (v.getClass() == String.class)
+					n.put(pair.getKey(), v);
+				else
+					n.put(pair.getKey(), duplicateDoc(v));
+			}
 
 			return n;
 		} else if (doc instanceof Collections) {

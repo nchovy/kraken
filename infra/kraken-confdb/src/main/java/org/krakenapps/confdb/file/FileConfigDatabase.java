@@ -264,8 +264,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 		try {
 			Manifest manifest = getManifest(changeset, true);
 			CollectionEntry col = manifest.getCollectionEntry(name);
-			if (col == null)
+			if (col == null) {
+				logger.debug("kraken confdb: col [{}] not found", name);
 				return null;
+			}
 
 			FileConfigCollection collection = new FileConfigCollection(this, changeset, col);
 			if (changeset != null)
@@ -586,10 +588,15 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public int count(Class<?> cls) {
+		return count(cls, null);
+	}
+
+	@Override
+	public int count(Class<?> cls, Predicate pred) {
 		ConfigCollection collection = getCollection(cls);
 		if (collection == null)
 			throw new IllegalStateException("Collection not found: class " + cls.getName());
-		return collection.count();
+		return collection.count(pred);
 	}
 
 	@Override
@@ -612,8 +619,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public ConfigIterator find(Class<?> cls, Predicate pred) {
 		ConfigCollection collection = getCollection(cls);
-		if (collection == null)
+		if (collection == null) {
+			logger.debug("kraken confdb: db [{}] col [{}] not found, returns empty iterator", dbName, cls.getName());
 			return new EmptyIterator();
+		}
 
 		return collection.find(pred);
 	}

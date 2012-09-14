@@ -63,6 +63,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 	private Map<Integer, RpcConnectionImpl> connMap;
 	private ConcurrentHashMap<RpcService, String> serviceMap;
 
+	// work key = channel id + session id
 	private ConcurrentMap<WorkKey, WorkStatus> worksheet;
 	private ConcurrentMap<WorkKey, ConcurrentLinkedQueue<RpcMessage>> channelMessages;
 
@@ -116,7 +117,8 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		while (!doStop) {
 			try {
 				for (WorkKey workKey : channelMessages.keySet()) {
-					if (!worksheet.containsKey(workKey)) {
+					WorkStatus status = worksheet.get(workKey);
+					if (status == null) {
 						ConcurrentLinkedQueue<RpcMessage> q = channelMessages.get(workKey);
 
 						// prepare rpc message list
@@ -131,13 +133,34 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 						if (executor != null && list.size() > 0) {
 							// prevent out-of-order execution per rpc session
-							worksheet.put(workKey, new WorkStatus());
+							worksheet.put(workKey, new WorkStatus(list));
 							executor.submit(new MessageHandler(workKey, list));
 						} else {
 							if (executor == null) {
 								logger.trace("kraken rpc: handler threadpool stopped, drop msg");
 								doStop = true;
 							}
+						}
+					} else {
+						long elapsed = new Date().getTime() - status.lastRun.getTime();
+						if (!status.alerted && elapsed > 2000) {
+							int i = 0;
+							StringBuilder sb = new StringBuilder();
+							for (RpcMessage m : status.runningMethods) {
+								if (i++ != 0)
+									sb.append(",");
+								
+								sb.append(m.getString("method"));
+								sb.append("(");
+								sb.append(m.getHeader("type"));
+								sb.append(")");
+							}
+
+							logger.warn(
+									"kraken rpc: rpc channel [{}] session [{}] work takes long time [{}] elapsed, pending methods [{}]",
+									new Object[] { workKey.channelId, workKey.sessionId, elapsed, sb.toString() });
+
+							status.alerted = true;
 						}
 					}
 				}
@@ -195,8 +218,13 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 	}
 
 	private static class WorkStatus {
-		@SuppressWarnings("unused")
+		private boolean alerted = false;
 		private Date lastRun = new Date();
+		private List<RpcMessage> runningMethods = new ArrayList<RpcMessage>();
+
+		private WorkStatus(List<RpcMessage> list) {
+			runningMethods = list;
+		}
 	}
 
 	public RpcConnection newClientConnection(Channel channel, RpcConnectionProperties props) {
@@ -437,8 +465,8 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 
 		RpcSession session = conn.findSession(sessionId);
 		if (session == null) {
-			logger.warn("kraken rpc: session {} not found, connection={}, peer={}",
-					new Object[] { sessionId, conn.getId(), conn.getRemoteAddress() });
+			logger.warn("kraken rpc: session {} not found, connection={}, peer={}, msg id={}, method={}", new Object[] {
+					sessionId, conn.getId(), conn.getRemoteAddress(), id, methodName });
 			return;
 		}
 
@@ -448,7 +476,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 		if (binding == null && (type.equals("rpc-call") || type.equals("rpc-post"))) {
 			int newId = conn.nextMessageId();
 			String cause = "service not found: " + serviceName;
-			logger.debug("kraken rpc: service [{}] not found", serviceName);
+			logger.debug("kraken rpc: connection={}, service [{}] not found", conn, serviceName);
 			RpcMessage error = RpcMessage.newException(newId, session.getId(), id, cause);
 			channel.write(error);
 			return;

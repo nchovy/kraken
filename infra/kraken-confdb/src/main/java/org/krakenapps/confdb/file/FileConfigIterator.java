@@ -32,6 +32,8 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.Predicate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Build collection snapshot based on collection log. Snapshot contains only doc
@@ -41,6 +43,7 @@ import org.krakenapps.confdb.Predicate;
  * 
  */
 class FileConfigIterator implements ConfigIterator {
+	private final Logger logger = LoggerFactory.getLogger(FileConfigIterator.class.getName());
 	private ConfigDatabase db;
 	private ConfigCache cache;
 	private ConfigCollection col;
@@ -61,6 +64,10 @@ class FileConfigIterator implements ConfigIterator {
 		this.reader = reader;
 		this.it = snapshot.iterator();
 		this.pred = pred;
+
+		if (logger.isDebugEnabled())
+			logger.debug("kraken confdb: db [{}], col [{}], snapshot size [{}], iterator hash code [{}]",
+					new Object[] { db.getName(), col.getName(), snapshot.size(), hashCode() });
 	}
 
 	@Override
@@ -106,8 +113,12 @@ class FileConfigIterator implements ConfigIterator {
 		Config matched = null;
 		while (it.hasNext()) {
 			Config c = getNextConfig();
+			if (logger.isDebugEnabled())
+				logger.debug("kraken confdb: db [{}], col [{}], config [{}]",
+						new Object[] { db.getName(), col.getName(), c.getDocument() });
+
 			if (pred == null || pred.eval(c)) {
-				matched = c;
+				matched = c.duplicate();
 				break;
 			}
 		}
@@ -135,7 +146,7 @@ class FileConfigIterator implements ConfigIterator {
 		Object doc = EncodingRule.decode(ByteBuffer.wrap(b));
 		FileConfig config = new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
 		cache.putEntry(colName, config);
-		return config.duplicate();
+		return config;
 	}
 
 	@Override
@@ -168,15 +179,50 @@ class FileConfigIterator implements ConfigIterator {
 
 	@Override
 	public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback) {
+		return getDocuments(cls, callback, 0, Integer.MAX_VALUE);
+	}
+
+	@Override
+	public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback, int offset, int limit) {
 		try {
+			int p = 0;
+			int count = 0;
+
 			Collection<T> docs = new ArrayList<T>();
 			ConfigIterator it = this;
-			while (it.hasNext())
-				docs.add(it.next().getDocument(cls, callback));
+			while (it.hasNext()) {
+				if (count >= limit)
+					break;
+
+				Config next = it.next();
+				if (p++ < offset)
+					continue;
+
+				docs.add(next.getDocument(cls, callback));
+				count++;
+			}
 			return docs;
 		} finally {
 			close();
 		}
+	}
+
+	@Override
+	public int count() {
+		int total = 0;
+
+		try {
+			while (it.hasNext()) {
+				Config c = getNextConfig();
+				if (pred == null || pred.eval(c))
+					total++;
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException("cannot count collection " + col.getName() + " of database " + db.getName(), e);
+		} finally {
+			close();
+		}
+		return total;
 	}
 
 	@Override
