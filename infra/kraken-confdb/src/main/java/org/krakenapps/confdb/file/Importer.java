@@ -1,6 +1,5 @@
 package org.krakenapps.confdb.file;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,9 +15,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.krakenapps.codec.Base64;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
@@ -37,31 +38,24 @@ public class Importer {
 		this.db = db;
 	}
 
-	@SuppressWarnings("unchecked")
 	public void importData(InputStream is) throws IOException, ParseException {
 		logger.debug("kraken confdb: start import data");
 		db.lock();
 
 		try {
-			JSONObject jsonObject = new JSONObject(getJsonString(is));
-			Map<String, Object> collections = (Map<String, Object>) parse(jsonObject.optJSONObject("collections"));
+			JSONTokener t = new JSONTokener(new InputStreamReader(is));
+
+			Map<String, Object> metadata = parseMetadata(t);
+			Integer version = (Integer) metadata.get("version");
+			if (version != 1)
+				throw new ParseException("unsupported confdb data format version: " + version, -1);
 
 			Manifest manifest = db.getManifest(null);
 			List<ConfigChange> configChanges = new ArrayList<ConfigChange>();
 
-			for (String colName : collections.keySet()) {
-				CollectionEntry collectionEntry = checkCollectionEntry(manifest, colName);
-				manifest.add(collectionEntry);
-				List<Object> docs = (List<Object>) removeType((List<Object>) collections.get(colName));
-
-				for (Object o : docs) {
-					ConfigEntry configEntry = writeConfigEntry(o, collectionEntry.getId());
-					configChanges.add(new ConfigChange(CommitOp.CreateDoc, colName, collectionEntry.getId(),
-							configEntry.getDocId()));
-					manifest.add(configEntry);
-				}
-
-			}
+			char comma = t.nextClean();
+			if (comma == ',')
+				parseCollections(t, manifest, configChanges);
 
 			writeManifestLog(manifest);
 			writeChangeLog(configChanges, manifest.getId());
@@ -73,20 +67,75 @@ public class Importer {
 		}
 	}
 
-	private String getJsonString(InputStream is) throws IOException {
-		BufferedReader in = null;
-		StringBuilder json = null;
+	private void parseCollections(JSONTokener t, Manifest manifest, List<ConfigChange> configChanges) throws JSONException,
+			ParseException, IOException {
+		Object key = t.nextValue();
+		if (!key.equals("collections"))
+			throw new ParseException("collections should be placed after metadata: token is " + key, -1);
 
-		in = new BufferedReader(new InputStreamReader(is, "utf-8"));
+		// "collections":{"COLNAME":["list",[...]]}
+		t.nextClean(); // :
+		t.nextClean(); // {
 
-		json = new StringBuilder();
-		String line = null;
+		int i = 0;
+		while (true) {
+			if (i++ != 0)
+				t.nextClean();
 
-		while ((line = in.readLine()) != null) {
-			json.append(line);
+			String colName = (String) t.nextValue();
+			CollectionEntry collectionEntry = checkCollectionEntry(manifest, colName);
+			manifest.add(collectionEntry);
+
+			t.nextTo('[');
+			t.nextClean();
+
+			// type token (should be 'list')
+			t.nextValue();
+			t.nextTo("[");
+			t.nextClean();
+
+			// check empty config list
+			char c = t.nextClean();
+			if (c == ']') {
+				t.nextClean();
+				continue;
+			}
+
+			t.back();
+
+			while (true) {
+				@SuppressWarnings("unchecked")
+				Object doc = removeType((List<Object>) parse((JSONArray) t.nextValue()));
+				ConfigEntry configEntry = writeConfigEntry(doc, collectionEntry.getId());
+				configChanges.add(new ConfigChange(CommitOp.CreateDoc, colName, collectionEntry.getId(), configEntry.getDocId()));
+				manifest.add(configEntry);
+
+				// check next list item
+				char delimiter = t.nextClean();
+				if (delimiter == ']')
+					break;
+			}
+
+			// end of list
+			t.nextClean();
+
+			char delimiter = t.nextClean();
+			if (delimiter == '}')
+				break;
+		}
+	}
+
+	private Map<String, Object> parseMetadata(JSONTokener x) throws JSONException, IOException {
+		if (x.nextClean() != '{') {
+			throw x.syntaxError("A JSONObject text must begin with '{'");
 		}
 
-		return json.toString();
+		Object key = x.nextValue();
+		if (!key.equals("metadata"))
+			throw x.syntaxError("confdb metadata should be placed first");
+
+		x.nextClean();
+		return parse((JSONObject) x.nextValue());
 	}
 
 	private CollectionEntry checkCollectionEntry(Manifest manifest, String colName) {
