@@ -130,7 +130,7 @@ public abstract class LogQueryCommand {
 		if (logQuery != null) {
 			if (callbackTimeline) {
 				for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
-					callback.callback();
+					callback.eof();
 				logQuery.getTimelineCallbacks().clear();
 			}
 			if (logQuery.getCommands().get(0).status != Status.End)

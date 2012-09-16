@@ -27,8 +27,11 @@ public abstract class LogTimelineCallback {
 	private long callbackInterval = 2000;
 	private Map<Long, Integer> timeline = new HashMap<Long, Integer>();
 	private long lastCallbackTime;
-	private SpanValue[] spans = new SpanValue[] { new SpanValue(Calendar.MINUTE, 1), new SpanValue(Calendar.MINUTE, 10),
-			new SpanValue(Calendar.HOUR_OF_DAY, 1), new SpanValue(Calendar.DAY_OF_YEAR, 1), new SpanValue(Calendar.WEEK_OF_YEAR, 1),
+	private SpanValue[] spans = new SpanValue[] { new SpanValue(Calendar.MINUTE, 1), //
+			new SpanValue(Calendar.MINUTE, 10), //
+			new SpanValue(Calendar.HOUR_OF_DAY, 1), //
+			new SpanValue(Calendar.DAY_OF_YEAR, 1), //
+			new SpanValue(Calendar.WEEK_OF_YEAR, 1), //
 			new SpanValue(Calendar.MONTH, 1) };
 	private int spansIndex = 0;
 
@@ -60,6 +63,14 @@ public abstract class LogTimelineCallback {
 	}
 
 	public void callback() {
+		buildCallbackData(false);
+	}
+
+	public void eof() {
+		buildCallbackData(true);
+	}
+
+	private void buildCallbackData(boolean isEnd) {
 		int size = getSize();
 		int[] values = new int[size];
 		Long beginTime = null;
@@ -102,10 +113,10 @@ public abstract class LogTimelineCallback {
 			break;
 		}
 
-		callback(new Date(beginTime), spans[spansIndex], values);
+		callback(new Date(beginTime), spans[spansIndex], values, isEnd);
 	}
 
-	protected abstract void callback(Date beginTime, SpanValue spanValue, int[] values);
+	protected abstract void callback(Date beginTime, SpanValue spanValue, int[] values, boolean isEnd);
 
 	public class SpanValue {
 		private int field;

@@ -304,9 +304,10 @@ public class LogQueryPlugin {
 		}
 
 		@Override
-		protected void callback(Date beginTime, SpanValue spanValue, int[] values) {
+		protected void callback(Date beginTime, SpanValue spanValue, int[] values, boolean isEnd) {
 			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("id", query.getId());
+			m.put("type", isEnd ? "eof" : "periodic");
 			m.put("span_field", spanValue.getFieldName());
 			m.put("span_amount", spanValue.getAmount());
 			m.put("begin", beginTime);

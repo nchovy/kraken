@@ -285,7 +285,7 @@ public class LogRpcService extends SimpleRpcService {
 		}
 
 		@Override
-		protected void callback(Date beginTime, SpanValue spanValue, int[] values) {
+		protected void callback(Date beginTime, SpanValue spanValue, int[] values, boolean isEnd) {
 		}
 	}
 
