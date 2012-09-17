@@ -768,7 +768,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public void exportData(OutputStream os) {
 		try {
+			long begin = new Date().getTime();
 			new Exporter(this).exportData(os);
+			long end = new Date().getTime();
+			logger.trace("kraken confdb: [{}] export is completed, elapsed {}ms", getName(), (end - begin));
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}

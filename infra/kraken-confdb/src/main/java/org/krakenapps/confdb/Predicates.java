@@ -15,8 +15,10 @@
  */
 package org.krakenapps.confdb;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.api.PrimitiveConverter;
@@ -78,6 +80,15 @@ public class Predicates {
 			value = m.get(k);
 		}
 		return value;
+	}
+
+	private static List<Predicate> checkPredicateNull(Predicate... pred) {
+		List<Predicate> ps = new ArrayList<Predicate>();
+		for (Predicate p : pred) {
+			if (p != null)
+				ps.add(p);
+		}
+		return ps;
 	}
 
 	private static class EqObject implements Predicate {
@@ -171,7 +182,8 @@ public class Predicates {
 		private Predicate[] pred;
 
 		public Conjunction(Predicate... pred) {
-			this.pred = pred;
+			List<Predicate> ps = checkPredicateNull(pred);
+			this.pred = ps.toArray(new Predicate[ps.size()]);
 		}
 
 		@Override
@@ -188,7 +200,8 @@ public class Predicates {
 		private Predicate[] pred;
 
 		public Disjunction(Predicate... pred) {
-			this.pred = pred;
+			List<Predicate> ps = checkPredicateNull(pred);
+			this.pred = ps.toArray(new Predicate[ps.size()]);
 		}
 
 		@Override
@@ -205,6 +218,8 @@ public class Predicates {
 		private Predicate pred;
 
 		public Not(Predicate pred) {
+			if (pred == null)
+				throw new IllegalArgumentException("pred should be not null");
 			this.pred = pred;
 		}
 

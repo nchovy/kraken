@@ -128,6 +128,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			return cfg.count(domain, cls, null);
 
 		int total = cfg.count(domain, cls, Predicates.and(Predicates.field("orgUnit/guid", orgUnitGuid), pred));
+
 		if (includeChildren) {
 			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
 			for (OrganizationUnit ou : parent.getChildren())
@@ -161,29 +162,33 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	public Collection<User> getUsers(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred, int offset,
 			int limit) {
 		if (orgUnitGuid == null && includeChildren)
-			return getUsers(domain, offset, limit);
+			return cfg.all(domain, cls, pred, offset, limit);
 
-		Collection<User> users = cfg.all(domain, cls, Predicates.field("orgUnit/guid", orgUnitGuid), offset, limit);
+		Collection<User> users = cfg.all(domain, cls, Predicates.and(Predicates.field("orgUnit/guid", orgUnitGuid), pred),
+				offset, limit);
+
+		int dec = Math.min(offset, users.size());
+		if (offset == dec) // offset <= users
+			limit -= users.size() - offset;
+		offset -= dec;
+
 		if (includeChildren) {
 			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
 			for (OrganizationUnit ou : parent.getChildren()) {
-				if (users.size() >= limit)
+				if (limit <= 0)
 					break;
 
-				users.addAll(getUsers(domain, ou.getGuid(), includeChildren, pred, offset, limit));
+				Collection<User> childUsers = getUsers(domain, ou.getGuid(), includeChildren, pred, offset, limit);
+				dec = Math.min(offset, childUsers.size());
+				if (offset == dec) // offset <= child users
+					limit -= childUsers.size() - offset;
+				offset -= dec;
+
+				users.addAll(childUsers);
 			}
 		}
 
-		ArrayList<User> ret = new ArrayList<User>(limit);
-		int count = 0;
-		for (User user : users) {
-			if (count++ >= limit)
-				break;
-
-			ret.add(user);
-		}
-
-		return ret;
+		return users;
 	}
 
 	@Override

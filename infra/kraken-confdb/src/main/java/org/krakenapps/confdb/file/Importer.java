@@ -97,7 +97,13 @@ public class Importer {
 			// check empty config list
 			char c = t.nextClean();
 			if (c == ']') {
-				t.nextClean();
+				t.nextClean(); // last ']'
+				char marker = t.nextClean(); // ',' or '}'
+				if (marker == '}')
+					break;
+				else
+					t.back();
+
 				continue;
 			}
 
