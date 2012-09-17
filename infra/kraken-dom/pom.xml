@@ -33,7 +33,7 @@
 						</Private-Package>
 						<Import-Package>
 							org.krakenapps.msgbus;version="1.5.0",
-							org.krakenapp.confdb;version="0.10.0",
+							org.krakenapps.confdb;version="0.10.0",
 							*
 						</Import-Package>
 					</instructions>

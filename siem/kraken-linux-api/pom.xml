@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-linux-api</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Linux Api</name>
 	<build>
