@@ -74,8 +74,12 @@ public class Importer {
 			throw new ParseException("collections should be placed after metadata: token is " + key, -1);
 
 		// "collections":{"COLNAME":["list",[...]]}
-		t.nextClean(); // :
+		t.nextClean(); // : 
 		t.nextClean(); // {
+		
+		if (t.nextClean() == '}')
+			return;
+		t.back();
 
 		int i = 0;
 		while (true) {
