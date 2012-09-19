@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-msgbus</artifactId>
-	<version>1.5.1</version>
+	<version>1.5.2</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Message Bus</name>
 	<build>
@@ -63,6 +63,10 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-cron</artifactId>
 		</dependency>
 	</dependencies>
 </project>

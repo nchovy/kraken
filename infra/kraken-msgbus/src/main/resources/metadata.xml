@@ -9,4 +9,6 @@
 	<instance component="msgbus-push-api" />
 	<instance component="msgbus-push-plugin" />
 	<instance component="msgbus-script-factory" />
+	<instance component="msgbus-token-api" />
+	<instance component="msgbus-token-plugin" />
 </ipojo>
