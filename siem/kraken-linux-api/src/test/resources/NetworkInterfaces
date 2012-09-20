@@ -1,0 +1,15 @@
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier com                                                                                                                          pressed
+  eth0: 2768360   45390    0    0    0     0          0         0 258966074   87851    0    0    0     0       0                                                                                                                                    0
+  eth1:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+  eth2:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+  eth3:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+  eth4:       0       0    0    0    0     0          0         0      438       5    0    0    0     0       0                                                                                                                                    0
+ bond0:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+    lo: 1557111    8191    0    0    0     0          0         0  1557111    8191    0    0    0     0       0                                                                                                                                    0
+ tunl0:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+  gre0:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+  sit0:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0                                                                                                                                    0
+  tap0:       0       0    0    0    0     0          0         0       90       1    0    3    0     0       0                                                                                                                                    0
+  
+  

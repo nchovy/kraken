@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NetworkInterfaceInformation {
+	private static final String DEFAULT_PATH = "/proc/net/dev";
 	private String name;
 	private long rxBytes;
 	private long rxPackets;
@@ -17,7 +18,7 @@ public class NetworkInterfaceInformation {
 	private long rxFifo;
 	private long rxFrame;
 	private long rxCompressed;
-	private long rxMuticast;
+	private long rxMulticast;
 
 	private long txBytes;
 	private long txPackets;
@@ -92,12 +93,12 @@ public class NetworkInterfaceInformation {
 		this.rxCompressed = rxCompressed;
 	}
 
-	public long getRxMuticast() {
-		return rxMuticast;
+	public long getRxMulticast() {
+		return rxMulticast;
 	}
 
-	public void setRxMuticast(long rxMuticast) {
-		this.rxMuticast = rxMuticast;
+	public void setRxMulticast(long rxMuticast) {
+		this.rxMulticast = rxMuticast;
 	}
 
 	public long getTxBytes() {
@@ -165,12 +166,19 @@ public class NetworkInterfaceInformation {
 	}
 
 	public static List<NetworkInterfaceInformation> getNetworkInterfaceInformations() throws IOException {
+		return getNetworkInterfaceInformations(new File(DEFAULT_PATH));
+	}
+
+	public static List<NetworkInterfaceInformation> getNetworkInterfaceInformations(File f) throws IOException {
 		List<NetworkInterfaceInformation> informs = new ArrayList<NetworkInterfaceInformation>();
 		NetworkInterfaceInformation inform = null;
 		BufferedReader br = null;
 		String line = null;
 		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream(new File("/proc/net/dev"))));
+			if (f == null)
+				throw new IllegalArgumentException("file should not be null");
+
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
 			while ((line = br.readLine()) != null) {
 				if (line.trim().startsWith("Inter") || line.trim().startsWith("face"))
 					continue;
@@ -194,7 +202,7 @@ public class NetworkInterfaceInformation {
 				inform.setRxFifo(Long.parseLong(datas[index++].trim()));
 				inform.setRxFrame(Long.parseLong(datas[index++].trim()));
 				inform.setRxCompressed(Long.parseLong(datas[index++].trim()));
-				inform.setRxMuticast(Long.parseLong(datas[index++].trim()));
+				inform.setRxMulticast(Long.parseLong(datas[index++].trim()));
 				inform.setTxBytes(Long.parseLong(datas[index++].trim()));
 				inform.setTxPackets(Long.parseLong(datas[index++].trim()));
 				inform.setTxErrs(Long.parseLong(datas[index++].trim()));
@@ -218,7 +226,7 @@ public class NetworkInterfaceInformation {
 	public String toString() {
 		return "NetworkInterfaceInformation [name=" + name + ", rxBytes=" + rxBytes + ", rxPackets=" + rxPackets + ", rxErrs="
 				+ rxErrs + ", rxDrop=" + rxDrop + ", rxFifo=" + rxFifo + ", rxFrame=" + rxFrame + ", rxCompressed="
-				+ rxCompressed + ", rxMuticast=" + rxMuticast + ", txBytes=" + txBytes + ", txPackets=" + txPackets + ", txErrs="
+				+ rxCompressed + ", rxMuticast=" + rxMulticast + ", txBytes=" + txBytes + ", txPackets=" + txPackets + ", txErrs="
 				+ txErrs + ", txDrop=" + txDrop + ", txFifo=" + txFifo + ", txColls=" + txColls + ", txCarrier=" + txCarrier
 				+ ", txCompressed=" + txCompressed + "]";
 	}
