@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,7 +38,7 @@ public class Exporter {
 		logger.debug("kraken confdb: start export data");
 		db.lock();
 		try {
-			OutputStreamWriter writer = new OutputStreamWriter(os);
+			OutputStreamWriter writer = new OutputStreamWriter(os, Charset.forName("utf-8"));
 			JSONWriter jw = new JSONWriter(writer);
 
 			jw.object();

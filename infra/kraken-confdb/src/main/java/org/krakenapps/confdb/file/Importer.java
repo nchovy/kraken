@@ -8,6 +8,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ public class Importer {
 		db.lock();
 
 		try {
-			JSONTokener t = new JSONTokener(new InputStreamReader(is));
+			JSONTokener t = new JSONTokener(new InputStreamReader(is, Charset.forName("utf-8")));
 
 			Map<String, Object> metadata = parseMetadata(t);
 			Integer version = (Integer) metadata.get("version");
@@ -74,9 +75,9 @@ public class Importer {
 			throw new ParseException("collections should be placed after metadata: token is " + key, -1);
 
 		// "collections":{"COLNAME":["list",[...]]}
-		t.nextClean(); // : 
+		t.nextClean(); // :
 		t.nextClean(); // {
-		
+
 		if (t.nextClean() == '}')
 			return;
 		t.back();
