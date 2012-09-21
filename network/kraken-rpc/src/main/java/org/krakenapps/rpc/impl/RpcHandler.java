@@ -149,7 +149,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 							for (RpcMessage m : status.runningMethods) {
 								if (i++ != 0)
 									sb.append(",");
-								
+
 								sb.append(m.getString("method"));
 								sb.append("(");
 								sb.append(m.getHeader("type"));
@@ -444,8 +444,10 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 				// clear work status
 				worksheet.remove(workKey);
 
-				if (channel.isOpen())
+				if (channel.isOpen() && !channel.isReadable()) {
+					logger.debug("kraken rpc: channel [{}], set readable true", channel.getId());
 					channel.setReadable(true);
+				}
 			}
 		}
 
