@@ -140,18 +140,17 @@ public class FileConfigCollection implements ConfigCollection {
 	}
 
 	private ConfigIterator getIterator(Predicate pred) throws IOException {
+		Manifest manifest = db.getManifest(changeset);
 		RevLogReader reader = new RevLogReader(logFile, datFile);
-		List<RevLog> snapshot = getSnapshot(reader);
+		List<RevLog> snapshot = getSnapshot(manifest, reader);
 		if (logger.isDebugEnabled())
 			logger.debug("kraken confdb: db [{}], col [{}], snapshot size [{}]", new Object[] { db.getName(), col.getName(),
 					snapshot.size() });
 
-		return new FileConfigIterator(db, this, reader, snapshot, pred);
+		return new FileConfigIterator(db, manifest, this, reader, snapshot, pred);
 	}
 
-	private List<RevLog> getSnapshot(RevLogReader reader) throws IOException {
-		Manifest manifest = db.getManifest(changeset);
-
+	private List<RevLog> getSnapshot(Manifest manifest, RevLogReader reader) throws IOException {
 		List<RevLog> snapshot = db.getSnapshotCache(col.getId(), manifest.getId());
 		if (snapshot != null) {
 			if (logger.isDebugEnabled())
@@ -259,9 +258,10 @@ public class FileConfigCollection implements ConfigCollection {
 	public Config update(ConfigTransaction xact, Config c, boolean checkConflict) {
 		RevLogReader reader = null;
 		try {
+			Manifest manifest = db.getManifest(changeset);
 			RevLogWriter writer = getWriter(xact);
 			reader = new RevLogReader(logFile, datFile);
-			List<RevLog> snapshot = getSnapshot(reader);
+			List<RevLog> snapshot = getSnapshot(manifest, reader);
 
 			// find any conflict (if common parent exists)
 			long lastRev = c.getRevision();

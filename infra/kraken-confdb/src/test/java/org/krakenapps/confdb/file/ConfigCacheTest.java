@@ -1,5 +1,8 @@
 package org.krakenapps.confdb.file;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -10,7 +13,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
-import static org.junit.Assert.*;
 
 public class ConfigCacheTest {
 	private FileConfigDatabase db;
@@ -80,16 +82,5 @@ public class ConfigCacheTest {
 		extMap = (Map<String, Object>) fetched.get("ext");
 		customMap = (Map<String, Object>) extMap.get("custom");
 		assertEquals("hello", customMap.get("field1"));
-	}
-
-	private void putConfig() {
-		int[] intArr = new int[3];
-		intArr[0] = 0;
-		intArr[1] = 1;
-		intArr[2] = 2;
-
-		Config c = new FileConfig(db, col, 0, 1, 0, intArr);
-
-		cache.putEntry(col.getName(), c);
 	}
 }

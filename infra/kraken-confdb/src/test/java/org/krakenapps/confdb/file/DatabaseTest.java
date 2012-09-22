@@ -15,23 +15,24 @@
  */
 package org.krakenapps.confdb.file;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.krakenapps.confdb.CollectionName;
 import org.krakenapps.confdb.CommitLog;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicates;
-
-import static org.junit.Assert.*;
 
 public class DatabaseTest {
 	private FileConfigDatabase db;

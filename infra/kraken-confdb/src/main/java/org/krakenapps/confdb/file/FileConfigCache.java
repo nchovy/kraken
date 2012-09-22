@@ -23,10 +23,11 @@ public class FileConfigCache implements ConfigCache {
 	}
 
 	/**
-	 * CAUTION: you should NOT MODIFY config object. mutable for iterator performance
+	 * CAUTION: you should NOT MODIFY config object. mutable for iterator
+	 * performance
 	 */
 	@Override
-	public Config findEntry(String colName, int docId, long rev) {
+	public Config findEntry(String colName, int manifestId, int docId, long rev) {
 		Integer colId = getCollectionId(colName);
 		if (colId == null)
 			return null;
@@ -39,7 +40,7 @@ public class FileConfigCache implements ConfigCache {
 		if (map == null)
 			return null;
 
-		Config c = map.get(new ConfigKey(docId, rev));
+		Config c = map.get(new ConfigKey(manifestId, docId, rev));
 		if (c != null) {
 			return c;
 		}
@@ -47,7 +48,7 @@ public class FileConfigCache implements ConfigCache {
 	}
 
 	@Override
-	public void putEntry(String colName, Config c) {
+	public void putEntry(String colName, int manifestId, Config c) {
 		Integer colId = getCollectionId(colName);
 		if (colId == null)
 			return;
@@ -62,7 +63,7 @@ public class FileConfigCache implements ConfigCache {
 				configCache = createCollectionCache(colId);
 		}
 
-		configCache.put(new ConfigKey(c.getId(), c.getRevision()), c);
+		configCache.put(new ConfigKey(manifestId, c.getId(), c.getRevision()), c);
 	}
 
 	private Integer getCollectionId(String colName) {
@@ -83,10 +84,12 @@ public class FileConfigCache implements ConfigCache {
 	}
 
 	private static class ConfigKey {
+		private int manifestId;
 		private int id;
 		private long rev;
 
-		public ConfigKey(int id, long rev) {
+		public ConfigKey(int manifestId, int id, long rev) {
+			this.manifestId = manifestId;
 			this.id = id;
 			this.rev = rev;
 		}
@@ -96,6 +99,7 @@ public class FileConfigCache implements ConfigCache {
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + id;
+			result = prime * result + manifestId;
 			result = prime * result + (int) (rev ^ (rev >>> 32));
 			return result;
 		}
@@ -110,6 +114,8 @@ public class FileConfigCache implements ConfigCache {
 				return false;
 			ConfigKey other = (ConfigKey) obj;
 			if (id != other.id)
+				return false;
+			if (manifestId != other.manifestId)
 				return false;
 			if (rev != other.rev)
 				return false;

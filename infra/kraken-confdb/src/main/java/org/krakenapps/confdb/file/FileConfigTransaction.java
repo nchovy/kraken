@@ -114,7 +114,6 @@ public class FileConfigTransaction implements ConfigTransaction {
 		try {
 			Manifest manifest = FileManifest.writeManifest(this.manifest, manifestLogFile, manifestDatFile);
 			ChangeSetWriter.log(changeLogFile, changeDatFile, changeSet, manifest.getId(), committer, log);
-
 			// do not move this code to finally block. rollback should be called
 			// after exception throwing
 			closeWriters();

@@ -7,8 +7,6 @@ import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.ConfigEntry;
 
-import static org.junit.Assert.*;
-
 public class FileManifestCodecTest {
 	@Test
 	public void testCodec() {

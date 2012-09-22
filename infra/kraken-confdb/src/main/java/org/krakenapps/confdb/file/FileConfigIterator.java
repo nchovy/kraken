@@ -31,6 +31,7 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigParser;
+import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ class FileConfigIterator implements ConfigIterator {
 	private final Logger logger = LoggerFactory.getLogger(FileConfigIterator.class.getName());
 	private ConfigDatabase db;
 	private ConfigCache cache;
+	private int manifestId;
 	private ConfigCollection col;
 	private String colName;
 	private RevLogReader reader;
@@ -56,8 +58,10 @@ class FileConfigIterator implements ConfigIterator {
 	private boolean closed;
 	private ConfigParser parser;
 
-	public FileConfigIterator(ConfigDatabase db, ConfigCollection col, RevLogReader reader, List<RevLog> snapshot, Predicate pred) {
+	public FileConfigIterator(ConfigDatabase db, Manifest manifest, ConfigCollection col, RevLogReader reader,
+			List<RevLog> snapshot, Predicate pred) {
 		this.db = db;
+		this.manifestId = manifest.getId();
 		this.cache = db.getCache();
 		this.col = col;
 		this.colName = col.getName();
@@ -135,7 +139,7 @@ class FileConfigIterator implements ConfigIterator {
 		RevLog log = it.next();
 
 		// check cache
-		Config cachedConfig = cache.findEntry(colName, log.getDocId(), log.getRev());
+		Config cachedConfig = cache.findEntry(colName, manifestId, log.getDocId(), log.getRev());
 		if (cachedConfig != null) {
 			Object doc = cachedConfig.getDocument();
 			return new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
@@ -145,7 +149,7 @@ class FileConfigIterator implements ConfigIterator {
 		byte[] b = reader.readDoc(log.getDocOffset(), log.getDocLength());
 		Object doc = EncodingRule.decode(ByteBuffer.wrap(b));
 		FileConfig config = new FileConfig(db, col, log.getDocId(), log.getRev(), log.getPrevRev(), doc, parser);
-		cache.putEntry(colName, config);
+		cache.putEntry(colName, manifestId, config);
 		return config;
 	}
 
