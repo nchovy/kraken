@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,6 +37,13 @@ public class ConfigCacheTest {
 	private static class CustomType {
 		public String name;
 		public Map<String, Object> ext;
+
+		public CustomType() {
+		}
+
+		public CustomType(String name) {
+			this.name = name;
+		}
 	}
 
 	private static class CustomField {
@@ -83,4 +91,23 @@ public class ConfigCacheTest {
 		customMap = (Map<String, Object>) extMap.get("custom");
 		assertEquals("hello", customMap.get("field1"));
 	}
+
+	@Test
+	// fixed 1252 (ae754000d01a) bug. cache criteria should contain manifest id.
+	public void testCacheBugFix() {
+		db.add(new CustomType("first"));
+		Collection<CustomType> docs = db.findAll(CustomType.class).getDocuments(CustomType.class);
+		assertEquals(1, docs.size());
+		assertEquals("first", docs.iterator().next().name);
+
+		db.dropCollection(CustomType.class);
+
+		db.add(new CustomType("second"));
+		docs = db.findAll(CustomType.class).getDocuments(CustomType.class);
+		assertEquals(1, docs.size());
+
+		// previous buggy version returned "first" here
+		assertEquals("second", docs.iterator().next().name);
+	}
+
 }
