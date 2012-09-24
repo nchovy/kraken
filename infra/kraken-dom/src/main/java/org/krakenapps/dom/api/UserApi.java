@@ -24,7 +24,7 @@ public interface UserApi extends EntityEventProvider<User> {
 	int countUsers(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred);
 
 	Collection<User> getUsers(String domain);
-	
+
 	Collection<User> getUsers(String domain, int offset, int length);
 
 	Collection<User> getUsers(String domain, Collection<String> loginNames);
@@ -70,4 +70,14 @@ public interface UserApi extends EntityEventProvider<User> {
 	boolean verifyPassword(String domain, String loginName, String password);
 
 	String hashPassword(String salt, String text);
+
+	//패스워드변경관련
+	void setForcePasswordChange(String loginName, boolean forcePasswordChange);
+
+	void setForcePasswordChanges(Collection<String> loginNames);
+	
+	void cancleForcePasswordChanges(Collection<String> loginNames);
+	
+	
+
 }

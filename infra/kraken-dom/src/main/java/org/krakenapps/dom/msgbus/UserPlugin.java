@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -306,5 +307,19 @@ public class UserPlugin {
 		for (UserExtensionProvider provider : userApi.getExtensionProviders())
 			schemas.add(provider.getExtensionName());
 		resp.put("schemas", schemas);
+	}
+	
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void setForcePasswordChanges(Request req, Response resp) {
+		Collection<String> loginNames = (Collection<String>) req.get("login_names");
+ 		userApi.setForcePasswordChanges(loginNames);
+	}
+	
+	@SuppressWarnings("unchecked")
+	@MsgbusMethod
+	public void cancleForcePasswordChanges(Request req, Response resp) {
+		Collection<String> loginNames = (Collection<String>) req.get("login_names");
+		userApi.cancleForcePasswordChanges(loginNames);
 	}
 }
