@@ -15,6 +15,8 @@
  */
 package org.krakenapps.dom.api;
 
+import java.util.Collection;
+
 import org.krakenapps.confdb.ConfigTransaction;
 
 public interface EntityEventListener<T> {
@@ -25,4 +27,12 @@ public interface EntityEventListener<T> {
 	void entityRemoving(String domain, T obj, ConfigTransaction xact, Object state);
 
 	void entityRemoved(String domain, T obj, Object state);
+
+	void entitiesAdded(String domain, Collection<EntityState> objs);
+
+	void entitiesUpdated(String domain, Collection<EntityState> objs);
+
+	void entitiesRemoving(String domain, Collection<EntityState> objs, ConfigTransaction xact);
+
+	void entitiesRemoved(String domain, Collection<EntityState> objs);
 }

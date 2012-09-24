@@ -1,7 +1,9 @@
 package org.krakenapps.dom.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -87,23 +89,75 @@ public class Transaction {
 		logs.add(new Log(Log.Operation.Remove, doc, removedState));
 	}
 
+	public void removePreChecked(Config c, Object doc, boolean checkConflict, Object removedState) {
+		db.remove(xact, c, checkConflict);
+		logs.add(new Log(Log.Operation.Remove, doc, removedState));
+	}
+
 	@SuppressWarnings("unchecked")
 	public void commit(String committer, String log) {
 		xact.commit(committer, log);
 
+		Map<Class<?>, List<EntityState>> addedMap = new HashMap<Class<?>, List<EntityState>>();
+		Map<Class<?>, List<EntityState>> updatedMap = new HashMap<Class<?>, List<EntityState>>();
+		Map<Class<?>, List<EntityState>> removedMap = new HashMap<Class<?>, List<EntityState>>();
+
 		for (Log l : logs) {
-			DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(l.obj.getClass());
+			Class<?> clazz = l.obj.getClass();
+			DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(clazz);
 			if (provider == null)
 				continue;
 
-			if (l.op == Log.Operation.Add)
-				provider.fireEntityAdded(domain, l.obj, l.state);
-			else if (l.op == Log.Operation.Update)
-				provider.fireEntityUpdated(domain, l.obj, l.state);
-			else if (l.op == Log.Operation.Remove)
-				provider.fireEntityRemoved(domain, l.obj, l.state);
+			if (l.op == Log.Operation.Add) {
+				List<EntityState> logs = addedMap.get(clazz);
+				if (logs == null) {
+					logs = new LinkedList<EntityState>();
+					addedMap.put(clazz, logs);
+				}
+
+				logs.add(new EntityState(l.obj, l.state));
+			} else if (l.op == Log.Operation.Update) {
+				List<EntityState> logs = updatedMap.get(clazz);
+				if (logs == null) {
+					logs = new LinkedList<EntityState>();
+					updatedMap.put(clazz, logs);
+				}
+
+				logs.add(new EntityState(l.obj, l.state));
+			} else if (l.op == Log.Operation.Remove) {
+				List<EntityState> logs = removedMap.get(clazz);
+				if (logs == null) {
+					logs = new LinkedList<EntityState>();
+					removedMap.put(clazz, logs);
+				}
+
+				logs.add(new EntityState(l.obj, l.state));
+			}
 		}
+
+		for (Class<?> key : addedMap.keySet()) {
+			DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(key);
+			provider.fireEntitiesAdded(domain, addedMap.get(key));
+		}
+
+		for (Class<?> key : updatedMap.keySet()) {
+			DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(key);
+			provider.fireEntitiesUpdated(domain, updatedMap.get(key));
+		}
+
+		for (Class<?> key : removedMap.keySet()) {
+			DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(key);
+			provider.fireEntitiesRemoved(domain, removedMap.get(key));
+		}
+
 		xacts.remove(this.xact);
+	}
+
+	public <T> void checkRemovability(Class<T> cls, Collection<EntityState> entities) {
+		@SuppressWarnings("unchecked")
+		DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(cls);
+		if (provider != null)
+			provider.fireEntitiesRemoving(domain, entities, xact);
 	}
 
 	public void rollback() {

@@ -15,6 +15,7 @@
  */
 package org.krakenapps.dom.api;
 
+import java.util.Collection;
 import java.util.WeakHashMap;
 
 import org.krakenapps.confdb.ConfigTransaction;
@@ -59,6 +60,18 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 		}
 	}
 
+	public void fireEntitiesAdded(String domain, Collection<EntityState> entities) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				try {
+					listener.entitiesAdded(domain, entities);
+				} catch (Throwable e) {
+					logger.warn("kraken dom: entity event callback should not throw any exception", e);
+				}
+			}
+		}
+	}
+
 	public void fireEntityUpdated(String domain, T t) {
 		fireEntityUpdated(domain, t, null);
 	}
@@ -68,6 +81,18 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			if (listener != null) {
 				try {
 					listener.entityUpdated(domain, t, state);
+				} catch (Throwable e) {
+					logger.warn("kraken dom: entity event callback should not throw any exception", e);
+				}
+			}
+		}
+	}
+
+	public void fireEntitiesUpdated(String domain, Collection<EntityState> entities) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				try {
+					listener.entitiesUpdated(domain, entities);
 				} catch (Throwable e) {
 					logger.warn("kraken dom: entity event callback should not throw any exception", e);
 				}
@@ -88,6 +113,15 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 		}
 	}
 
+	public void fireEntitiesRemoving(String domain, Collection<EntityState> entities, ConfigTransaction xact) {
+		// DO NOT add try-catch. it's intentional exception throwing
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				listener.entitiesRemoving(domain, entities, xact);
+			}
+		}
+	}
+
 	public void fireEntityRemoved(String domain, T t) {
 		fireEntityRemoved(domain, t, null);
 	}
@@ -103,4 +137,17 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			}
 		}
 	}
+
+	public void fireEntitiesRemoved(String domain, Collection<EntityState> entities) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				try {
+					listener.entitiesRemoved(domain, entities);
+				} catch (Throwable e) {
+					logger.warn("kraken dom: entity event callback should not throw any exception", e);
+				}
+			}
+		}
+	}
+
 }

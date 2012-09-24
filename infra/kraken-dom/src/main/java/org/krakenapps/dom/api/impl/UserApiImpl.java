@@ -16,8 +16,10 @@
 package org.krakenapps.dom.api.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -30,6 +32,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.PrimitiveParseCallback;
+import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
@@ -54,6 +57,7 @@ import org.slf4j.LoggerFactory;
 @Component(name = "dom-user-api")
 @Provides
 public class UserApiImpl extends DefaultEntityEventProvider<User> implements UserApi {
+	private static final char[] SALT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 	private final Logger logger = LoggerFactory.getLogger(UserApiImpl.class.getName());
 	private static final Class<User> cls = User.class;
 	private static final String NOT_FOUND = "user-not-found";
@@ -64,17 +68,17 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		@Override
 		public void entityRemoving(String domain, OrganizationUnit orgUnit, ConfigTransaction xact, Object state) {
 			List<User> users = new ArrayList<User>(getUsers(domain, orgUnit.getGuid(), false));
-			List<Predicate> preds = new ArrayList<Predicate>();
+			FilterByLoginNames filter = new FilterByLoginNames();
 			for (User user : users) {
 				user.setOrgUnit(null);
-				preds.add(getPred(user.getLoginName()));
+				filter.addLoginName(user.getLoginName());
 			}
 
 			Transaction x = Transaction.getInstance(xact);
 			if ((state != null) && (state instanceof Boolean) && ((Boolean) state))
-				cfg.updates(x, cls, preds, users, null);
+				cfg.updates(x, cls, Arrays.asList((Predicate) filter), users, null);
 			else
-				cfg.removes(x, domain, cls, preds, null, UserApiImpl.this);
+				cfg.removes(x, domain, cls, Arrays.asList((Predicate) filter), null, UserApiImpl.this);
 		}
 	};
 
@@ -223,8 +227,9 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 		List<User> userList = new ArrayList<User>(users);
 		if (!noHash) {
+			int saltLength = getSaltLength(domain);
 			for (User user : users) {
-				user.setSalt(createSalt(domain));
+				user.setSalt(createSalt(saltLength));
 				user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 			}
 		}
@@ -276,10 +281,8 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		if (loginNames == null || loginNames.size() == 0)
 			return;
 
-		List<Predicate> preds = new ArrayList<Predicate>(loginNames.size());
-		for (String loginName : loginNames)
-			preds.add(getPred(loginName));
-		cfg.removes(domain, cls, preds, NOT_FOUND, this);
+		Predicate pred = Predicates.in("login_name", new HashSet<String>(loginNames));
+		cfg.removes(domain, cls, Arrays.asList(pred), NOT_FOUND, this);
 	}
 
 	@Override
@@ -314,15 +317,17 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 
 	@Override
 	public String createSalt(String domain) {
-		StringBuilder salt = new StringBuilder();
-		Random rand = new Random();
-		char[] c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
-
 		int saltLength = getSaltLength(domain);
 		logger.trace("kraken dom: salt length [{}]", saltLength);
 
+		return createSalt(saltLength);
+	}
+
+	private String createSalt(int saltLength) {
+		StringBuilder salt = new StringBuilder(saltLength);
+		Random rand = new Random();
 		for (int i = 0; i < saltLength; i++)
-			salt.append(c[rand.nextInt(c.length)]);
+			salt.append(SALT_CHARS[rand.nextInt(SALT_CHARS.length)]);
 		return salt.toString();
 	}
 
@@ -389,4 +394,25 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			return user;
 		}
 	}
+
+	private static class FilterByLoginNames implements Predicate {
+
+		private HashSet<String> loginNames = new HashSet<String>();
+
+		public void addLoginName(String loginName) {
+			loginNames.add(loginName);
+		}
+
+		@Override
+		public boolean eval(Config c) {
+			Object doc = c.getDocument();
+			if (doc == null)
+				return false;
+
+			@SuppressWarnings("unchecked")
+			Map<String, Object> m = (Map<String, Object>) doc;
+			return loginNames.contains(m.get("login_name"));
+		}
+	}
+
 }

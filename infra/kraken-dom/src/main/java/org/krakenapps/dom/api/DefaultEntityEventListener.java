@@ -15,6 +15,8 @@
  */
 package org.krakenapps.dom.api;
 
+import java.util.Collection;
+
 import org.krakenapps.confdb.ConfigTransaction;
 
 public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
@@ -32,5 +34,33 @@ public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
 
 	@Override
 	public void entityRemoved(String domain, T obj, Object state) {
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void entitiesAdded(String domain, Collection<EntityState> objs) {
+		for (EntityState t : objs)
+			entityAdded(domain, (T) t.entity, t.state);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void entitiesUpdated(String domain, Collection<EntityState> objs) {
+		for (EntityState t : objs)
+			entityUpdated(domain, (T) t.entity, t.state);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void entitiesRemoving(String domain, Collection<EntityState> objs, ConfigTransaction xact) {
+		for (EntityState t : objs)
+			entityRemoving(domain, (T) t.entity, xact, t.state);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void entitiesRemoved(String domain, Collection<EntityState> objs) {
+		for (EntityState t : objs)
+			entityRemoved(domain, (T) t.entity, t.state);
 	}
 }

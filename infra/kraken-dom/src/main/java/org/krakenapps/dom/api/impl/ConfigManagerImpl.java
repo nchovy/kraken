@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,6 +25,7 @@ import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
+import org.krakenapps.dom.api.EntityState;
 import org.krakenapps.dom.api.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -449,13 +451,17 @@ public class ConfigManagerImpl implements ConfigManager {
 		Collection<T> docs = new ArrayList<T>();
 		ConfigIterator it = db.find(cls, pred);
 		try {
+			List<EntityState> entities = new LinkedList<EntityState>();
 			it.setParser(parsers.get(cls));
 			while (it.hasNext()) {
 				Config c = it.next();
 				T doc = c.getDocument(cls, getCallback(domain));
 				docs.add(doc);
-				xact.remove(c, doc, removingState, removedState);
+				xact.removePreChecked(c, doc, false, removedState);
+				entities.add(new EntityState(doc, removingState));
 			}
+
+			xact.checkRemovability(cls, entities);
 		} finally {
 			it.close();
 		}

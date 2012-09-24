@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,23 +37,23 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
-import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.EntityEventListener;
 import org.krakenapps.dom.api.EntityEventProvider;
+import org.krakenapps.dom.api.EntityState;
 import org.krakenapps.dom.api.FileUploadApi;
 import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UploadCallback;
 import org.krakenapps.dom.api.UploadToken;
 import org.krakenapps.dom.api.UserApi;
-import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.FileSpace;
 import org.krakenapps.dom.model.UploadedFile;
 import org.krakenapps.dom.model.User;
@@ -80,34 +81,54 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 	private ConcurrentMap<String, DownloadToken> downloadTokens = new ConcurrentHashMap<String, DownloadToken>(); // session-token
 
 	private EntityEventListener<User> userEventListener = new DefaultEntityEventListener<User>() {
+
 		@Override
-		public void entityRemoving(String domain, User obj, ConfigTransaction xact, Object state) {
-			List<FileSpace> spaces = new ArrayList<FileSpace>(cfg.all(domain, FileSpace.class,
-					Predicates.field("owner/loginName", obj.getLoginName())));
-			List<Predicate> spacePreds = new ArrayList<Predicate>();
-
-			List<UploadedFile> files = new ArrayList<UploadedFile>(cfg.all(domain, UploadedFile.class,
-					Predicates.field("owner/loginName", obj.getLoginName())));
-			List<Predicate> filePreds = new ArrayList<Predicate>();
-
-			if (!spaces.isEmpty() && !files.isEmpty()) {
-				User master = null;
-				for (Admin admin : adminApi.getAdmins(domain)) {
-					if (admin.getRole().getName().equals("master"))
-						master = admin.getUser();
-				}
-
-				for (FileSpace space : spaces)
-					space.setOwner(master);
-				for (UploadedFile file : files)
-					file.setOwner(master);
-
-				Transaction x = Transaction.getInstance(xact);
-				cfg.updates(x, FileSpace.class, spacePreds, spaces, null);
-				cfg.updates(x, UploadedFile.class, filePreds, files, null);
+		public void entitiesRemoved(String domain, Collection<EntityState> objs) {
+			LoginNameFilter filter = new LoginNameFilter();
+			for (EntityState o : objs) {
+				User user = (User) o.entity;
+				filter.add(user.getLoginName());
 			}
+
+			cfg.removes(domain, UploadedFile.class, Arrays.asList((Predicate) filter), null, null);
+			cfg.removes(domain, FileSpace.class, Arrays.asList((Predicate) filter), null, null);
+		}
+
+		@Override
+		public void entityRemoved(String domain, User obj, Object state) {
+			Predicate pred = Predicates.field("owner/loginName", obj.getLoginName());
+			cfg.removes(domain, UploadedFile.class, Arrays.asList(pred), null, null);
+			cfg.removes(domain, FileSpace.class, Arrays.asList(pred), null, null);
 		}
 	};
+
+	private static class LoginNameFilter implements Predicate {
+
+		private HashSet<String> loginNames = new HashSet<String>();
+
+		public void add(String loginName) {
+			loginNames.add(loginName);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public boolean eval(Config c) {
+			Map<String, Object> m = (Map<String, Object>) c.getDocument();
+			if (m == null)
+				return false;
+
+			Map<String, Object> owner = (Map<String, Object>) m.get("owner");
+			if (owner == null)
+				return false;
+
+			String loginName = (String) owner.get("login_name");
+			if (loginName == null)
+				return false;
+
+			return loginNames.contains(loginName);
+		}
+	}
+
 	private EntityEventListener<FileSpace> spaceEventListener = new DefaultEntityEventListener<FileSpace>() {
 		@Override
 		public void entityRemoving(String domain, FileSpace obj, ConfigTransaction xact, Object state) {
@@ -132,9 +153,6 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Requires
 	private UserApi userApi;
-
-	@Requires
-	private AdminApi adminApi;
 
 	@Validate
 	public void validate() {
