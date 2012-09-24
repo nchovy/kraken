@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.krakenapps.api.PrimitiveParseCallback;
+import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.Predicate;
@@ -16,6 +17,8 @@ public interface ConfigManager {
 	ConfigDatabase getDatabase(String domain);
 
 	<T> int count(String domain, Class<T> cls, Predicate pred);
+
+	List<Config> matches(String domain, Class<?> cls, Predicate pred, int offset, int limit);
 
 	<T> Collection<T> all(String domain, Class<T> cls);
 

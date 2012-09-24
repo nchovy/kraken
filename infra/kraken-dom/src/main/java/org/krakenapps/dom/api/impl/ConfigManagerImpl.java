@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 @Component(name = "dom-config-manager")
 @Provides
 public class ConfigManagerImpl implements ConfigManager {
+
 	private static final String COMMITER = "kraken-dom";
 	private final Logger logger = LoggerFactory.getLogger(ConfigManagerImpl.class.getName());
 
@@ -75,6 +76,12 @@ public class ConfigManagerImpl implements ConfigManager {
 	public <T> int count(String domain, Class<T> cls, Predicate pred) {
 		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
 		return it.count();
+	}
+
+	@Override
+	public List<Config> matches(String domain, Class<?> cls, Predicate pred, int offset, int limit) {
+		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
+		return it.getConfigs(offset, limit);
 	}
 
 	@Override
@@ -150,9 +157,6 @@ public class ConfigManagerImpl implements ConfigManager {
 			Object state) {
 		if (docs.isEmpty())
 			return;
-
-		if (preds.size() != docs.size())
-			throw new IllegalArgumentException("preds and docs must has equal size");
 
 		ConfigDatabase db = xact.getConfigDatabase();
 
@@ -452,7 +456,11 @@ public class ConfigManagerImpl implements ConfigManager {
 		ConfigIterator it = db.find(cls, pred);
 		try {
 			List<EntityState> entities = new LinkedList<EntityState>();
-			it.setParser(parsers.get(cls));
+			ConfigParser parser = parsers.get(cls);
+			if (parser == null)
+				logger.trace("kraken dom: no parser for " + cls.getName());
+
+			it.setParser(parser);
 			while (it.hasNext()) {
 				Config c = it.next();
 				T doc = c.getDocument(cls, getCallback(domain));

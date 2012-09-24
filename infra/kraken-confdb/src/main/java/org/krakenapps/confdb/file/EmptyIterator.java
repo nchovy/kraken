@@ -2,6 +2,7 @@ package org.krakenapps.confdb.file;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
@@ -25,6 +26,11 @@ class EmptyIterator implements ConfigIterator {
 
 	@Override
 	public void setParser(ConfigParser parser) {
+	}
+
+	@Override
+	public List<Config> getConfigs(int offset, int limit) {
+		return new ArrayList<Config>();
 	}
 
 	@Override

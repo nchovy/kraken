@@ -16,15 +16,19 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
+import java.util.List;
 
+import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.dom.model.User;
 
 public interface UserApi extends EntityEventProvider<User> {
 	int countUsers(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred);
 
+	List<Config> getConfigs(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred, int offset, int limit);
+
 	Collection<User> getUsers(String domain);
-	
+
 	Collection<User> getUsers(String domain, int offset, int length);
 
 	Collection<User> getUsers(String domain, Collection<String> loginNames);
@@ -49,6 +53,11 @@ public interface UserApi extends EntityEventProvider<User> {
 
 	void createUser(String domain, User user, boolean noHash);
 
+	void updateUsers(String domain, List<ConfigUpdateRequest<User>> userUpdates);
+
+	void updateUsers(String domain, List<ConfigUpdateRequest<User>> userUpdates, boolean updatePassword);
+
+	@Deprecated
 	void updateUsers(String domain, Collection<User> users, boolean updatePassword);
 
 	void updateUser(String domain, User user, boolean updatePassword);

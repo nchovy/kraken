@@ -41,6 +41,7 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.DefaultEntityEventListener;
@@ -54,6 +55,7 @@ import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UploadCallback;
 import org.krakenapps.dom.api.UploadToken;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.model.Admin;
 import org.krakenapps.dom.model.FileSpace;
 import org.krakenapps.dom.model.UploadedFile;
 import org.krakenapps.dom.model.User;
@@ -91,14 +93,36 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 			}
 
 			cfg.removes(domain, UploadedFile.class, Arrays.asList((Predicate) filter), null, null);
-			cfg.removes(domain, FileSpace.class, Arrays.asList((Predicate) filter), null, null);
+			fileSpaceRemoveOrUpdate(domain, filter);
 		}
 
 		@Override
 		public void entityRemoved(String domain, User obj, Object state) {
 			Predicate pred = Predicates.field("owner/loginName", obj.getLoginName());
 			cfg.removes(domain, UploadedFile.class, Arrays.asList(pred), null, null);
-			cfg.removes(domain, FileSpace.class, Arrays.asList(pred), null, null);
+			fileSpaceRemoveOrUpdate(domain, pred);
+		}
+
+		private void fileSpaceRemoveOrUpdate(String domain, Predicate pred) {
+			Collection<FileSpace> fileSpaces = cfg.all(domain, FileSpace.class, pred);
+			if (!fileSpaces.isEmpty()) {
+				User master = null;
+				for (Admin admin : adminApi.getAdmins(domain)) {
+					if (admin.getRole().getName().equals("master")) {
+						master = admin.getUser();
+						break;
+					}
+				}
+
+				for (FileSpace fileSpace : fileSpaces) {
+					if (fileSpace.getFiles().isEmpty()) {
+						cfg.remove(domain, FileSpace.class, Predicates.field("guid", fileSpace.getGuid()), null, null);
+					} else {
+						fileSpace.setOwner(master);
+						cfg.update(domain, FileSpace.class, Predicates.field("guid", fileSpace.getGuid()), fileSpace, null, null);
+					}
+				}
+			}
 		}
 	};
 
@@ -153,6 +177,9 @@ public class FileUploadApiImpl extends DefaultEntityEventProvider<FileSpace> imp
 
 	@Requires
 	private UserApi userApi;
+
+	@Requires
+	private AdminApi adminApi;
 
 	@Validate
 	public void validate() {

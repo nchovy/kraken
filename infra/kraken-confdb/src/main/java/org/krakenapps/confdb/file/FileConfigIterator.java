@@ -164,6 +164,31 @@ class FileConfigIterator implements ConfigIterator {
 	}
 
 	@Override
+	public List<Config> getConfigs(int offset, int limit) {
+		try {
+			int p = 0;
+			int count = 0;
+
+			ArrayList<Config> configs = new ArrayList<Config>();
+			ConfigIterator it = this;
+			while (it.hasNext()) {
+				if (count >= limit)
+					break;
+
+				Config next = it.next();
+				if (p++ < offset)
+					continue;
+
+				configs.add(next);
+				count++;
+			}
+			return configs;
+		} finally {
+			close();
+		}
+	}
+
+	@Override
 	public Collection<Object> getDocuments() {
 		try {
 			Collection<Object> docs = new ArrayList<Object>();

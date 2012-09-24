@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.text.ParseException;
@@ -95,13 +95,13 @@ public class FileConfigDatabase implements ConfigDatabase {
 	private int defaultTimeout = 5000;
 
 	// change set rev to manifest id cache
-	private SoftReference<ConcurrentMap<Integer, Integer>> changeCache;
+	private WeakReference<ConcurrentMap<Integer, Integer>> changeCache;
 
 	// manifest id to manifest cache
-	private SoftReference<ConcurrentMap<Integer, FileManifest>> manifestCache;
+	private WeakReference<ConcurrentMap<Integer, FileManifest>> manifestCache;
 
 	// (collection id, manifest id) to snapshot cache
-	private SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>> snapshotCache;
+	private WeakReference<ConcurrentMap<SnapshotKey, List<RevLog>>> snapshotCache;
 
 	// config cache
 	private FileConfigCache configCache;
@@ -116,10 +116,10 @@ public class FileConfigDatabase implements ConfigDatabase {
 		this.dbDir = new File(baseDir, name);
 		this.changeset = rev;
 		this.threadLock = new ReentrantLock();
-		this.changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(new ConcurrentHashMap<Integer, Integer>());
-		this.manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(
+		this.changeCache = new WeakReference<ConcurrentMap<Integer, Integer>>(new ConcurrentHashMap<Integer, Integer>());
+		this.manifestCache = new WeakReference<ConcurrentMap<Integer, FileManifest>>(
 				new ConcurrentHashMap<Integer, FileManifest>());
-		this.snapshotCache = new SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(
+		this.snapshotCache = new WeakReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(
 				new ConcurrentHashMap<SnapshotKey, List<RevLog>>());
 		this.configCache = new FileConfigCache(this);
 
@@ -793,7 +793,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ConcurrentMap<Integer, FileManifest> manifestMap = manifestCache.get();
 		if (manifestMap == null) {
 			manifestMap = new ConcurrentHashMap<Integer, FileManifest>();
-			manifestCache = new SoftReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
+			manifestCache = new WeakReference<ConcurrentMap<Integer, FileManifest>>(manifestMap);
 		}
 
 		manifestMap.put(manifest.getId(), manifest);
@@ -811,7 +811,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ConcurrentMap<Integer, Integer> changeMap = changeCache.get();
 		if (changeMap == null) {
 			changeMap = new ConcurrentHashMap<Integer, Integer>();
-			changeCache = new SoftReference<ConcurrentMap<Integer, Integer>>(changeMap);
+			changeCache = new WeakReference<ConcurrentMap<Integer, Integer>>(changeMap);
 		}
 
 		changeMap.put(changeDocId, manifestId);
@@ -840,7 +840,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ConcurrentMap<SnapshotKey, List<RevLog>> snapshotMap = snapshotCache.get();
 		if (snapshotMap == null) {
 			snapshotMap = new ConcurrentHashMap<SnapshotKey, List<RevLog>>();
-			snapshotCache = new SoftReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(snapshotMap);
+			snapshotCache = new WeakReference<ConcurrentMap<SnapshotKey, List<RevLog>>>(snapshotMap);
 		}
 
 		snapshotMap.put(new SnapshotKey(colId, manifestId), snapshot);

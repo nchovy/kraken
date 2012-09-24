@@ -17,11 +17,14 @@ package org.krakenapps.confdb;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.krakenapps.api.PrimitiveParseCallback;
 
 public interface ConfigIterator extends Iterator<Config> {
 	void setParser(ConfigParser parser);
+
+	List<Config> getConfigs(int offset, int limit);
 
 	Collection<Object> getDocuments();
 

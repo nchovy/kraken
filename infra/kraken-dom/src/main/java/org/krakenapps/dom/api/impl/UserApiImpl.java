@@ -33,11 +33,15 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigParser;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.ConfigUpdateRequest;
+import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.DefaultEntityEventListener;
 import org.krakenapps.dom.api.DefaultEntityEventProvider;
 import org.krakenapps.dom.api.EntityEventListener;
@@ -48,6 +52,7 @@ import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
+import org.krakenapps.dom.msgbus.UserPlugin;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
@@ -67,23 +72,37 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	private EntityEventListener<OrganizationUnit> orgUnitEventListener = new DefaultEntityEventListener<OrganizationUnit>() {
 		@Override
 		public void entityRemoving(String domain, OrganizationUnit orgUnit, ConfigTransaction xact, Object state) {
-			List<User> users = new ArrayList<User>(getUsers(domain, orgUnit.getGuid(), false));
-			FilterByLoginNames filter = new FilterByLoginNames();
-			for (User user : users) {
-				user.setOrgUnit(null);
-				filter.addLoginName(user.getLoginName());
-			}
+			List<Config> users = getConfigs(domain, orgUnit.getGuid(), false, null, 0, Integer.MAX_VALUE);
 
 			Transaction x = Transaction.getInstance(xact);
-			if ((state != null) && (state instanceof Boolean) && ((Boolean) state))
-				cfg.updates(x, cls, Arrays.asList((Predicate) filter), users, null);
-			else
+			if ((state != null) && (state instanceof Boolean) && ((Boolean) state)) {
+				List<ConfigUpdateRequest<User>> userUpdates = new ArrayList<ConfigUpdateRequest<User>>();
+
+				for (Config c : users) {
+					User user = c.getDocument(User.class, cfg.getParseCallback(domain));
+					user.setOrgUnit(null);
+					userUpdates.add(new ConfigUpdateRequest<User>(c, user));
+				}
+
+				updateUsers(domain, userUpdates);
+			} else {
+				FilterByLoginNames filter = new FilterByLoginNames();
+				for (Config user : users) {
+					@SuppressWarnings("unchecked")
+					Map<String, Object> doc = (Map<String, Object>) user.getDocument();
+					filter.addLoginName((String) doc.get("login_name"));
+				}
+
 				cfg.removes(x, domain, cls, Arrays.asList((Predicate) filter), null, UserApiImpl.this);
+			}
 		}
 	};
 
 	@Requires
 	private ConfigManager cfg;
+
+	@Requires
+	private ConfigService conf;
 
 	@Requires
 	private OrganizationApi orgApi;
@@ -120,10 +139,12 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 		if (users == null)
 			return new ArrayList<Predicate>();
 
-		List<Predicate> preds = new ArrayList<Predicate>(users.size());
+		FilterByLoginNames filter = new FilterByLoginNames();
+
 		for (User user : users)
-			preds.add(getPred(user.getLoginName()));
-		return preds;
+			filter.addLoginName(user.getLoginName());
+
+		return Arrays.asList((Predicate) filter);
 	}
 
 	@Override
@@ -196,6 +217,39 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
+	public List<Config> getConfigs(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred, int offset,
+			int limit) {
+		if (orgUnitGuid == null && includeChildren)
+			return cfg.matches(domain, cls, pred, offset, limit);
+
+		List<Config> users = cfg.matches(domain, cls, Predicates.and(Predicates.field("orgUnit/guid", orgUnitGuid), pred),
+				offset, limit);
+
+		int dec = Math.min(offset, users.size());
+		if (offset == dec) // offset <= users
+			limit -= users.size() - offset;
+		offset -= dec;
+
+		if (includeChildren) {
+			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
+			for (OrganizationUnit ou : parent.getChildren()) {
+				if (limit <= 0)
+					break;
+
+				List<Config> childUsers = getConfigs(domain, ou.getGuid(), includeChildren, pred, offset, limit);
+				dec = Math.min(offset, childUsers.size());
+				if (offset == dec) // offset <= child users
+					limit -= childUsers.size() - offset;
+				offset -= dec;
+
+				users.addAll(childUsers);
+			}
+		}
+
+		return users;
+	}
+
+	@Override
 	public Collection<User> getUsers(String domain, String domainController) {
 		return cfg.all(domain, cls, Predicates.field("domainController", domainController));
 	}
@@ -251,6 +305,38 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
+	public void updateUsers(String domain, List<ConfigUpdateRequest<User>> userUpdates) {
+		updateUsers(domain, userUpdates, false);
+	}
+
+	@Override
+	public void updateUsers(String domain, List<ConfigUpdateRequest<User>> userUpdates, boolean updatePassword) {
+		if (userUpdates == null || userUpdates.size() == 0)
+			return;
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-dom-" + domain);
+		Transaction xact = new Transaction(domain, db);
+		xact.addEventProvider(cls, this);
+
+		try {
+			for (ConfigUpdateRequest<User> update : userUpdates) {
+				User user = update.doc;
+				user.setUpdated(new Date());
+				if (updatePassword)
+					user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
+				xact.update(update.config, user);
+			}
+			xact.commit("kraken-dom", "updated " + userUpdates.size() + " users");
+		} catch (Throwable e) {
+			xact.rollback();
+			if (e instanceof DOMException)
+				throw (DOMException) e;
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Deprecated
+	@Override
 	public void updateUsers(String domain, Collection<User> users, boolean updatePassword) {
 		if (users == null || users.size() == 0)
 			return;
@@ -261,6 +347,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			if (updatePassword)
 				user.setPassword(hashPassword(user.getSalt(), user.getPassword()));
 		}
+
 		cfg.updates(domain, cls, getPreds(userList), userList, NOT_FOUND, this);
 	}
 

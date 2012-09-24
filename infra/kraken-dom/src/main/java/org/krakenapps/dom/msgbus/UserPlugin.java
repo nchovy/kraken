@@ -18,6 +18,7 @@ package org.krakenapps.dom.msgbus;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +26,11 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
+import org.krakenapps.dom.api.ConfigUpdateRequest;
 import org.krakenapps.dom.api.DOMException;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.UserApi;
@@ -117,20 +121,24 @@ public class UserPlugin {
 			orgUnit = orgUnitApi.findOrganizationUnit("localhost", orgUnitGuid);
 
 		@SuppressWarnings("unchecked")
-		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		Collection<User> users = userApi.getUsers(req.getOrgDomain(), loginNames);
+		HashSet<String> loginNames = new HashSet<String>((Collection<String>) req.get("login_names"));
+		List<Config> configs = userApi.getConfigs(req.getOrgDomain(), null, true, Predicates.in("login_name", loginNames), 0,
+				Integer.MAX_VALUE);
 
 		List<String> failures = new ArrayList<String>();
-		for (User u : users) {
+		List<ConfigUpdateRequest<User>> updates = new ArrayList<ConfigUpdateRequest<User>>();
+		for (Config c : configs) {
 			// try to check role
+			User u = c.getDocument(User.class, conf.getParseCallback("localhost"));
 			if (!adminApi.canManage(req.getOrgDomain(), admin, u)) {
 				failures.add(u.getLoginName());
 				continue;
 			}
 			u.setOrgUnit(orgUnit);
+			updates.add(new ConfigUpdateRequest<User>(c, u));
 		}
 
-		userApi.updateUsers("localhost", users, false);
+		userApi.updateUsers("localhost", updates);
 
 		resp.put("failed_login_names", failures);
 	}

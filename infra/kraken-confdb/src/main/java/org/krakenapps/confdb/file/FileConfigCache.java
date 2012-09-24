@@ -1,6 +1,6 @@
 package org.krakenapps.confdb.file;
 
-import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -12,14 +12,14 @@ public class FileConfigCache implements ConfigCache {
 	private ConcurrentMap<String, Integer> nameMap;
 
 	// collection id to config cache map
-	private ConcurrentMap<Integer, SoftReference<ConcurrentMap<ConfigKey, Config>>> cache;
+	private ConcurrentMap<Integer, WeakReference<ConcurrentMap<ConfigKey, Config>>> cache;
 
 	private FileConfigDatabase db;
 
 	public FileConfigCache(FileConfigDatabase db) {
 		this.db = db;
 		this.nameMap = new ConcurrentHashMap<String, Integer>();
-		this.cache = new ConcurrentHashMap<Integer, SoftReference<ConcurrentMap<ConfigKey, Config>>>();
+		this.cache = new ConcurrentHashMap<Integer, WeakReference<ConcurrentMap<ConfigKey, Config>>>();
 	}
 
 	/**
@@ -32,7 +32,7 @@ public class FileConfigCache implements ConfigCache {
 		if (colId == null)
 			return null;
 
-		SoftReference<ConcurrentMap<ConfigKey, Config>> ref = cache.get(colId);
+		WeakReference<ConcurrentMap<ConfigKey, Config>> ref = cache.get(colId);
 		if (ref == null)
 			return null;
 
@@ -53,7 +53,7 @@ public class FileConfigCache implements ConfigCache {
 		if (colId == null)
 			return;
 
-		SoftReference<ConcurrentMap<ConfigKey, Config>> ref = cache.get(colId);
+		WeakReference<ConcurrentMap<ConfigKey, Config>> ref = cache.get(colId);
 		ConcurrentMap<ConfigKey, Config> configCache = null;
 		if (ref == null) {
 			configCache = createCollectionCache(colId);
@@ -78,7 +78,7 @@ public class FileConfigCache implements ConfigCache {
 
 	private ConcurrentMap<ConfigKey, Config> createCollectionCache(int colId) {
 		ConcurrentMap<ConfigKey, Config> configCache = new ConcurrentHashMap<FileConfigCache.ConfigKey, Config>();
-		SoftReference<ConcurrentMap<ConfigKey, Config>> ref = new SoftReference<ConcurrentMap<ConfigKey, Config>>(configCache);
+		WeakReference<ConcurrentMap<ConfigKey, Config>> ref = new WeakReference<ConcurrentMap<ConfigKey, Config>>(configCache);
 		cache.put(colId, ref);
 		return configCache;
 	}
