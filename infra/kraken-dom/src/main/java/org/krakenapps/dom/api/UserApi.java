@@ -85,7 +85,7 @@ public interface UserApi extends EntityEventProvider<User> {
 
 	void setForcePasswordChanges(Collection<String> loginNames);
 	
-	void cancleForcePasswordChanges(Collection<String> loginNames);
+	void cancelForcePasswordChanges(Collection<String> loginNames);
 	
 	
 

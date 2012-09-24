@@ -531,7 +531,7 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	}
 
 	@Override
-	public void cancleForcePasswordChanges(Collection<String> loginNames) {
+	public void cancelForcePasswordChanges(Collection<String> loginNames) {
 		Collection<User> users = null;
 		
 		if (loginNames == null)

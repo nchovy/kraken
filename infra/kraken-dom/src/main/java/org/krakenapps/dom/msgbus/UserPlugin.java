@@ -326,8 +326,8 @@ public class UserPlugin {
 	
 	@SuppressWarnings("unchecked")
 	@MsgbusMethod
-	public void cancleForcePasswordChanges(Request req, Response resp) {
+	public void cancelForcePasswordChanges(Request req, Response resp) {
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		userApi.cancleForcePasswordChanges(loginNames);
+		userApi.cancelForcePasswordChanges(loginNames);
 	}
 }
