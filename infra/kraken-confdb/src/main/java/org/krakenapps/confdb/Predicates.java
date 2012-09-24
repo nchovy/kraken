@@ -56,7 +56,7 @@ public class Predicates {
 		return new Not(pred);
 	}
 
-	private static Object getValue(Config c, String[] keys) {
+	static Object getValue(Config c, String[] keys) {
 		return getValue(c, keys, false);
 	}
 
