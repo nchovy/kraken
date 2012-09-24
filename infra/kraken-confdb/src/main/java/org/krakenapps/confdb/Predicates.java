@@ -61,7 +61,7 @@ public class Predicates {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static Object getValue(Config c, String[] keys, boolean throwException) {
+	static Object getValue(Config c, String[] keys, boolean throwException) {
 		Object value = c.getDocument();
 		for (String k : keys) {
 			if (!(value instanceof Map)) {

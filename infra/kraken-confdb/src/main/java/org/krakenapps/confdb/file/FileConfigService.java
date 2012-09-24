@@ -33,14 +33,14 @@ import org.krakenapps.confdb.Predicates;
 
 public class FileConfigService implements ConfigService {
 	private File baseDir;
-	private ConcurrentMap<String, ConfigDatabase> instances;
+	private ConcurrentMap<DatabaseCacheKey, ConfigDatabase> instances;
 	private ConfigDatabase metadb;
 
 	public FileConfigService() throws IOException {
 		baseDir = new File(System.getProperty("kraken.data.dir"), "kraken-confdb");
 		baseDir.mkdirs();
 		metadb = new FileConfigDatabase(baseDir, "confdb");
-		instances = new ConcurrentHashMap<String, ConfigDatabase>();
+		instances = new ConcurrentHashMap<DatabaseCacheKey, ConfigDatabase>();
 	}
 
 	@Override
@@ -65,13 +65,18 @@ public class FileConfigService implements ConfigService {
 	@Override
 	public ConfigDatabase getDatabase(String name, Integer rev) {
 		try {
+			DatabaseCacheKey cacheKey = new DatabaseCacheKey(name, rev);
+			ConfigDatabase db = instances.get(cacheKey);
+			if (db != null)
+				return db;
+
 			ConfigCollection col = metadb.ensureCollection("database");
 			Config c = col.findOne(Predicates.field("name", name));
 			if (c == null)
 				return null;
 
-			ConfigDatabase db = new FileConfigDatabase(baseDir, name, rev);
-			ConfigDatabase old = instances.putIfAbsent(name, db);
+			db = new FileConfigDatabase(baseDir, name, rev);
+			ConfigDatabase old = instances.putIfAbsent(cacheKey, db);
 			return old != null ? old : db;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -99,7 +104,7 @@ public class FileConfigService implements ConfigService {
 			col.add(PrimitiveConverter.serialize(meta));
 
 			ConfigDatabase db = new FileConfigDatabase(baseDir, name);
-			instances.putIfAbsent(name, db);
+			instances.putIfAbsent(new DatabaseCacheKey(name, null), db);
 			return db;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -116,7 +121,7 @@ public class FileConfigService implements ConfigService {
 
 			col.remove(c);
 
-			FileConfigDatabase db = (FileConfigDatabase) instances.remove(name);
+			FileConfigDatabase db = (FileConfigDatabase) instances.remove(new DatabaseCacheKey(name, null));
 
 			if (db == null)
 				db = new FileConfigDatabase(baseDir, name);
@@ -137,6 +142,47 @@ public class FileConfigService implements ConfigService {
 
 		public DatabaseMetadata(String name) {
 			this.name = name;
+		}
+	}
+
+	private static class DatabaseCacheKey {
+		private String name;
+		private Integer rev;
+
+		public DatabaseCacheKey(String name, Integer rev) {
+			this.name = name;
+			this.rev = rev;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((name == null) ? 0 : name.hashCode());
+			result = prime * result + ((rev == null) ? 0 : rev.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			DatabaseCacheKey other = (DatabaseCacheKey) obj;
+			if (name == null) {
+				if (other.name != null)
+					return false;
+			} else if (!name.equals(other.name))
+				return false;
+			if (rev == null) {
+				if (other.rev != null)
+					return false;
+			} else if (!rev.equals(other.rev))
+				return false;
+			return true;
 		}
 	}
 }
