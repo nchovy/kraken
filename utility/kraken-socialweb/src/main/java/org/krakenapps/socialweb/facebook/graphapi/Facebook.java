@@ -6,7 +6,18 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 
+import net.sf.json.JSONArray;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpConnectionManager;
+import org.apache.commons.httpclient.NameValuePair;
+import org.apache.commons.httpclient.SimpleHttpConnectionManager;
+import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.params.HttpConnectionManagerParams;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -72,6 +83,23 @@ public class Facebook {
 		return new JSONObject(me);
 	}
 	
+	@SuppressWarnings("restriction")
+	public ArrayList<JSONArray> getPostComment(String postid) throws Exception{
+		ArrayList<JSONArray> commentsArray = new ArrayList<JSONArray>();
+		JSONObject tmpComments;
+		String url = graph+""+postid+ "/comments?access_token="+accessToken;
+		tmpComments = getPaging(url);
+		commentsArray.add((JSONArray)tmpComments.get("data"));
+		if(tmpComments.containsKey("paging")){
+			while(((JSONObject)tmpComments.get("paging")).containsKey("next")){
+				tmpComments = getPaging( ((JSONObject)tmpComments.get("paging")).getString("next") );
+				if(((JSONArray)tmpComments.get("data")).size() >0){
+					commentsArray.add((JSONArray)tmpComments.get("data"));
+				}
+			}
+		}
+		return commentsArray;
+	}
 	
 	//TODO fql design
 	public JSONObject getFqlOnlinePresence(String userId) throws IOException{
