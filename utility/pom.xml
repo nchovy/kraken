@@ -18,5 +18,6 @@
 		<module>kraken-query-browser</module>
 		<module>kraken-util</module>
 		<module>kraken-util-directoryfile</module>
-	</modules>
+    <module>kraken-socialweb</module>
+  </modules>
 </project>
