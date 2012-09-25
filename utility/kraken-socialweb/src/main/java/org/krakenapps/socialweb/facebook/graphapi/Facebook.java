@@ -25,7 +25,7 @@ import org.json.JSONObject;
 public class Facebook {
 // regular formula is https://graph.facebook.com/ + id + /object + ?access_token=YOUR_ACCESS_TOKEN
 	String graph = "https://graph.facebook.com/";
-	String fql = graph+"/fql?";
+	String fql = graph+"/fql?q=";
 	String appId;
 	String accessToken;
 	String callbackURL;
@@ -35,7 +35,7 @@ public class Facebook {
 		accessToken = token;
 		callbackURL = URL;
 	}
-	public JSONObject getInfo(String userId, String objectId) throws IOException{
+	public JSONObject getBasicInfo(String userId, String objectId) throws IOException{
 		URL url = new URL(graph+userId+"/"+objectId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -50,7 +50,7 @@ public class Facebook {
 		return new JSONObject(me);
 	}
 	
-	public JSONObject getInfo(String userId) throws IOException, JSONException{
+	public JSONObject getBasicInfo(String userId) throws IOException, JSONException{
 		URL url = new URL(graph+userId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -103,7 +103,7 @@ public class Facebook {
 	
 	//TODO fql design
 	public JSONObject getFqlOnlinePresence(String userId) throws IOException{
-		URL url = new URL(fql+"?q=SELECT%20online_presence%20FROM%20user%20WHERE%20uid=me()&access_token="+accessToken);
+		URL url = new URL(fql+"SELECT%20online_presence%20FROM%20user%20WHERE%20uid=me()&access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
 		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
