@@ -16,7 +16,7 @@
 package org.krakenapps.dom.api;
 
 import java.util.Collection;
-import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.confdb.ConfigTransaction;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	private final Logger logger = LoggerFactory.getLogger(DefaultEntityEventProvider.class);
-	private WeakHashMap<EntityEventListener<T>, Integer> listeners = new WeakHashMap<EntityEventListener<T>, Integer>();
+	private CopyOnWriteArraySet<EntityEventListener<T>> listeners = new CopyOnWriteArraySet<EntityEventListener<T>>();
 
 	@Override
 	public void addEntityEventListener(EntityEventListener<T> listener) {
@@ -32,7 +32,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			logger.warn("kraken dom: listener is null at subscribe()");
 			return;
 		}
-		listeners.put(listener, null);
+		listeners.add(listener);
 	}
 
 	@Override
@@ -49,7 +49,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityAdded(String domain, T t, Object state) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				try {
 					listener.entityAdded(domain, t, state);
@@ -61,7 +61,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntitiesAdded(String domain, Collection<EntityState> entities) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				try {
 					listener.entitiesAdded(domain, entities);
@@ -77,7 +77,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityUpdated(String domain, T t, Object state) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				try {
 					listener.entityUpdated(domain, t, state);
@@ -89,7 +89,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntitiesUpdated(String domain, Collection<EntityState> entities) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				try {
 					listener.entitiesUpdated(domain, entities);
@@ -106,7 +106,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 
 	public void fireEntityRemoving(String domain, T t, ConfigTransaction xact, Object state) {
 		// DO NOT add try-catch. it's intentional exception throwing
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				listener.entityRemoving(domain, t, xact, state);
 			}
@@ -115,7 +115,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 
 	public void fireEntitiesRemoving(String domain, Collection<EntityState> entities, ConfigTransaction xact) {
 		// DO NOT add try-catch. it's intentional exception throwing
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				listener.entitiesRemoving(domain, entities, xact);
 			}
@@ -127,7 +127,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntityRemoved(String domain, T t, Object state) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				try {
 					listener.entityRemoved(domain, t, state);
@@ -139,7 +139,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 	}
 
 	public void fireEntitiesRemoved(String domain, Collection<EntityState> entities) {
-		for (EntityEventListener<T> listener : listeners.keySet()) {
+		for (EntityEventListener<T> listener : listeners) {
 			if (listener != null) {
 				try {
 					listener.entitiesRemoved(domain, entities);
@@ -149,5 +149,4 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			}
 		}
 	}
-
 }

@@ -74,14 +74,26 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	@Override
 	public <T> int count(String domain, Class<T> cls, Predicate pred) {
-		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
-		return it.count();
+		ConfigIterator it = null;
+		try {
+			it = getDatabase(domain).ensureCollection(cls).find(pred);
+			return it.count();
+		} finally {
+			if (it != null)
+				it.close();
+		}
 	}
 
 	@Override
 	public List<Config> matches(String domain, Class<?> cls, Predicate pred, int offset, int limit) {
-		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
-		return it.getConfigs(offset, limit);
+		ConfigIterator it = null;
+		try {
+			it = getDatabase(domain).ensureCollection(cls).find(pred);
+			return it.getConfigs(offset, limit);
+		} finally {
+			if (it != null)
+				it.close();
+		}
 	}
 
 	@Override
@@ -91,16 +103,28 @@ public class ConfigManagerImpl implements ConfigManager {
 
 	@Override
 	public <T> Collection<T> all(String domain, Class<T> cls, Predicate pred) {
-		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
-		it.setParser(parsers.get(cls));
-		return it.getDocuments(cls, getCallback(domain));
+		ConfigIterator it = null;
+		try {
+			it = getDatabase(domain).ensureCollection(cls).find(pred);
+			it.setParser(parsers.get(cls));
+			return it.getDocuments(cls, getCallback(domain));
+		} finally {
+			if (it != null)
+				it.close();
+		}
 	}
 
 	@Override
 	public <T> Collection<T> all(String domain, Class<T> cls, Predicate pred, int offset, int limit) {
-		ConfigIterator it = getDatabase(domain).ensureCollection(cls).find(pred);
-		it.setParser(parsers.get(cls));
-		return it.getDocuments(cls, getCallback(domain), offset, limit);
+		ConfigIterator it = null;
+		try {
+			it = getDatabase(domain).ensureCollection(cls).find(pred);
+			it.setParser(parsers.get(cls));
+			return it.getDocuments(cls, getCallback(domain), offset, limit);
+		} finally {
+			if (it != null)
+				it.close();
+		}
 	}
 
 	@Override
