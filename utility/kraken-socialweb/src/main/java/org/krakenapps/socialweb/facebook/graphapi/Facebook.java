@@ -7,24 +7,19 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Map;
 
-import net.sf.json.JSONArray;
 
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpConnectionManager;
-import org.apache.commons.httpclient.NameValuePair;
-import org.apache.commons.httpclient.SimpleHttpConnectionManager;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.params.HttpConnectionManagerParams;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Restrictions;
 
 
 public class Facebook {
 // regular formula is https://graph.facebook.com/ + id + /object + ?access_token=YOUR_ACCESS_TOKEN
 	String graph = "https://graph.facebook.com/";
+	String search = "https://graph.facebook.com/search?";
 	String fql = graph+"/fql?q=";
 	String appId;
 	String accessToken;
@@ -40,25 +35,25 @@ public class Facebook {
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
 		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-		StringBuffer me = new StringBuffer();
+		StringBuffer bf = new StringBuffer();
 		while(true){
 			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
-			me.append(tmp);
+			bf.append(tmp);
 		}
-		return new JSONObject(me);
+		return new JSONObject(bf);
 	}
 	
 	public JSONObject getBasicInfo(String userId) throws IOException, JSONException{
 		URL url = new URL(graph+userId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
-		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		BufferedReader bf = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 		
 		StringBuffer me = new StringBuffer();
 		while(true){
-			String tmp = br.readLine();
+			String tmp = bf.readLine();
 			if(tmp == null) 
 				break;
 			me.append(tmp);
@@ -73,14 +68,14 @@ public class Facebook {
 		conn.setDoOutput(true);
 		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 		
-		StringBuffer me = new StringBuffer();
+		StringBuffer bf = new StringBuffer();
 		while(true){
 			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
-			me.append(tmp);
+			bf.append(tmp);
 		}
-		return new JSONObject(me);
+		return new JSONObject(bf);
 	}
 	
 	@SuppressWarnings("restriction")
@@ -93,12 +88,30 @@ public class Facebook {
 		if(tmpComments.containsKey("paging")){
 			while(((JSONObject)tmpComments.get("paging")).containsKey("next")){
 				tmpComments = getPaging( ((JSONObject)tmpComments.get("paging")).getString("next") );
-				if(((JSONArray)tmpComments.get("data")).size() >0){
+				if(((JSONArray)tmpComments.get("data")).length() >0){
 					commentsArray.add((JSONArray)tmpComments.get("data"));
 				}
 			}
 		}
 		return commentsArray;
+	}
+	/*designed searching method*/
+	
+	public JSONObject getSearchResult(String searchCommend , String types) throws IOException{
+		URL url = new URL(graph+"q="+searchCommend+"&type="+types +"?access_token="+accessToken);
+		URLConnection conn = url.openConnection();
+		conn.setDoOutput(true);
+		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		
+		StringBuffer bf = new StringBuffer();
+		while(true){
+			String tmp = br.readLine();
+			if(tmp == null) 
+				break;
+			bf.append(tmp);
+		}
+		new JSONObject(bf);
+		return new JSONObject(bf);
 	}
 	
 	//TODO fql design
@@ -108,15 +121,15 @@ public class Facebook {
 		conn.setDoOutput(true);
 		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 		
-		StringBuffer me = new StringBuffer();
+		StringBuffer bf = new StringBuffer();
 		while(true){
 			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
-			me.append(tmp);
+			bf.append(tmp);
 		}
-		new JSONObject(me);
-		return new JSONObject(me);
+		new JSONObject(bf);
+		return new JSONObject(bf);
 	}
 	//getter and setter
 	public String getGraph() {
@@ -153,3 +166,4 @@ public class Facebook {
 	
 	
 }
+

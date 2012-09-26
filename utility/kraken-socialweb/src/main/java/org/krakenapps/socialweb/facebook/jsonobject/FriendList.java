@@ -1,5 +1,13 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
-public class FriendList {
+import org.json.JSONObject;
+
+public class FriendList implements FacebookGraphObject{
+
+	@Override
+	public int parseJson(JSONObject json) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
 }

@@ -1,10 +1,11 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
 
-public class AchievementInstance {
+public class AchievementInstance implements FacebookGraphObject{
 
 	String id;
 	From from; // object containing the id and name of user
@@ -68,6 +69,12 @@ public class AchievementInstance {
 
 	public void setComments(Comment comments) {
 		this.comments = comments;
+	}
+
+	@Override
+	public int parseJson(JSONObject json) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }

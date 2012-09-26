@@ -1,11 +1,12 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 import java.util.ArrayList;
 
 
 
-public class Checkin {
+public class Checkin implements FacebookGraphObject{
 
 	String id;
 	From from;
@@ -20,5 +21,10 @@ public class Checkin {
 	public class Connections{
 		ArrayList<Comment> comments;
 		Likes likes;
+	}
+	@Override
+	public int parseJson(JSONObject json) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

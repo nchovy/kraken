@@ -1,9 +1,10 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
-public class Album {
+public class Album implements FacebookGraphObject{
 
 	String id;
 	From from;
@@ -21,5 +22,10 @@ public class Album {
 	private class Connection{
 		Photo photos;
 		
+	}
+	@Override
+	public int parseJson(JSONObject json) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

@@ -1,8 +1,9 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
-public class Comment {
+public class Comment implements FacebookGraphObject{
 
 	String id;
 	From from;
@@ -66,6 +67,12 @@ public class Comment {
 
 	public void setType(String type) {
 		Type = type;
+	}
+
+	@Override
+	public int parseJson(JSONObject json) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }
