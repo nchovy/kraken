@@ -114,17 +114,30 @@ public class Importer {
 
 			t.back();
 
-			while (true) {
-				@SuppressWarnings("unchecked")
-				Object doc = removeType((List<Object>) parse((JSONArray) t.nextValue()));
-				ConfigEntry configEntry = writeConfigEntry(doc, collectionEntry.getId());
-				configChanges.add(new ConfigChange(CommitOp.CreateDoc, colName, collectionEntry.getId(), configEntry.getDocId()));
-				manifest.add(configEntry);
+			int collectionId = collectionEntry.getId();
+			RevLogWriter writer = null;
+			try {
+				File logFile = new File(db.getDbDirectory(), "col" + collectionId + ".log");
+				File datFile = new File(db.getDbDirectory(), "col" + collectionId + ".dat");
 
-				// check next list item
-				char delimiter = t.nextClean();
-				if (delimiter == ']')
-					break;
+				writer = new RevLogWriter(logFile, datFile);
+
+				while (true) {
+					@SuppressWarnings("unchecked")
+					Object doc = removeType((List<Object>) parse((JSONArray) t.nextValue()));
+					ConfigEntry configEntry = writeConfigEntry(writer, doc, collectionId);
+					configChanges.add(new ConfigChange(CommitOp.CreateDoc, colName, collectionEntry.getId(), configEntry
+							.getDocId()));
+					manifest.add(configEntry);
+
+					// check next list item
+					char delimiter = t.nextClean();
+					if (delimiter == ']')
+						break;
+				}
+			} finally {
+				if (writer != null)
+					writer.close();
 			}
 
 			// end of list
@@ -188,28 +201,17 @@ public class Importer {
 		return manifestId;
 	}
 
-	private ConfigEntry writeConfigEntry(Object doc, int collectionId) throws IOException {
+	private ConfigEntry writeConfigEntry(RevLogWriter writer, Object doc, int collectionId) throws IOException {
 
-		RevLogWriter writer = null;
-		try {
-			File logFile = new File(db.getDbDirectory(), "col" + collectionId + ".log");
-			File datFile = new File(db.getDbDirectory(), "col" + collectionId + ".dat");
+		ByteBuffer bb = encodeDocument(doc);
+		RevLog log = new RevLog();
+		log.setDoc(bb.array());
+		log.setRev(1);
+		log.setOperation(CommitOp.CreateDoc);
+		int docId = writer.write(log);
+		int index = writer.count() - 1;
 
-			writer = new RevLogWriter(logFile, datFile);
-
-			ByteBuffer bb = encodeDocument(doc);
-			RevLog log = new RevLog();
-			log.setDoc(bb.array());
-			log.setRev(1);
-			log.setOperation(CommitOp.CreateDoc);
-			int docId = writer.write(log);
-			int index = writer.count() - 1;
-
-			return new ConfigEntry(collectionId, docId, 0, index);
-		} finally {
-			if (writer != null)
-				writer.close();
-		}
+		return new ConfigEntry(collectionId, docId, 0, index);
 	}
 
 	private ByteBuffer encodeDocument(Object doc) {
