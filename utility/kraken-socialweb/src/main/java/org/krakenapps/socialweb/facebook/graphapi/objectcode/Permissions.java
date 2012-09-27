@@ -14,8 +14,8 @@ public enum Permissions {
 	 * 
 	 * 5-6 this field represent sequence
 	 *  
-	 *  for example 0x101001 is represented first sequence user has permission that user permissions among "user and friend" category.
-	 *              0x202002 is represented first sequence user has permission that friends permissions among "user and friend" category.    
+	 *  for example 0x101001 is represented as first sequence user has permission that user permissions among "user and friend" category.
+	 *              0x202002 is represented as second sequence user has permission that friends permissions among "user and friend" category.    
 	 * 
 	 * */
 	user_about_me(0x101001),

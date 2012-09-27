@@ -14,6 +14,10 @@ public class AchievementInstance implements FacebookGraphObject{
 	Achievement achievement;
 	Likes likes;
 	Comment comments;
+	
+	class Connections{
+		// this Class has no connections
+	};
 
 	public String getId() {
 		return id;

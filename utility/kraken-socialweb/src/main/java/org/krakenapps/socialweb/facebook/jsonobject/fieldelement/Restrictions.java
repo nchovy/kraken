@@ -2,10 +2,20 @@ package org.krakenapps.socialweb.facebook.jsonobject.fieldelement;
 
 public class Restrictions {
 
+	String id;
 	String type;
 	String location;
 	String age;
 	String ageDistr;
+
+	
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
 
 	public String getType() {
 		return type;

@@ -6,6 +6,8 @@ public class Achievement {
 	String url;
 	String type;
 	String title;
+	String description;
+	String update_time;
 
 	public String getId() {
 		return id;

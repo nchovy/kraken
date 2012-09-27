@@ -21,6 +21,15 @@ public class Application implements FacebookGraphObject{
 	// Migration?
 	String namespace;
 	Restrictions restrictions;
+	
+	//TODO: add lots of objects
+	class Connection{
+		
+		
+	}
+	
+	
+	
 	@Override
 	public int parseJson(JSONObject json) {
 		// TODO Auto-generated method stub
