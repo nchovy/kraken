@@ -61,6 +61,27 @@ public class Facebook {
 		new JSONObject(me);
 		return new JSONObject(me);
 	}
+	/*
+	 * use following getSpecificInfo function like this Facebook fb = new Facebook();
+	 * fb.getSpecificInfo(Album.getId+"/"+Album.Connection.CONN_photos);
+	 * fb.getSpecificInfo(Album.getId+"/"+Album.Connection.CONN_likes); 
+	 * Album is object parsed json 
+	 * */
+	public JSONObject getSpecificInfo(String objectId) throws IOException{
+		URL url = new URL(graph+objectId+"?access_token="+accessToken);
+		URLConnection conn = url.openConnection();
+		conn.setDoOutput(true);
+		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		StringBuffer bf = new StringBuffer();
+		while(true){
+			String tmp = br.readLine();
+			if(tmp == null) 
+				break;
+			bf.append(tmp);
+		}
+		return new JSONObject(bf);
+	}
+	
 	
 	public JSONObject getPaging(String nextUrl) throws Exception{
 		URL url = new URL(nextUrl);

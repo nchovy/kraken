@@ -9,6 +9,23 @@ public class Achievement {
 	String description;
 	String update_time;
 
+	
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public String getUpdate_time() {
+		return update_time;
+	}
+
+	public void setUpdate_time(String update_time) {
+		this.update_time = update_time;
+	}
+
 	public String getId() {
 		return id;
 	}

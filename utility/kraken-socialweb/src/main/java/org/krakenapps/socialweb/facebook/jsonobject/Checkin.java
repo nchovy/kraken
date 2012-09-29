@@ -8,6 +8,16 @@ import java.util.ArrayList;
 
 public class Checkin implements FacebookGraphObject{
 
+	public Checkin(){
+		fbConnection = new FbConnection();
+		from = new From();
+		tags = new From();
+		place = new Place();
+		application = new CheckinApplication();
+		likes = new Likes();
+		comments = new ArrayList<Comment>(); // limited number object.
+	}
+	
 	String id;
 	From from;
 	From tags;
@@ -18,9 +28,17 @@ public class Checkin implements FacebookGraphObject{
 	String message;
 	ArrayList<Comment> comments;
 	String type;
-	public class Connections{
+	FbConnection fbConnection;
+	public class FbConnection{
 		ArrayList<Comment> comments;
 		Likes likes;
+		public FbConnection(){
+			comments = new ArrayList<Comment>();
+			likes = new Likes();
+		}
+		
+		
+		
 	}
 	@Override
 	public int parseJson(JSONObject json) {

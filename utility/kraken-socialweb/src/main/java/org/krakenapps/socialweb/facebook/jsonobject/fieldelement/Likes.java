@@ -7,7 +7,7 @@ public class Likes {
 	int count;
 	ArrayList<From> likeList;
 
-	Likes() {
+	public Likes() {
 		this.count = 0;
 		this.likeList = new ArrayList<From>();
 	}

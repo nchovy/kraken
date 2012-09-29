@@ -6,7 +6,6 @@ import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
 public class AchievementInstance implements FacebookGraphObject{
-
 	String id;
 	From from; // object containing the id and name of user
 	String createdTime; //
@@ -14,8 +13,18 @@ public class AchievementInstance implements FacebookGraphObject{
 	Achievement achievement;
 	Likes likes;
 	Comment comments;
+	FbConnection fbConnection;
 	
-	class Connections{
+	public AchievementInstance(){
+		from = new From();
+		likes = new Likes();
+		achievement = new Achievement();
+		comments = new Comment();
+		fbConnection = new FbConnection();
+	}
+
+	
+	class FbConnection{
 		// this Class has no connections
 	};
 

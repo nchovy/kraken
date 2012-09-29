@@ -5,9 +5,6 @@ import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
 public class Album implements FacebookGraphObject{
-	public Album(){
-	}
-
 	String id;
 	From from;
 	String name;
@@ -21,17 +18,18 @@ public class Album implements FacebookGraphObject{
 	String createdTime;
 	String updatedTime;
 	boolean canUpload;
-	Connection connection;
-	class Connection{
+	FbConnection fbConnection;
+	class FbConnection{
 		Photo photos;
 		Likes likes;
 		Comment comments;
+		String pictures; // redirect url
+		
 		public String CONN_photos = "photos";
 		public String CONN_likes = "likes";
 		public String CONN_comments = "comments";
-		/*
-		 Album Class has Pictures Connection, but we can't Support Redirect function.
-		*/
+		public String CONN_pictures = "pictures";
+		
 		public Photo getPhotos() {
 			return photos;
 		}
@@ -50,11 +48,21 @@ public class Album implements FacebookGraphObject{
 		public void setComments(Comment comments) {
 			this.comments = comments;
 		}
-		
+		public String getPictures() {
+			return pictures;
+		}
+		public void setPictures(String pictures) {
+			this.pictures = pictures;
+		}
+	}
+	public Album(){
+		from = new From();
+		fbConnection = new FbConnection();
 	}
 	@Override
 	public int parseJson(JSONObject json) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+	
 }
