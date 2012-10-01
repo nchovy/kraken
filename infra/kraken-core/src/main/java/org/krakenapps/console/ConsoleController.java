@@ -262,7 +262,9 @@ public class ConsoleController {
 				return;
 			dataList.remove(cursorPos - 1);
 			decreaseCursorPos();
-			out.print(new MoveCode(MoveCode.Direction.Left, 1));
+
+			if (sc.isEchoOn())
+				out.print(new MoveCode(MoveCode.Direction.Left, 1));
 		}
 
 		out.print(new EraseLineCode(Option.CursorToEnd));
