@@ -1597,4 +1597,10 @@ public class JSONObject {
 			throw new JSONException(e);
 		}
 	}
+	
+	/*added by tgnice@nchovy.com*/
+	public boolean containsKey(String key){
+		return map.containsKey(key);
+	}
+	
 }
