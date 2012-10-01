@@ -10,6 +10,6 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>kraken-api</artifactId>
 	<name>Kraken API</name>
-	<version>1.16.0</version>
+	<version>2.0.0</version>
 	<url>http://maven.apache.org</url>
 </project>

@@ -25,6 +25,7 @@ import org.krakenapps.ansicode.MoveCode;
 import org.krakenapps.ansicode.MoveToCode;
 import org.krakenapps.ansicode.EraseLineCode.Option;
 import org.krakenapps.api.FunctionKeyEvent;
+import org.krakenapps.api.ScriptAutoCompletion;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptOutputStream;
 import org.krakenapps.api.FunctionKeyEvent.KeyCode;
@@ -88,17 +89,21 @@ public class ConsoleController {
 
 	private void doAutoCompletion(String input) {
 		ScriptOutputStream out = sc.getOutputStream();
-		List<String> terms = autoComplete.search(input);
+		String lastToken = getLastToken(input);
+
+		List<ScriptAutoCompletion> terms = autoComplete.search(sc.getSession(), input);
 		if (terms.size() > 1) {
 			out.print("\r\n");
-			for (String term : terms) {
-				out.print(term);
+			for (ScriptAutoCompletion term : terms) {
+				out.print(term.getSuggestion());
 				out.print(" ");
 			}
 			out.print("\r\n");
 			sc.printPrompt();
 			String commonPrefix = extractCommonPrefix(terms);
-			String remainingCommonPrefix = commonPrefix.substring(input.length() - input.lastIndexOf('.') - 1);
+			String remainingCommonPrefix = "";
+			if (commonPrefix.length() >= lastToken.length())
+				remainingCommonPrefix = commonPrefix.substring(lastToken.length());
 			String semiCompletedLine = input + remainingCommonPrefix;
 			if (semiCompletedLine.length() != 0) {
 				out.print(semiCompletedLine);
@@ -108,18 +113,9 @@ public class ConsoleController {
 				increaseCursorPos();
 			}
 		} else if (terms.size() == 1) {
-			String term = terms.get(0);
+			String term = terms.get(0).getCompletion();
 
-			int cutLength = 0;
-			int dotPos = input.indexOf('.');
-			if (dotPos < 0) {
-				// alias auto-completion
-				cutLength = input.length();
-			} else {
-				cutLength = input.length() - dotPos - 1;
-			}
-
-			String completion = term.substring(cutLength);
+			String completion = term.substring(lastToken.length());
 			if (completion.length() > 0) {
 				for (int i = 0; i < completion.length(); i++) {
 					dataList.add(cursorPos, Character.toString(completion.charAt(i)));
@@ -130,16 +126,35 @@ public class ConsoleController {
 		}
 	}
 
-	private String extractCommonPrefix(List<String> terms) {
+	private String getLastToken(String input) {
+		String[] tokens = ScriptArgumentParser.tokenize(input);
+		if (tokens.length == 0)
+			return "";
+
+		String lastToken = "";
+		if (!input.endsWith(" ")) {
+			lastToken = tokens[tokens.length - 1];
+
+			if (tokens.length == 1) {
+				int p = lastToken.indexOf('.');
+				if (p > 0)
+					lastToken = lastToken.substring(p + 1);
+			}
+		}
+
+		return lastToken;
+	}
+
+	private String extractCommonPrefix(List<ScriptAutoCompletion> terms) {
 		if (terms.size() == 0)
 			return new String("");
 		else if (terms.size() == 1)
-			return terms.get(0);
+			return terms.get(0).getCompletion();
 		else {
-			String commonPrefix = terms.get(0);
+			String commonPrefix = terms.get(0).getCompletion();
 
 			for (int i = 1; i < terms.size(); ++i) {
-				String rhs = terms.get(i);
+				String rhs = terms.get(i).getCompletion();
 				for (int endPos = commonPrefix.length(); endPos >= 0; --endPos) {
 					if (endPos == 0) {
 						return new String("");

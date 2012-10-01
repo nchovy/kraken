@@ -16,6 +16,7 @@
 package org.krakenapps.script;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -25,8 +26,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.krakenapps.api.ScriptSession;
 import org.krakenapps.console.ConsoleHistoryManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ScriptSessionImpl implements ScriptSession {
+	private final Logger logger = LoggerFactory.getLogger(ScriptSessionImpl.class);
 	private static final String hostname;
 
 	private ConcurrentMap<String, Object> properties;
@@ -50,7 +54,16 @@ public class ScriptSessionImpl implements ScriptSession {
 	@Override
 	public String getPrompt() {
 		File dir = (File) getProperty("dir");
-		String workingDirectory = dir.getName();
+		String workingDirectory = null;
+		try {
+			if (dir != null) {
+				dir = dir.getAbsolutePath().endsWith(File.separator) ? dir.getParentFile() : dir;
+				workingDirectory = dir.getCanonicalFile().getName();
+			}
+		} catch (IOException e) {
+			logger.error("kraken core: cannot resolve working directory", e);
+		}
+
 		if (workingDirectory == null || workingDirectory.isEmpty())
 			workingDirectory = "/";
 

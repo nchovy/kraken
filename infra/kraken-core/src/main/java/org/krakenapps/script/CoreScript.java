@@ -20,8 +20,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,10 +44,12 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.krakenapps.ansicode.ClearScreenCode;
+import org.krakenapps.ansicode.ClearScreenCode.Option;
 import org.krakenapps.ansicode.MoveToCode;
 import org.krakenapps.ansicode.SetColorCode;
-import org.krakenapps.ansicode.ClearScreenCode.Option;
 import org.krakenapps.ansicode.SetColorCode.Color;
+import org.krakenapps.api.DirectoryAutoCompleter;
+import org.krakenapps.api.FileAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -107,6 +109,7 @@ public class CoreScript implements Script {
 
 	}
 
+	@ScriptUsage(description = "print file content", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = FileAutoCompleter.class) })
 	public void cat(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 		File f = canonicalize(dir, args[0]);
@@ -136,6 +139,7 @@ public class CoreScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "edit file content", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = FileAutoCompleter.class) })
 	public void edit(String[] args) {
 		try {
 			File dir = (File) context.getSession().getProperty("dir");
@@ -172,11 +176,14 @@ public class CoreScript implements Script {
 		}
 	}
 
-	public void pwd(String[] args) {
+	public void pwd(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
-		context.println(dir.getAbsolutePath());
+		context.println(dir.getCanonicalPath());
 	}
 
+	@ScriptUsage(description = "copy file", arguments = {
+			@ScriptArgument(name = "source file path", type = "string", description = "source file path", autocompletion = FileAutoCompleter.class),
+			@ScriptArgument(name = "destination file path", type = "string", description = "destination file path", autocompletion = FileAutoCompleter.class) })
 	public void cp(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
@@ -200,7 +207,8 @@ public class CoreScript implements Script {
 		}
 	}
 
-	public void rm(String[] args) {
+	@ScriptUsage(description = "delete file", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = FileAutoCompleter.class) })
+	public void rm(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
 		for (String token : args) {
@@ -212,7 +220,10 @@ public class CoreScript implements Script {
 		}
 	}
 
-	public void mv(String[] args) {
+	@ScriptUsage(description = "move file", arguments = {
+			@ScriptArgument(name = "source file path", type = "string", description = "source file path", autocompletion = FileAutoCompleter.class),
+			@ScriptArgument(name = "destination file path", type = "string", description = "destination file path", autocompletion = FileAutoCompleter.class) })
+	public void mv(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
 		File from = canonicalize(dir, args[0]);
@@ -226,7 +237,7 @@ public class CoreScript implements Script {
 			from.renameTo(to);
 	}
 
-	public void ls(String[] args) {
+	public void ls(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 		List<File> targets = new LinkedList<File>();
 		if (args.length == 0)
@@ -250,20 +261,14 @@ public class CoreScript implements Script {
 		}
 	}
 
-	public void cd(String[] args) {
+	@ScriptUsage(description = "change directory", arguments = { @ScriptArgument(name = "path", type = "string", description = "absolute or relative directory path", autocompletion = DirectoryAutoCompleter.class) })
+	public void cd(String[] args) throws IOException {
 		if (args.length == 0)
 			return;
 
 		File dir = (File) context.getSession().getProperty("dir");
 
-		File newDir = null;
-		if (args[0].equals("..")) {
-			if (dir.getParentFile() != null)
-				newDir = dir.getParentFile();
-			else
-				newDir = dir;
-		} else
-			newDir = canonicalize(dir, args[0]);
+		File newDir = canonicalize(dir, args[0]);
 
 		if (!(newDir.exists() && newDir.isDirectory()))
 			context.println("No such file or directory");
@@ -271,11 +276,11 @@ public class CoreScript implements Script {
 			context.getSession().setProperty("dir", newDir);
 	}
 
-	private File canonicalize(File dir, String path) {
+	private File canonicalize(File dir, String path) throws IOException {
 		if (path.startsWith("/"))
-			return new File(path);
+			return new File(path).getCanonicalFile();
 		else
-			return new File(dir, path);
+			return new File(dir, path).getCanonicalFile();
 	}
 
 	public void date(String[] args) {

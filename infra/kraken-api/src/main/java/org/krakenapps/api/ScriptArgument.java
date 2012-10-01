@@ -15,4 +15,6 @@ public @interface ScriptArgument {
 	String description() default "";
 
 	boolean optional() default false;
+
+	Class<?> autocompletion() default ScriptAutoCompletionHelper.class;
 }

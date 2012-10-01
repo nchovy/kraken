@@ -18,10 +18,16 @@ package org.krakenapps.console;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.krakenapps.api.Script;
+import org.krakenapps.api.ScriptArgument;
+import org.krakenapps.api.ScriptAutoCompletion;
+import org.krakenapps.api.ScriptAutoCompletionHelper;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.api.ScriptSession;
+import org.krakenapps.api.ScriptUsage;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -33,47 +39,69 @@ public class ConsoleAutoComplete {
 		this.bundleContext = bundleContext;
 	}
 
-	public List<String> search(String prefix) {
-		List<String> terms = new ArrayList<String>();
-		if (!isFirstTerm(prefix)) {
-			return terms;
-		}
+	public List<ScriptAutoCompletion> search(ScriptSession session, String prefix) {
+		String[] tokens = ScriptArgumentParser.tokenize(prefix);
 
-		if (isScriptFactoryDetermined(prefix)) {
-			addScriptMethods(prefix, terms);
+		List<ScriptAutoCompletion> terms = new ArrayList<ScriptAutoCompletion>();
+		if (tokens.length <= 1 && !prefix.endsWith(" ")) {
+			if (isScriptFactoryDetermined(prefix)) {
+				addScriptMethods(prefix, terms);
+			} else {
+				addScriptAliases(prefix, terms);
+				addScriptMethods("core." + prefix, terms);
+			}
 		} else {
-			addScriptAliases(prefix, terms);
-			addScriptMethods("core." + prefix, terms);
+			try {
+				int p = tokens[0].indexOf('.');
+				String alias = p > 0 ? tokens[0].substring(0, p) : "core";
+				String method = p > 0 ? tokens[0].substring(p + 1) : tokens[0];
+				Script script = newScript(alias);
+
+				Method m = script.getClass().getDeclaredMethod(method, new Class[] { String[].class });
+				if (m == null)
+					return terms;
+
+				ScriptUsage usage = m.getAnnotation(ScriptUsage.class);
+				if (usage == null)
+					return terms;
+
+				int argIndex = prefix.endsWith(" ") ? tokens.length - 1 : tokens.length - 2;
+
+				ScriptArgument arg = usage.arguments()[argIndex];
+				if (arg == null || arg.autocompletion() == ScriptAutoCompletionHelper.class)
+					return terms;
+
+				String nextToken = prefix.endsWith(" ") ? "" : tokens[tokens.length - 1];
+				ScriptAutoCompletionHelper helper = (ScriptAutoCompletionHelper) arg.autocompletion().newInstance();
+				return helper.matches(session, nextToken);
+			} catch (Throwable e) {
+				e.printStackTrace();
+			}
 		}
 
-		Collections.sort(terms);
+		Collections.sort(terms, new Comparator<ScriptAutoCompletion>() {
+
+			@Override
+			public int compare(ScriptAutoCompletion o1, ScriptAutoCompletion o2) {
+				return o1.getSuggestion().compareTo(o2.getSuggestion());
+			}
+		});
 
 		return terms;
-	}
-
-	private boolean isFirstTerm(String prefix) {
-		return prefix.indexOf(' ') < 0;
 	}
 
 	private boolean isScriptFactoryDetermined(String prefix) {
 		return prefix.indexOf('.') >= 0;
 	}
 
-	private void addScriptMethods(String prefix, List<String> terms) {
+	private void addScriptMethods(String prefix, List<ScriptAutoCompletion> terms) {
 		try {
 			String token = prefix.split(" ")[0];
 			int dotPos = token.indexOf('.');
 			String alias = token.substring(0, dotPos);
 			String methodPrefix = token.substring(dotPos + 1);
 
-			ServiceReference[] refs = bundleContext.getServiceReferences(ScriptFactory.class.getName(), "(alias="
-					+ alias + ")");
-			if (refs == null || refs.length == 0) {
-				return;
-			}
-
-			ScriptFactory scriptFactory = (ScriptFactory) bundleContext.getService(refs[0]);
-			Script script = scriptFactory.createScript();
+			Script script = newScript(alias);
 			for (Method m : script.getClass().getMethods()) {
 				Class<?>[] paramTypes = m.getParameterTypes();
 				if (paramTypes == null || paramTypes.length == 0) {
@@ -84,18 +112,31 @@ public class ConsoleAutoComplete {
 					continue;
 
 				if (methodPrefix.length() == 0 || (methodPrefix.length() > 0 && m.getName().startsWith(methodPrefix))) {
-					terms.add(m.getName());
+					terms.add(new ScriptAutoCompletion(m.getName()));
 				}
 			}
-
-		} catch (InvalidSyntaxException e) {
-			// ignore
 		} catch (NullPointerException e) {
 			// ignore
 		}
 	}
 
-	private void addScriptAliases(String prefix, List<String> terms) {
+	private Script newScript(String alias) {
+		ServiceReference[] refs;
+		try {
+			refs = bundleContext.getServiceReferences(ScriptFactory.class.getName(), "(alias=" + alias + ")");
+			if (refs == null || refs.length == 0) {
+				return null;
+			}
+
+			ScriptFactory scriptFactory = (ScriptFactory) bundleContext.getService(refs[0]);
+			Script script = scriptFactory.createScript();
+			return script;
+		} catch (InvalidSyntaxException e) {
+			return null;
+		}
+	}
+
+	private void addScriptAliases(String prefix, List<ScriptAutoCompletion> terms) {
 		try {
 			ServiceReference[] refs = bundleContext.getServiceReferences(ScriptFactory.class.getName(), null);
 			if (refs == null)
@@ -105,7 +146,7 @@ public class ConsoleAutoComplete {
 				if (refs[i].getProperty("alias") != null) {
 					String alias = refs[i].getProperty("alias").toString();
 					if (alias.startsWith(prefix))
-						terms.add(alias);
+						terms.add(new ScriptAutoCompletion(alias));
 				}
 			}
 
