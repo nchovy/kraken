@@ -1,30 +1,32 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import java.util.ArrayList;
+
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
 
 public class AchievementInstance implements FacebookGraphObject{
-	String id;
-	From from; // object containing the id and name of user
-	String createdTime; //
-	String application; // Application name
-	Achievement achievement;
-	Likes likes;
-	Comment comments;
-	FbConnection fbConnection;
+	private String id;
+	private From from; // object containing the id and name of user
+	private String createdTime; //
+	private String application; // Application name
+	private Achievement achievement;
+	private Likes likes;
+	private ArrayList<Comment> comments;
+	private FbConnection fbConnection;
 	
 	public AchievementInstance(){
 		from = new From();
 		likes = new Likes();
 		achievement = new Achievement();
-		comments = new Comment();
+		comments = new ArrayList<Comment>();
 		fbConnection = new FbConnection();
 	}
 
 	
-	class FbConnection{
+	private class FbConnection{
 		// this Class has no connections
 	};
 
@@ -76,11 +78,11 @@ public class AchievementInstance implements FacebookGraphObject{
 		this.likes = likes;
 	}
 
-	public Comment getComments() {
+	public ArrayList<Comment> getComments() {
 		return comments;
 	}
 
-	public void setComments(Comment comments) {
+	public void setComments(ArrayList<Comment> comments) {
 		this.comments = comments;
 	}
 
@@ -88,6 +90,14 @@ public class AchievementInstance implements FacebookGraphObject{
 	public int parseJson(JSONObject json) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	public FbConnection getFbConnection() {
+		return fbConnection;
+	}
+
+	public void setFbConnection(FbConnection fbConnection) {
+		this.fbConnection = fbConnection;
 	}
 
 }

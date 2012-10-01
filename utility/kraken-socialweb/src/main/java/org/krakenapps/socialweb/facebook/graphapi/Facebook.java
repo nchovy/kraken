@@ -67,19 +67,21 @@ public class Facebook {
 	 * fb.getSpecificInfo(Album.getId+"/"+Album.Connection.CONN_likes); 
 	 * Album is object parsed json 
 	 * */
-	public JSONObject getSpecificInfo(String objectId) throws IOException{
-		URL url = new URL(graph+objectId+"?access_token="+accessToken);
-		URLConnection conn = url.openConnection();
-		conn.setDoOutput(true);
-		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-		StringBuffer bf = new StringBuffer();
-		while(true){
-			String tmp = br.readLine();
-			if(tmp == null) 
-				break;
-			bf.append(tmp);
+	public ArrayList<JSONArray> getSpecificInfo(String objectId) throws Exception{
+		ArrayList<JSONArray> objectArray = new ArrayList<JSONArray>();
+		JSONObject tmpObject;
+		String url =graph+objectId+"?access_token="+accessToken;
+		tmpObject = getPaging(url);
+		objectArray.add((JSONArray)tmpObject.get("data"));
+		if(tmpObject.containsKey("paging")){
+			while(((JSONObject)tmpObject.get("paging")).containsKey("next")){
+				tmpObject = getPaging( ((JSONObject)tmpObject.get("paging")).getString("next") );
+				if(((JSONArray)tmpObject.get("data")).length() >0){
+					objectArray.add((JSONArray)tmpObject.get("data"));
+				}
+			}
 		}
-		return new JSONObject(bf);
+		return objectArray;
 	}
 	
 	
@@ -99,23 +101,6 @@ public class Facebook {
 		return new JSONObject(bf);
 	}
 	
-	@SuppressWarnings("restriction")
-	public ArrayList<JSONArray> getPostComment(String postid) throws Exception{
-		ArrayList<JSONArray> commentsArray = new ArrayList<JSONArray>();
-		JSONObject tmpComments;
-		String url = graph+""+postid+ "/comments?access_token="+accessToken;
-		tmpComments = getPaging(url);
-		commentsArray.add((JSONArray)tmpComments.get("data"));
-		if(tmpComments.containsKey("paging")){
-			while(((JSONObject)tmpComments.get("paging")).containsKey("next")){
-				tmpComments = getPaging( ((JSONObject)tmpComments.get("paging")).getString("next") );
-				if(((JSONArray)tmpComments.get("data")).length() >0){
-					commentsArray.add((JSONArray)tmpComments.get("data"));
-				}
-			}
-		}
-		return commentsArray;
-	}
 	/*designed searching method*/
 	
 	public JSONObject getSearchResult(String searchCommend , String types) throws IOException{
