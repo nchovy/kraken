@@ -21,6 +21,7 @@ public class Offer implements FacebookGraphObject{
 	}
 	public Offer(){
 		fbConnection = new FbConnection();
+		from = new From();
 	}
 	
 	@Override

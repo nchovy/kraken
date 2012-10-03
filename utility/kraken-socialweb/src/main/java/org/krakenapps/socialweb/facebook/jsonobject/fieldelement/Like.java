@@ -2,12 +2,12 @@ package org.krakenapps.socialweb.facebook.jsonobject.fieldelement;
 
 import java.util.ArrayList;
 
-public class Likes {
+public class Like {
 
 	int count;
 	ArrayList<From> likeList;
 
-	public Likes() {
+	public Like() {
 		this.count = 0;
 		this.likeList = new ArrayList<From>();
 	}

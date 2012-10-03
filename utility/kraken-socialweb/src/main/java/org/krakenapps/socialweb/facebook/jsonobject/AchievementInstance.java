@@ -13,13 +13,13 @@ public class AchievementInstance implements FacebookGraphObject{
 	private String createdTime; //
 	private String application; // Application name
 	private Achievement achievement;
-	private Likes likes;
+	private Like likes;
 	private ArrayList<Comment> comments;
 	private FbConnection fbConnection;
 	
 	public AchievementInstance(){
 		from = new From();
-		likes = new Likes();
+		likes = new Like();
 		achievement = new Achievement();
 		comments = new ArrayList<Comment>();
 		fbConnection = new FbConnection();
@@ -70,11 +70,11 @@ public class AchievementInstance implements FacebookGraphObject{
 		this.achievement = achievement;
 	}
 
-	public Likes getLikes() {
+	public Like getLikes() {
 		return likes;
 	}
 
-	public void setLikes(Likes likes) {
+	public void setLikes(Like likes) {
 		this.likes = likes;
 	}
 

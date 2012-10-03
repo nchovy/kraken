@@ -6,7 +6,7 @@ import org.json.JSONObject;
 public class Order implements FacebookGraphObject{
 
 	private String id;
-	private 	String from;
+	private String from;
 	private int amount;
 	private String status; // settled, disputed, refunded, cancelled
 	private String application;

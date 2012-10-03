@@ -13,19 +13,31 @@ public class Insight implements FacebookGraphObject{
 	private ArrayList<Values> values;
 	private String Description;
 	private FbConnection fbConnection;
-	
-	public Insight(){
-		fbConnection = new FbConnection();
-	}
+
 	private class FbConnection{
 		public FbConnection(){
 			
 		}
 	}
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
+	private class Values{
+		String val;
+		String end_time;
+		public String getVal() {
+			return val;
+		}
+		public void setVal(String val) {
+			this.val = val;
+		}
+		public String getEnd_time() {
+			return end_time;
+		}
+		public void setEnd_time(String end_time) {
+			this.end_time = end_time;
+		}
+		
+	}
+	public Insight(){
+		fbConnection = new FbConnection();
 	}
 	public String getId() {
 		return id;
@@ -63,21 +75,10 @@ public class Insight implements FacebookGraphObject{
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
 	}
-}
-class Values{
-	String val;
-	String end_time;
-	public String getVal() {
-		return val;
+	@Override
+	public int parseJson(JSONObject json) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
-	public void setVal(String val) {
-		this.val = val;
-	}
-	public String getEnd_time() {
-		return end_time;
-	}
-	public void setEnd_time(String end_time) {
-		this.end_time = end_time;
-	}
-	
+
 }

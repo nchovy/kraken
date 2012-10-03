@@ -32,7 +32,7 @@ public class Album implements FacebookGraphObject{
 			comments = null;
 		}
 		private Photo photos;
-		private Likes likes;
+		private Like likes;
 		private ArrayList<Comment> comments ;
 		private String pictures; // redirect url
 		
@@ -47,10 +47,10 @@ public class Album implements FacebookGraphObject{
 		public void setPhotos(Photo photos) {
 			this.photos = photos;
 		}
-		public Likes getLikes() {
+		public Like getLikes() {
 			return likes;
 		}
-		public void setLikes(Likes likes) {
+		public void setLikes(Like likes) {
 			this.likes = likes;
 		}
 		

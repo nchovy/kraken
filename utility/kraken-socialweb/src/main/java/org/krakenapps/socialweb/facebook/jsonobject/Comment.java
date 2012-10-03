@@ -11,26 +11,26 @@ public class Comment implements FacebookGraphObject{
 	private From from;
 	private String message;
 	private String createTime;
-	private Likes likes;
+	private Like likes;
 	private String userLikes; // Always True;
 	private String Type;
 	private FbConnection fbConnection;
 
 	public Comment(){
 		from = new From();
-		likes = new Likes();
+		likes = new Like();
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
 		public String CONN_likes = "likes";
-		private Likes likes;
+		private Like likes;
 		public FbConnection(){
 			likes = null;
 		}
-		public Likes getLikes() {
+		public Like getLikes() {
 			return likes;
 		}
-		public void setLikes(Likes likes) {
+		public void setLikes(Like likes) {
 			this.likes = likes;
 		}
 		
@@ -67,11 +67,11 @@ public class Comment implements FacebookGraphObject{
 		this.createTime = createTime;
 	}
 
-	public Likes getLikes() {
+	public Like getLikes() {
 		return likes;
 	}
 
-	public void setLikes(Likes likes) {
+	public void setLikes(Like likes) {
 		this.likes = likes;
 	}
 

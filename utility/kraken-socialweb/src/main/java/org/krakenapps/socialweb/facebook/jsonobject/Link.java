@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
-import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Likes;
+import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Like;
 
 
 public class Link implements FacebookGraphObject{
@@ -25,7 +25,7 @@ public class Link implements FacebookGraphObject{
 		public String CONN_comments = "comments";
 		public String CONN_likes = "likes";
 		private ArrayList<Comment> comments;
-		private Likes likes;
+		private Like likes;
 		public FbConnection(){
 			comments =null;
 			likes =null;
@@ -36,10 +36,10 @@ public class Link implements FacebookGraphObject{
 		public void setComments(ArrayList<Comment> comments) {
 			this.comments = comments;
 		}
-		public Likes getLikes() {
+		public Like getLikes() {
 			return likes;
 		}
-		public void setLikes(Likes likes) {
+		public void setLikes(Like likes) {
 			this.likes = likes;
 		}
 	}

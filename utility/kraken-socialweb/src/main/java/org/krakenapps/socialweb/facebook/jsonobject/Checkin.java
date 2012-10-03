@@ -14,7 +14,7 @@ public class Checkin implements FacebookGraphObject{
 	private Place place;
 	private CheckinApplication application;
 	private String createdTime;
-	private Likes likes;
+	private Like likes;
 	private String message;
 	private ArrayList<Comment> comments;
 	private String type;
@@ -25,14 +25,14 @@ public class Checkin implements FacebookGraphObject{
 		tags = new From();
 		place = new Place();
 		application = new CheckinApplication();
-		likes = new Likes();
+		likes = new Like();
 		comments = new ArrayList<Comment>(); // limited number object.
 	}
 	private class FbConnection{
 		public String CONN_comments = "comments";
 		public String CONN_likes = "likes";
 		private ArrayList<Comment> comments;
-		private Likes likes;
+		private Like likes;
 		public FbConnection(){
 			comments = null;
 			likes = null;
@@ -43,10 +43,10 @@ public class Checkin implements FacebookGraphObject{
 		public void setComments(ArrayList<Comment> comments) {
 			this.comments = comments;
 		}
-		public Likes getLikes() {
+		public Like getLikes() {
 			return likes;
 		}
-		public void setLikes(Likes likes) {
+		public void setLikes(Like likes) {
 			this.likes = likes;
 		}
 		
@@ -106,11 +106,11 @@ public class Checkin implements FacebookGraphObject{
 		this.createdTime = createdTime;
 	}
 
-	public Likes getLikes() {
+	public Like getLikes() {
 		return likes;
 	}
 
-	public void setLikes(Likes likes) {
+	public void setLikes(Like likes) {
 		this.likes = likes;
 	}
 
