@@ -9,7 +9,7 @@ import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Place;
 
 
 /**
- * @author hefos
+ * @author tgnice
  *
  */
 public class Post implements FacebookGraphObject{
