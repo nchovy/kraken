@@ -57,7 +57,8 @@ public class ScriptSessionImpl implements ScriptSession {
 		String workingDirectory = null;
 		try {
 			if (dir != null) {
-				dir = dir.getAbsolutePath().endsWith(File.separator) ? dir.getParentFile() : dir;
+				if (dir.getAbsolutePath().endsWith(File.separator) && dir.getParentFile() != null)
+					dir = dir.getParentFile();
 				workingDirectory = dir.getCanonicalFile().getName();
 			}
 		} catch (IOException e) {

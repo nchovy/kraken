@@ -67,7 +67,10 @@ public class ConsoleAutoComplete {
 
 				int argIndex = prefix.endsWith(" ") ? tokens.length - 1 : tokens.length - 2;
 
-				ScriptArgument arg = usage.arguments()[argIndex];
+				ScriptArgument arg = null;
+				if (argIndex < usage.arguments().length)
+					arg = usage.arguments()[argIndex];
+				
 				if (arg == null || arg.autocompletion() == ScriptAutoCompletionHelper.class)
 					return terms;
 
