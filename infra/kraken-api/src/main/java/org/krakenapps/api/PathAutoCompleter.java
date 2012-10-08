@@ -16,6 +16,7 @@
 package org.krakenapps.api;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,15 +41,29 @@ public class PathAutoCompleter implements ScriptAutoCompletionHelper {
 		File dir = (File) session.getProperty("dir");
 
 		int p = prefix.lastIndexOf('/');
-		String parent = p >= 0 ? prefix.substring(0, p) : null;
-		String filePrefix = p >= 0 ? prefix.substring(p + 1) : prefix;
+		String parent = null;
+		if (p > 0)
+			parent = prefix.substring(0, p);
+		else if (p == 0)
+			parent = "/";
 
+		String filePrefix = p >= 0 ? prefix.substring(p + 1) : prefix;
 		File parentFile = canonicalize(dir, parent);
-		boolean absolute = parent != null && parent.startsWith("/");
+		boolean absolute = parent != null && (parent.startsWith("/") || isWindowsDriveRoot(parentFile.getAbsolutePath()));
 
 		List<ScriptAutoCompletion> paths = new ArrayList<ScriptAutoCompletion>();
-		for (File f : parentFile.listFiles()) {
-			if (f.getName().startsWith(filePrefix)) {
+		File[] files = null;
+
+		// for windows drive root enumeration
+		if (parent != null && parent.equals("/") && File.separatorChar == '\\') {
+			files = File.listRoots();
+		} else {
+			files = parentFile.listFiles();
+		}
+
+		for (File f : files) {
+			String name = f.getName();
+			if (name.startsWith(filePrefix)) {
 				if (filterOption == FilterOption.DirectoryOnly && !f.isDirectory())
 					continue;
 
@@ -57,14 +72,31 @@ public class PathAutoCompleter implements ScriptAutoCompletionHelper {
 
 				if (absolute) {
 					String path = f.getAbsolutePath();
+					try {
+						path = f.getCanonicalPath();
+					} catch (IOException e) {
+					}
+
 					if (!path.startsWith("/"))
 						path = "/" + path;
-					paths.add(new ScriptAutoCompletion(path.replaceAll("\\\\", "/")));
+					path = path.replaceAll("\\\\", "/");
+					if (f.isDirectory() && !path.endsWith("/"))
+						path = path + "/";
+
+					if (path.toLowerCase().startsWith(prefix.toLowerCase()))
+						paths.add(new ScriptAutoCompletion(path, name));
 				} else {
-					if (p > 0)
-						paths.add(new ScriptAutoCompletion(parent + "/" + f.getName(), f.getName()));
-					else
-						paths.add(new ScriptAutoCompletion(f.getName()));
+					if (f.isDirectory())
+						name = name + "/";
+
+					if (p > 0) {
+						String completion = parent + "/" + name;
+						if (completion.toLowerCase().startsWith(prefix.toLowerCase()))
+							paths.add(new ScriptAutoCompletion(completion, name));
+					} else {
+						if (name.toLowerCase().startsWith(prefix.toLowerCase()))
+							paths.add(new ScriptAutoCompletion(name));
+					}
 				}
 			}
 		}
@@ -73,11 +105,32 @@ public class PathAutoCompleter implements ScriptAutoCompletionHelper {
 	}
 
 	private File canonicalize(File dir, String path) {
-		if (path == null)
-			return dir;
-		else if (path.startsWith("/"))
-			return new File(path);
-		else
-			return new File(dir, path);
+		try {
+			if (path == null || path.isEmpty()) {
+				return dir.getCanonicalFile();
+			} else if (path.startsWith("/") || isWindowsDriveRoot(path)) {
+				File f = new File(path.endsWith("/") ? path : path + "/");
+				return f.getCanonicalFile();
+			} else {
+				return new File(dir, path).getCanonicalFile();
+			}
+		} catch (IOException e) {
+			return null;
+		}
 	}
+
+	private boolean isWindowsDriveRoot(String path) {
+		try {
+			File f = new File(path);
+			for (File root : File.listRoots()) {
+				String s1 = root.getCanonicalPath();
+				String s2 = f.getCanonicalPath();
+				if (s1.equals(s2))
+					return true;
+			}
+		} catch (IOException e) {
+		}
+		return false;
+	}
+
 }
