@@ -20,19 +20,28 @@ import java.util.Collection;
 import org.krakenapps.confdb.ConfigTransaction;
 
 public interface EntityEventListener<T> {
+
+	// add
+	void entityAdding(String domain, T obj, Object state);
+
 	void entityAdded(String domain, T obj, Object state);
 
+	void entitiesAdding(String domain, Collection<EntityState> objs);
+
+	void entitiesAdded(String domain, Collection<EntityState> objs);
+
+	// udpate
 	void entityUpdated(String domain, T obj, Object state);
 
+	void entitiesUpdated(String domain, Collection<EntityState> objs);
+
+	// remove
 	void entityRemoving(String domain, T obj, ConfigTransaction xact, Object state);
 
 	void entityRemoved(String domain, T obj, Object state);
 
-	void entitiesAdded(String domain, Collection<EntityState> objs);
-
-	void entitiesUpdated(String domain, Collection<EntityState> objs);
-
 	void entitiesRemoving(String domain, Collection<EntityState> objs, ConfigTransaction xact);
 
 	void entitiesRemoved(String domain, Collection<EntityState> objs);
+
 }

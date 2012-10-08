@@ -52,7 +52,6 @@ import org.krakenapps.dom.api.UserApi;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
-import org.krakenapps.dom.msgbus.UserPlugin;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
@@ -501,50 +500,4 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			return loginNames.contains(m.get("login_name"));
 		}
 	}
-
-	@Override
-	public void setForcePasswordChange(String loginName, boolean forcePasswordChange) {
-		User user = getUser("localhost", loginName);
-
-		if (user == null)
-			throw new IllegalArgumentException("user is null.");
-
-		user.setForcePasswordChange(forcePasswordChange);
-
-	}
-
-	@Override
-	public void setForcePasswordChanges(Collection<String> loginNames) {
-		Collection<User> users = null;
-
-		if (loginNames == null)
-			users = getUsers("localhost");
-		else
-			users = getUsers("localhost", loginNames);
-
-		if (users == null || users.isEmpty())
-			throw new IllegalArgumentException("users are empty.");
-
-		for (User user : users)
-			user.setForcePasswordChange(true);
-
-	}
-
-	@Override
-	public void cancelForcePasswordChanges(Collection<String> loginNames) {
-		Collection<User> users = null;
-		
-		if (loginNames == null)
-			users = getUsers("localhost");
-		else
-			users = getUsers("localhost", loginNames);
-		
-		if (users == null || users.isEmpty())
-			throw new IllegalArgumentException("users are empty.");
-		
-		for (User user : users)
-			user.setForcePasswordChange(false);
-		
-	}
-
 }

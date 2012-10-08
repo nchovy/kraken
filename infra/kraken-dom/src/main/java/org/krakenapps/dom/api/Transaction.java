@@ -160,6 +160,20 @@ public class Transaction {
 			provider.fireEntitiesRemoving(domain, entities, xact);
 	}
 
+	public <T> void checkAddability(Class<T> cls, EntityState entity) {
+		@SuppressWarnings("unchecked")
+		DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(cls);
+		if (provider != null)
+			provider.fireEntityAdding(domain, entity.entity);
+	}
+	
+	public <T> void checkAddability(Class<T> cls, Collection<EntityState> entities) {
+		@SuppressWarnings("unchecked")
+		DefaultEntityEventProvider<Object> provider = (DefaultEntityEventProvider<Object>) eventProviders.get(cls);
+		if (provider != null)
+			provider.fireEntitiesAdding(domain, entities);
+	}
+
 	public void rollback() {
 		xact.rollback();
 		xacts.remove(this.xact);
@@ -169,8 +183,16 @@ public class Transaction {
 		eventProviders.put(cls, provider);
 	}
 
+	public DefaultEntityEventProvider<?> getEventProvider(Class<?> cls) {
+		return eventProviders.get(cls);
+	}
+
 	public void removeEventProvider(Class<?> cls) {
 		eventProviders.remove(cls);
+	}
+
+	public String getDomain() {
+		return domain;
 	}
 
 	private static class Log {
@@ -191,4 +213,5 @@ public class Transaction {
 			this.state = state;
 		}
 	}
+
 }
