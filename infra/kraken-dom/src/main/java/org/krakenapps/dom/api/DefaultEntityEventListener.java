@@ -21,19 +21,18 @@ import org.krakenapps.confdb.ConfigTransaction;
 
 public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
 	@Override
+	public void entityAdding(String domain, T obj, Object state) {
+	}
+
+	@Override
 	public void entityAdded(String domain, T obj, Object state) {
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void entityUpdated(String domain, T obj, Object state) {
-	}
-
-	@Override
-	public void entityRemoving(String domain, T obj, ConfigTransaction xact, Object state) {
-	}
-
-	@Override
-	public void entityRemoved(String domain, T obj, Object state) {
+	public void entitiesAdding(String domain, Collection<EntityState> objs) {
+		for (EntityState t : objs)
+			entityAdding(domain, (T) t.entity, t.state);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -43,11 +42,23 @@ public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
 			entityAdded(domain, (T) t.entity, t.state);
 	}
 
+	@Override
+	public void entityUpdated(String domain, T obj, Object state) {
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void entitiesUpdated(String domain, Collection<EntityState> objs) {
 		for (EntityState t : objs)
 			entityUpdated(domain, (T) t.entity, t.state);
+	}
+
+	@Override
+	public void entityRemoving(String domain, T obj, ConfigTransaction xact, Object state) {
+	}
+
+	@Override
+	public void entityRemoved(String domain, T obj, Object state) {
 	}
 
 	@SuppressWarnings("unchecked")
@@ -63,4 +74,5 @@ public class DefaultEntityEventListener<T> implements EntityEventListener<T> {
 		for (EntityState t : objs)
 			entityRemoved(domain, (T) t.entity, t.state);
 	}
+
 }

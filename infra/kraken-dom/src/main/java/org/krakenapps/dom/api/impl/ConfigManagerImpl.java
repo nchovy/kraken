@@ -157,6 +157,15 @@ public class ConfigManagerImpl implements ConfigManager {
 			Object state) {
 		if (docs.isEmpty())
 			return;
+		
+		Collection<EntityState> entities = new ArrayList<EntityState>();
+		
+		for(T doc : docs) {
+			EntityState es = new EntityState(doc, state);
+			entities.add(es);
+		}
+		
+		xact.checkAddability(cls, entities);
 
 		ConfigDatabase db = xact.getConfigDatabase();
 
@@ -211,6 +220,8 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		if (db.findOne(cls, pred) != null)
 			throw new DOMException(alreadyExistMessage);
+		
+		xact.checkAddability(cls, new EntityState(doc, state));
 		xact.add(doc, state);
 	}
 

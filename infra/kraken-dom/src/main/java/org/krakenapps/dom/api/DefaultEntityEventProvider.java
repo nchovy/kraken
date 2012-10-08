@@ -48,6 +48,7 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 		fireEntityAdded(domain, t, null);
 	}
 
+	
 	public void fireEntityAdded(String domain, T t, Object state) {
 		for (EntityEventListener<T> listener : listeners.keySet()) {
 			if (listener != null) {
@@ -59,6 +60,27 @@ public class DefaultEntityEventProvider<T> implements EntityEventProvider<T> {
 			}
 		}
 	}
+
+	public void fireEntityAdding(String domain, T t){
+		fireEntityAdding(domain, t, null);
+	}
+	
+	public void fireEntityAdding(String domain, T t, Object state){
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				listener.entityAdding(domain, t, state);
+			}
+		}
+	}
+	
+	
+	public void fireEntitiesAdding(String domain, Collection<EntityState> entities) {
+		for (EntityEventListener<T> listener : listeners.keySet()) {
+			if (listener != null) {
+				listener.entitiesAdding(domain, entities);
+			}
+		}
+	}	
 
 	public void fireEntitiesAdded(String domain, Collection<EntityState> entities) {
 		for (EntityEventListener<T> listener : listeners.keySet()) {

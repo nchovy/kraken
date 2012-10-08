@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -316,18 +315,50 @@ public class UserPlugin {
 			schemas.add(provider.getExtensionName());
 		resp.put("schemas", schemas);
 	}
-	
-	@SuppressWarnings("unchecked")
+
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void setForcePasswordChanges(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
- 		userApi.setForcePasswordChanges(loginNames);
+		setForcePasswordChanges(loginNames, true);
 	}
-	
-	@SuppressWarnings("unchecked")
+
 	@MsgbusMethod
+	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void cancelForcePasswordChanges(Request req, Response resp) {
+		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		userApi.cancelForcePasswordChanges(loginNames);
+		setForcePasswordChanges(loginNames, false);
+	}
+
+	private void setForcePasswordChanges(Collection<String> loginNames, boolean forcePasswordChange) {
+		List<ConfigUpdateRequest<User>> updateUsers = new ArrayList<ConfigUpdateRequest<User>>();
+
+		List<Config> userConfigs = null;
+		if (loginNames == null)
+			userConfigs = userApi.getConfigs("localhost", null, true, null, 0, Integer.MAX_VALUE);
+		else
+			userConfigs = userApi.getConfigs("localhost", null, true, Predicates.in("login_name", loginNames), 0,
+					Integer.MAX_VALUE);
+
+		if (userConfigs == null)
+			throw new IllegalArgumentException("userConfigs are empty.");
+
+		for (Config c : userConfigs) {
+			User user = c.getDocument(User.class);
+			user.setForcePasswordChange(forcePasswordChange);
+			updateUsers.add(new ConfigUpdateRequest<User>(c, user));
+		}
+
+		// updateUser 실행
+		if (updateUsers.size() > 0) {
+			try {
+				userApi.updateUsers("localhost", updateUsers);
+				logger.trace("kraken dom: updated [{}] users", updateUsers.size());
+			} catch (Throwable t) {
+				logger.error("kraken dom: user update failed", t);
+			}
+		}
 	}
 }
