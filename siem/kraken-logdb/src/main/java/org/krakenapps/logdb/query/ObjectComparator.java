@@ -33,6 +33,11 @@ public class ObjectComparator implements Comparator<Object> {
 		if (o1.equals(o2))
 			return 0;
 		else {
+			if (o1.getClass() == o2.getClass()) {
+				if (o1 instanceof Integer)
+					return (Integer) o1 - (Integer) o2;
+			}
+
 			if (NumberUtil.getClass(o1) != null && NumberUtil.getClass(o2) != null) {
 				long cmp = NumberUtil.sub(o1, o2).longValue();
 				return (cmp == 0) ? 0 : ((cmp > 0) ? 1 : -1);
