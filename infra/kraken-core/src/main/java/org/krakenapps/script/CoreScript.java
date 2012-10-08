@@ -113,7 +113,7 @@ public class CoreScript implements Script {
 	public void cat(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 		File f = canonicalize(dir, args[0]);
-		if (!f.exists()) {
+		if (f == null || !f.exists()) {
 			context.println("cat: " + f.getName() + ": No such file or directory");
 			return;
 		}
@@ -190,8 +190,10 @@ public class CoreScript implements Script {
 		File from = canonicalize(dir, args[0]);
 		File to = canonicalize(dir, args[1]);
 
-		if (!from.exists())
-			context.println("cp: cannot stat '" + from.getName() + "': No such file or directory");
+		if (from == null || !from.exists())
+			context.println("cp: cannot stat '" + args[0] + "': No such file or directory");
+		else if (to == null)
+			context.println("cp: cannot stat '" + args[1] + "': No such file or directory");
 		else {
 			FileChannel inChannel = new FileInputStream(from).getChannel();
 			FileChannel outChannel = new FileOutputStream(to).getChannel();
@@ -213,10 +215,13 @@ public class CoreScript implements Script {
 
 		for (String token : args) {
 			File f = canonicalize(dir, token);
-			if (!f.exists())
+			if (f == null || !f.exists())
 				context.println("rm: cannot remove '" + token + "': No such file or directory");
-			else
-				f.delete();
+			else {
+				boolean ret = f.delete();
+				if (!ret)
+					context.println("rm: permission denied");
+			}
 		}
 	}
 
@@ -229,12 +234,19 @@ public class CoreScript implements Script {
 		File from = canonicalize(dir, args[0]);
 		File to = canonicalize(dir, args[1]);
 
-		if (from.equals(to))
+		if (from == null)
+			context.println("mv: cannot stat '" + args[0] + "': No such file or directory");
+		else if (to == null)
+			context.println("mv: cannot stat '" + args[1] + "': No such file or directory");
+		else if (from.equals(to))
 			context.println("mv: '" + from.getName() + "' and '" + to.getName() + "' are the same file");
 		else if (!from.exists())
 			context.println("mv: cannot stat '" + from.getName() + "': No such file or directory");
-		else
-			from.renameTo(to);
+		else {
+			boolean ret = from.renameTo(to);
+			if (!ret)
+				context.println("mv: cannot rename '" + from.getName() + "' to '" + to.getName() + "'");
+		}
 	}
 
 	public void ls(String[] args) throws IOException {
@@ -243,8 +255,11 @@ public class CoreScript implements Script {
 		if (args.length == 0)
 			targets.add(dir);
 
-		for (String arg : args)
-			targets.add(canonicalize(dir, arg));
+		for (String arg : args) {
+			File target = canonicalize(dir, arg);
+			if (target != null)
+				targets.add(target);
+		}
 
 		for (File target : targets) {
 			if (!target.exists()) {
@@ -255,7 +270,11 @@ public class CoreScript implements Script {
 			if (targets.size() > 1)
 				context.println(target.getName() + ":");
 
-			for (File f : target.listFiles()) {
+			File[] list = target.listFiles();
+			if (list == null)
+				continue;
+
+			for (File f : list) {
 				context.println(formatFileInfo(f));
 			}
 		}
@@ -270,7 +289,7 @@ public class CoreScript implements Script {
 
 		File newDir = canonicalize(dir, args[0]);
 
-		if (!(newDir.exists() && newDir.isDirectory()))
+		if (newDir == null || !(newDir.exists() && newDir.isDirectory()))
 			context.println("No such file or directory");
 		else
 			context.getSession().setProperty("dir", newDir);
