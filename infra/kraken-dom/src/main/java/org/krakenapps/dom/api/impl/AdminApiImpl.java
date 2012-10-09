@@ -502,11 +502,14 @@ public class AdminApiImpl implements AdminApi {
 	@Override
 	public boolean canManage(String domain, Admin admin, User user) {
 		String loginName = user.getLoginName();
-		Admin targetAdmin = PrimitiveConverter.parse(Admin.class, user.getExt().get("admin"), cfg.getParseCallback(domain));
-
 		if (!admin.getRole().getPermissions().contains(new Permission("dom", "user_edit")))
 			return false;
 
+		Object ext = user.getExt().get("admin");
+		if (ext == null)
+			return true;
+		
+		Admin targetAdmin = PrimitiveConverter.parse(Admin.class, ext, cfg.getParseCallback(domain));
 		if (targetAdmin != null && !loginName.equals(admin.getUser().getLoginName())
 				&& targetAdmin.getRole().getLevel() >= admin.getRole().getLevel()) {
 			return false;

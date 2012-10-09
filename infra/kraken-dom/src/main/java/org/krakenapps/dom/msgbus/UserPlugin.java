@@ -324,7 +324,8 @@ public class UserPlugin {
 	public void setForcePasswordChanges(Request req, Response resp) {
 		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		setForcePasswordChanges(req.getOrgDomain(), loginNames, true);
+		List<String> failedUsers = setForcePasswordChanges(req.getOrgDomain(), req.getAdminLoginName(), loginNames, true);
+		resp.put("failed_login_names", failedUsers);
 	}
 
 	@MsgbusMethod
@@ -332,13 +333,17 @@ public class UserPlugin {
 	public void cancelForcePasswordChanges(Request req, Response resp) {
 		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		setForcePasswordChanges(req.getOrgDomain(), loginNames, false);
+		List<String> failedUsers = setForcePasswordChanges(req.getOrgDomain(), req.getAdminLoginName(), loginNames, false);
+		resp.put("failed_login_names", failedUsers);
 	}
 
-	private void setForcePasswordChanges(String domain, Collection<String> loginNames, boolean forcePasswordChange) {
-		List<ConfigUpdateRequest<User>> updateUsers = new ArrayList<ConfigUpdateRequest<User>>();
+	private List<String> setForcePasswordChanges(String domain, String adminLoginName, Collection<String> loginNames,
+			boolean forcePasswordChange) {
 
+		List<ConfigUpdateRequest<User>> updateUsers = new ArrayList<ConfigUpdateRequest<User>>();
 		List<Config> userConfigs = null;
+		List<String> failures = new ArrayList<String>();
+
 		if (loginNames == null)
 			userConfigs = userApi.getConfigs(domain, null, true, null, 0, Integer.MAX_VALUE);
 		else
@@ -347,9 +352,17 @@ public class UserPlugin {
 		if (userConfigs == null)
 			throw new IllegalArgumentException("userConfigs are empty.");
 
+		Admin admin = adminApi.findAdmin(domain, adminLoginName);
+		if (admin == null)
+			throw new DOMException("admin-not-found");
+
 		PrimitiveParseCallback callback = conf.getParseCallback(domain);
 		for (Config c : userConfigs) {
 			User user = c.getDocument(User.class, callback);
+			if (!adminApi.canManage(domain, admin, user)) {
+				failures.add(user.getLoginName());
+				continue;
+			}
 			user.setForcePasswordChange(forcePasswordChange);
 			updateUsers.add(new ConfigUpdateRequest<User>(c, user));
 		}
@@ -363,5 +376,6 @@ public class UserPlugin {
 				logger.error("kraken dom: user update failed", t);
 			}
 		}
+		return failures;
 	}
 }
