@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AdminApi;
@@ -114,11 +115,12 @@ public class UserPlugin {
 			throw new DOMException("admin-not-found");
 
 		String orgUnitGuid = req.getString("org_unit_guid");
+		String domain = req.getOrgDomain();
 
 		// org unit guid can be null (for root node)
 		OrganizationUnit orgUnit = null;
 		if (orgUnitGuid != null)
-			orgUnit = orgUnitApi.findOrganizationUnit("localhost", orgUnitGuid);
+			orgUnit = orgUnitApi.findOrganizationUnit(domain, orgUnitGuid);
 
 		@SuppressWarnings("unchecked")
 		HashSet<String> loginNames = new HashSet<String>((Collection<String>) req.get("login_names"));
@@ -129,7 +131,7 @@ public class UserPlugin {
 		List<ConfigUpdateRequest<User>> updates = new ArrayList<ConfigUpdateRequest<User>>();
 		for (Config c : configs) {
 			// try to check role
-			User u = c.getDocument(User.class, conf.getParseCallback("localhost"));
+			User u = c.getDocument(User.class, conf.getParseCallback(domain));
 			if (!adminApi.canManage(req.getOrgDomain(), admin, u)) {
 				failures.add(u.getLoginName());
 				continue;
@@ -138,7 +140,7 @@ public class UserPlugin {
 			updates.add(new ConfigUpdateRequest<User>(c, u));
 		}
 
-		userApi.updateUsers("localhost", updates);
+		userApi.updateUsers(domain, updates);
 
 		resp.put("failed_login_names", failures);
 	}
@@ -291,18 +293,19 @@ public class UserPlugin {
 	@MsgbusPermission(group = "dom", code = "user_edit")
 	public void removeUser(Request req, Response resp) {
 		String loginName = req.getAdminLoginName();
+		String domain = req.getOrgDomain();
 		Admin admin = adminApi.getAdmin(req.getOrgDomain(), req.getAdminLoginName());
 		if (admin == null)
 			throw new MsgbusException("dom", "admin-not-found");
 
-		User target = userApi.findUser("localhost", req.getString("login_name"));
+		User target = userApi.findUser(domain, req.getString("login_name"));
 		if (target == null)
 			throw new MsgbusException("dom", "user-not-found");
 
 		if (loginName.equals(target.getLoginName()))
 			throw new MsgbusException("dom", "cannot-remove-self");
 
-		if (!adminApi.canManage("localhost", admin, target))
+		if (!adminApi.canManage(domain, admin, target))
 			throw new MsgbusException("dom", "no-permission");
 
 		userApi.removeUser(req.getOrgDomain(), target.getLoginName());
@@ -321,7 +324,7 @@ public class UserPlugin {
 	public void setForcePasswordChanges(Request req, Response resp) {
 		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		setForcePasswordChanges(loginNames, true);
+		setForcePasswordChanges(req.getOrgDomain(), loginNames, true);
 	}
 
 	@MsgbusMethod
@@ -329,24 +332,24 @@ public class UserPlugin {
 	public void cancelForcePasswordChanges(Request req, Response resp) {
 		@SuppressWarnings("unchecked")
 		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		setForcePasswordChanges(loginNames, false);
+		setForcePasswordChanges(req.getOrgDomain(), loginNames, false);
 	}
 
-	private void setForcePasswordChanges(Collection<String> loginNames, boolean forcePasswordChange) {
+	private void setForcePasswordChanges(String domain, Collection<String> loginNames, boolean forcePasswordChange) {
 		List<ConfigUpdateRequest<User>> updateUsers = new ArrayList<ConfigUpdateRequest<User>>();
 
 		List<Config> userConfigs = null;
 		if (loginNames == null)
-			userConfigs = userApi.getConfigs("localhost", null, true, null, 0, Integer.MAX_VALUE);
+			userConfigs = userApi.getConfigs(domain, null, true, null, 0, Integer.MAX_VALUE);
 		else
-			userConfigs = userApi.getConfigs("localhost", null, true, Predicates.in("login_name", loginNames), 0,
-					Integer.MAX_VALUE);
+			userConfigs = userApi.getConfigs(domain, null, true, Predicates.in("login_name", loginNames), 0, Integer.MAX_VALUE);
 
 		if (userConfigs == null)
 			throw new IllegalArgumentException("userConfigs are empty.");
 
+		PrimitiveParseCallback callback = conf.getParseCallback(domain);
 		for (Config c : userConfigs) {
-			User user = c.getDocument(User.class);
+			User user = c.getDocument(User.class, callback);
 			user.setForcePasswordChange(forcePasswordChange);
 			updateUsers.add(new ConfigUpdateRequest<User>(c, user));
 		}
@@ -354,7 +357,7 @@ public class UserPlugin {
 		// updateUser 실행
 		if (updateUsers.size() > 0) {
 			try {
-				userApi.updateUsers("localhost", updateUsers);
+				userApi.updateUsers(domain, updateUsers);
 				logger.trace("kraken dom: updated [{}] users", updateUsers.size());
 			} catch (Throwable t) {
 				logger.error("kraken dom: user update failed", t);
