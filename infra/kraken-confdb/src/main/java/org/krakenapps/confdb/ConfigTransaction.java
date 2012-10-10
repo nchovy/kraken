@@ -29,4 +29,6 @@ public interface ConfigTransaction {
 	void commit(String committer, String log);
 
 	void rollback();
+
+	ConfigTransactionCache getCache();
 }

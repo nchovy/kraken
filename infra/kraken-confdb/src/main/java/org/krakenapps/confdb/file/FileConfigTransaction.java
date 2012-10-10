@@ -23,10 +23,12 @@ import java.util.Map;
 
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
+import org.krakenapps.confdb.ConfigCache;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigEntry;
 import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.ConfigTransactionCache;
 import org.krakenapps.confdb.Manifest;
 
 public class FileConfigTransaction implements ConfigTransaction {
@@ -42,9 +44,11 @@ public class FileConfigTransaction implements ConfigTransaction {
 	private File manifestDatFile;
 
 	private Map<File, RevLogWriter> writers;
+	private ConfigTransactionCache cache;
 
 	public FileConfigTransaction(FileConfigDatabase db) {
 		this.db = db;
+		this.cache = new FileConfigTransactionCache();
 		File dbDir = db.getDbDirectory();
 
 		// TODO: apply changeset rev
@@ -127,6 +131,11 @@ public class FileConfigTransaction implements ConfigTransaction {
 	public void rollback() {
 		closeWriters();
 		db.unlock();
+	}
+
+	@Override
+	public ConfigTransactionCache getCache() {
+		return cache;
 	}
 
 	private void closeWriters() {

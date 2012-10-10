@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +27,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.AdminApi;
 import org.krakenapps.dom.api.ConfigManager;
@@ -147,54 +147,54 @@ public class UserPlugin {
 
 	@MsgbusMethod
 	public void getUsers(Request req, Response resp) {
-		Collection<User> users = null;
-		if (!req.has("ou_guid"))
-			users = userApi.getUsers(req.getOrgDomain());
-		else {
-			String orgUnitGuid = req.getString("ou_guid");
-			boolean includeChildren = req.has("inc_children") ? req.getBoolean("inc_children") : false;
-			users = userApi.getUsers(req.getOrgDomain(), orgUnitGuid, includeChildren);
-		}
+		String orgUnitGuid = req.getString("ou_guid");
 
-		// search name or login_name
+		Predicate pred = null;
 		if (req.has("filter_name") || req.has("filter_login_name")) {
 			String name = req.getString("filter_name");
 			String loginName = req.getString("filter_login_name");
-
-			Iterator<User> it = users.iterator();
-			while (it.hasNext()) {
-				boolean remove = true;
-				User user = it.next();
-				if (name != null && user.getName().contains(name))
-					remove = false;
-				if (loginName != null && user.getLoginName().contains(loginName))
-					remove = false;
-				if (remove)
-					it.remove();
-			}
+			pred = new Matched(name, loginName);
 		}
 
-		// paging
 		int offset = 0;
-		int limit = users.size();
+		int limit = Integer.MAX_VALUE;
 
-		if (req.has("offset")) {
-			offset = range(0, users.size(), req.getInteger("offset"));
-			limit -= offset;
-		}
+		if (req.has("offset"))
+			offset = req.getInteger("offset");
 		if (req.has("limit"))
-			limit = range(0, users.size() - offset, req.getInteger("limit"));
+			limit = req.getInteger("limit");
 
-		resp.put("users", PrimitiveConverter.serialize(new ArrayList<User>(users).subList(offset, offset + limit)));
-		resp.put("total", users.size());
+		int total = userApi.countUsers(req.getOrgDomain(), orgUnitGuid, true, pred);
+		Collection<User> users = userApi.getUsers(req.getOrgDomain(), orgUnitGuid, true, pred, offset, limit);
+
+		resp.put("users", PrimitiveConverter.serialize(users));
+		resp.put("total", total);
 	}
 
-	private int range(int min, int max, int value) {
-		if (value < min)
-			return min;
-		if (value > max)
-			return max;
-		return value;
+	private static class Matched implements Predicate {
+		private String userName;
+		private String loginName;
+
+		public Matched(String userName, String loginName) {
+			this.userName = userName;
+			this.loginName = loginName;
+		}
+
+		@Override
+		public boolean eval(Config c) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> m = (Map<String, Object>) c.getDocument();
+
+			String name = (String) m.get("name");
+			String login = (String) m.get("login_name");
+
+			if (name.contains(userName))
+				return true;
+			if (login.contains(loginName))
+				return true;
+
+			return false;
+		}
 	}
 
 	@MsgbusMethod

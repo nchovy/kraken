@@ -31,10 +31,8 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
-import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
-import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicate;
@@ -49,6 +47,7 @@ import org.krakenapps.dom.api.OrganizationApi;
 import org.krakenapps.dom.api.OrganizationUnitApi;
 import org.krakenapps.dom.api.Transaction;
 import org.krakenapps.dom.api.UserApi;
+import org.krakenapps.dom.api.UserConfigParser;
 import org.krakenapps.dom.api.UserExtensionProvider;
 import org.krakenapps.dom.model.OrganizationUnit;
 import org.krakenapps.dom.model.User;
@@ -451,33 +450,6 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 			UserExtensionProvider p = (UserExtensionProvider) service;
 			userExtensionProviders.remove(p.getExtensionName());
 			super.removedService(reference, service);
-		}
-	}
-
-	private class UserConfigParser extends ConfigParser {
-		@SuppressWarnings("unchecked")
-		@Override
-		public Object parse(Object obj, PrimitiveParseCallback callback) {
-			if (!(obj instanceof Map))
-				return null;
-
-			User user = new User();
-			Map<String, Object> m = (Map<String, Object>) obj;
-			user.setLoginName((String) m.get("login_name"));
-			if (m.get("org_unit") != null)
-				user.setOrgUnit(callback.onParse(OrganizationUnit.class, (Map<String, Object>) m.get("org_unit")));
-			user.setName((String) m.get("name"));
-			user.setDescription((String) m.get("description"));
-			user.setPassword((String) m.get("password"));
-			user.setSalt((String) m.get("salt"));
-			user.setTitle((String) m.get("title"));
-			user.setEmail((String) m.get("email"));
-			user.setPhone((String) m.get("phone"));
-			user.setExt((Map<String, Object>) m.get("ext"));
-			user.setCreated((Date) m.get("created"));
-			user.setUpdated((Date) m.get("updated"));
-			user.setLastPasswordChange((Date) m.get("last_password_change"));
-			return user;
 		}
 	}
 

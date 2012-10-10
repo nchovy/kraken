@@ -49,10 +49,12 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.ConfigTransactionCache;
 import org.krakenapps.confdb.Manifest;
 import org.krakenapps.confdb.ManifestIterator;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.confdb.ReferenceKeys;
 import org.krakenapps.confdb.RollbackException;
 import org.krakenapps.confdb.WriteLockTimeoutException;
 import org.slf4j.Logger;
@@ -641,7 +643,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ConfigTransaction xact = beginTransaction();
 		try {
 			ConfigCollection collection = ensureCollection(xact, doc.getClass());
-			Config c = collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+			Config c = collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate(xact.getCache())));
 			xact.commit(null, null);
 			return c;
 		} catch (Throwable t) {
@@ -655,7 +657,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		ConfigTransaction xact = beginTransaction();
 		try {
 			ConfigCollection collection = ensureCollection(xact, doc.getClass());
-			Config c = collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+			Config c = collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate(xact.getCache())));
 			xact.commit(committer, log);
 			return c;
 		} catch (Throwable t) {
@@ -667,7 +669,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 	@Override
 	public Config add(ConfigTransaction xact, Object doc) {
 		ConfigCollection collection = ensureCollection(xact, doc.getClass());
-		return collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate()));
+		return collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate(xact.getCache())));
 	}
 
 	@Override
@@ -693,13 +695,21 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config update(ConfigTransaction xact, Config c, Object doc, boolean checkConflict) {
-		if (!setUpdate(c, doc))
+		if (!setUpdate(c, doc, xact))
 			return c;
 		return c.getCollection().update(xact, c, checkConflict);
 	}
 
 	private boolean setUpdate(Config c, Object doc) {
-		Object newDoc = PrimitiveConverter.serialize(doc, new CascadeUpdate());
+		return setUpdate(c, doc, null);
+	}
+
+	private boolean setUpdate(Config c, Object doc, ConfigTransaction xact) {
+		ConfigTransactionCache cache = null;
+		if (xact != null)
+			xact.getCache();
+
+		Object newDoc = PrimitiveConverter.serialize(doc, new CascadeUpdate(cache));
 		if (newDoc.equals(c.getDocument()))
 			return false;
 		c.setDocument(newDoc);
@@ -707,17 +717,38 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	private class CascadeUpdate implements PrimitiveSerializeCallback {
+		private ConfigTransactionCache cache;
+
+		public CascadeUpdate(ConfigTransactionCache cache) {
+			this.cache = cache;
+		}
+
 		@Override
 		public void onSerialize(Object root, Class<?> cls, Object obj, Map<String, Object> referenceKeys) {
 			ConfigCollection coll = ensureCollection(cls);
-			Config c = coll.findOne(Predicates.field(referenceKeys));
-			if (c == null)
+			Object oldDoc = cache.get(cls, new ReferenceKeys(referenceKeys));
+			Config c = null;
+			if (oldDoc == null) {
+				c = coll.findOne(Predicates.field(referenceKeys));
+				if (c != null) {
+					oldDoc = c.getDocument();
+					cache.put(cls, oldDoc);
+				}
+			}
+
+			if (oldDoc == null)
 				add(obj);
 			else {
 				Object serialized = PrimitiveConverter.serialize(obj, this);
-				if (!serialized.equals(c.getDocument())) {
+				if (!serialized.equals(oldDoc)) {
+					if (c == null)
+						c = coll.findOne(Predicates.field(referenceKeys));
+
+					// c must exists
 					c.setDocument(serialized);
 					c.getCollection().update(c);
+					cache.remove(cls, oldDoc);
+					cache.put(cls, serialized);
 				}
 			}
 		}
