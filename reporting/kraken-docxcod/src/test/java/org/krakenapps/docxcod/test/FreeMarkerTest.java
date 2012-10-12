@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.json.JSONObject;
 import org.json.JSONTokener;
-import org.junit.Test;
 import org.krakenapps.docxcod.JsonHelper;
 
 import freemarker.template.Configuration;
@@ -18,7 +17,6 @@ import freemarker.template.Template;
 
 public class FreeMarkerTest {
 
-	@Test
 	public void nestedListTest() throws Exception {
 		Configuration cfg = new Configuration();
 		cfg.setObjectWrapper(new DefaultObjectWrapper());
@@ -45,7 +43,6 @@ public class FreeMarkerTest {
 		}
 	}
 
-//	@Test
 	public void test1() throws Exception {
 		Configuration cfg = new Configuration();
 		cfg.setObjectWrapper(new DefaultObjectWrapper());

@@ -1,6 +1,8 @@
 package org.krakenapps.docxcod;
 
-import static org.krakenapps.docxcod.util.XMLDocHelper.*;
+import static org.krakenapps.docxcod.util.XMLDocHelper.evaluateXPath;
+import static org.krakenapps.docxcod.util.XMLDocHelper.newDocumentBuilder;
+import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

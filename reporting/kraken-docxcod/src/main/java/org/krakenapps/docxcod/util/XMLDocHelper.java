@@ -65,7 +65,7 @@ public class XMLDocHelper {
 		}
 
 		@Override
-		public Iterator getPrefixes(String namespaceURI) {
+		public Iterator<?> getPrefixes(String namespaceURI) {
 			// no need to implement for using xpath
 			return null;
 		}

@@ -55,11 +55,10 @@ public class XMLTest {
 		XPath xpath = newXPath(doc);
 
 		XPathExpression expr = xpath.compile("//DEF:Relationship");
-		XPathExpression attrsExpr = xpath.compile("@*");
 
 		NodeList nodeList = evaluateXPathExpr(expr, doc);
 		//		System.out.println(nodeList.getLength());
-		for (Node node : new NodeListWrapper(nodeList)) {
+		for (@SuppressWarnings("unused") Node node : new NodeListWrapper(nodeList)) {
 			//			System.out.println(node.getNodeName());
 			//			NodeList attrs = evaluateXPathExpr(attrsExpr, node);
 			//			for (Node attr: new NodeListWrapper(attrs)) {
@@ -116,7 +115,6 @@ public class XMLTest {
 		}
 	}
 
-	@Test
 	public void xmlTest3() throws Exception {
 		InputStream f = null;
 		try {

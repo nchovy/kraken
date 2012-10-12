@@ -8,7 +8,6 @@
 		<groupId>org.krakenapps</groupId>
 		<version>1.0.0</version>
 	</parent>
-	<groupId>org.krakenapps</groupId>
 	<artifactId>kraken-docxcod</artifactId>
 	<version>0.1.0-SNAPSHOT</version>
 	<packaging>bundle</packaging>
@@ -17,12 +16,10 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-api</artifactId>
-			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
-			<version>1.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -42,17 +39,22 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-json</artifactId>
-			<version>1.1.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.6.6</version>
+			<version>1.6.6</version><!--$NO-MVN-MAN-VER$ -->
 		</dependency>
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-simple</artifactId>
-			<version>1.6.6</version>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.0.7</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.0.7</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -66,7 +68,6 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-bundle-plugin</artifactId>
-				<version>2.0.1</version>
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
@@ -80,7 +81,6 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-ipojo-plugin</artifactId>
-				<version>1.4.0</version>
 				<executions>
 					<execution>
 						<goals>

@@ -1,13 +1,12 @@
 package org.krakenapps.docxcod;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.Reader;
-import java.io.Writer;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -35,6 +34,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 
 		for (String s : docx.listParts("")) {
 			InputStreamReader templateReader = null;
+			
 			PrintWriter writer = null;
 			File sf = new File(docx.getDataDir(), s);
 			File outf = new File(sf.getPath() + ".new");
@@ -56,7 +56,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 					logger.trace("process: deleting old file success: {}", sf);
 					outf.renameTo(sf);
 				} else {
-					logger.trace("process: deleting old file failed: {}", sf);
+					logger.error("process: deleting old file failed: {}", sf);
 				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -71,16 +71,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 		}
 	}
 
-	private void safeClose(Writer o) {
-		try {
-			if (o != null)
-				o.close();
-		} catch (IOException e) {
-			// ignore
-		}
-	}
-
-	private void safeClose(Reader o) {
+	private void safeClose(Closeable o) {
 		try {
 			if (o != null)
 				o.close();

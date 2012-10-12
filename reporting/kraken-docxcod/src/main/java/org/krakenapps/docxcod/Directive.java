@@ -1,6 +1,5 @@
 package org.krakenapps.docxcod;
 
-import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,10 +23,10 @@ public class Directive {
 		return directiveStr;
 	}
 
+	@SuppressWarnings("unused")
 	private static Pattern quotedString = Pattern
 			.compile("[^\\s\"]*\"([^\\\\\"]+|\\\\([btnfr\"'\\\\]|[0-3]?[0-7]{1,2}|u[0-9a-fA-F]{4}))*\"[^\\s\"]*");
 	private static Pattern MERGEFIELD_PATTERN = Pattern.compile("MERGEFIELD\\s+(?:\"(.*)\"|([^\"].*[^\"]))");
-
 
 	private static String parseMergeField(String in) {
 		in = replaceUnicodeQuote(in.trim());
@@ -42,7 +41,6 @@ public class Directive {
 		} else
 			return null;
 	}
-
 
 	private static String replaceUnicodeQuote(String in) {
 		StringBuilder builder = new StringBuilder();

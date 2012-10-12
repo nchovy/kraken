@@ -8,11 +8,11 @@ import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -92,20 +92,24 @@ public class TableDirectiveParser implements OOXMLProcessor {
 	public static final String UTF8_BOM = "\uFEFF";
 
 	private void unwrapMagicNode(OOXMLPackage pkg) {
-		InputStream in = null;
-		FileOutputStream fos = null;
 		BufferedInputStream bis = null;
 		BufferedOutputStream bos = null;
+		FileInputStream fis	= null;
 		
 		try {
-			FileInputStream fis = new FileInputStream(new File(pkg.getDataDir(), "word/document.xml"));
-			String xmlString = new Scanner(fis, "UTF-8").useDelimiter("\\A").next();
+			File docXml = new File(pkg.getDataDir(), "word/document.xml");
+			File newDocXml = new File(docXml + ".new");
 
+			fis = new FileInputStream(docXml);
+			String xmlString = new Scanner(fis, "UTF-8").useDelimiter("\\A").next();
+			
+			fis.close();
+			
 			xmlString = xmlString.replaceAll("<KMagicNode><!\\[CDATA\\[", "<");
 			xmlString = xmlString.replaceAll("\\]\\]></KMagicNode>", ">");
 
-			in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
-			fos = new FileOutputStream(new File(pkg.getDataDir(), "word/document.xml"));
+			InputStream in = new ByteArrayInputStream(xmlString.getBytes("UTF-8"));
+			FileOutputStream fos = new FileOutputStream(newDocXml);
 
 			bis = new BufferedInputStream(in);
 			bos = new BufferedOutputStream(fos);
@@ -116,13 +120,26 @@ public class TableDirectiveParser implements OOXMLProcessor {
 				bos.write(buf, 0, len);
 			}
 
+			bis.close();
+			bos.close();
+			bis = null;
+			bos = null;
+
+			logger.trace("unwrapMagicNode: rename {} to {}", newDocXml, docXml);
+			boolean deleteResult = docXml.delete();
+			if (deleteResult) {
+				logger.trace("unwrapMagicNode: deleting old file success: {}", docXml);
+				newDocXml.renameTo(docXml);
+			} else {
+				logger.error("unwrapMagicNode: deleting old file failed: {}", docXml);
+			}
+
 		} catch (Exception e) {
 			logger.warn("Exception in unwrapMagicNode", e);
 		} finally {
-			safeCloseBOS(bos);
-			safeCloseBIS(bis);
-			safeCloseFOS(fos);
-			safeCloseIS(in);
+			safeClose(fis);
+			safeClose(bis);
+			safeClose(bos);
 		}
 	}
 
@@ -163,7 +180,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			safeCloseIS(f);
+			safeClose(f);
 		}
 	}
 
@@ -396,37 +413,7 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		return directive;
 	}
 
-	private void safeCloseIS(InputStream f) {
-		if (f == null)
-			return;
-		try {
-			f.close();
-		} catch (Exception e) {
-			// ignore
-		}
-	}
-	
-	private void safeCloseFOS(FileOutputStream f) {
-		if (f == null)
-			return;
-		try {
-			f.close();
-		} catch (Exception e) {
-			// ignore
-		}
-	}
-	
-	private void safeCloseBIS(BufferedInputStream f) {
-		if (f == null)
-			return;
-		try {
-			f.close();
-		} catch (Exception e) {
-			// ignore
-		}
-	}
-	
-	private void safeCloseBOS(BufferedOutputStream f) {
+	private void safeClose(Closeable f) {
 		if (f == null)
 			return;
 		try {

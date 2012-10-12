@@ -3,23 +3,23 @@ package org.krakenapps.docxcod.test;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.krakenapps.docxcod.ChartDataReference;
-import org.krakenapps.docxcod.Config;
-import org.krakenapps.docxcod.DataReference;
-import org.krakenapps.docxcod.DocumentMerger;
-import org.krakenapps.docxcod.DocumentSourceInformation;
-import org.krakenapps.docxcod.FileDocumentSource;
-import org.krakenapps.docxcod.RptOutput;
-import org.krakenapps.docxcod.RptTemplateProcessor;
-import org.krakenapps.docxcod.TableDataReference;
-import org.krakenapps.docxcod.TextDataReference;
-import org.krakenapps.docxcod.Utils;
+import org.krakenapps.docxcod.ChartDirectiveParser;
+import org.krakenapps.docxcod.FreeMarkerRunner;
+import org.krakenapps.docxcod.JsonHelper;
+import org.krakenapps.docxcod.OOXMLPackage;
+import org.krakenapps.docxcod.OOXMLProcessor;
+import org.krakenapps.docxcod.TableDirectiveParser;
 
 public class UseCaseScenarios {
 
@@ -34,68 +34,32 @@ public class UseCaseScenarios {
 		tearDownHelper.tearDown();
 	}
 
-	//	@Test
+	@Test
 	public void testScenario1() throws Exception {
-		File inputFile = new File("testScenario1_Input.docx");
-		File outputFile = File.createTempFile("KrakenDocxcodTest_", "_Output.docx");
-		tearDownHelper.add(outputFile);
-		
-		Config config = new Config();
-		config.workingDir = new File("."); 
+		File targetDir = new File("mainTest");
+		targetDir.mkdirs();
+//		tearDownHelper.add(targetDir);
 
-		RptTemplateProcessor tmplProc = new RptTemplateProcessor(config);
-		tmplProc.setDocumentSource(new FileDocumentSource(inputFile));
-		RptOutput output = tmplProc.generateOutput();
+		OOXMLPackage docx = new OOXMLPackage();
+		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
 
-		if (output != null) {
-			Utils.saveReport(output, outputFile);
+		InputStreamReader inputReader = new InputStreamReader(getClass().getResourceAsStream("/nestedListTest.in"));
+		JSONTokener tokener = new JSONTokener(inputReader);
+		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
+
+		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
+		processors.add(new TableDirectiveParser());
+		processors.add(new ChartDirectiveParser());
+		processors.add(new FreeMarkerRunner(rootMap));
+
+		for (OOXMLProcessor processor : processors) {
+			processor.process(docx);
 		}
 
-		assertTrue(outputFile.exists());
+		File saveFile = new File("mainTest-save.docx");
+		docx.save(new FileOutputStream(saveFile));
+		//tearDownHelper.add(saveFile);
+		assertTrue(saveFile.exists());
+		
 	}
-
-	// @Test
-	public void testScenario2() throws Exception {
-		String fSection1Template = "testScenario2_Input.docx";
-
-		HashMap<String, Object> varMap = new HashMap<String, Object>();
-		varMap.put("key1", "value1");
-		varMap.put("key2", "value2");
-
-		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
-		tmplProc.setDataSource(varMap);
-		tmplProc.setDocumentSource(new FileDocumentSource(new File(fSection1Template)));
-		RptOutput output = tmplProc.generateOutput();
-
-		if (output != null)
-			Utils.saveReport(output, new File("testScenario2_Output.docx"));
-	}
-
-	// @Test
-	public void testScenarioOfSomeDay() throws Exception {
-		String fSection1Template = "section1_template.docx";
-
-		DocumentSourceInformation docInfo = new DocumentSourceInformation(new FileDocumentSource(new File(fSection1Template)));
-		docInfo.load();
-		ArrayList<TextDataReference> refs = docInfo.getTextReferences();
-		ArrayList<TableDataReference> tblRefs = docInfo.getTableReferences();
-		ArrayList<ChartDataReference> chartRefs = docInfo.getChartReferences();
-
-		DocumentMerger merger = new DocumentMerger();
-		merger.addDocumentSource(new FileDocumentSource(new File("cover.docx")));
-		merger.addDocumentSource(new FileDocumentSource(new File(fSection1Template)));
-		merger.addDocumentSource(new FileDocumentSource(new File(fSection1Template)));
-		RptOutput mergedTmpl = merger.generateOutput();
-
-		RptTemplateProcessor tmplProc = new RptTemplateProcessor(Config.defaultConfig);
-		HashMap<String, Object> rootObj = new HashMap<String, Object>();
-		tmplProc.setDataSource(rootObj);
-		tmplProc.setDocumentSource(mergedTmpl.createDocumentSource());
-		RptOutput output = tmplProc.generateOutput();
-
-		Utils.saveReport(mergedTmpl, new File("test.docx"));
-	}
-	
-	
-
 }
