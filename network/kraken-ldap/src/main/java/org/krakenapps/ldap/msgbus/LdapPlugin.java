@@ -66,7 +66,7 @@ public class LdapPlugin {
 			serialize.put("trust_store", (serialize.get("trust_store") != null));
 			profiles.add(serialize);
 		}
-		resp.put("profiles", PrimitiveConverter.serialize(ldap.getProfiles()));
+		resp.put("profiles", PrimitiveConverter.serialize(profiles));
 	}
 
 	@SuppressWarnings("unchecked")
