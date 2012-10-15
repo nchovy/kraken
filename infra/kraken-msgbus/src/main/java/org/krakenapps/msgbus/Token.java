@@ -9,6 +9,7 @@ public class Token {
 	private String tokenId = UUID.randomUUID().toString();
 	private Date issuedDate = new Date();
 	private Object data;
+	private int count = 2;
 
 	public String getTokenId() {
 		return tokenId;
@@ -32,6 +33,14 @@ public class Token {
 
 	public void setData(Object data) {
 		this.data = data;
+	}
+
+	public int getCount() {
+		return count;
+	}
+
+	public void setCount(int count) {
+		this.count = count;
 	}
 
 	@Override

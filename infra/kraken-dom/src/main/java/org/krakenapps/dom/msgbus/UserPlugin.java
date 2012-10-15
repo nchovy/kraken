@@ -25,7 +25,6 @@ import java.util.Map;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
-import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
@@ -317,65 +316,5 @@ public class UserPlugin {
 		for (UserExtensionProvider provider : userApi.getExtensionProviders())
 			schemas.add(provider.getExtensionName());
 		resp.put("schemas", schemas);
-	}
-
-	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "user_edit")
-	public void setForcePasswordChanges(Request req, Response resp) {
-		@SuppressWarnings("unchecked")
-		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		List<String> failedUsers = setForcePasswordChanges(req.getOrgDomain(), req.getAdminLoginName(), loginNames, true);
-		resp.put("failed_login_names", failedUsers);
-	}
-
-	@MsgbusMethod
-	@MsgbusPermission(group = "dom", code = "user_edit")
-	public void cancelForcePasswordChanges(Request req, Response resp) {
-		@SuppressWarnings("unchecked")
-		Collection<String> loginNames = (Collection<String>) req.get("login_names");
-		List<String> failedUsers = setForcePasswordChanges(req.getOrgDomain(), req.getAdminLoginName(), loginNames, false);
-		resp.put("failed_login_names", failedUsers);
-	}
-
-	private List<String> setForcePasswordChanges(String domain, String adminLoginName, Collection<String> loginNames,
-			boolean forcePasswordChange) {
-
-		List<ConfigUpdateRequest<User>> updateUsers = new ArrayList<ConfigUpdateRequest<User>>();
-		List<Config> userConfigs = null;
-		List<String> failures = new ArrayList<String>();
-
-		if (loginNames == null)
-			userConfigs = userApi.getConfigs(domain, null, true, null, 0, Integer.MAX_VALUE);
-		else
-			userConfigs = userApi.getConfigs(domain, null, true, Predicates.in("login_name", loginNames), 0, Integer.MAX_VALUE);
-
-		if (userConfigs == null)
-			throw new IllegalArgumentException("userConfigs are empty.");
-
-		Admin admin = adminApi.findAdmin(domain, adminLoginName);
-		if (admin == null)
-			throw new DOMException("admin-not-found");
-
-		PrimitiveParseCallback callback = conf.getParseCallback(domain);
-		for (Config c : userConfigs) {
-			User user = c.getDocument(User.class, callback);
-			if (!adminApi.canManage(domain, admin, user)) {
-				failures.add(user.getLoginName());
-				continue;
-			}
-			user.setForcePasswordChange(forcePasswordChange);
-			updateUsers.add(new ConfigUpdateRequest<User>(c, user));
-		}
-
-		// updateUser 실행
-		if (updateUsers.size() > 0) {
-			try {
-				userApi.updateUsers(domain, updateUsers);
-				logger.trace("kraken dom: updated [{}] users", updateUsers.size());
-			} catch (Throwable t) {
-				logger.error("kraken dom: user update failed", t);
-			}
-		}
-		return failures;
-	}
+	}		
 }

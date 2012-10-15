@@ -69,16 +69,6 @@ public class User {
 	@FieldOption(nullable = true)
 	private String sourceType;	
 	
-	private boolean forcePasswordChange;
-
-	public boolean isForcePasswordChange() {
-		return forcePasswordChange;
-	}
-
-	public void setForcePasswordChange(boolean forcePasswordChange) {
-		this.forcePasswordChange = forcePasswordChange;
-	}
-
 	public String getSourceType() {
 		return sourceType;
 	}

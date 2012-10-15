@@ -43,6 +43,12 @@ public class TokenApiImpl implements TokenApi, Runnable {
 	}
 
 	@Override
+	public void setToken(Token token) {
+		String tokenId = token.getTokenId();
+		tokens.put(tokenId, token);		
+	}
+	
+	@Override
 	public void run() {
 		long now = new Date().getTime();
 		for (Token token : getTokens()) {
@@ -55,4 +61,5 @@ public class TokenApiImpl implements TokenApi, Runnable {
 		}
 
 	}
+
 }
