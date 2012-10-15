@@ -161,6 +161,9 @@ class FileManifest implements Manifest {
 			throw new IllegalStateException("col not found: " + e.getColId());
 
 		m.put(e.getDocId(), e);
+
+		if (m.size() > 65535)
+			throw new IllegalStateException("cannot add more than 65535 docs");
 	}
 
 	@Override
