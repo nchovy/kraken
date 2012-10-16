@@ -67,8 +67,10 @@ public class XmlRpcMethodRegistryImpl extends ServiceTracker implements XmlRpcMe
 
 	@Invalidate
 	public void stop() {
-		HttpContext context = httpd.ensureContext("xmlrpc");
-		context.removeServlet("xmlrpc");
+		if (httpd != null) {
+			HttpContext context = httpd.ensureContext("xmlrpc");
+			context.removeServlet("xmlrpc");
+		}
 
 		// stop service tracker
 		close();
