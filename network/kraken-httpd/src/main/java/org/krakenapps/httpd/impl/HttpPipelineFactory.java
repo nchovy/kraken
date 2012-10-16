@@ -79,6 +79,7 @@ public class HttpPipelineFactory implements ChannelPipelineFactory, HttpConfigur
 		if (config.isSsl()) {
 			SSLEngine engine = sslContext.createSSLEngine();
 			engine.setUseClientMode(false);
+
 			pipeline.addLast("ssl", new SslHandler(engine));
 		}
 

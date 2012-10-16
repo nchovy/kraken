@@ -119,13 +119,15 @@ public class HttpdScript implements Script {
 
 	@ScriptUsage(description = "open https server", arguments = {
 			@ScriptArgument(name = "port", type = "int", description = "bind port"),
-			@ScriptArgument(name = "key alias", type = "string", description = "keystore name"),
-			@ScriptArgument(name = "trust alias", type = "string", description = "truststore name") })
+			@ScriptArgument(name = "key alias", type = "string", description = "JKS keystore name"),
+			@ScriptArgument(name = "trust alias", type = "string", description = "JKS truststore name for client authentication", optional = true) })
 	public void openSsl(String[] args) {
 		try {
 			int port = Integer.valueOf(args[0]);
 			String keyAlias = args[1];
-			String trustAlias = args[2];
+			String trustAlias = null;
+			if (args.length > 2)
+				trustAlias = args[2];
 
 			InetSocketAddress listen = new InetSocketAddress(port);
 			HttpConfiguration config = new HttpConfiguration(listen, keyAlias, trustAlias);
