@@ -50,6 +50,33 @@ public class DirectiveExtractor implements OOXMLProcessor {
 	}
 
 	public static List<Directive> parseNodeList(NodeList nodeList) {
+		/* example:
+		<w:fldSimple w:instr="MERGEFIELD &quot;@before-row#list .vars[\&quot;disk-usage-summary\&quot;] as u&quot; \* MERGEFORMAT">
+          <w:r w:rsidR="00C47145">
+            <w:t>«@before-row#list .vars["disk-usage-summa»</w:t>
+          </w:r>
+    	</w:fldSimple>
+
+	    <w:r>
+          <w:fldChar w:fldCharType="begin" />
+        </w:r>
+        <w:r>
+          <w:instrText xml:space="preserve">MERGEFIELD "@before-row#list .vars[\"disk-usage-summary\"] as u" \* MERGEFORMAT</w:instrText>
+        </w:r>
+        <w:r>
+          <w:fldChar w:fldCharType="separate" />
+        </w:r>
+	    ... w:r screen representation of directive
+        <w:r>
+          <w:rPr>
+            <w:noProof />
+          </w:rPr>
+          <w:fldChar w:fldCharType="end" />
+        </w:r>
+        
+        contents of 'w:instrText' can be splitted into many runs, so  
+        contents of the elements between w:fldCharType="begin" and w:fldCharType="end" should be merged
+		*/
 		ArrayList<Directive> directives = new ArrayList<Directive>();
 		String mergedDirective = null;
 		Node directivePosition = null;

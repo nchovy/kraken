@@ -86,7 +86,7 @@ public class DocxTest {
 	public void mainTest() throws IOException, JSONException {
 		File targetDir = new File("mainTest");
 		targetDir.mkdirs();
-		tearDownHelper.add(targetDir);
+		//tearDownHelper.add(targetDir);
 
 		OOXMLPackage docx = new OOXMLPackage();
 		docx.load(getClass().getResourceAsStream("/nestedList2.docx"), targetDir);
@@ -106,7 +106,7 @@ public class DocxTest {
 
 		File saveFile = new File("mainTest-save.docx");
 		docx.save(new FileOutputStream(saveFile));
-		tearDownHelper.add(saveFile);
+//		tearDownHelper.add(saveFile);
 	}
 
 	@Test

@@ -12,3 +12,8 @@ kraken-rrd/equalityTest.bin
 .*.swp
 reporting/kraken-docxcod/saveTest
 reporting/kraken-docxcod/src/test/resources/~$*.docx
+
+syntax: regexp
+^reporting/kraken-docxcod/mainTest$
+syntax: regexp
+\.docx$

@@ -41,70 +41,88 @@ import org.w3c.dom.NodeList;
 public class TableDirectiveParser implements OOXMLProcessor {
 	private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
+	static String[] augmentedDirectives = {
+			"@before-row",
+			"@after-row",
+			// "@before-paragraph",
+			// "@after-paragraph"
+	};
+
 	public void process(OOXMLPackage pkg) {
 		extractMergeField(pkg);
 		unwrapMagicNode(pkg);
 	}
 
-	private static Pattern MAGICNODE_PATTERN = Pattern.compile("<KMagicNode><![CDATA[+(.*)+]]></KMagicNode>");
+	private void extractMergeField(OOXMLPackage pkg) throws TransformerFactoryConfigurationError {
+		InputStream f = null;
+		try {
+			f = new FileInputStream(new File(pkg.getDataDir(), "word/document.xml"));
+			Document doc = newDocumentBuilder().parse(f);
 
-	private static String parseMagicNode(String in) {
-		in = replaceUnicodeQuote(in.trim());
-		Matcher matcher = MAGICNODE_PATTERN.matcher(in);
+			XPath xpath = newXPath(doc);
+			NodeList nodeList = evaluateXPath(xpath,
+					"//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
 
-		System.out.println(matcher.group(1));
-		if (matcher.find() && matcher.groupCount() > 0) {
-			String f = matcher.group(1);
-			System.out.printf("group1 : %s\n", f);
-			if (f == null)
-				f = matcher.group(2);
-			f = f.replaceAll("\\\\(.)", "$1");
-			return f;
-		} else
-			return null;
-	}
+			XPathExpression xpFldSimpleText = xpath.compile("w:r/w:t");
 
-	private static String replaceUnicodeQuote(String in) {
-		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < in.length(); ++i) {
-			int type = Character.getType(in.codePointAt(i));
-			switch (type) {
-			case Character.FINAL_QUOTE_PUNCTUATION:
-			case Character.INITIAL_QUOTE_PUNCTUATION:
-				builder.append('"');
-				break;
-			default:
-				builder.append(in.charAt(i));
-				break;
+			List<Directive> directives = DirectiveExtractor.parseNodeList(nodeList);
+			for (Directive d : directives) {
+
+				Node n = d.getPosition();
+
+				String directive = d.getDirectiveString();
+				logger.debug("{} {}", new Object[] { n.getNodeName(), directive });
+
+				/*
+				 * AugmentedDirective: starts with '@', refer
+				 * 'augmented-directive' static variable. Their contents will be
+				 * moved to proper position through directive.
+				 * FreemarkerDirective: others
+				 */
+				if (directive.charAt(0) == '@') {
+					handleAugmentedDirective(doc, n, directive);
+				} else {
+					handleFreemarkerDirective(xpFldSimpleText, n, directive);
+				}
+
 			}
-		}
-		return builder.toString();
-	}
 
-	public static String transformMagicNode(String nodeValue) {
-		String result = nodeValue.trim();
-		if (result.startsWith("<KMagicNode>")) {
-			result = parseMagicNode(result);
+			Transformer transformer = TransformerFactory.newInstance().newTransformer();
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			transformer.setOutputProperty(OutputKeys.CDATA_SECTION_ELEMENTS, "yes");
+			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+			transformer
+					.transform(new DOMSource(doc), new StreamResult(new File(pkg.getDataDir(), "word/document.xml")));
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			safeClose(f);
 		}
-		return result;
 	}
-
-	public static final String UTF8_BOM = "\uFEFF";
 
 	private void unwrapMagicNode(OOXMLPackage pkg) {
+		/*
+		 * augmented directive is processed with standard XML API. Because
+		 * Freemarker directive is not legal XML element, contents of augmented
+		 * directive should be wrapped to legal XML element, "KMagicNode", in
+		 * extractMergeField method.
+		 * 
+		 * In this method, all KMagicNode element will be translated into
+		 * Freemarker directive without XML API.
+		 */
 		BufferedInputStream bis = null;
 		BufferedOutputStream bos = null;
-		FileInputStream fis	= null;
-		
+		FileInputStream fis = null;
+
 		try {
 			File docXml = new File(pkg.getDataDir(), "word/document.xml");
 			File newDocXml = new File(docXml + ".new");
 
 			fis = new FileInputStream(docXml);
 			String xmlString = new Scanner(fis, "UTF-8").useDelimiter("\\A").next();
-			
+
 			fis.close();
-			
+
 			xmlString = xmlString.replaceAll("<KMagicNode><!\\[CDATA\\[", "<");
 			xmlString = xmlString.replaceAll("\\]\\]></KMagicNode>", ">");
 
@@ -143,49 +161,66 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		}
 	}
 
-	private void extractMergeField(OOXMLPackage pkg) throws TransformerFactoryConfigurationError {
-		InputStream f = null;
-		try {
-			f = new FileInputStream(new File(pkg.getDataDir(), "word/document.xml"));
-			Document doc = newDocumentBuilder().parse(f);
+	private static Pattern MAGICNODE_PATTERN = Pattern.compile("<KMagicNode><![CDATA[+(.*)+]]></KMagicNode>");
 
-			XPath xpath = newXPath(doc);
-			NodeList nodeList = evaluateXPath(xpath,
-					"//w:tbl//*[name()='w:fldChar' or name()='w:instrText' or name()='w:fldSimple']", doc);
+	private static String parseMagicNode(String in) {
+		in = replaceUnicodeQuote(in.trim());
+		Matcher matcher = MAGICNODE_PATTERN.matcher(in);
 
-			XPathExpression xpFldSimpleText = xpath.compile("w:r/w:t");
-
-			List<Directive> directives = DirectiveExtractor.parseNodeList(nodeList);
-			for (Directive d : directives) {
-
-				Node n = d.getPosition();
-
-				String directive = d.getDirectiveString();
-				logger.debug("{} {}", new Object[] { n.getNodeName(), directive });
-
-				if (directive.charAt(0) == '@') {
-					handleAugmentedDirective(doc, n, directive);
-				} else {
-					handleFreemarkerDirective(xpFldSimpleText, n, directive);
-				}
-
-			}
-
-			Transformer transformer = TransformerFactory.newInstance().newTransformer();
-			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-			transformer.setOutputProperty(OutputKeys.CDATA_SECTION_ELEMENTS, "yes");
-			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-			transformer
-					.transform(new DOMSource(doc), new StreamResult(new File(pkg.getDataDir(), "word/document.xml")));
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			safeClose(f);
-		}
+		if (matcher.find() && matcher.groupCount() > 0) {
+			String f = matcher.group(1);
+			if (f == null)
+				f = matcher.group(2);
+			f = f.replaceAll("\\\\(.)", "$1");
+			return f;
+		} else
+			return null;
 	}
 
-	private void handleFreemarkerDirective(XPathExpression xpFldSimpleText, Node n, String directive) throws XPathExpressionException {
+	private static String replaceUnicodeQuote(String in) {
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < in.length(); ++i) {
+			int type = Character.getType(in.codePointAt(i));
+			switch (type) {
+			case Character.FINAL_QUOTE_PUNCTUATION:
+			case Character.INITIAL_QUOTE_PUNCTUATION:
+				builder.append('"');
+				break;
+			default:
+				builder.append(in.charAt(i));
+				break;
+			}
+		}
+		return builder.toString();
+	}
+
+	// unused but leave here for reference
+	@SuppressWarnings("unused")
+	private static String transformMagicNode(String nodeValue) {
+		String result = nodeValue.trim();
+		if (result.startsWith("<KMagicNode>")) {
+			result = parseMagicNode(result);
+		}
+		return result;
+	}
+
+	public static final String UTF8_BOM = "\uFEFF";
+
+	private void handleFreemarkerDirective(XPathExpression xpFldSimpleText, Node n, String directive)
+			throws XPathExpressionException {
 		if (n.getNodeName().equals("w:fldSimple")) {
+			/* // @formatter:off
+            <w:fldSimple w:instr="MERGEFIELD &quot;@before-row#list .vars[\&quot;disk-usage-summary\&quot;] as u&quot; \* MERGEFORMAT">
+              <w:r w:rsidR="00C47145">
+                <w:rPr>
+                  <w:noProof />
+                </w:rPr>
+                <w:t>«@before-row#list .vars["disk-usage-summa»</w:t>
+              </w:r>
+            </w:fldSimple>
+            move all nodes in fldSimple to out of it.
+                        
+            */ // @formatter:on
 			logger.debug("fldSimple found");
 			NodeList t = evaluateXPathExpr(xpFldSimpleText, n);
 
@@ -200,6 +235,31 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			}
 			parent.removeChild(n);
 		} else if (n.getNodeName().equals("w:fldChar")) {
+			// @formatter:off
+			/*
+            <w:r>
+              <w:fldChar w:fldCharType="begin" />
+            </w:r>
+            <w:r>
+              <w:instrText xml:space="preserve">MERGEFIELD @after-row#/list \* MERGEFORMAT</w:instrText>
+            </w:r>
+            <w:r>
+              <w:fldChar w:fldCharType="separate" />
+            </w:r>
+            <w:r> <!-- style of this run will be used -->
+              <w:rPr>
+                <w:noProof />
+              </w:rPr>
+              <w:t>«@after-row#/list»</w:t>
+            </w:r>
+            <w:r>
+              <w:rPr>
+                <w:noProof />
+              </w:rPr>
+              <w:fldChar w:fldCharType="end" />
+            </w:r>
+			 */
+            // @formatter:on
 			Node firstRun = n.getParentNode();
 			Node sibling = firstRun.getNextSibling();
 			Node lastRun = null;
@@ -211,7 +271,10 @@ public class TableDirectiveParser implements OOXMLProcessor {
 			{
 				if (sibling.getNodeName().equals("w:r"))
 				{
+					// all nodes in w:fldChar except 'newRun' will be removed
+					// finally.
 					willBeRemoved.add(sibling);
+
 					Node fldCharNode = findFldCharNode(sibling);
 					if (fldCharNode == null) {
 						sibling = sibling.getNextSibling();
@@ -226,11 +289,15 @@ public class TableDirectiveParser implements OOXMLProcessor {
 					if (namedItem.getNodeValue().equals("separate")) {
 						sibling = sibling.getNextSibling();
 
+						// newRun will not be removed
 						newRun = sibling;
+						// skip whitespace elements and find first w:r.
 						while (!newRun.getNodeName().equals("w:r")) {
 							newRun = newRun.getNextSibling();
 						}
 
+						// replace contents of first w:r. so formating style of
+						// newRun will preserved.
 						Node textNode = findTextNode(newRun);
 						if (textNode == null) {
 							logger.warn("no text-containing run element found with directive. skipped. : {}", directive);
@@ -261,13 +328,14 @@ public class TableDirectiveParser implements OOXMLProcessor {
 		}
 	}
 
-	static String[] augmentedDirectives = {
-			"@before-row",
-			"@after-row",
-			"@before-paragraph",
-			"@after-paragraph"
-	};
-
+	/*
+	 * Augmented directive is annotated Freemarker directive. The directive
+	 * contains annotation on position of the Freemarker directive, such as
+	 * 'before row', 'after row'.
+	 * 
+	 * This method removes annotated node and inserts the magic node contains
+	 * Freemarker directive which is handled by unwrapMagicNode.
+	 */
 	private void handleAugmentedDirective(Document doc, Node n, String directive) {
 		if (n.getNodeName().equals("w:fldSimple"))
 		{
@@ -297,8 +365,10 @@ public class TableDirectiveParser implements OOXMLProcessor {
 				targetPara = targetPara.getNextSibling();
 			}
 
+			// insert magic node
 			parentOfPara.insertBefore(getMagicNode(doc, unwrapAugmentedDirective(directive)), targetPara);
 
+			// remove annotated node
 			n.getParentNode().removeChild(n);
 		}
 		else if (n.getNodeName().equals("w:fldChar"))
