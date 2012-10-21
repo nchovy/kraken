@@ -1,7 +1,6 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
 import java.util.ArrayList;
-
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
 
@@ -18,101 +17,6 @@ public class Question implements FacebookGraphObject{
 	private class FbConnection{
 		public String CONN_options = "options";
 		private ArrayList<QuestionOption> options;
-		private class QuestionOption{
-			private String id;
-			private From from;
-			private String name;
-			private int vote;
-			private Category object;
-			private String created_time;
-			private class InnerConnection{
-				public String CONN_votes = "votes";
-				private ArrayList<From> votes;
-				public InnerConnection(){
-					votes = null;
-				}
-				public ArrayList<From> getVotes() {
-					return votes;
-				}
-				public void setVotes(ArrayList<From> votes) {
-					this.votes = votes;
-				}
-			}
-			private class Category{
-				private String id;
-				private String name;
-				private String category;
-				private String created_time;
-				public Category(){
-					
-				}
-				public String getId() {
-					return id;
-				}
-				public void setId(String id) {
-					this.id = id;
-				}
-				public String getName() {
-					return name;
-				}
-				public void setName(String name) {
-					this.name = name;
-				}
-				public String getCategory() {
-					return category;
-				}
-				public void setCategory(String category) {
-					this.category = category;
-				}
-				public String getCreated_time() {
-					return created_time;
-				}
-				public void setCreated_time(String created_time) {
-					this.created_time = created_time;
-				}
-				
-			}
-			public QuestionOption(){
-				from = null;
-			}
-			public String getId() {
-				return id;
-			}
-			public void setId(String id) {
-				this.id = id;
-			}
-			public From getFrom() {
-				return from;
-			}
-			public void setFrom(From from) {
-				this.from = from;
-			}
-			public String getName() {
-				return name;
-			}
-			public void setName(String name) {
-				this.name = name;
-			}
-			public int getVote() {
-				return vote;
-			}
-			public void setVote(int vote) {
-				this.vote = vote;
-			}
-			public Category getObject() {
-				return object;
-			}
-			public void setObject(Category object) {
-				this.object = object;
-			}
-			public String getCreated_time() {
-				return created_time;
-			}
-			public void setCreated_time(String created_time) {
-				this.created_time = created_time;
-			}
-			
-		}
 		public FbConnection(){
 			options = null;
 		}
