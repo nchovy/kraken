@@ -14,19 +14,82 @@ public class Thread implements FacebookGraphObject{
 	private int message_count;
 	private int unread_count;
 	private ArrayList<From> tags;
-	// participants;
-	//fromer_participants;
-	//senders
+	private ArrayList<participant> participants;
+	private ArrayList<participant> former_participants;
+	private ArrayList<participant> senders;
 	private ArrayList<Message> messages;
 	private FbConnection fbConnection;
 	
 	private class FbConnection{
-		
-		//tags
-		//participants
-		//senders
-		ArrayList<Message> messages;
+		public String CONN_tags = "tags";
+		public String CONN_participants = "participants";
+		public String CONN_former_participants = "former_participants";
+		public String CONN_senders = "senders";
+		public String CONN_messages = "messages";
+		private ArrayList<Message> messages;
+		private ArrayList<String> tags;
+		private ArrayList<participant> participants;
+		private ArrayList<participant> former_participants;
+		private ArrayList<participant> senders;
 		public FbConnection(){
+			messages = null;
+			participants = null;
+			former_participants =null;
+			senders = null;
+		}
+		public ArrayList<Message> getMessages() {
+			return messages;
+		}
+		public void setMessages(ArrayList<Message> messages) {
+			this.messages = messages;
+		}
+		public ArrayList<String> getTags() {
+			return tags;
+		}
+		public void setTags(ArrayList<String> tags) {
+			this.tags = tags;
+		}
+		public ArrayList<participant> getParticipants() {
+			return participants;
+		}
+		public void setParticipants(ArrayList<participant> participants) {
+			this.participants = participants;
+		}
+		public ArrayList<participant> getFormer_participants() {
+			return former_participants;
+		}
+		public void setFormer_participants(ArrayList<participant> former_participants) {
+			this.former_participants = former_participants;
+		}
+		public ArrayList<participant> getSenders() {
+			return senders;
+		}
+		public void setSenders(ArrayList<participant> senders) {
+			this.senders = senders;
+		}
+		
+	}
+	private class participant{
+		private String id;
+		private String email;
+		private String name;
+		public String getId() {
+			return id;
+		}
+		public void setId(String id) {
+			this.id = id;
+		}
+		public String getEmail() {
+			return email;
+		}
+		public void setEmail(String email) {
+			this.email = email;
+		}
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
 		}
 	}
 	public Thread(){
