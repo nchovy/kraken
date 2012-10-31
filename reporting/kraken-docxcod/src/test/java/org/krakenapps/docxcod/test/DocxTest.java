@@ -74,6 +74,7 @@ public class DocxTest {
 
 		int cnt = 0;
 		for (Directive dir : directiveExtractor.getDirectives()) {
+			@SuppressWarnings("unused")
 			Node n = dir.getPosition();
 			String dirStr = dir.getDirectiveString();
 			logger.debug("extracted: " + dirStr);
