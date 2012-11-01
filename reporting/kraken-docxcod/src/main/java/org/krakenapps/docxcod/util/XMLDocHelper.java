@@ -1,17 +1,27 @@
 package org.krakenapps.docxcod.util;
 
+import java.io.File;
 import java.util.Iterator;
 
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -32,7 +42,7 @@ public class XMLDocHelper {
 		if (xpathFactory == null) {
 			xpathFactory = XPathFactory.newInstance();
 		}
-			
+
 		XPath xpath = xpathFactory.newXPath();
 		xpath.setNamespaceContext(new DocumentNamespaceContext(doc));
 		return xpath;
@@ -74,9 +84,11 @@ public class XMLDocHelper {
 	public static NodeList evaluateXPath(Document doc, String expression) throws XPathExpressionException {
 		return (NodeList) newXPath(doc).evaluate(expression, doc, XPathConstants.NODESET);
 	}
+
 	public static NodeList evaluateXPath(XPath xpath, String expression, Node node) throws XPathExpressionException {
 		return (NodeList) xpath.evaluate(expression, node, XPathConstants.NODESET);
 	}
+
 	public static NodeList evaluateXPathExpr(XPathExpression xpath, Node node) throws XPathExpressionException {
 		return (NodeList) xpath.evaluate(node, XPathConstants.NODESET);
 	}
@@ -120,5 +132,22 @@ public class XMLDocHelper {
 		public Iterator<Node> iterator() {
 			return new IteratorI();
 		}
+	}
+
+	public static void save(Document doc, File file, boolean indent) throws XPathExpressionException, DOMException,
+			TransformerFactoryConfigurationError, TransformerException {
+		doc.normalize();
+
+		XPath xpath = newXPath(doc);
+
+		for (Node n : new NodeListWrapper(evaluateXPath(xpath, "//text()[normalize-space(.)='']", doc))) {
+			n.getParentNode().removeChild(n);
+		}
+
+		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		transformer.setOutputProperty(OutputKeys.INDENT, indent ? "yes" : "no");
+		transformer.setOutputProperty(OutputKeys.CDATA_SECTION_ELEMENTS, "yes");
+		transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+		transformer.transform(new DOMSource(doc), new StreamResult(file));
 	}
 }

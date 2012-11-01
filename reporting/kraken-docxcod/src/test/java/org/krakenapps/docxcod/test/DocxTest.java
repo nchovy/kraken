@@ -17,14 +17,16 @@ import org.json.JSONTokener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.krakenapps.docxcod.AugmentedDirectiveProcessor;
 import org.krakenapps.docxcod.ChartDirectiveParser;
 import org.krakenapps.docxcod.Directive;
 import org.krakenapps.docxcod.DirectiveExtractor;
 import org.krakenapps.docxcod.FreeMarkerRunner;
 import org.krakenapps.docxcod.JsonHelper;
+import org.krakenapps.docxcod.MagicNodeUnwrapper;
 import org.krakenapps.docxcod.OOXMLPackage;
 import org.krakenapps.docxcod.OOXMLProcessor;
-import org.krakenapps.docxcod.TableDirectiveParser;
+import org.krakenapps.docxcod.MergeFieldParser;
 import org.krakenapps.docxcod.util.ZipHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,8 +99,10 @@ public class DocxTest {
 		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
 
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
-		processors.add(new TableDirectiveParser());
+		processors.add(new MergeFieldParser());
+		processors.add(new AugmentedDirectiveProcessor());
 		processors.add(new ChartDirectiveParser());
+		processors.add(new MagicNodeUnwrapper());
 		processors.add(new FreeMarkerRunner(rootMap));
 
 		for (OOXMLProcessor processor : processors) {

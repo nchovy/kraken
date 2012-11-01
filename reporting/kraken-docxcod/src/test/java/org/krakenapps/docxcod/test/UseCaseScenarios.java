@@ -19,7 +19,7 @@ import org.krakenapps.docxcod.FreeMarkerRunner;
 import org.krakenapps.docxcod.JsonHelper;
 import org.krakenapps.docxcod.OOXMLPackage;
 import org.krakenapps.docxcod.OOXMLProcessor;
-import org.krakenapps.docxcod.TableDirectiveParser;
+import org.krakenapps.docxcod.MergeFieldParser;
 
 public class UseCaseScenarios {
 
@@ -48,7 +48,7 @@ public class UseCaseScenarios {
 		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
 
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
-		processors.add(new TableDirectiveParser());
+		processors.add(new MergeFieldParser());
 		processors.add(new ChartDirectiveParser());
 		processors.add(new FreeMarkerRunner(rootMap));
 
