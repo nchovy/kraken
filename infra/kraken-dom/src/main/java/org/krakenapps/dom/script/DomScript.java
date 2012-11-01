@@ -7,8 +7,13 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.api.AreaApi;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.GlobalConfigApi;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.api.HostUpdateApi;
@@ -40,10 +45,11 @@ public class DomScript implements Script {
 	private HostApi hostApi;
 	private ApplicationApi appApi;
 	private HostUpdateApi updateApi;
+	private ConfigService conf;
 
 	public DomScript(GlobalConfigApi globalConfigApi, OrganizationApi orgApi, OrganizationUnitApi orgUnitApi, UserApi userApi,
 			RoleApi roleApi, ProgramApi programApi, AreaApi areaApi, HostApi hostApi, ApplicationApi appApi,
-			HostUpdateApi updateApi) {
+			HostUpdateApi updateApi, ConfigService conf) {
 		this.globalConfigApi = globalConfigApi;
 		this.orgApi = orgApi;
 		this.orgUnitApi = orgUnitApi;
@@ -54,11 +60,36 @@ public class DomScript implements Script {
 		this.hostApi = hostApi;
 		this.appApi = appApi;
 		this.updateApi = updateApi;
+		this.conf = conf;
 	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	// can remove master user
+	@ScriptUsage(description = "remove user", arguments = {
+			@ScriptArgument(name = "domain", type = "string", description = "domain"),
+			@ScriptArgument(name = "login name", type = "string", description = "target login name") })
+	public void removeUser(String[] args) {
+		String domain = args[0];
+		String loginName = args[1];
+
+		try {
+			ConfigDatabase db = conf.getDatabase("kraken-dom-" + domain);
+			Config c = db.findOne(User.class, Predicates.field("login_name", loginName));
+
+			if (c == null) {
+				context.println("user not found");
+				return;
+			}
+
+			db.remove(c, true);
+			context.println("done");
+		} catch (RuntimeException e) {
+			context.println("[kraken-dom-" + domain + "] not found");
+		}
 	}
 
 	@ScriptUsage(description = "reset user password", arguments = {
