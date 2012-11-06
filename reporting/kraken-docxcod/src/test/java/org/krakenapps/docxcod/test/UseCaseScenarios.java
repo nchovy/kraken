@@ -53,7 +53,7 @@ public class UseCaseScenarios {
 		processors.add(new FreeMarkerRunner(rootMap));
 
 		for (OOXMLProcessor processor : processors) {
-			processor.process(docx);
+			processor.process(docx, rootMap);
 		}
 
 		File saveFile = new File("mainTest-save.docx");

@@ -17,6 +17,7 @@ import org.json.JSONTokener;
 import org.junit.Test;
 import org.krakenapps.docxcod.JsonHelper;
 
+import freemarker.core.Environment;
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
@@ -32,6 +33,8 @@ public class FreeMarkerTest {
 		public Object exec(@SuppressWarnings("rawtypes") List arguments) throws TemplateModelException {
 			callCount ++;
 			System.out.printf("makeNewChart called(%s, %s)\n", arguments.get(0), arguments.get(1));
+			System.out.printf("%s\n", Environment.getCurrentEnvironment().getKnownVariableNames());
+			System.out.printf("%s\n", Environment.getCurrentEnvironment().getVariable("u"));
 			return "";
 		}
 	}

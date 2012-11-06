@@ -3,7 +3,7 @@ disk-usage-summary
 <#list .vars["disk-usage-summary"] as u>
 ===========
 Host: ${u["host"]}
------------${makeNewChart("ctx", u)}
+-----------${makeNewChart("ctx", u, .vars["u"])}
 <#list u["disk-usage"] as d>
 ${d["disk-name"]}: ${d["usage"]}%
 </#list>

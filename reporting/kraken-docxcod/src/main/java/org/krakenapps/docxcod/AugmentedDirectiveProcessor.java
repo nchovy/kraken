@@ -8,6 +8,7 @@ import static org.krakenapps.docxcod.util.XMLDocHelper.newXPath;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Map;
 
 import javax.xml.xpath.XPath;
 
@@ -31,7 +32,7 @@ public class AugmentedDirectiveProcessor implements OOXMLProcessor {
 	};
 
 	@Override
-	public void process(OOXMLPackage pkg) {
+	public void process(OOXMLPackage pkg, Map<String, Object> rootMap) {
 		InputStream f = null;
 		try {
 			f = new FileInputStream(new File(pkg.getDataDir(), "word/document.xml"));

@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.xpath.XPath;
@@ -21,7 +22,7 @@ import org.w3c.dom.NodeList;
 public class DirectiveExtractor implements OOXMLProcessor {
 
 	@Override
-	public void process(OOXMLPackage pkg) {
+	public void process(OOXMLPackage pkg, Map<String, Object> rootMap) {
 		extractField(pkg);
 	}
 	

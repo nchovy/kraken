@@ -27,7 +27,7 @@ public class FreeMarkerRunner implements OOXMLProcessor {
 	}
 
 	@Override
-	public void process(OOXMLPackage docx) {
+	public void process(OOXMLPackage docx, Map<String, Object> rootMap) {
 		// TODO Auto-generated method stub
 		Configuration cfg = new Configuration();
 		cfg.setObjectWrapper(new DefaultObjectWrapper());

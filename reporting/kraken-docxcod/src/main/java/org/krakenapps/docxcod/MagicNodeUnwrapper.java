@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,7 +23,7 @@ public class MagicNodeUnwrapper implements OOXMLProcessor {
 	private static Pattern MAGICNODE_PTRN_EXPR = Pattern.compile("<KMagicNode><!\\[CDATA\\[(.*)\\]\\]><\\/KMagicNode>");
 
 	@Override
-	public void process(OOXMLPackage pkg) {
+	public void process(OOXMLPackage pkg, Map<String, Object> rootMap) {
 		/*
 		 * augmented directive is processed with standard XML API. Because
 		 * Freemarker directive is not legal XML element, contents of augmented

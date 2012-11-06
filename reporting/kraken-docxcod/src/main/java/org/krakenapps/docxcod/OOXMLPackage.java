@@ -232,6 +232,8 @@ public class OOXMLPackage {
 	public void save(OutputStream os) {
 		ZipOutputStream zipOs = null;
 		try {
+			parseRels();
+			
 			zipOs = new ZipOutputStream(os);
 			List<File> files = new ArrayList<File>();
 

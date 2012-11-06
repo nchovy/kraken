@@ -1,6 +1,9 @@
 package org.krakenapps.docxcod.util;
 
+import static org.krakenapps.docxcod.util.XMLDocHelper.evaluateXPath;
+
 import java.io.File;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import javax.xml.namespace.NamespaceContext;
@@ -53,11 +56,29 @@ public class XMLDocHelper {
 		String unnamedPrefix = null;
 		String unnamedURI = null;
 
+		HashMap<String, String> uriMap = new HashMap<String, String>();
+
 		public DocumentNamespaceContext(Document doc) {
 			this.doc = doc;
 			if (doc.lookupNamespaceURI(null) != null) {
 				unnamedPrefix = "DEF";
 				unnamedURI = doc.lookupNamespaceURI(null);
+			}
+			try {
+				XPath xpath = xpathFactory.newXPath();
+				NodeList nodeList_ = evaluateXPath(xpath, "//*/namespace::*", doc);
+
+				for (Node n : new NodeListWrapper(nodeList_)) {
+					String nsName = n.getNodeName();
+					String nsURI = n.getTextContent();
+					if (nsName.length() > 6) {
+						nsName = nsName.substring(6);
+					} else {
+						nsName = ""; // empty(default) namespace
+					}
+					uriMap.put(nsName, nsURI);
+				}
+			} catch (XPathExpressionException e) {
 			}
 		}
 
@@ -65,7 +86,10 @@ public class XMLDocHelper {
 		public String getNamespaceURI(String prefix) {
 			if (prefix.equals(unnamedPrefix))
 				return unnamedURI;
-			return doc.lookupNamespaceURI(prefix);
+			if (uriMap.containsKey(prefix))
+				return uriMap.get(prefix);
+			else
+				return doc.lookupNamespaceURI(prefix);
 		}
 
 		@Override
