@@ -46,6 +46,7 @@ public class User implements FacebookGraphObject{
 	//video_upload_limits;
 	private String website;
 	private ArrayList<Work> work;
+	private FbConnection fbConnection;
 	
 	public User(){
 		languages = new ArrayList<From>();
@@ -54,8 +55,52 @@ public class User implements FacebookGraphObject{
 		interested_in = new ArrayList<String>();
 		favorite_athletes = new ArrayList<From>();
 		favorite_team = new ArrayList<From>();
+		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
+		public String CONN_accounts = "accounts";
+		public String CONN_achievements = "achievements";
+		public String CONN_activities = "activities";
+		public String CONN_albums = "albums";
+		public String CONN_apprequests = "apprequests";
+		public String CONN_books = "books";
+		public String CONN_checkins = "checkins";
+		public String CONN_events = "events";
+		public String CONN_family = "family";
+		public String CONN_feed = "feed";
+		public String CONN_friendlists = "friendlists";
+		public String CONN_friendrequests = "friendrequests";
+		public String CONN_friends = "friends";
+		public String CONN_games = "games";
+		public String CONN_home = "home";
+		public String CONN_inbox = "inbox";
+		public String CONN_interests = "interests";
+		public String CONN_likes = "likes";
+		public String CONN_locations = "locations";
+		public String CONN_movies = "movies";
+		public String CONN_music = "music";
+		public String CONN_mutualfriends = "mutualfriends";
+		public String CONN_notes = "notes";
+		public String CONN_notifications = "notifications";
+		public String CONN_outbox = "outbox";
+		public String CONN_payments = "payments";
+		public String CONN_permissions = "permissions";
+		public String CONN_photos = "photos";
+		public String CONN_photos_uploaded = "photos/uploaded";
+		public String CONN_picture = "picture";
+		public String CONN_pokes = "pokes";
+		public String CONN_posts = "posts";
+		public String CONN_questions = "questions";
+		public String CONN_scores = "scores";
+		public String CONN_sharedposts = "sharedposts";
+		public String CONN_statuses = "statuses";
+		public String CONN_subscribedto = "subscribedto";
+		public String CONN_subscribers = "subscribers";
+		public String CONN_tagged = "tagged";
+		public String CONN_television = "television";
+		public String CONN_updates = "updates";
+		public String CONN_videos = "videos";
+		
 		
 		public FbConnection(){
 		}
