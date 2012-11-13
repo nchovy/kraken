@@ -17,9 +17,8 @@ package org.krakenapps.pkg;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -29,19 +28,26 @@ import org.krakenapps.api.PackageDescriptor;
 import org.krakenapps.api.PackageRepository;
 import org.krakenapps.api.Version;
 import org.krakenapps.api.VersionRange;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 
+/**
+ * Package configurator for metadata management
+ * 
+ * @author xeraph
+ * 
+ */
 public class PackageDatabase {
-	private static final String BUNDLE_REQS = "bundle_reqs";
-	private Preferences prefs;
+	private ConfigService conf;
 
-	public PackageDatabase(Preferences prefs) throws BackingStoreException {
-		this.prefs = prefs;
+	public PackageDatabase(ConfigService conf) {
+		this.conf = conf;
 		insertDefaultRepositories();
 	}
 
-	private void insertDefaultRepositories() throws BackingStoreException {
+	private void insertDefaultRepositories() {
 		PackageRepository[] DEFAULT_REPOSITORIES = null;
 		try {
 			DEFAULT_REPOSITORIES = new PackageRepository[] { PackageRepository.create("krakenapps", new URL(
@@ -49,204 +55,172 @@ public class PackageDatabase {
 		} catch (MalformedURLException e) {
 		}
 
-		Preferences repoPrefs = getPackagePreferences().node("repo");
-		if (repoPrefs.childrenNames().length > 0)
+		if (getPackageRepositories().size() > 0)
 			return;
 
 		for (PackageRepository repo : DEFAULT_REPOSITORIES) {
-			Preferences p = repoPrefs.node(repo.getAlias());
-			p.put("url", repo.getUrl().toString());
+			try {
+				createPackageRepository(repo);
+			} catch (IllegalStateException e) {
+				// ignore duplicated repos
+			}
 		}
-
-		sync(repoPrefs);
-	}
-
-	private void sync(Preferences p) throws BackingStoreException {
-		p.flush();
-		p.sync();
-
 	}
 
 	public List<PackageRepository> getPackageRepositories() {
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Collection<PackageRepositoryConfig> repos = db.findAll(PackageRepositoryConfig.class).getDocuments(
+				PackageRepositoryConfig.class);
+
 		List<PackageRepository> repositories = new ArrayList<PackageRepository>();
 
-		Preferences repoPrefs = getPackagePreferences().node("repo");
-		String[] childrenNames = null;
-		try {
-			childrenNames = repoPrefs.childrenNames();
-		} catch (BackingStoreException e) {
-			return repositories;
-		}
-
-		for (String alias : childrenNames) {
-			try {
-				Preferences p = repoPrefs.node(alias);
-				URL url = new URL(p.get("url", null));
-				boolean auth = p.getBoolean("auth", false);
-				String account = p.get("account", null);
-				String password = p.get("password", null);
-				String trustStoreAlias = p.get("truststore", null);
-				String keyStoreAlias = p.get("keystore", null);
-
-				if (url.getProtocol().equals("https"))
-					repositories.add(PackageRepository.createHttps(alias, url, trustStoreAlias, keyStoreAlias));
-				else if (auth)
-					repositories.add(PackageRepository.createHttpAuth(alias, url, account, password));
-				else
-					repositories.add(PackageRepository.create(alias, url));
-
-			} catch (MalformedURLException e) {
-			}
+		for (PackageRepositoryConfig repo : repos) {
+			repositories.add(convert(repo));
 		}
 		return repositories;
 	}
 
-	public void addPackageRepository(String alias, URL url) throws BackingStoreException {
-		Preferences repoPrefs = getPackagePreferences().node("repo");
-		if (repoPrefs.nodeExists(alias))
-			throw new IllegalStateException("duplicated repository name");
+	public PackageRepository getPackageRepository(String alias) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(PackageRepositoryConfig.class, Predicates.field("alias", alias));
+		if (c == null)
+			return null;
 
-		Preferences repo = repoPrefs.node(alias);
-		repo.put("url", url.toString());
-		sync(repoPrefs);
+		return convert(c.getDocument(PackageRepositoryConfig.class));
 	}
 
-	public void addSecurePackageRepository(String alias, URL url, String trustStoreAlias, String keyStoreAlias)
-			throws BackingStoreException {
-		Preferences repoPrefs = getPackagePreferences().node("repo");
-		if (repoPrefs.nodeExists(alias))
-			throw new IllegalStateException("duplicated repository name");
+	private PackageRepository convert(PackageRepositoryConfig repo) {
+		try {
+			URL url = new URL(repo.getUrl());
+			String alias = repo.getAlias();
+			boolean auth = repo.isAuthRequired();
+			String account = repo.getAccount();
+			String password = repo.getPassword();
+			String trustStoreAlias = repo.getTrustStoreAlias();
+			String keyStoreAlias = repo.getKeyStoreAlias();
 
-		Preferences repo = repoPrefs.node(alias);
-		repo.put("url", url.toString());
-		repo.put("truststore", trustStoreAlias);
-		repo.put("keystore", keyStoreAlias);
-		sync(repoPrefs);
+			if (url.getProtocol().equals("https"))
+				return PackageRepository.createHttps(alias, url, trustStoreAlias, keyStoreAlias);
+			else if (auth)
+				return PackageRepository.createHttpAuth(alias, url, account, password);
+			else
+				return PackageRepository.create(alias, url);
+
+		} catch (MalformedURLException e) {
+		}
+		return null;
 	}
 
-	public void removePackageRepository(String alias) throws BackingStoreException {
-		Preferences repoPrefs = getPackagePreferences().node("repo");
-		Preferences repo = repoPrefs.node(alias);
-		repo.removeNode();
-		sync(repoPrefs);
+	public void createPackageRepository(PackageRepository repo) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(PackageRepositoryConfig.class, Predicates.field("alias", repo.getAlias()));
+		if (c != null)
+			throw new IllegalStateException("duplicated repository name: " + repo.getAlias());
+
+		PackageRepositoryConfig config = new PackageRepositoryConfig(repo);
+		db.add(config);
+	}
+
+	public void updatePackageRepository(PackageRepository repo) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(PackageRepositoryConfig.class, Predicates.field("alias", repo.getAlias()));
+		if (c == null)
+			throw new IllegalStateException("repository [" + repo.getAlias() + "] not found");
+
+		PackageRepositoryConfig config = new PackageRepositoryConfig(repo);
+		db.update(c, config);
+	}
+
+	public void removePackageRepository(String alias) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(PackageRepositoryConfig.class, Predicates.field("alias", alias));
+		if (c == null)
+			throw new IllegalStateException("package repository [" + alias + "] not found");
+
+		c.remove();
 	}
 
 	public List<PackageDescriptor> getInstalledPackages() {
-		Preferences packagesPrefs = getPackagePreferences().node("installed");
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+
 		List<PackageDescriptor> packages = new ArrayList<PackageDescriptor>();
+		Collection<InstalledPackage> installedPkgs = db.findAll(InstalledPackage.class).getDocuments(InstalledPackage.class);
 
-		String[] childNames = null;
-		try {
-			childNames = packagesPrefs.childrenNames();
-		} catch (BackingStoreException e) {
-			return packages;
-		}
-
-		for (String key : childNames) {
-			Preferences packagePrefs = packagesPrefs.node(key);
-			PackageDescriptor pkg = toPackageObject(key, packagePrefs);
+		for (InstalledPackage installed : installedPkgs) {
+			PackageDescriptor pkg = toPackageObject(installed);
 			packages.add(pkg);
 		}
 
 		return packages;
 	}
 
-	private PackageDescriptor toPackageObject(String name, Preferences p) {
-		try {
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private PackageDescriptor toPackageObject(InstalledPackage pkg) {
+		Date released = pkg.getReleased();
+		Version version = new Version(pkg.getVersion());
 
-			Date released = dateFormat.parse(p.get("released", null));
-			Version version = new Version(p.get("version", null));
+		PackageDescriptor desc = new PackageDescriptor(pkg.getName(), version, released);
 
-			PackageDescriptor desc = new PackageDescriptor(name, version, released);
-			parsePackageBundles(desc, p.node(BUNDLE_REQS));
-			return desc;
-		} catch (ParseException e) {
-			e.printStackTrace();
-			return null;
-		}
-
-	}
-
-	private void parsePackageBundles(PackageDescriptor pkg, Preferences bundleReqs) {
-		String[] childrenNames = null;
-		try {
-			childrenNames = bundleReqs.childrenNames();
-		} catch (BackingStoreException e) {
-			return;
-		}
-
-		for (String id : childrenNames) {
-			Preferences p = bundleReqs.node(id);
-			String name = p.get("name", null);
-			String lowVersion = p.get("low_version", null);
-			String highVersion = p.get("high_version", null);
+		for (PackageBundleRequirement req : pkg.getBundleRequirements()) {
+			String name = req.getName();
+			String lowVersion = req.getLowVersion();
+			String highVersion = req.getHighVersion();
 
 			VersionRange range = new VersionRange(new Version(lowVersion), new Version(highVersion));
 			BundleRequirement bundleDesc = new BundleRequirement(name, range);
-			pkg.getBundleRequirements().add(bundleDesc);
+			desc.getBundleRequirements().add(bundleDesc);
 		}
 
+		return desc;
 	}
 
 	public PackageDescriptor findInstalledPackage(String name) {
-		Preferences packagesPrefs = getPackagePreferences().node("installed");
-		try {
-			if (!packagesPrefs.nodeExists(name))
-				return null;
-		} catch (BackingStoreException e) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(InstalledPackage.class, Predicates.field("name", name));
+		if (c == null)
 			return null;
-		}
 
-		return toPackageObject(name, packagesPrefs.node(name));
+		return toPackageObject(c.getDocument(InstalledPackage.class));
 	}
 
-	public void installPackage(PackageDescriptor pkg) throws AlreadyInstalledPackageException, BackingStoreException {
-		Preferences packagesPrefs = getPackagePreferences().node("installed");
+	public void installPackage(PackageDescriptor pkg) throws AlreadyInstalledPackageException {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(InstalledPackage.class, Predicates.field("name", pkg.getName()));
+		if (c != null)
+			throw new IllegalStateException("package [" + pkg.getName() + "] already installed");
 
-		// check already installed
-		if (packagesPrefs.nodeExists(pkg.getName()))
-			return;
+		InstalledPackage installed = new InstalledPackage();
+		installed.setName(pkg.getName());
+		installed.setVersion(pkg.getVersion().toString());
+		installed.setReleased(pkg.getDate());
+		installed.setDescription(pkg.getDescription());
 
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		Preferences p = packagesPrefs.node(pkg.getName());
-		p.put("version", pkg.getVersion().toString());
-		p.put("released", dateFormat.format(pkg.getDate()));
-		p.put("description", pkg.getDescription());
-
-		Preferences bundleReqs = p.node(BUNDLE_REQS);
-		int i = 1;
 		for (BundleRequirement bundleDesc : pkg.getBundleRequirements()) {
-			Preferences b = bundleReqs.node(Integer.toString(i++));
-			b.put("name", bundleDesc.getName());
-			b.put("low_version", bundleDesc.getVersionRange().getLow().toString());
-			b.put("high_version", bundleDesc.getVersionRange().getHigh().toString());
+			PackageBundleRequirement req = new PackageBundleRequirement();
+			req.setName(bundleDesc.getName());
+			req.setLowVersion(bundleDesc.getVersionRange().getLow().toString());
+			req.setHighVersion(bundleDesc.getVersionRange().getHigh().toString());
+			installed.getBundleRequirements().add(req);
 		}
 
-		sync(packagesPrefs);
+		db.add(installed);
 	}
 
-	public void uninstallPackage(String name) throws BackingStoreException {
-		Preferences pkgs = getPackagePreferences().node("installed");
-		if (!pkgs.nodeExists(name))
-			return;
+	public void uninstallPackage(String name) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(InstalledPackage.class, Predicates.field("name", name));
+		if (c == null)
+			throw new IllegalStateException("package [" + name + "] not found");
 
-		Preferences p = pkgs.node(name);
-		p.removeNode();
-		sync(pkgs);
+		c.remove();
 	}
 
-	public void updatePackage(PackageDescriptor pkg) throws BackingStoreException {
+	public void updatePackage(PackageDescriptor pkg) {
 		try {
 			uninstallPackage(pkg.getName());
 			installPackage(pkg);
 		} catch (AlreadyInstalledPackageException e) {
 			e.printStackTrace();
 		}
-	}
-
-	private Preferences getPackagePreferences() {
-		Preferences repos = prefs.node("/package");
-		return repos;
 	}
 }

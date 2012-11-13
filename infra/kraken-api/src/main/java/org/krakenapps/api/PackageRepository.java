@@ -30,7 +30,7 @@ public class PackageRepository {
 	private String trustStoreAlias;
 	private String keyStoreAlias;
 
-	private PackageRepository() {
+	public PackageRepository() {
 	}
 
 	public static PackageRepository create(String alias, URL url) {
@@ -55,43 +55,71 @@ public class PackageRepository {
 		return r;
 	}
 
-	public boolean isAuthRequired() {
-		return isAuthRequired;
-	}
-
 	public String getAlias() {
 		return alias;
+	}
+
+	public void setAlias(String alias) {
+		this.alias = alias;
 	}
 
 	public URL getUrl() {
 		return url;
 	}
 
+	public void setUrl(URL url) {
+		this.url = url;
+	}
+
+	public boolean isAuthRequired() {
+		return isAuthRequired;
+	}
+
+	public void setAuthRequired(boolean isAuthRequired) {
+		this.isAuthRequired = isAuthRequired;
+	}
+
 	public String getAccount() {
 		return account;
+	}
+
+	public void setAccount(String account) {
+		this.account = account;
 	}
 
 	public String getPassword() {
 		return password;
 	}
 
-	public boolean isHttps() {
-		return url.getProtocol().equals("https");
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
 	public String getTrustStoreAlias() {
 		return trustStoreAlias;
 	}
 
+	public void setTrustStoreAlias(String trustStoreAlias) {
+		this.trustStoreAlias = trustStoreAlias;
+	}
+
 	public String getKeyStoreAlias() {
 		return keyStoreAlias;
+	}
+
+	public void setKeyStoreAlias(String keyStoreAlias) {
+		this.keyStoreAlias = keyStoreAlias;
+	}
+
+	public boolean isHttps() {
+		return url.getProtocol().equals("https");
 	}
 
 	@Override
 	public String toString() {
 		if (isHttps())
-			return String.format("{alias: %s, url: %s, truststore: %s, keystore: %s}", alias, url, trustStoreAlias,
-					keyStoreAlias);
+			return String
+					.format("{alias: %s, url: %s, truststore: %s, keystore: %s}", alias, url, trustStoreAlias, keyStoreAlias);
 
 		if (isAuthRequired)
 			return String.format("{alias: %s, url: %s, account: %s, password: %s}", alias, url, account, password);

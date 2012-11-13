@@ -32,6 +32,9 @@ import org.krakenapps.api.BundleDescriptor;
 import org.krakenapps.api.BundleRequirement;
 import org.krakenapps.api.MavenResolveException;
 import org.krakenapps.api.PackageDescriptor;
+import org.krakenapps.api.PackageIndex;
+import org.krakenapps.api.PackageManager;
+import org.krakenapps.api.PackageMetadata;
 import org.krakenapps.api.PackageNotFoundException;
 import org.krakenapps.api.PackageRepository;
 import org.krakenapps.api.PackageUpdatePlan;
@@ -41,13 +44,8 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.api.VersionRange;
-import org.krakenapps.main.Kraken;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +53,7 @@ public class PackageScript implements Script {
 	private final Logger logger = LoggerFactory.getLogger(PackageScript.class.getName());
 	private ScriptContext context;
 	private BundleContext bc;
-	private PackageManagerService packageManager;
+	private PackageManager packageManager;
 
 	public PackageScript(BundleContext bc, PackageManagerService packageManager) {
 		this.bc = bc;
@@ -68,14 +66,14 @@ public class PackageScript implements Script {
 	}
 
 	public void repositories(String[] args) {
-		context.println("Kraken Package Repository");
-		context.println("---------------------------");
+		context.println("Package Repository");
+		context.println("--------------------");
 
 		for (PackageRepository repo : packageManager.getRepositories()) {
 			String alias = repo.getAlias();
 			if (repo.isHttps()) {
-				context.printf("[%s] %s, trust=%s, key=%s\n", alias, repo.getUrl().toString(),
-						repo.getTrustStoreAlias(), repo.getKeyStoreAlias());
+				context.printf("[%s] %s, trust=%s, key=%s\n", alias, repo.getUrl().toString(), repo.getTrustStoreAlias(),
+						repo.getKeyStoreAlias());
 			} else {
 				if (repo.isAuthRequired())
 					alias += " (http-auth)";
@@ -92,7 +90,7 @@ public class PackageScript implements Script {
 		try {
 			String alias = args[0];
 			URL url = new URL(args[1]);
-			packageManager.addRepository(alias, url);
+			packageManager.createRepository(PackageRepository.create(alias, url));
 			context.printf("repository [%s] added\n", alias);
 		} catch (MalformedURLException e) {
 			context.printf("invalid url format\n");
@@ -113,7 +111,7 @@ public class PackageScript implements Script {
 			String trustStoreAlias = args[2];
 			String keyStoreAlias = args[3];
 
-			packageManager.addSecureRepository(alias, url, trustStoreAlias, keyStoreAlias);
+			packageManager.createRepository(PackageRepository.createHttps(alias, url, trustStoreAlias, keyStoreAlias));
 			context.printf("secure repository [%s] added\n", alias);
 		} catch (MalformedURLException e) {
 			context.printf("invalid url format\n");
@@ -138,35 +136,34 @@ public class PackageScript implements Script {
 			@ScriptArgument(name = "account", type = "string", description = "account for http authentication"),
 			@ScriptArgument(name = "password", type = "string", description = "password for http authentication") })
 	public void setHttpAuth(String[] args) {
-		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
-		String alias = args[0];
-		String account = args[1];
-		String password = args[2];
-		Preferences repo = prefs.node(alias);
-		repo.put("account", account);
-		repo.put("password", password);
-		repo.putBoolean("auth", true);
-		sync(repo);
+		PackageRepository repo = packageManager.getRepository(args[0]);
+		if (repo == null) {
+			context.println("package repository [" + args[0] + "] not found");
+			return;
+		}
+
+		repo.setAccount(args[1]);
+		repo.setPassword(args[2]);
+		repo.setAuthRequired(true);
+
+		packageManager.updateRepository(repo);
+		context.println("ok");
 	}
 
 	@ScriptUsage(description = "Reset credential for repository http authentication", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the maven repository") })
 	public void resetHttpAuth(String[] args) {
-		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
-		String alias = args[0];
-
-		Preferences repo = prefs.node(alias);
-		repo.remove("account");
-		repo.remove("password");
-		repo.remove("auth");
-		sync(repo);
-	}
-
-	private void sync(Preferences repo) {
-		try {
-			repo.flush();
-			repo.sync();
-		} catch (BackingStoreException e) {
+		PackageRepository repo = packageManager.getRepository(args[0]);
+		if (repo == null) {
+			context.println("package repository [" + args[0] + "] not found");
+			return;
 		}
+
+		repo.setAccount(null);
+		repo.setPassword(null);
+		repo.setAuthRequired(false);
+
+		packageManager.updateRepository(repo);
+		context.println("ok");
 	}
 
 	public void list(String[] args) {
@@ -182,7 +179,7 @@ public class PackageScript implements Script {
 		String keyword = (args.length > 0) ? args[0].toLowerCase() : null;
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-		for (PackageList list : packageManager.getPackageList()) {
+		for (PackageIndex list : packageManager.getPackageIndexes()) {
 			context.println(String.format("[%s] %s (%s)", list.getRepository().getAlias(), list.getDescription(),
 					dateFormat.format(list.getCreated())));
 			for (PackageMetadata metadata : list.getPackages()) {
@@ -238,9 +235,6 @@ public class PackageScript implements Script {
 			if (e.getCause() instanceof BundleException) {
 				context.println("Bundle exception: " + e.getMessage());
 				logger.error("kraken core: bundle error", e);
-			} else if (e.getCause() instanceof BackingStoreException) {
-				context.println("database failure");
-				logger.error("kraken core: database error", e);
 			} else {
 				context.println("unknown error: " + e.getMessage());
 				logger.error("kraken core: unknown error", e);
@@ -315,9 +309,9 @@ public class PackageScript implements Script {
 		}
 	}
 
-	private void updatePackageInternal(String packageName, PackageVersionHistory history)
-			throws PackageNotFoundException, InterruptedException, MavenResolveException, BundleException,
-			UnrecoverableKeyException, KeyManagementException, KeyStoreException {
+	private void updatePackageInternal(String packageName, PackageVersionHistory history) throws PackageNotFoundException,
+			InterruptedException, MavenResolveException, BundleException, UnrecoverableKeyException, KeyManagementException,
+			KeyStoreException {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		context.printf("Latest version found -> version: %s, last updated at: %s\n", history.getVersion(),
 				dateFormat.format(history.getLastUpdated()));
@@ -398,8 +392,7 @@ public class PackageScript implements Script {
 			List<BundleDescriptor> remainingBundles = new ArrayList<BundleDescriptor>();
 
 			// categorize
-			List<BundleDescriptor> relatedBundles = new ArrayList<BundleDescriptor>(
-					packageManager.findRelatedBundles(pkg));
+			List<BundleDescriptor> relatedBundles = new ArrayList<BundleDescriptor>(packageManager.findRelatedBundles(pkg));
 			Collections.sort(relatedBundles, new BundleOrder());
 
 			for (BundleDescriptor bundle : relatedBundles) {
@@ -424,8 +417,7 @@ public class PackageScript implements Script {
 				for (BundleDescriptor bundle : remainingBundles) {
 					List<PackageDescriptor> packages = dependMap.get(bundle.getSymbolicName());
 
-					context.printf("[%3d] %-49s %s\n", bundle.getBundleId(), bundle.getSymbolicName(),
-							bundle.getVersion());
+					context.printf("[%3d] %-49s %s\n", bundle.getBundleId(), bundle.getSymbolicName(), bundle.getVersion());
 					context.printf("\tused by [%s]\n", toPackageString(packages));
 					context.println("");
 				}
@@ -447,7 +439,7 @@ public class PackageScript implements Script {
 			context.println("Database error occurred");
 		}
 	}
-	
+
 	public void export(String[] args) {
 		context.println(new PackageDescWriter(bc));
 	}
@@ -464,12 +456,5 @@ public class PackageScript implements Script {
 		}
 
 		return b.toString();
-	}
-
-	private Preferences getRepositoryPreferences(BundleContext bc) {
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		Preferences systemPrefs = prefsService.getSystemPreferences();
-		return systemPrefs.node("/package/repo");
 	}
 }

@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -168,54 +170,79 @@ public class MavenResolver {
 			if (monitor != null)
 				monitor.writeln("  -> trying to download from " + repo);
 
+			byte[] b = new byte[8096];
+
 			// download pom
+			InputStream is = null;
 			if (localPom.exists() == false) {
 				try {
-					byte[] binary = download(repo, pomUrl);
+					is = download(repo, pomUrl);
 					pomStream = new FileOutputStream(localPom, false);
-					pomStream.write(binary);
+
+					while (is != null) {
+						int read = is.read(b);
+						if (read <= 0)
+							break;
+
+						pomStream.write(b, 0, read);
+					}
 				} catch (Exception e) {
 					logger.info("maven resolver: failed to get {} {}", pomUrl, e.getMessage());
 					return null;
+				} finally {
+					ensureClose(is);
 				}
 			}
 
 			// download jar
-//			if (localJar.exists() == false) {
-				try {
-					byte[] binary = download(repo, jarUrl);
-					jarStream = new FileOutputStream(localJar, false);
-					jarStream.write(binary);
-				} catch (Exception e) {
-					logger.info("maven resolver: failed to get {} {}", jarUrl, e.getMessage());
-					return null;
+			is = null;
+			try {
+				is = download(repo, jarUrl);
+				jarStream = new FileOutputStream(localJar, false);
+
+				while (is != null) {
+					int read = is.read(b);
+					if (read <= 0)
+						break;
+
+					jarStream.write(b, 0, read);
 				}
-//			}
+			} catch (Exception e) {
+				logger.info("maven resolver: failed to get {} {}", jarUrl, e.getMessage());
+				return null;
+			} finally {
+				ensureClose(is);
+			}
 
 			return localJar;
 		} catch (MalformedURLException e) {
 			logger.info("maven resolver: malformed url", e);
 			return null;
 		} finally {
-			if (pomStream != null) {
-				try {
-					pomStream.close();
-				} catch (IOException e) {
-					// ignore
-				}
-			}
+			ensureClose(pomStream);
+			ensureClose(jarStream);
+		}
+	}
 
-			if (jarStream != null) {
-				try {
-					jarStream.close();
-				} catch (IOException e) {
-					// ignore
-				}
+	private void ensureClose(InputStream is) {
+		if (is != null) {
+			try {
+				is.close();
+			} catch (IOException e) {
 			}
 		}
 	}
 
-	private byte[] download(BundleRepository repository, URL url) throws IOException, KeyStoreException,
+	private void ensureClose(OutputStream os) {
+		if (os != null) {
+			try {
+				os.close();
+			} catch (IOException e) {
+			}
+		}
+	}
+
+	private InputStream download(BundleRepository repository, URL url) throws IOException, KeyStoreException,
 			KeyManagementException, UnrecoverableKeyException {
 		if (repository.isHttps() && keyStoreManager != null) { // https
 			try {
@@ -225,27 +252,22 @@ public class MavenResolver {
 				TrustManagerFactory tmf = keyStoreManager.getTrustManagerFactory(trustStoreAlias, "SunX509");
 				KeyManagerFactory kmf = keyStoreManager.getKeyManagerFactory(keyStoreAlias, "SunX509");
 
-				return HttpWagon.download(url, tmf, kmf);
+				return HttpWagon.openDownloadStream(url, tmf, kmf);
 			} catch (NoSuchAlgorithmException e) {
 				return null;
 			}
 		} else if (repository.isAuthRequired()) // http auth
-			return HttpWagon.download(url, true, repository.getAccount(), repository.getPassword());
+			return HttpWagon.openDownloadStream(url, true, repository.getAccount(), repository.getPassword());
 		else if (url.getProtocol().equals("file")) {
 			try {
 				File file = new File(url.toURI());
-				long length = file.length();
-				FileInputStream stream = new FileInputStream(file);
-				byte[] b = new byte[(int) length];
-				stream.read(b);
-				return b;
+				return new FileInputStream(file);
 			} catch (URISyntaxException e) {
-				e.printStackTrace();
-				return new byte[0];
+				return null;
 			}
 		} else
 			// plain http
-			return HttpWagon.download(url);
+			return HttpWagon.openDownloadStream(url);
 	}
 
 	private URL getPomUrl(URL repository, MavenArtifact artifact) throws MalformedURLException {

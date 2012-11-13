@@ -84,7 +84,6 @@ import org.krakenapps.script.HistoryScriptFactory;
 import org.krakenapps.script.OsgiScriptFactory;
 import org.krakenapps.script.OutputOnlyScriptContext;
 import org.krakenapps.script.PerfScriptFactory;
-import org.krakenapps.script.RegistryScriptFactory;
 import org.krakenapps.script.SunPerfScriptFactory;
 import org.krakenapps.script.batch.BatchScriptFactory;
 import org.krakenapps.ssh.SshCommandFactory;
@@ -385,6 +384,9 @@ public class Kraken implements BundleActivator, SignalHandler {
 	 * @see Kraken API documentation
 	 */
 	private void registerScripts() {
+		// config service should be registered first
+		registerScriptFactory(new ConfScriptFactory(conf), "conf");
+		
 		registerScriptFactory(CoreScriptFactory.class, "core");
 		registerScriptFactory(BundleScriptFactory.class, "bundle");
 		registerScriptFactory(LoggerScriptFactory.class, "logger");
@@ -393,11 +395,9 @@ public class Kraken implements BundleActivator, SignalHandler {
 		registerScriptFactory(HistoryScriptFactory.class, "history");
 		registerScriptFactory(ThreadScriptFactory.class, "thread");
 		registerScriptFactory(PerfScriptFactory.class, "perf");
-		registerScriptFactory(RegistryScriptFactory.class, "registry");
 		registerScriptFactory(KeyStoreScriptFactory.class, "keystore");
 		registerScriptFactory(new AccountScriptFactory(context, conf), "account");
 		registerScriptFactory(SunPerfScriptFactory.class, "sunperf");
-		registerScriptFactory(new ConfScriptFactory(conf), "conf");
 		registerScriptFactory(new AuthScriptFactory(auth), "auth");
 		registerScriptFactory(new CronScriptFactory(context, cron), "cron");
 		registerScriptFactory(BatchScriptFactory.class, "batch");

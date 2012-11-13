@@ -18,106 +18,116 @@ package org.krakenapps.bundle;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.krakenapps.api.BundleRepository;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BundleConfig {
-	private static final String BUNDLE_REPO_PATH = "/bundle/repo";
-	private Preferences prefs;
+	private final Logger logger = LoggerFactory.getLogger(BundleConfig.class);
+	private ConfigService conf;
 
-	public BundleConfig(Preferences prefs) {
-		this.prefs = prefs;
+	public BundleConfig(ConfigService conf) {
+		this.conf = conf;
 		initialize();
 	}
 
 	private void initialize() {
-		try {
-			createBundleRepositoriesTable();
-		} catch (BackingStoreException e) {
-			e.printStackTrace();
-		}
+		addDefaultBundleRepositories();
 	}
 
-	public List<BundleRepository> getBundleRepositories() {
-		Preferences repos = getRootPreferences();
+	public List<BundleRepository> getRepositories() {
 		List<BundleRepository> repositories = new ArrayList<BundleRepository>();
-		String[] childrenNames;
-		try {
-			childrenNames = repos.childrenNames();
-		} catch (BackingStoreException e) {
-			return repositories;
-		}
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
 
-		for (String key : childrenNames) {
+		ConfigIterator it = db.findAll(BundleRepositoryConfig.class);
+		Collection<BundleRepositoryConfig> configs = it.getDocuments(BundleRepositoryConfig.class);
+		for (BundleRepositoryConfig c : configs) {
 			try {
-				Preferences repo = repos.node(key);
-				URL url = new URL(repo.get("url", null));
+				URL url = new URL(c.getUrl());
 
-				BundleRepository config = new BundleRepository(key, url);
-				config.setAuthRequired(repo.getBoolean("auth", false));
-				config.setAccount(repo.get("account", null));
-				config.setPassword(repo.get("password", null));
-				config.setPriority(repo.getInt("priority", 0));
-				config.setTrustStoreAlias(repo.get("truststore", null));
-				config.setKeyStoreAlias(repo.get("keystore", null));
+				BundleRepository config = new BundleRepository(c.getName(), url);
+				config.setAuthRequired(c.isAuthRequired());
+				config.setAccount(c.getAccount());
+				config.setPassword(c.getPassword());
+				config.setPriority(c.getPriority());
+				config.setTrustStoreAlias(c.getTrustStoreAlias());
+				config.setKeyStoreAlias(c.getKeyStoreAlias());
 
 				repositories.add(config);
 			} catch (MalformedURLException e) {
+				logger.error("kraken core: cannot fetch bundle repos", e);
 			}
 		}
 
 		return repositories;
 	}
 
-	public void addRepository(String name, URL url, int priority) throws BackingStoreException {
-		Preferences repos = getRootPreferences();
-		Preferences newNode = repos.node(name);
-		newNode.put("url", url.toString());
-		newNode.putInt("priority", priority);
+	public BundleRepository getRepository(String alias) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
 
-		sync(newNode);
-		sync(repos);
-	}
+		Config c = db.findOne(BundleRepositoryConfig.class, Predicates.field("name", alias));
+		if (c == null)
+			return null;
 
-	public void addSecureRepository(String name, URL url, String trustStoreAlias, String keyStoreAlias)
-			throws BackingStoreException {
-		Preferences repos = getRootPreferences();
-		Preferences newNode = repos.node(name);
-		newNode.put("url", url.toString());
-		newNode.put("truststore", trustStoreAlias);
-
-		if (keyStoreAlias != null)
-			newNode.put("keystore", keyStoreAlias);
-
-		sync(newNode);
-		sync(repos);
-	}
-
-	private Preferences getRootPreferences() {
-		Preferences repos = prefs.node(BUNDLE_REPO_PATH);
-		return repos;
-	}
-
-	public void removeRepository(String name) throws BackingStoreException {
-		Preferences repos = getRootPreferences();
-		Preferences repo = repos.node(name);
-		repo.removeNode();
-		sync(repos);
-	}
-
-	private void sync(Preferences p) throws BackingStoreException {
-		p.flush();
-		p.sync();
-	}
-
-	private void createBundleRepositoriesTable() throws BackingStoreException {
 		try {
-			addRepository("krakenapps", new URL("http://download.krakenapps.org/"), 1);
-			addRepository("maven", new URL("http://repo1.maven.org/maven2/"), 0);
+			BundleRepositoryConfig m = c.getDocument(BundleRepositoryConfig.class);
+			BundleRepository repo = new BundleRepository(m.getName(), new URL(m.getUrl()));
+			repo.setAuthRequired(m.isAuthRequired());
+			repo.setAccount(m.getAccount());
+			repo.setPassword(m.getPassword());
+			repo.setPriority(m.getPriority());
+			repo.setKeyStoreAlias(m.getKeyStoreAlias());
+			repo.setTrustStoreAlias(m.getTrustStoreAlias());
+
+			return repo;
 		} catch (MalformedURLException e) {
+			return null;
+		}
+	}
+
+	public void addRepository(BundleRepository repo) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(BundleRepositoryConfig.class, Predicates.field("name", repo.getName()));
+		if (c != null)
+			throw new IllegalStateException("bundle repository [" + repo.getName() + "] already exists");
+
+		db.add(new BundleRepositoryConfig(repo));
+	}
+
+	public void updateRepository(BundleRepository repo) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(BundleRepositoryConfig.class, Predicates.field("name", repo.getName()));
+		if (c == null)
+			throw new IllegalStateException("bundle repository [" + repo.getName() + "] not found");
+
+		db.update(c, new BundleRepositoryConfig(repo));
+	}
+
+	public void removeRepository(String name) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+
+		Config c = db.findOne(BundleRepositoryConfig.class, Predicates.field("name", name));
+		if (c != null)
+			c.remove();
+		else
+			throw new IllegalStateException("bundle repository [" + name + "] not found");
+	}
+
+	private void addDefaultBundleRepositories() {
+		try {
+			addRepository(new BundleRepository("krakenapps", new URL("http://download.krakenapps.org/"), 1));
+			addRepository(new BundleRepository("maven", new URL("http://repo1.maven.org/maven2/"), 0));
+		} catch (MalformedURLException e) {
+		} catch (IllegalStateException e) {
+			// ignore duplicated repo
 		}
 	}
 }

@@ -15,7 +15,9 @@
  */
 package org.krakenapps.pkg;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
@@ -48,14 +50,15 @@ import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
 import org.apache.commons.httpclient.protocol.SecureProtocolSocketFactory;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.main.Kraken;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HttpWagon {
-
 	private HttpWagon() {
 	}
 
@@ -76,7 +79,29 @@ public class HttpWagon {
 		return download(url, false, null, null);
 	}
 
-	public static byte[] download(URL url, TrustManagerFactory tmf, KeyManagerFactory kmf)
+	public static InputStream openDownloadStream(URL url) throws IOException {
+		return openDownloadStream(url, false, null, null);
+	}
+
+	public static byte[] download(URL url, TrustManagerFactory tmf, KeyManagerFactory kmf) throws KeyManagementException,
+			IOException {
+		ByteArrayOutputStream os = new ByteArrayOutputStream();
+		InputStream is = openDownloadStream(url, tmf, kmf);
+		try {
+			byte[] b = new byte[8096];
+			while (true) {
+				int read = is.read(b);
+				if (read <= 0)
+					break;
+				os.write(b, 0, read);
+			}
+			return os.toByteArray();
+		} finally {
+			is.close();
+		}
+	}
+
+	public static InputStream openDownloadStream(URL url, TrustManagerFactory tmf, KeyManagerFactory kmf)
 			throws KeyManagementException, IOException {
 		SSLContext ctx = null;
 		try {
@@ -84,14 +109,14 @@ public class HttpWagon {
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
-		
+
 		TrustManager[] trustManagers = null;
 		KeyManager[] keyManagers = null;
 		if (tmf != null)
 			trustManagers = tmf.getTrustManagers();
 		if (kmf != null)
 			keyManagers = kmf.getKeyManagers();
-		
+
 		ctx.init(keyManagers, trustManagers, new SecureRandom());
 
 		HttpsSocketFactory h = new HttpsSocketFactory(kmf, tmf);
@@ -100,14 +125,28 @@ public class HttpWagon {
 
 		HttpClient client = new HttpClient();
 		HttpMethod method = new GetMethod(url.toString());
-		int statusCode = client.executeMethod(method);
-
-		System.out.println(statusCode);
-		System.out.println("================================");
-		return method.getResponseBody();
+		client.executeMethod(method);
+		return method.getResponseBodyAsStream();
 	}
 
 	public static byte[] download(URL url, boolean useAuth, String username, String password) throws IOException {
+		ByteArrayOutputStream os = new ByteArrayOutputStream();
+		InputStream is = openDownloadStream(url, useAuth, username, password);
+		try {
+			byte[] b = new byte[8096];
+			while (true) {
+				int read = is.read(b);
+				if (read <= 0)
+					break;
+				os.write(b, 0, read);
+			}
+			return os.toByteArray();
+		} finally {
+			is.close();
+		}
+	}
+
+	public static InputStream openDownloadStream(URL url, boolean useAuth, String username, String password) throws IOException {
 		Logger logger = LoggerFactory.getLogger(HttpWagon.class.getName());
 		logger.trace("http wagon: downloading {}", url);
 
@@ -115,14 +154,13 @@ public class HttpWagon {
 		if (useAuth) {
 			client.getParams().setAuthenticationPreemptive(true);
 			Credentials defaultcreds = new UsernamePasswordCredentials(username, password);
-			client.getState().setCredentials(new AuthScope(url.getHost(), url.getPort(), AuthScope.ANY_REALM),
-					defaultcreds);
+			client.getState().setCredentials(new AuthScope(url.getHost(), url.getPort(), AuthScope.ANY_REALM), defaultcreds);
 		}
 
 		HttpMethod method = new GetMethod(url.toString());
 
 		int socketTimeout = getSocketTimeout();
-		int connectionTimeout = getConnectionTimeout();
+		int connectionTimeout = getConnectTimeout();
 
 		client.getParams().setParameter("http.socket.timeout", socketTimeout);
 		client.getParams().setParameter("http.connection.timeout", connectionTimeout);
@@ -134,23 +172,33 @@ public class HttpWagon {
 			throw new IOException("method failed: " + method.getStatusLine());
 		}
 
-		return method.getResponseBody();
+		return method.getResponseBodyAsStream();
 	}
 
 	private static int getSocketTimeout() {
-		ServiceReference ref = Kraken.getContext().getServiceReference(PreferencesService.class.getName());
+		ServiceReference ref = Kraken.getContext().getServiceReference(ConfigService.class.getName());
 		if (ref != null) {
-			PreferencesService prefs = (PreferencesService) Kraken.getContext().getService(ref);
-			return prefs.getSystemPreferences().getInt("http.socket.timeout", 10000);
+			ConfigService conf = (ConfigService) Kraken.getContext().getService(ref);
+			ConfigDatabase db = conf.ensureDatabase("kraken-core");
+			Config c = db.findOne(HttpWagonConfig.class, null);
+			if (c != null) {
+				HttpWagonConfig hc = c.getDocument(HttpWagonConfig.class);
+				return hc.getReadTimeout();
+			}
 		}
 		return 10000;
 	}
 
-	private static int getConnectionTimeout() {
-		ServiceReference ref = Kraken.getContext().getServiceReference(PreferencesService.class.getName());
+	private static int getConnectTimeout() {
+		ServiceReference ref = Kraken.getContext().getServiceReference(ConfigService.class.getName());
 		if (ref != null) {
-			PreferencesService prefs = (PreferencesService) Kraken.getContext().getService(ref);
-			return prefs.getSystemPreferences().getInt("http.connection.timeout", 10000);
+			ConfigService conf = (ConfigService) Kraken.getContext().getService(ref);
+			ConfigDatabase db = conf.ensureDatabase("kraken-core");
+			Config c = db.findOne(HttpWagonConfig.class, null);
+			if (c != null) {
+				HttpWagonConfig hc = c.getDocument(HttpWagonConfig.class);
+				return hc.getConnectTimeout();
+			}
 		}
 		return 10000;
 	}
@@ -171,8 +219,8 @@ public class HttpWagon {
 		}
 
 		@Override
-		public Socket createSocket(String host, int port, InetAddress clientHost, int clientPort,
-				HttpConnectionParams params) throws IOException, UnknownHostException, ConnectTimeoutException {
+		public Socket createSocket(String host, int port, InetAddress clientHost, int clientPort, HttpConnectionParams params)
+				throws IOException, UnknownHostException, ConnectTimeoutException {
 			return createSocket(host, port);
 		}
 
@@ -211,14 +259,13 @@ public class HttpWagon {
 
 		@Override
 		public void handshakeCompleted(HandshakeCompletedEvent event) {
-			System.out.println("handshake completed");
+			Logger logger = LoggerFactory.getLogger(HttpWagon.class);
 
 			try {
-				System.out.println("CipherSuite: " + event.getCipherSuite());
-
+				StringBuilder sb = new StringBuilder(4096);
 				SSLSession session = event.getSession();
-				System.out.println("Protocol: " + session.getProtocol());
-				System.out.println("PeerHost: " + session.getPeerHost());
+				sb.append(String.format("cipher %s, protocol %s, peer %s, ", event.getCipherSuite(), session.getProtocol(),
+						session.getPeerHost()));
 
 				java.security.cert.Certificate[] certs = event.getPeerCertificates();
 				for (int i = 0; i < certs.length; i++) {
@@ -227,11 +274,13 @@ public class HttpWagon {
 
 					java.security.cert.X509Certificate cert = (java.security.cert.X509Certificate) certs[i];
 					System.out.println("Cert #" + i + ": " + cert.getSubjectDN().getName());
+					sb.append("\ncert #" + i + ": " + cert.getSubjectDN().getName());
 				}
-			} catch (Exception e) {
-				System.out.println("handshake completed: " + e);
-			}
 
+				logger.debug("kraken core: handshake completed, {}", sb.toString());
+			} catch (Exception e) {
+				logger.error("kraken core: handshake complete parse error", e);
+			}
 		}
 	}
 }

@@ -27,7 +27,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,7 +49,9 @@ import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.MavenArtifact;
 import org.krakenapps.api.MavenResolveException;
 import org.krakenapps.api.PackageDescriptor;
+import org.krakenapps.api.PackageIndex;
 import org.krakenapps.api.PackageManager;
+import org.krakenapps.api.PackageMetadata;
 import org.krakenapps.api.PackageNotFoundException;
 import org.krakenapps.api.PackageRepository;
 import org.krakenapps.api.PackageUpdatePlan;
@@ -58,13 +59,11 @@ import org.krakenapps.api.PackageVersionHistory;
 import org.krakenapps.api.ProgressMonitor;
 import org.krakenapps.api.Version;
 import org.krakenapps.api.VersionRange;
+import org.krakenapps.confdb.ConfigService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,11 +74,11 @@ public class PackageManagerService implements PackageManager {
 	private BundleContext bc;
 	private BundleManager bundleManager;
 
-	public PackageManagerService(BundleContext bc) throws BackingStoreException {
+	public PackageManagerService(BundleContext bc) {
 		this.bc = bc;
 		ServiceReference ref = bc.getServiceReference(BundleManager.class.getName());
 		bundleManager = (BundleManager) bc.getService(ref);
-		db = new PackageDatabase(getSystemPreferences());
+		db = new PackageDatabase(getConfigService());
 	}
 
 	@Override
@@ -88,9 +87,8 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
-	public void updatePackage(String packageName, Version version, ProgressMonitor monitor)
-			throws PackageNotFoundException, MavenResolveException, KeyStoreException, UnrecoverableKeyException,
-			KeyManagementException {
+	public void updatePackage(String packageName, Version version, ProgressMonitor monitor) throws PackageNotFoundException,
+			MavenResolveException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
 		PackageUpdatePlan dep = getUpdatePlan(packageName, version);
 
 		PackageMetadata metadata = downloadMetadata(packageName);
@@ -118,14 +116,12 @@ public class PackageManagerService implements PackageManager {
 			db.updatePackage(newPkg);
 		} catch (BundleException e) {
 			throw new RuntimeException(e);
-		} catch (BackingStoreException e) {
-			throw new RuntimeException(e);
 		}
 	}
 
 	public void installPackage(String packageName, String version, ProgressMonitor monitor)
-			throws AlreadyInstalledPackageException, PackageNotFoundException, MavenResolveException,
-			KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+			throws AlreadyInstalledPackageException, PackageNotFoundException, MavenResolveException, KeyStoreException,
+			UnrecoverableKeyException, KeyManagementException {
 		PackageDescriptor pkg = db.findInstalledPackage(packageName);
 		if (pkg != null)
 			throw new AlreadyInstalledPackageException(pkg);
@@ -156,26 +152,31 @@ public class PackageManagerService implements PackageManager {
 			db.installPackage(newPkg);
 		} catch (BundleException e) {
 			throw new RuntimeException(e);
-		} catch (BackingStoreException e) {
-			throw new RuntimeException(e);
 		}
 	}
 
-	public List<PackageList> getPackageList() {
-		List<PackageList> list = new ArrayList<PackageList>();
+	@Override
+	public List<PackageIndex> getPackageIndexes() {
+		List<PackageIndex> list = new ArrayList<PackageIndex>();
 		for (PackageRepository repo : db.getPackageRepositories()) {
 			try {
-				URL url = new URL(normalize(repo.getUrl()) + "kraken-package.index");
-				byte[] body = download(repo, url);
-				list.add(PackageListParser.parse(repo, body));
-			} catch (IOException e) {
-			} catch (UnrecoverableKeyException e) {
-			} catch (KeyManagementException e) {
-			} catch (KeyStoreException e) {
-			} catch (ClassNotFoundException e) {
+				list.add(getPackageIndex(repo));
+			} catch (Throwable t) {
+				logger.error("kraken core: cannot download package index", t);
 			}
 		}
 		return list;
+	}
+
+	@Override
+	public PackageIndex getPackageIndex(PackageRepository repo) {
+		try {
+			URL url = new URL(normalize(repo.getUrl()) + "kraken-package.index");
+			byte[] body = download(repo, url);
+			return PackageIndexParser.parse(repo, body);
+		} catch (Throwable t) {
+			throw new IllegalStateException("cannot download package index from " + repo.getUrl(), t);
+		}
 	}
 
 	private PackageVersionHistory selectVersion(String version, PackageMetadata metadata) {
@@ -211,8 +212,8 @@ public class PackageManagerService implements PackageManager {
 					bundle.start();
 					monitor.writeln(String.format("  -> [OK] %s %s", bundle.getSymbolicName(), bundle.getVersion()));
 				} catch (BundleException e) {
-					monitor.writeln(String.format("  -> [FAIL] %s %s: %s", bundle.getSymbolicName(),
-							bundle.getVersion(), e.getMessage()));
+					monitor.writeln(String.format("  -> [FAIL] %s %s: %s", bundle.getSymbolicName(), bundle.getVersion(),
+							e.getMessage()));
 				}
 			}
 		}
@@ -222,7 +223,7 @@ public class PackageManagerService implements PackageManager {
 			throws MavenResolveException, BundleException {
 		// prepare repository set
 		Set<String> urls = metadata.getMavenRepositories();
-		Collection<BundleRepository> configs = bundleManager.getRemoteRepositories();
+		List<BundleRepository> configs = bundleManager.getRepositories();
 
 		List<BundleRepository> remotes = new ArrayList<BundleRepository>();
 		for (BundleRepository c : configs) {
@@ -348,8 +349,7 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
-	public Map<String, List<PackageDescriptor>> checkUninstallDependency(String packageName)
-			throws PackageNotFoundException {
+	public Map<String, List<PackageDescriptor>> checkUninstallDependency(String packageName) throws PackageNotFoundException {
 		PackageDescriptor pkg = getInstalledPackage(packageName);
 
 		Set<BundleDescriptor> relatedBundles = findRelatedBundles(pkg);
@@ -394,8 +394,8 @@ public class PackageManagerService implements PackageManager {
 				continue;
 
 			if (req.getVersionRange().contains(new Version(bundle.getVersion().toString())))
-				relatedBundles.add(new BundleDescriptor(bundle.getBundleId(), bundle.getSymbolicName(), bundle
-						.getVersion().toString()));
+				relatedBundles.add(new BundleDescriptor(bundle.getBundleId(), bundle.getSymbolicName(), bundle.getVersion()
+						.toString()));
 		}
 
 		return relatedBundles;
@@ -494,11 +494,7 @@ public class PackageManagerService implements PackageManager {
 			}
 		}
 
-		try {
-			db.uninstallPackage(pkg.getName());
-		} catch (BackingStoreException e) {
-			throw new RuntimeException(e);
-		}
+		db.uninstallPackage(pkg.getName());
 	}
 
 	@Override
@@ -507,30 +503,33 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
+	public PackageRepository getRepository(String alias) {
+		return db.getPackageRepository(alias);
+	}
+
+	@Override
+	public void createRepository(PackageRepository repo) {
+		db.createPackageRepository(repo);
+	}
+
+	@Override
+	public void updateRepository(PackageRepository repo) {
+		db.updatePackageRepository(repo);
+	}
+
+	@Override
 	public void addRepository(String alias, URL url) {
-		try {
-			db.addPackageRepository(alias, url);
-		} catch (BackingStoreException e) {
-			throw new RuntimeException(e);
-		}
+		createRepository(PackageRepository.create(alias, url));
 	}
 
 	@Override
 	public void addSecureRepository(String alias, URL url, String trustStoreAlias, String keyStoreAlias) {
-		try {
-			db.addSecurePackageRepository(alias, url, trustStoreAlias, keyStoreAlias);
-		} catch (BackingStoreException e) {
-			throw new RuntimeException(e);
-		}
+		createRepository(PackageRepository.createHttps(alias, url, trustStoreAlias, keyStoreAlias));
 	}
 
 	@Override
 	public void removeRepository(String alias) {
-		try {
-			db.removePackageRepository(alias);
-		} catch (BackingStoreException e) {
-			throw new RuntimeException(e);
-		}
+		db.removePackageRepository(alias);
 	}
 
 	private PackageDescriptor getInstalledPackage(String packageName) throws PackageNotFoundException {
@@ -574,8 +573,8 @@ public class PackageManagerService implements PackageManager {
 		return metadata;
 	}
 
-	private PackageMetadata downloadMetadata(PackageRepository repository, String packageName)
-			throws KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+	private PackageMetadata downloadMetadata(PackageRepository repository, String packageName) throws KeyStoreException,
+			UnrecoverableKeyException, KeyManagementException {
 		try {
 			URL url = new URL(normalize(repository.getUrl()) + packageName + "/kraken.package");
 			String body = downloadString(repository, url);
@@ -588,8 +587,8 @@ public class PackageManagerService implements PackageManager {
 		}
 	}
 
-	private byte[] download(PackageRepository repo, URL url) throws IOException, KeyStoreException,
-			UnrecoverableKeyException, KeyManagementException {
+	private byte[] download(PackageRepository repo, URL url) throws IOException, KeyStoreException, UnrecoverableKeyException,
+			KeyManagementException {
 		if (repo.isLocalFilesystem()) {
 			try {
 				File file = new File(url.toURI());
@@ -660,8 +659,8 @@ public class PackageManagerService implements PackageManager {
 	}
 
 	@Override
-	public PackageVersionHistory getLatestVersion(String packageName) throws PackageNotFoundException,
-			KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+	public PackageVersionHistory getLatestVersion(String packageName) throws PackageNotFoundException, KeyStoreException,
+			UnrecoverableKeyException, KeyManagementException {
 		PackageMetadata metadata = downloadMetadata(packageName);
 		if (metadata == null)
 			throw new PackageNotFoundException(packageName);
@@ -706,10 +705,9 @@ public class PackageManagerService implements PackageManager {
 		return db.findInstalledPackage(name);
 	}
 
-	private Preferences getSystemPreferences() {
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		return prefsService.getSystemPreferences();
+	private ConfigService getConfigService() {
+		ServiceReference ref = bc.getServiceReference(ConfigService.class.getName());
+		return (ConfigService) bc.getService(ref);
 	}
 
 	private KeyStoreManager getKeyStoreManager() {
