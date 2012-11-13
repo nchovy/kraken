@@ -18,6 +18,7 @@ package org.krakenapps.pkg;
 import org.krakenapps.api.BundleRequirement;
 import org.krakenapps.api.MavenArtifact;
 import org.krakenapps.api.PackageDescriptor;
+import org.krakenapps.api.PackageMetadata;
 import org.krakenapps.api.PackageVersionHistory;
 import org.krakenapps.api.Version;
 import org.krakenapps.api.VersionRange;

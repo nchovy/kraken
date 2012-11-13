@@ -40,6 +40,7 @@ import org.krakenapps.api.MavenArtifact;
 import org.krakenapps.api.MavenResolveException;
 import org.krakenapps.api.ProgressMonitor;
 import org.krakenapps.api.Version;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.pkg.MavenResolver;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -48,9 +49,6 @@ import org.osgi.framework.BundleException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.SynchronousBundleListener;
 import org.osgi.service.packageadmin.PackageAdmin;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,16 +67,12 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	public BundleManagerService(BundleContext bc) {
 		this.context = bc;
 		bc.addBundleListener(this);
-
-		Preferences systemPrefs = getSystemPreferences();
-		config = new BundleConfig(systemPrefs);
+		config = new BundleConfig(getConfigService());
 	}
 
-	private Preferences getSystemPreferences() {
-		ServiceReference ref = context.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) context.getService(ref);
-		Preferences systemPrefs = prefsService.getSystemPreferences();
-		return systemPrefs;
+	private ConfigService getConfigService() {
+		ServiceReference ref = context.getServiceReference(ConfigService.class.getName());
+		return (ConfigService) context.getService(ref);
 	}
 
 	/*
@@ -100,7 +94,32 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	 */
 	@Override
 	public List<BundleRepository> getRemoteRepositories() {
-		return config.getBundleRepositories();
+		return config.getRepositories();
+	}
+
+	@Override
+	public List<BundleRepository> getRepositories() {
+		return config.getRepositories();
+	}
+
+	@Override
+	public BundleRepository getRepository(String alias) {
+		return config.getRepository(alias);
+	}
+
+	@Override
+	public void addRepository(BundleRepository repo) {
+		config.addRepository(repo);
+	}
+
+	@Override
+	public void updateRepository(BundleRepository repo) {
+		config.updateRepository(repo);
+	}
+
+	@Override
+	public void removeRepository(String alias) {
+		config.removeRepository(alias);
 	}
 
 	/*
@@ -112,11 +131,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	 */
 	@Override
 	public void addRemoteRepository(String alias, URL url) {
-		try {
-			config.addRepository(alias, url, 0);
-		} catch (BackingStoreException e) {
-			throw new IllegalStateException(e);
-		}
+		config.addRepository(new BundleRepository(alias, url, 0));
 	}
 
 	/*
@@ -128,11 +143,10 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	 */
 	@Override
 	public void addSecureRemoteRepository(String alias, URL url, String trustStoreAlias, String keyStoreAlias) {
-		try {
-			config.addSecureRepository(alias, url, trustStoreAlias, keyStoreAlias);
-		} catch (BackingStoreException e) {
-			throw new IllegalStateException(e);
-		}
+		BundleRepository repo = new BundleRepository(alias, url);
+		repo.setTrustStoreAlias(trustStoreAlias);
+		repo.setKeyStoreAlias(keyStoreAlias);
+		config.addRepository(repo);
 	}
 
 	/*
@@ -144,11 +158,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	 */
 	@Override
 	public void removeRemoteRepository(String alias) {
-		try {
-			config.removeRepository(alias);
-		} catch (BackingStoreException e) {
-			throw new IllegalStateException(e);
-		}
+		config.removeRepository(alias);
 	}
 
 	/*
@@ -176,7 +186,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 	@Override
 	public long installBundle(ProgressMonitor monitor, String groupId, String artifactId, String version)
 			throws MavenResolveException {
-		MavenResolver resolver = new MavenResolver(getLocalRepository(), config.getBundleRepositories(), monitor,
+		MavenResolver resolver = new MavenResolver(getLocalRepository(), config.getRepositories(), monitor,
 				getKeyStoreManager());
 		Version v = (version != null) ? new Version(version) : null;
 		MavenArtifact artifact = new MavenArtifact(groupId, artifactId, v);
@@ -336,8 +346,8 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 						File temp = File.createTempFile(before.getName(), "", before.getParentFile());
 						temp.delete();
 						if (before.renameTo(temp)) {
-							MavenResolver resolver = new MavenResolver(getLocalRepository(),
-									config.getBundleRepositories(), null, getKeyStoreManager());
+							MavenResolver resolver = new MavenResolver(getLocalRepository(), config.getRepositories(),
+									null, getKeyStoreManager());
 							MavenArtifact artifact = getArtifact(bundle);
 							File after = resolver.resolve(artifact);
 							if (after.exists())
@@ -347,8 +357,8 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 						}
 					} else {
 						before.getParentFile().mkdirs();
-						MavenResolver resolver = new MavenResolver(getLocalRepository(),
-								config.getBundleRepositories(), null, getKeyStoreManager());
+						MavenResolver resolver = new MavenResolver(getLocalRepository(), config.getRepositories(), null,
+								getKeyStoreManager());
 						MavenArtifact artifact = getArtifact(bundle);
 						resolver.resolve(artifact);
 					}
@@ -419,8 +429,7 @@ public class BundleManagerService implements SynchronousBundleListener, BundleMa
 			Object object = bundle.getHeaders().get("Bnd-LastModified");
 			if (object != null)
 				packagedDate = new Date(Long.parseLong((String) object));
-			BundleStatus bundleStatus = new BundleStatus(bundle.getSymbolicName(), version, bundle.getState(),
-					packagedDate);
+			BundleStatus bundleStatus = new BundleStatus(bundle.getSymbolicName(), version, bundle.getState(), packagedDate);
 			bundles.put(bundle.getBundleId(), bundleStatus);
 		}
 		return bundles;

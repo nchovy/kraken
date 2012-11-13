@@ -47,12 +47,8 @@ import org.krakenapps.pkg.ProgressMonitorImpl;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 
 public class BundleScript implements Script {
-	private static final String BUNDLE_REPO_PATH = "/bundle/repo";
 	private BundleContext bc;
 	private ScriptContext context;
 	private BundleManager manager;
@@ -86,7 +82,7 @@ public class BundleScript implements Script {
 
 	public void repositories(String[] args) {
 		try {
-			List<BundleRepository> repositories = manager.getRemoteRepositories();
+			List<BundleRepository> repositories = manager.getRepositories();
 			context.println("Maven Bundle Repository");
 			drawLine(70);
 			Collections.sort(repositories, new PriorityComparator());
@@ -113,11 +109,14 @@ public class BundleScript implements Script {
 	public void addRepository(String[] args) {
 		try {
 			String alias = args[0];
-			manager.addRemoteRepository(alias, new URL(args[1]));
+			BundleRepository repo = new BundleRepository(alias, new URL(args[1]));
+			int priority = 0;
 			if (args.length > 2) {
-				int newPriority = Integer.parseInt(args[2]);		
-				setRepositoryPriority(alias, newPriority);
+				priority = Integer.parseInt(args[2]);
 			}
+
+			repo.setPriority(priority);
+			manager.addRepository(repo);
 			context.println(args[1] + " added.");
 		} catch (Exception e) {
 			context.println("error: " + e.getMessage());
@@ -125,10 +124,15 @@ public class BundleScript implements Script {
 	}
 
 	private void setRepositoryPriority(String alias, int priority) {
-		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
-		Preferences repo = prefs.node(alias);
-		repo.putInt("priority", priority);
-		sync(repo);
+		BundleRepository repo = manager.getRepository(alias);
+		if (repo == null) {
+			context.println("repository not found");
+			return;
+		}
+
+		repo.setPriority(priority);
+		manager.updateRepository(repo);
+		context.println("ok");
 	}
 
 	@ScriptUsage(description = "add secure bundle repository", arguments = {
@@ -139,17 +143,20 @@ public class BundleScript implements Script {
 			@ScriptArgument(name = "priority", type = "integer", description = "priority of the repository", optional = true) })
 	public void addSecureRepository(String[] args) {
 		try {
+
 			String alias = args[0];
 			URL url = new URL(args[1]);
-			String trustStoreAlias = args[2];
-			String keyStoreAlias = null;
+
+			BundleRepository repo = new BundleRepository(alias, url);
+
+			repo.setTrustStoreAlias(args[2]);
 			if (args.length >= 4)
-				keyStoreAlias = args[3];
-			manager.addSecureRemoteRepository(alias, url, trustStoreAlias, keyStoreAlias);
-			if (args.length >= 5) {
-				int newPriority = Integer.parseInt(args[4]);		
-				setRepositoryPriority(alias, newPriority);
-			}
+				repo.setKeyStoreAlias(args[3]);
+
+			if (args.length >= 5)
+				repo.setPriority(Integer.parseInt(args[4]));
+
+			manager.addRepository(repo);
 			context.printf("secure repository [%s] added\n", alias);
 		} catch (MalformedURLException e) {
 			context.println("invalid url format");
@@ -163,7 +170,7 @@ public class BundleScript implements Script {
 	public void removeRepository(String[] args) {
 		try {
 			String alias = args[0];
-			manager.removeRemoteRepository(alias);
+			manager.removeRepository(alias);
 			context.println(alias + " removed.");
 		} catch (Exception e) {
 			context.println("error: " + e.getMessage());
@@ -175,27 +182,33 @@ public class BundleScript implements Script {
 			@ScriptArgument(name = "account", type = "string", description = "account for http authentication"),
 			@ScriptArgument(name = "password", type = "string", description = "password for http authentication") })
 	public void setHttpAuth(String[] args) {
-		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
-		String alias = args[0];
-		String account = args[1];
-		String password = args[2];
-		Preferences repo = prefs.node(alias);
-		repo.put("account", account);
-		repo.put("password", password);
-		repo.putBoolean("auth", true);
-		sync(repo);
+		BundleRepository repo = manager.getRepository(args[0]);
+		if (repo == null) {
+			context.println("repository not found");
+			return;
+		}
+
+		repo.setAccount(args[1]);
+		repo.setPassword(args[2]);
+		repo.setAuthRequired(true);
+
+		manager.updateRepository(repo);
+		context.println("ok");
 	}
 
 	@ScriptUsage(description = "Reset credential for repository http authentication", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the maven repository") })
 	public void resetHttpAuth(String[] args) {
-		Preferences prefs = getRepositoryPreferences(Kraken.getContext());
-		String alias = args[0];
+		BundleRepository repo = manager.getRepository(args[0]);
+		if (repo == null) {
+			context.println("repository not found");
+			return;
+		}
 
-		Preferences repo = prefs.node(alias);
-		repo.remove("account");
-		repo.remove("password");
-		repo.remove("auth");
-		sync(repo);
+		repo.setAccount(null);
+		repo.setPassword(null);
+		repo.setAuthRequired(false);
+		manager.updateRepository(repo);
+		context.println("ok");
 	}
 
 	@ScriptUsage(description = "Set priority of repository. Larger number means higher priority", arguments = {
@@ -205,21 +218,6 @@ public class BundleScript implements Script {
 		String alias = args[0];
 		int newPriority = Integer.parseInt(args[1]);
 		setRepositoryPriority(alias, newPriority);
-	}
-
-	private void sync(Preferences repo) {
-		try {
-			repo.flush();
-			repo.sync();
-		} catch (BackingStoreException e) {
-		}
-	}
-
-	private Preferences getRepositoryPreferences(BundleContext bc) {
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		Preferences systemPrefs = prefsService.getSystemPreferences();
-		return systemPrefs.node(BUNDLE_REPO_PATH);
 	}
 
 	public void install(String[] args) {
@@ -560,7 +558,7 @@ public class BundleScript implements Script {
 		KeyStoreManager keyman = (KeyStoreManager) bc.getService(ref);
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'");
 
-		for (BundleRepository repo : manager.getRemoteRepositories()) {
+		for (BundleRepository repo : manager.getRepositories()) {
 			try {
 				MavenMetadata mm = new MavenMetadata(repo, keyman, args[0], args[1]);
 

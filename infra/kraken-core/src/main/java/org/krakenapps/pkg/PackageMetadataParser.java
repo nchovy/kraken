@@ -21,6 +21,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.krakenapps.api.PackageMetadata;
 import org.krakenapps.api.PackageVersionHistory;
 import org.krakenapps.api.Version;
 
@@ -53,8 +54,7 @@ public class PackageMetadataParser {
 					SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 					Version version = new Version(line.substring(0, pos));
 					Date lastUpdated = dateFormat.parse(line.substring(pos + 1).trim());
-					PackageVersionHistory versionHistory = new PackageVersionHistory(version,
-							lastUpdated);
+					PackageVersionHistory versionHistory = new PackageVersionHistory(version, lastUpdated);
 					metadata.getVersions().add(versionHistory);
 				} catch (ParseException e) {
 					e.printStackTrace();
@@ -62,7 +62,8 @@ public class PackageMetadataParser {
 				}
 			} else if (subject.equals("[maven repository]")) {
 				try {
-					// normalize url (and do not use URL. see URL.equals() javadoc)
+					// normalize url (and do not use URL. see URL.equals()
+					// javadoc)
 					URL uri = new URL(line);
 					metadata.getMavenRepositories().add(uri.toString());
 				} catch (MalformedURLException e) {

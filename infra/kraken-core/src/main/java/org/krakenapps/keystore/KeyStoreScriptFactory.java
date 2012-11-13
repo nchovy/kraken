@@ -20,17 +20,16 @@ import java.util.Properties;
 import org.krakenapps.api.KeyStoreManager;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.main.Kraken;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.prefs.Preferences;
-import org.osgi.service.prefs.PreferencesService;
 
 public class KeyStoreScriptFactory implements ScriptFactory {
 	private KeyStoreManager manager;
 
 	public KeyStoreScriptFactory() {
-		this.manager = new KeyStoreManagerImpl(getPreferences());
+		this.manager = new KeyStoreManagerImpl(getConfigService());
 		BundleContext bc = Kraken.getContext();
 		bc.registerService(KeyStoreManager.class.getName(), manager, new Properties());
 	}
@@ -40,10 +39,9 @@ public class KeyStoreScriptFactory implements ScriptFactory {
 		return new KeyStoreScript(manager);
 	}
 
-	private Preferences getPreferences() {
+	private ConfigService getConfigService() {
 		BundleContext bc = Kraken.getContext();
-		ServiceReference ref = bc.getServiceReference(PreferencesService.class.getName());
-		PreferencesService prefsService = (PreferencesService) bc.getService(ref);
-		return prefsService.getSystemPreferences();
+		ServiceReference ref = bc.getServiceReference(ConfigService.class.getName());
+		return (ConfigService) bc.getService(ref);
 	}
 }

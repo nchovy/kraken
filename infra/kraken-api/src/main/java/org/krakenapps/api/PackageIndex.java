@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 NCHOVY
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,28 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.pkg;
+package org.krakenapps.api;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Date;
 import java.util.List;
-import java.util.Set;
 
 import org.krakenapps.api.PackageRepository;
-import org.krakenapps.api.PackageVersionHistory;
 
-public class PackageMetadata {
+public class PackageIndex {
 	private PackageRepository repository;
-	private String name;
 	private String description;
-
-	private List<PackageVersionHistory> versions;
-	private Set<String> mavenRepositories;
-
-	public PackageMetadata() {
-		versions = new ArrayList<PackageVersionHistory>();
-		mavenRepositories = new HashSet<String>();
-	}
+	private List<PackageMetadata> packages = new ArrayList<PackageMetadata>();
+	private Date created;
 
 	public PackageRepository getRepository() {
 		return repository;
@@ -42,14 +33,6 @@ public class PackageMetadata {
 
 	public void setRepository(PackageRepository repository) {
 		this.repository = repository;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public String getDescription() {
@@ -60,20 +43,19 @@ public class PackageMetadata {
 		this.description = description;
 	}
 
-	public List<PackageVersionHistory> getVersions() {
-		return versions;
+	public List<PackageMetadata> getPackages() {
+		return packages;
 	}
 
-	public void setVersions(List<PackageVersionHistory> versions) {
-		this.versions = versions;
+	public void setPackages(List<PackageMetadata> packages) {
+		this.packages = packages;
 	}
 
-	public Set<String> getMavenRepositories() {
-		return mavenRepositories;
+	public Date getCreated() {
+		return created;
 	}
 
-	public void setMavenRepositories(Set<String> mavenRepositories) {
-		this.mavenRepositories = mavenRepositories;
+	public void setCreated(Date created) {
+		this.created = created;
 	}
-
 }

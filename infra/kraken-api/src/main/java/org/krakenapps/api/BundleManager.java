@@ -21,7 +21,18 @@ public interface BundleManager {
 	 * 
 	 * @return the remote maven repositories
 	 */
+	@Deprecated
 	List<BundleRepository> getRemoteRepositories();
+	
+	List<BundleRepository> getRepositories();
+	
+	BundleRepository getRepository(String alias);
+
+	void addRepository(BundleRepository repo);
+
+	void updateRepository(BundleRepository repo);
+
+	void removeRepository(String alias);
 
 	/**
 	 * Add maven repository configuration.
@@ -32,8 +43,10 @@ public interface BundleManager {
 	 *            the repository url
 	 * @throws BackingStoreException
 	 */
+	@Deprecated
 	void addRemoteRepository(String alias, URL url);
 
+	@Deprecated
 	void addSecureRemoteRepository(String alias, URL url, String trustStoreAlias, String keyStoreAlias);
 
 	/**
@@ -44,6 +57,7 @@ public interface BundleManager {
 	 * @return the removed repository url
 	 * @throws BackingStoreException
 	 */
+	@Deprecated
 	void removeRemoteRepository(String alias);
 
 	/**
@@ -73,8 +87,7 @@ public interface BundleManager {
 	 * @throws BackingStoreException
 	 * @throws Exception
 	 */
-	long installBundle(ProgressMonitor monitor, String groupId, String artifactId, String version)
-			throws MavenResolveException;
+	long installBundle(ProgressMonitor monitor, String groupId, String artifactId, String version) throws MavenResolveException;
 
 	boolean uninstallBundle(long bundleId);
 
@@ -141,6 +154,6 @@ public interface BundleManager {
 	 * @throws BundleException
 	 */
 	List<String> getEntryPaths(long bundleId, String directory);
-	
-	boolean isLocallyInstalledBundle(long bundleId);	
+
+	boolean isLocallyInstalledBundle(long bundleId);
 }

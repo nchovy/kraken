@@ -31,13 +31,17 @@ public class BundleRepository {
 
 	private String trustStoreAlias;
 	private String keyStoreAlias;
-
+	
 	public BundleRepository(String name, URL url) {
+		this(name, url, 0);
+	}
+
+	public BundleRepository(String name, URL url, int priority) {
 		this.name = name;
 		this.url = url;
-		this.priority = 0;
+		this.priority = priority;
 	}
-	
+
 	public boolean isHttps() {
 		return url.getProtocol().equals("https");
 	}

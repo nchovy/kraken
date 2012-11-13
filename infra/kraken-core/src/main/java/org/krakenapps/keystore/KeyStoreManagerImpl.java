@@ -35,19 +35,22 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.krakenapps.api.Environment;
 import org.krakenapps.api.KeyStoreManager;
-import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.service.prefs.Preferences;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class KeyStoreManagerImpl implements KeyStoreManager {
 	private final Logger logger = LoggerFactory.getLogger(KeyStoreManagerImpl.class.getName());
-	private Preferences prefs;
+	private ConfigService conf;
 	private Map<String, KeyStore> keyStoreMap;
 	private Map<String, Properties> keyStoreProps;
 
-	public KeyStoreManagerImpl(Preferences prefs) {
-		this.prefs = prefs;
+	public KeyStoreManagerImpl(ConfigService conf) {
+		this.conf = conf;
 		this.keyStoreMap = new ConcurrentHashMap<String, KeyStore>();
 		this.keyStoreProps = new ConcurrentHashMap<String, Properties>();
 
@@ -55,38 +58,34 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 	}
 
 	private void loadKeyStoreFiles() {
-		Preferences prefs = getKeyStorePreferences();
-		try {
-			String[] names = prefs.childrenNames();
-			for (String alias : names) {
-				Preferences p = prefs.node(alias);
-				String type = p.get("type", null);
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		ConfigIterator it = db.findAll(KeyStoreConfig.class);
 
-				String pp = p.get("password", null);
-				char[] password = null;
-				if (pp != null)
-					password = pp.toCharArray();
-				String path = p.get("path", null);
+		for (KeyStoreConfig c : it.getDocuments(KeyStoreConfig.class)) {
+			String type = c.getType();
 
-				FileInputStream fs = null;
-				try {
-					fs = new FileInputStream(new File(Environment.expandSystemProperties(path)));
-					registerKeyStore(alias, type, fs, password);
-					Properties props = keyStoreProps.get(alias);
-					props.put("path", path);
-				} catch (Exception e) {
-					logger.warn("load key store error: ", e);
-				} finally {
-					if (fs != null) {
-						try {
-							fs.close();
-						} catch (IOException e) {
-						}
+			String pp = c.getPassword();
+			char[] password = null;
+			if (pp != null)
+				password = pp.toCharArray();
+			String path = c.getPath();
+
+			FileInputStream fs = null;
+			try {
+				fs = new FileInputStream(new File(Environment.expandSystemProperties(path)));
+				registerKeyStore(c.getAlias(), type, fs, password);
+				Properties props = keyStoreProps.get(c.getAlias());
+				props.put("path", path);
+			} catch (Exception e) {
+				logger.warn("load key store error: ", e);
+			} finally {
+				if (fs != null) {
+					try {
+						fs.close();
+					} catch (IOException e) {
 					}
 				}
 			}
-		} catch (BackingStoreException e) {
-			logger.warn("key store load: ", e);
 		}
 	}
 
@@ -106,16 +105,16 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 			return null;
 
 		FileInputStream is = null;
-		Preferences prefs = getKeyStorePreferences();
-		try {
-			if (!prefs.nodeExists(alias)) {
-				return null;
-			}
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(KeyStoreConfig.class, Predicates.field("alias", alias));
+		if (c == null)
+			return null;
 
-			Preferences p = prefs.node(alias);
-			String type = p.get("type", null);
-			String path = p.get("path", null);
-			String passwd = p.get("password", null);
+		try {
+			KeyStoreConfig ksc = c.getDocument(KeyStoreConfig.class);
+			String type = ksc.getType();
+			String path = ksc.getPath();
+			String passwd = ksc.getPassword();
 			char[] password = null;
 			if (passwd != null)
 				password = passwd.toCharArray();
@@ -147,13 +146,10 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 		if (!file.exists())
 			throw new FileNotFoundException();
 
-		Preferences prefs = getKeyStorePreferences();
-		try {
-			if (prefs.nodeExists(alias))
-				throw new RuntimeException("duplicated key store alias");
-		} catch (BackingStoreException e1) {
-			throw new RuntimeException("node exists check failed", e1);
-		}
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(KeyStoreConfig.class, Predicates.field("alias", alias));
+		if (c != null)
+			throw new RuntimeException("duplicated key store alias");
 
 		FileInputStream fs = null;
 		try {
@@ -172,63 +168,19 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 			}
 		}
 
-		Preferences p = prefs.node(alias);
-		p.put("alias", alias);
-		p.put("type", type);
-		p.put("path", path);
-		if (password != null)
-			p.put("password", new String(password));
-
-		try {
-			p.flush();
-			p.sync();
-		} catch (BackingStoreException e) {
-			throw new RuntimeException("failed to save keystore preference", e);
-		}
+		KeyStoreConfig ksc = new KeyStoreConfig();
+		ksc.setAlias(alias);
+		ksc.setType(type);
+		ksc.setPath(path);
+		ksc.setPassword(new String(password));
+		db.add(ksc);
 	}
 
 	@Deprecated
 	@Override
-	public void registerKeyStore(String alias, String type, File file, char[] password) throws KeyStoreException, NoSuchAlgorithmException,
-			CertificateException, IOException {
-		Preferences prefs = getKeyStorePreferences();
-		try {
-			if (prefs.nodeExists(alias))
-				throw new RuntimeException("duplicated key store alias");
-		} catch (BackingStoreException e1) {
-			throw new RuntimeException("node exists check failed", e1);
-		}
-
-		FileInputStream fs = null;
-		try {
-			fs = new FileInputStream(file);
-			registerKeyStore(alias, type, fs, password);
-
-			// add file path property
-			Properties props = keyStoreProps.get(alias);
-			props.put("path", file.getAbsolutePath());
-		} finally {
-			if (fs != null) {
-				try {
-					fs.close();
-				} catch (IOException e) {
-				}
-			}
-		}
-
-		Preferences p = prefs.node(alias);
-		p.put("alias", alias);
-		p.put("type", type);
-		p.put("path", file.getAbsolutePath());
-		if (password != null)
-			p.put("password", new String(password));
-
-		try {
-			p.flush();
-			p.sync();
-		} catch (BackingStoreException e) {
-			throw new RuntimeException("failed to save keystore preference", e);
-		}
+	public void registerKeyStore(String alias, String type, File file, char[] password) throws KeyStoreException,
+			NoSuchAlgorithmException, CertificateException, IOException {
+		registerKeyStore(alias, type, file.getAbsolutePath(), password);
 	}
 
 	@Override
@@ -256,20 +208,15 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 
 	@Override
 	public void unregisterKeyStore(String alias) {
-		Preferences prefs = getKeyStorePreferences();
-		try {
-			if (!prefs.nodeExists(alias))
-				return;
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(KeyStoreConfig.class, Predicates.field("alias", alias));
 
-			Preferences p = prefs.node(alias);
-			p.removeNode();
-			prefs.flush();
-			prefs.sync();
+		if (c == null)
+			throw new IllegalStateException("keystore alias [" + alias + "] not found");
 
-			keyStoreMap.remove(alias);
-		} catch (BackingStoreException e) {
-			throw new RuntimeException("failed to unregister key store", e);
-		}
+		c.remove();
+
+		keyStoreMap.remove(alias);
 	}
 
 	@Override
@@ -287,7 +234,8 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 	}
 
 	@Override
-	public TrustManagerFactory getTrustManagerFactory(String alias, String algorithm) throws KeyStoreException, NoSuchAlgorithmException {
+	public TrustManagerFactory getTrustManagerFactory(String alias, String algorithm) throws KeyStoreException,
+			NoSuchAlgorithmException {
 		KeyStore keystore = getKeyStore(alias);
 		if (keystore == null)
 			return null;
@@ -297,20 +245,16 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 		return tmf;
 	}
 
-	private Preferences getKeyStorePreferences() {
-		return prefs.node("/keystore");
-	}
-
 	private char[] getKeyStorePassword(String alias) {
-		Preferences prefs = getKeyStorePreferences();
-		try {
-			if (!prefs.nodeExists(alias))
-				return null;
-		} catch (BackingStoreException e) {
-		}
+		ConfigDatabase db = conf.ensureDatabase("kraken-core");
+		Config c = db.findOne(KeyStoreConfig.class, Predicates.field("alias", alias));
+		if (c == null)
+			return null;
 
-		Preferences p = prefs.node(alias);
-		String password = p.get("password", null);
-		return password.toCharArray();
+		KeyStoreConfig ksc = c.getDocument(KeyStoreConfig.class);
+		if (ksc.getPassword() == null)
+			return null;
+		
+		return ksc.getPassword().toCharArray();
 	}
 }

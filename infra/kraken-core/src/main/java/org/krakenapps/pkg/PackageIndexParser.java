@@ -24,17 +24,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.krakenapps.api.PackageIndex;
+import org.krakenapps.api.PackageMetadata;
 import org.krakenapps.api.PackageRepository;
 import org.krakenapps.api.PackageVersionHistory;
 import org.krakenapps.api.Version;
 
-public class PackageListParser {
-	private PackageListParser() {
+public class PackageIndexParser {
+	private PackageIndexParser() {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static PackageList parse(PackageRepository repo, byte[] doc) throws IOException, ClassNotFoundException {
-		PackageList pl = new PackageList();
+	public static PackageIndex parse(PackageRepository repo, byte[] doc) throws IOException, ClassNotFoundException {
+		PackageIndex pl = new PackageIndex();
 
 		ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(doc));
 		pl.setDescription((String) ois.readObject());
