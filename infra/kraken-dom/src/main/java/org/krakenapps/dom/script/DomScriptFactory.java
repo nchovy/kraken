@@ -6,8 +6,10 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.dom.api.ApplicationApi;
 import org.krakenapps.dom.api.AreaApi;
+import org.krakenapps.dom.api.ConfigManager;
 import org.krakenapps.dom.api.GlobalConfigApi;
 import org.krakenapps.dom.api.HostApi;
 import org.krakenapps.dom.api.HostUpdateApi;
@@ -54,9 +56,12 @@ public class DomScriptFactory implements ScriptFactory {
 	@Requires
 	private HostUpdateApi updateApi;
 
+	@Requires
+	private ConfigService conf;
+
 	@Override
 	public Script createScript() {
 		return new DomScript(globalConfigApi, orgApi, orgUnitApi, userApi, roleApi, programApi, areaApi, hostApi, appApi,
-				updateApi);
+				updateApi, conf);
 	}
 }

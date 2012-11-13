@@ -17,14 +17,16 @@ import org.json.JSONTokener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.krakenapps.docxcod.AugmentedDirectiveProcessor;
 import org.krakenapps.docxcod.ChartDirectiveParser;
 import org.krakenapps.docxcod.Directive;
 import org.krakenapps.docxcod.DirectiveExtractor;
 import org.krakenapps.docxcod.FreeMarkerRunner;
 import org.krakenapps.docxcod.JsonHelper;
+import org.krakenapps.docxcod.MagicNodeUnwrapper;
+import org.krakenapps.docxcod.MergeFieldParser;
 import org.krakenapps.docxcod.OOXMLPackage;
 import org.krakenapps.docxcod.OOXMLProcessor;
-import org.krakenapps.docxcod.TableDirectiveParser;
 import org.krakenapps.docxcod.util.ZipHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +60,7 @@ public class DocxTest {
 		parsers.add(directiveExtractor);
 
 		for (OOXMLProcessor parser : parsers) {
-			parser.process(docx);
+			parser.process(docx, null);
 		}
 
 		String[] expected = new String[] {
@@ -74,12 +76,42 @@ public class DocxTest {
 
 		int cnt = 0;
 		for (Directive dir : directiveExtractor.getDirectives()) {
+			@SuppressWarnings("unused")
 			Node n = dir.getPosition();
 			String dirStr = dir.getDirectiveString();
 			logger.debug("extracted: " + dirStr);
 
 			assertTrue(dirStr.equals(expected[cnt++]));
 		}
+	}
+
+	@Test
+	public void chartTest() throws IOException, JSONException {
+		File targetDir = new File("_chartTest");
+		targetDir.mkdirs();
+		//tearDownHelper.add(targetDir);
+
+		OOXMLPackage docx = new OOXMLPackage();
+		docx.load(getClass().getResourceAsStream("/chartTest.docx"), targetDir);
+
+		InputStreamReader inputReader = new InputStreamReader(getClass().getResourceAsStream("/nestedListTest.in"));
+		JSONTokener tokener = new JSONTokener(inputReader);
+		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
+
+		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
+		processors.add(new MergeFieldParser());
+		processors.add(new AugmentedDirectiveProcessor());
+		processors.add(new ChartDirectiveParser());
+		processors.add(new MagicNodeUnwrapper());
+		processors.add(new FreeMarkerRunner(rootMap));
+
+		for (OOXMLProcessor processor : processors) {
+			processor.process(docx, rootMap);
+		}
+
+		File saveFile = new File("chartTest-save.docx");
+		docx.save(new FileOutputStream(saveFile));
+//		tearDownHelper.add(saveFile);
 	}
 
 	@Test
@@ -96,12 +128,13 @@ public class DocxTest {
 		Map<String, Object> rootMap = JsonHelper.parse((JSONObject) tokener.nextValue());
 
 		List<OOXMLProcessor> processors = new ArrayList<OOXMLProcessor>();
-		processors.add(new TableDirectiveParser());
-		processors.add(new ChartDirectiveParser());
+		processors.add(new MergeFieldParser());
+		processors.add(new AugmentedDirectiveProcessor());
+		processors.add(new MagicNodeUnwrapper());
 		processors.add(new FreeMarkerRunner(rootMap));
 
 		for (OOXMLProcessor processor : processors) {
-			processor.process(docx);
+			processor.process(docx, rootMap);
 		}
 
 		File saveFile = new File("mainTest-save.docx");

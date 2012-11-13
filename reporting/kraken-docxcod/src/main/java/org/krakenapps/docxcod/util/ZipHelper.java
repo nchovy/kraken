@@ -89,6 +89,10 @@ public class ZipHelper {
 					dir = dir.substring(0, dir.lastIndexOf("/"));
 					File parentDir = new File(targetDir, dir);
 					parentDir.mkdirs();
+				} else if (dir.lastIndexOf("\\") != -1) {
+					dir = dir.substring(0, dir.lastIndexOf("\\"));
+					File parentDir = new File(targetDir, dir);
+					parentDir.mkdirs();
 				}
 
 				File file = new File(targetDir, filename);
