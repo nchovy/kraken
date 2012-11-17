@@ -122,7 +122,7 @@ public class Facebook {
 	
 	//TODO fql design
 	public JSONObject getFqlOnlinePresence(String userId) throws IOException{
-		URL url = new URL(fql+"SELECT%20online_presence%20FROM%20user%20WHERE%20uid=me()&access_token="+accessToken);
+		URL url = new URL(fql+"SELECT%20online_presence%20FROM%20user%20WHERE%20uid="+userId+"&access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
 		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
