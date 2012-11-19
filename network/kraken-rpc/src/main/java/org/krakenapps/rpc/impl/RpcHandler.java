@@ -408,7 +408,7 @@ public class RpcHandler extends SimpleChannelHandler implements Runnable, RpcCon
 			return;
 		}
 
-		logger.debug("kraken rpc: unhandled exception", cause);
+		logger.error("kraken rpc: unhandled exception", cause);
 
 		// close
 		e.getChannel().close();
