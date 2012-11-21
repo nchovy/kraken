@@ -17,6 +17,7 @@ package org.krakenapps.webconsole.impl;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Date;
 import java.util.Locale;
 
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -40,6 +41,7 @@ public class CometSession implements Session {
 	private CometSessionStore comet;
 	private String sessionKey;
 	private Channel channel;
+	private Date lastAccessTime;
 
 	public CometSession(CometSessionStore comet, String sessionKey, Channel channel) {
 		this.comet = comet;
@@ -137,5 +139,15 @@ public class CometSession implements Session {
 	@Override
 	public String toString() {
 		return "channel=" + channel.getId() + ", sessionkey=" + sessionKey;
+	}
+
+	@Override
+	public Date getLastAccessTime() {
+		return lastAccessTime;
+	}
+
+	@Override
+	public void setLastAccessTime() {
+		this.lastAccessTime = new Date();			
 	}
 }

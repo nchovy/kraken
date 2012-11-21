@@ -16,6 +16,7 @@
 package org.krakenapps.webconsole.impl;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import org.krakenapps.httpd.WebSocket;
 import org.krakenapps.msgbus.AbstractSession;
@@ -26,19 +27,23 @@ import org.slf4j.LoggerFactory;
 public class WebSocketSession extends AbstractSession {
 	private final Logger logger = LoggerFactory.getLogger(WebSocketSession.class.getName());
 	private WebSocket socket;
+	private InetSocketAddress local;
+	private InetSocketAddress remote;
 
 	public WebSocketSession(WebSocket socket) {
 		this.socket = socket;
+		this.local = socket.getLocalAddress();
+		this.remote = socket.getRemoteAddress();
 	}
 
 	@Override
 	public InetAddress getLocalAddress() {
-		return socket.getLocalAddress().getAddress();
+		return local.getAddress();
 	}
 
 	@Override
 	public InetAddress getRemoteAddress() {
-		return socket.getRemoteAddress().getAddress();
+		return remote.getAddress();
 	}
 
 	public void send(Message msg) {
@@ -59,7 +64,7 @@ public class WebSocketSession extends AbstractSession {
 
 	@Override
 	public String toString() {
-		return "websocket session, guid=" + getGuid() + ", remote=" + socket.getRemoteAddress();
+		return "websocket session, guid=" + getGuid() + ", remote=" + socket.getRemoteAddress() + ", lastAccessTime="
+				+ getLastAccessTime();
 	}
-
 }

@@ -17,10 +17,15 @@ import org.krakenapps.httpd.WebSocketFrame;
 import org.krakenapps.httpd.WebSocketListener;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
+import org.krakenapps.msgbus.Session;
+import org.krakenapps.msgbus.handler.CallbackType;
+import org.krakenapps.msgbus.handler.MsgbusMethod;
+import org.krakenapps.msgbus.handler.MsgbusPlugin;
 import org.krakenapps.webconsole.WebConsole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@MsgbusPlugin
 @Component(name = "webconsole")
 @Provides(specifications = { WebConsole.class })
 public class WebConsoleImpl implements WebConsole, WebSocketListener {
@@ -81,5 +86,20 @@ public class WebConsoleImpl implements WebConsole, WebSocketListener {
 		Message msg = KrakenMessageDecoder.decode(session, frame.getTextData());
 		if (msg != null)
 			msgbus.dispatch(session, msg);
+	}
+
+	@MsgbusMethod(type = CallbackType.SessionClosed)
+	public void onSessionClose(Session session) {
+		logger.debug("kraken webconsole: session [{}] closed", session);
+
+		for (InetSocketAddress key : sessions.keySet()) {
+			WebSocketSession wss = sessions.get(key);
+			if (wss.getGuid().equals(session.getGuid())) {
+				logger.info("kraken webconsole: kill websocket session [{}]", wss);
+				wss.close();
+				sessions.remove(key);
+				break;
+			}
+		}
 	}
 }

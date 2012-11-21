@@ -1,6 +1,7 @@
 package org.krakenapps.msgbus;
 
 import java.net.InetAddress;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -9,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractSession implements Session {
 	private String guid;
 	private Map<String, Object> params;
+	private Date lastAccessTime = new Date();
 
 	public AbstractSession() {
 		this.guid = UUID.randomUUID().toString();
@@ -84,5 +86,15 @@ public abstract class AbstractSession implements Session {
 
 	@Override
 	public void close() {
+	}
+
+	@Override
+	public Date getLastAccessTime() {
+		return lastAccessTime;
+	}
+
+	@Override
+	public void setLastAccessTime() {
+		this.lastAccessTime = new Date();
 	}
 }
