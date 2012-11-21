@@ -28,6 +28,7 @@ import org.krakenapps.codec.TypeMismatchException;
 import org.krakenapps.codec.UnsupportedTypeException;
 import org.krakenapps.logdb.query.command.Function;
 import org.krakenapps.logdb.query.command.Timechart;
+import org.krakenapps.logdb.sort.SortCodec;
 
 public class FunctionCodec implements CustomCodec {
 	public final static FunctionCodec instance = new FunctionCodec();
@@ -66,7 +67,7 @@ public class FunctionCodec implements CustomCodec {
 			if (data instanceof String)
 				contentLength += EncodedStringCache.getEncodedString((String) data).length();
 			else
-				contentLength += EncodingRule.lengthOf(data);
+				contentLength += EncodingRule.lengthOf(data, SortCodec.instance);
 		}
 
 		bb.put(code.byteValue());

@@ -61,4 +61,13 @@ public class OutputCsv extends LogQueryCommand {
 	public boolean isReducer() {
 		return false;
 	}
+
+	@Override
+	public void eof() {
+		try {
+			os.close();
+		} catch (IOException e) {
+		}
+		super.eof();
+	}
 }

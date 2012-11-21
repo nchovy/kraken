@@ -24,9 +24,12 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.codec.EncodingRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RunOutput {
 	private static final int WRITE_BUFFER_SIZE = 1024 * 1024 * 8;
+	private final Logger logger = LoggerFactory.getLogger(RunOutput.class);
 	public BufferedOutputStream dataBos;
 
 	private int written;
@@ -51,7 +54,7 @@ class RunOutput {
 
 		int remainCacheSize = cacheCount.addAndGet(-length);
 		if (remainCacheSize >= 0) {
-			this.run = new Run(id, new LinkedList<Object>());
+			this.run = new Run(id, new LinkedList<Item>());
 		} else {
 			cacheCount.addAndGet(length);
 
@@ -59,21 +62,29 @@ class RunOutput {
 			File dataFile = File.createTempFile("mergedata", ".tmp");
 			if (!noIndexWrite) {
 				indexFile = File.createTempFile("mergeindex", ".tmp");
+				logger.debug("kraken logdb: creating run output index [{}]", indexFile.getAbsolutePath());
 				indexFos = new FileOutputStream(indexFile);
 				indexBos = new BufferedOutputStream(indexFos, WRITE_BUFFER_SIZE);
 			}
 			dataFos = new FileOutputStream(dataFile);
 			dataBos = new BufferedOutputStream(dataFos, WRITE_BUFFER_SIZE);
-			this.run = new Run(id, length, indexFile, dataFile);
+
+			ReferenceCountedFile rcIndex = null;
+			if (indexFile != null)
+				rcIndex = new ReferenceCountedFile(indexFile.getAbsolutePath());
+
+			ReferenceCountedFile rcData = new ReferenceCountedFile(dataFile.getAbsolutePath());
+
+			this.run = new Run(id, length, rcIndex, rcData);
 		}
 	}
 
-	public void write(Object o) throws IOException {
+	public void write(Item o) throws IOException {
 		written++;
 		if (run.cached != null)
 			run.cached.add(o);
 		else {
-			EncodingRule.encode(buf, o);
+			EncodingRule.encode(buf, o, SortCodec.instance);
 			buf.flip();
 			int len = buf.remaining();
 
@@ -104,7 +115,7 @@ class RunOutput {
 			try {
 				bos.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.error("kraken logdb: cannot close run output", e);
 			}
 		}
 
@@ -112,7 +123,7 @@ class RunOutput {
 			try {
 				fos.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.error("kraken logdb: cannot close run output", e);
 			}
 		}
 	}

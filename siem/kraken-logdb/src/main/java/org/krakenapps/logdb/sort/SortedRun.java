@@ -18,5 +18,5 @@ package org.krakenapps.logdb.sort;
 public interface SortedRun {
 	int length();
 
-	Object get(int offset);
+	Item get(int offset);
 }

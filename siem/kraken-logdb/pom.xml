@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb</artifactId>
-	<version>0.5.15</version>
+	<version>0.6.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log DB</name>
 	<build>
@@ -28,6 +28,7 @@
 							org.krakenapps.logdb.mapreduce,
 							org.krakenapps.logdb.query.command,
 							org.krakenapps.logdb.query.parser,
+							org.krakenapps.logdb.sort,
 							org.krakenapps.logdb.msgbus
 						</Private-Package>
 						<Import-Package>*</Import-Package>

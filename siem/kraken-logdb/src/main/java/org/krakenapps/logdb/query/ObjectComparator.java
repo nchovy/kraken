@@ -21,6 +21,7 @@ import java.util.Date;
 import org.krakenapps.logdb.query.command.NumberUtil;
 
 public class ObjectComparator implements Comparator<Object> {
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public int compare(Object o1, Object o2) {
 		if (o1 == null && o2 == null)
@@ -36,6 +37,23 @@ public class ObjectComparator implements Comparator<Object> {
 			if (o1.getClass() == o2.getClass()) {
 				if (o1 instanceof Integer)
 					return (Integer) o1 - (Integer) o2;
+
+				if (o1 instanceof Comparable && o2 instanceof Comparable) {
+					return ((Comparable) o1).compareTo(o2);
+				}
+
+				if (o1 instanceof Object[] && o2 instanceof Object[]) {
+					Object[] arr1 = (Object[]) o1;
+					Object[] arr2 = (Object[]) o2;
+					int min = Math.min(arr1.length, arr2.length);
+					for (int i = 0; i < min; i++) {
+						int cmp = compare(arr1[i], arr2[i]);
+						if (cmp != 0)
+							return cmp;
+					}
+
+					return arr1.length - arr2.length;
+				}
 			}
 
 			if (NumberUtil.getClass(o1) != null && NumberUtil.getClass(o2) != null) {
@@ -50,6 +68,7 @@ public class ObjectComparator implements Comparator<Object> {
 				return ((String) o1).compareTo((String) o2);
 			else if (o1 instanceof Date)
 				return ((Date) o1).compareTo((Date) o2);
+
 		}
 
 		return -1;

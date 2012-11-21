@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 public class Partitioner {
-	private Comparator<Object> comparator;
+	private Comparator<Item> comparator;
 
-	public Partitioner(Comparator<Object> comparator) {
+	public Partitioner(Comparator<Item> comparator) {
 		this.comparator = comparator;
 	}
 
@@ -53,7 +53,7 @@ public class Partitioner {
 		}
 
 		// sort by median
-		Object medianOfMedian = null;
+		Item medianOfMedian = null;
 		int runCount = sortedRuns.size();
 		int half = (runCount - 1) / 2;
 		int i = 0;
@@ -107,11 +107,11 @@ public class Partitioner {
 		}
 	}
 
-	private void findBoundary(Object medianOfMedian, SortedRunStatus runStatus) {
+	private void findBoundary(Item medianOfMedian, SortedRunStatus runStatus) {
 		int left = runStatus.medianLeft;
 		int right = runStatus.medianRight;
 		int mid = 0;
-		Object value = null;
+		Item value = null;
 
 		while (left <= right) {
 			mid = left + ((right - left) / 2);
@@ -143,9 +143,9 @@ public class Partitioner {
 	private class Median implements Comparable<Median> {
 		private SortedRunStatus runStatus;
 		private int offset;
-		private Object value;
+		private Item value;
 
-		public Median(SortedRunStatus runStatus, int offset, Object value) {
+		public Median(SortedRunStatus runStatus, int offset, Item value) {
 			this.runStatus = runStatus;
 			this.offset = offset;
 			this.value = value;
@@ -167,7 +167,7 @@ public class Partitioner {
 		private int left;
 		private int right;
 		private int boundary;
-		private Object median;
+		private Item median;
 
 		// median binary search range
 		private int medianLeft;

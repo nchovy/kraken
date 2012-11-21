@@ -15,32 +15,26 @@
  */
 package org.krakenapps.logdb.sort;
 
-import java.io.IOException;
-import java.util.Iterator;
+public class Item {
+	// sort key
+	private Object key;
+	private Object value;
 
-class CacheRunIterator implements CloseableIterator {
-	private Iterator<Item> it;
+	public Item(Object key, Object value) {
+		this.key = key;
+		this.value = value;
+	}
 
-	public CacheRunIterator(Iterator<Item> it) {
-		this.it = it;
+	public Object getKey() {
+		return key;
+	}
+
+	public Object getValue() {
+		return value;
 	}
 
 	@Override
-	public boolean hasNext() {
-		return it.hasNext();
-	}
-
-	@Override
-	public Item next() {
-		return it.next();
-	}
-
-	@Override
-	public void remove() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void close() throws IOException {
+	public String toString() {
+		return "item key=" + key + ", value=" + value;
 	}
 }

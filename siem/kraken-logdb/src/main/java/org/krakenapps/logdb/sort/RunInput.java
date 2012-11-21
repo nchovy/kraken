@@ -26,9 +26,12 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.codec.EncodingRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RunInput {
 	private static final int READ_BUFFER_SIZE = 1024 * 128;
+	private final Logger logger = LoggerFactory.getLogger(RunInput.class);
 	private ThreadLocal<byte[]> readBuffer = new ThreadLocal<byte[]>() {
 		@Override
 		protected byte[] initialValue() {
@@ -37,12 +40,12 @@ class RunInput {
 	};
 
 	private Run run;
-	public Iterator<Object> cachedIt;
+	public Iterator<Item> cachedIt;
 	public BufferedInputStream bis;
-	public Object loaded;
+	public Item loaded;
 
 	private FileInputStream fis;
-	private Object prefetch;
+	private Item prefetch;
 	private byte[] intbuf = new byte[4];
 	private int loadCount;
 	private AtomicInteger cacheCount;
@@ -56,6 +59,7 @@ class RunInput {
 		} else {
 			this.fis = new FileInputStream(run.dataFile);
 			if (run.offset > 0) {
+				logger.debug("kraken logdb: run input #{}, offset #{}", run.id, run.offset);
 				// index file must exists here
 				long skip = readSkipLength(run.indexFile, run.offset);
 				fis.skip(skip);
@@ -63,6 +67,10 @@ class RunInput {
 
 			this.bis = new BufferedInputStream(fis, READ_BUFFER_SIZE);
 		}
+	}
+
+	public int getId() {
+		return run.id;
 	}
 
 	private long readSkipLength(File indexFile, int offset) throws IOException {
@@ -97,18 +105,18 @@ class RunInput {
 				byte[] buf = readBuffer.get();
 				readBytes = IoHelper.ensureRead(bis, buf, len);
 				if (readBytes == len)
-					prefetch = EncodingRule.decode(ByteBuffer.wrap(buf, 0, len));
+					prefetch = (Item) EncodingRule.decode(ByteBuffer.wrap(buf, 0, len), SortCodec.instance);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("kraken logdb: cannot read run", e);
 		}
 		return prefetch != null;
 	}
 
-	public Object next() throws IOException {
+	public Item next() throws IOException {
 		if (!hasNext())
 			throw new NoSuchElementException();
-		Object ret = prefetch;
+		Item ret = prefetch;
 		prefetch = null;
 		loadCount++;
 		return ret;
@@ -133,14 +141,14 @@ class RunInput {
 			if (bis != null)
 				bis.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("kraken logdb: cannot close run", e);
 		}
 
 		try {
 			if (fis != null)
 				fis.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("kraken logdb: cannot close run", e);
 		}
 	}
 
