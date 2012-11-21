@@ -15,32 +15,34 @@
  */
 package org.krakenapps.logdb.sort;
 
-import java.io.IOException;
-import java.util.Iterator;
+import java.io.File;
 
-class CacheRunIterator implements CloseableIterator {
-	private Iterator<Item> it;
+public class ReferenceCountedFile extends File {
+	private static final long serialVersionUID = 1L;
+	private int count = 0;
+	
+	public ReferenceCountedFile(String pathname) {
+		super(pathname);
+	}
 
-	public CacheRunIterator(Iterator<Item> it) {
-		this.it = it;
+	public ReferenceCountedFile share() {
+		count++;
+		return this;
 	}
 
 	@Override
-	public boolean hasNext() {
-		return it.hasNext();
+	public boolean delete() {
+		count--;
+		if (count <= 0)
+			return super.delete();
+		return false;
 	}
 
 	@Override
-	public Item next() {
-		return it.next();
+	public void deleteOnExit() {
+		count--;
+		if (count <= 0)
+			super.deleteOnExit();
 	}
 
-	@Override
-	public void remove() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public void close() throws IOException {
-	}
 }

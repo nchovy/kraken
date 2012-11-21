@@ -33,12 +33,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ParallelMergeSorter {
+	private final Logger logger = LoggerFactory.getLogger(ParallelMergeSorter.class);
 	private Queue<Run> runs = new LinkedBlockingDeque<Run>();
 	private Queue<PartitionMergeTask> merges = new LinkedBlockingQueue<PartitionMergeTask>();
-	private LinkedList<Object> buffer;
-	private Comparator<Object> comparer;
-	private int runLength = 400000;
+	private LinkedList<Item> buffer;
+	private Comparator<Item> comparer;
+	private int runLength = 20000;
 	private AtomicInteger runIndexer;
 	private AtomicInteger flushTasks;
 	private AtomicInteger mergeTasks;
@@ -47,14 +51,14 @@ public class ParallelMergeSorter {
 	private Object mergeDoneSignal = new Object();
 	private ExecutorService executor;
 
-	public ParallelMergeSorter(Comparator<Object> comparer) {
+	public ParallelMergeSorter(Comparator<Item> comparer) {
 		this.comparer = comparer;
-		this.buffer = new LinkedList<Object>();
+		this.buffer = new LinkedList<Item>();
 		this.runIndexer = new AtomicInteger();
 		this.flushTasks = new AtomicInteger();
 		this.mergeTasks = new AtomicInteger();
 		this.executor = new ThreadPoolExecutor(8, 8, 10, TimeUnit.SECONDS, new LimitedQueue<Runnable>(8));
-		this.cacheCount = new AtomicInteger(2000000);
+		this.cacheCount = new AtomicInteger(10000);
 	}
 
 	public class LimitedQueue<E> extends ArrayBlockingQueue<E> {
@@ -78,24 +82,24 @@ public class ParallelMergeSorter {
 
 	}
 
-	public void add(Object item) throws IOException {
+	public void add(Item item) throws IOException {
 		buffer.add(item);
 		if (buffer.size() >= runLength)
 			flushRun();
 	}
 
-	public void addAll(List<? extends Object> items) throws IOException {
+	public void addAll(List<? extends Item> items) throws IOException {
 		buffer.addAll(items);
 		if (buffer.size() >= runLength)
 			flushRun();
 	}
 
 	private void flushRun() throws IOException, FileNotFoundException {
-		LinkedList<Object> buffered = buffer;
+		LinkedList<Item> buffered = buffer;
 		if (buffered.isEmpty())
 			return;
 
-		buffer = new LinkedList<Object>();
+		buffer = new LinkedList<Item>();
 		flushTasks.incrementAndGet();
 		executor.submit(new FlushWorker(buffered));
 	}
@@ -110,15 +114,14 @@ public class ParallelMergeSorter {
 			try {
 				synchronized (flushDoneSignal) {
 					flushDoneSignal.wait();
-					System.out.println("remaining runs: " + runs.size() + ", task count: " + flushTasks.get());
+					logger.debug("kraken logdb: remaining runs {}, task count: {}", runs.size(), flushTasks.get());
 				}
 			} catch (InterruptedException e) {
-				System.out.println("interrupted ");
 			}
 		}
 
 		// partition
-		System.out.println("start partitioning...");
+		logger.debug("kraken logdb: start partitioning");
 		long begin = new Date().getTime();
 		Partitioner partitioner = new Partitioner(comparer);
 		List<SortedRun> sortedRuns = new LinkedList<SortedRun>();
@@ -133,11 +136,10 @@ public class ParallelMergeSorter {
 			((SortedRunImpl) r).close();
 
 		long elapsed = new Date().getTime() - begin;
-		System.out.println("partition completed in " + elapsed);
+		logger.debug("kraken logdb: partitioning completed in {}ms", elapsed);
 
 		// n-way merge
 		Run run = mergeAll(partitions);
-		System.out.println("last result: " + run.dataFile.getAbsolutePath());
 		executor.shutdown();
 
 		if (run.cached != null)
@@ -159,7 +161,7 @@ public class ParallelMergeSorter {
 		}
 
 		@Override
-		public Object get(int offset) {
+		public Item get(int offset) {
 			try {
 				return ra.get(offset);
 			} catch (IOException e) {
@@ -183,19 +185,21 @@ public class ParallelMergeSorter {
 				int newId = runIndexer.incrementAndGet();
 
 				if (run.cached != null) {
-					List<Object> sublist = run.cached.subList(range.getFrom(), range.getTo() + 1);
+					List<Item> sublist = run.cached.subList(range.getFrom(), range.getTo() + 1);
 					Run r = new Run(newId, sublist);
 					runParts.add(r);
 				} else {
-					Run r = new Run(newId, range.length(), run.indexFile, run.dataFile, range.getFrom());
+					Run r = new Run(newId, range.length(), run.indexFile.share(), run.dataFile.share(), range.getFrom());
 					runParts.add(r);
 				}
 			}
 
-			PartitionMergeTask task = new PartitionMergeTask(id++, runParts);
-			merges.add(task);
-			mergeTasks.incrementAndGet();
-			executor.submit(new MergeWorker(task));
+			if (runParts.size() > 0) {
+				PartitionMergeTask task = new PartitionMergeTask(id++, runParts);
+				merges.add(task);
+				mergeTasks.incrementAndGet();
+				executor.submit(new MergeWorker(task));
+			}
 		}
 
 		// wait partition merge
@@ -206,10 +210,9 @@ public class ParallelMergeSorter {
 			try {
 				synchronized (mergeDoneSignal) {
 					mergeDoneSignal.wait();
-					System.out.println("remaining runs: " + runs.size() + ", task count: " + mergeTasks.get());
+					logger.debug("kraken logdb: remaining runs: {}, task count: {}", runs.size(), mergeTasks.get());
 				}
 			} catch (InterruptedException e) {
-				System.out.println("interrupted ");
 			}
 		}
 
@@ -233,9 +236,9 @@ public class ParallelMergeSorter {
 	}
 
 	private class FlushWorker implements Runnable {
-		private LinkedList<Object> buffered;
+		private LinkedList<Item> buffered;
 
-		public FlushWorker(LinkedList<Object> list) {
+		public FlushWorker(LinkedList<Item> list) {
 			buffered = list;
 		}
 
@@ -244,7 +247,7 @@ public class ParallelMergeSorter {
 			try {
 				doFlush();
 			} catch (Throwable t) {
-				t.printStackTrace();
+				logger.error("kraken logdb: failed to flush", t);
 			} finally {
 				flushTasks.decrementAndGet();
 				synchronized (flushDoneSignal) {
@@ -259,7 +262,7 @@ public class ParallelMergeSorter {
 			int id = runIndexer.incrementAndGet();
 			RunOutput out = new RunOutput(id, buffered.size(), cacheCount);
 			try {
-				for (Object o : buffered)
+				for (Item o : buffered)
 					out.write(o);
 			} finally {
 				Run run = out.finish();
@@ -278,11 +281,12 @@ public class ParallelMergeSorter {
 		@Override
 		public void run() {
 			try {
-				Run merged = merge(task.runs);
-				System.out.println("merged run " + merged + ", input runs: " + task.runs);
+				Run merged = mergeRuns(task.runs);
+				logger.debug("kraken logdb: merged run {}, input runs: {}", merged, task.runs);
+
 				task.output = merged;
 			} catch (Throwable t) {
-				t.printStackTrace();
+				logger.error("kraken logdb: failed to merge " + task.runs, t);
 			} finally {
 				mergeTasks.decrementAndGet();
 
@@ -291,15 +295,34 @@ public class ParallelMergeSorter {
 				}
 			}
 		}
+
+		private Run mergeRuns(List<Run> runs) throws IOException {
+			if (runs.size() == 1)
+				return runs.get(0);
+
+			List<Run> phase = new ArrayList<Run>();
+			for (int i = 0; i < 8; i++) {
+				if (!runs.isEmpty())
+					phase.add(runs.remove(0));
+			}
+
+			runs.add(merge(phase));
+			return mergeRuns(runs);
+		}
+
 	}
 
 	private void writeRestObjects(RunInput in, RunOutput out) throws IOException {
+		int count = 0;
 		while (in.hasNext()) {
 			out.write(in.next());
+			count++;
 		}
+		logger.debug("kraken logdb: final output writing from run #{}, count={}", in.getId(), count);
 	}
 
 	private Run concat(List<Run> finalRuns) throws IOException {
+		logger.debug("kraken logdb: concat begins");
 		RunOutput out = null;
 		List<RunInput> inputs = new LinkedList<RunInput>();
 		try {
@@ -307,30 +330,24 @@ public class ParallelMergeSorter {
 			for (Run r : finalRuns) {
 				total += r.length;
 				inputs.add(new RunInput(r, cacheCount));
+				logger.debug("kraken logdb: concat run #{}", r.id);
 			}
 
 			int id = runIndexer.incrementAndGet();
 			out = new RunOutput(id, total, cacheCount, true);
 
-			byte[] b = new byte[640 * 1024];
 			for (RunInput in : inputs) {
-				if (in.cachedIt != null) {
-					writeRestObjects(in, out);
+				writeRestObjects(in, out);
+				if (out.dataBos != null)
 					out.dataBos.flush();
-				} else {
-					// fast file copy
-					while (true) {
-						int readBytes = in.bis.read(b);
-						if (readBytes <= 0)
-							break;
-						out.dataBos.write(b, 0, readBytes);
-					}
-				}
 			}
 
+		} catch (Exception e) {
+			logger.error("kraken logdb: failed to concat " + finalRuns, e);
 		} finally {
-			for (RunInput input : inputs)
+			for (RunInput input : inputs) {
 				input.purge();
+			}
 
 			if (out != null)
 				return out.finish();
@@ -343,10 +360,11 @@ public class ParallelMergeSorter {
 		if (runs.size() == 0)
 			throw new IllegalArgumentException("runs should not be empty");
 
-		if (runs.size() == 1)
+		if (runs.size() == 1) {
 			return runs.get(0);
+		}
 
-		System.out.println("begin " + runs.size() + "way merge: " + runs);
+		logger.debug("kraken logdb: begin {}way merge, {}", runs.size(), runs);
 		ArrayList<RunInput> inputs = new ArrayList<RunInput>();
 		PriorityQueue<RunItem> q = new PriorityQueue<RunItem>(runs.size(), new RunItemComparater());
 		RunOutput r3 = null;
@@ -376,7 +394,6 @@ public class ParallelMergeSorter {
 				r3.write(item.item);
 				item.runInput.loaded = null;
 			}
-
 		} finally {
 			for (RunInput input : inputs)
 				input.purge();
@@ -385,7 +402,7 @@ public class ParallelMergeSorter {
 				return r3.finish();
 		}
 
-		System.out.println("bug check!!!");
+		logger.error("kraken logdb: merge cannot reach here, bug check!");
 		return null;
 	}
 
@@ -400,9 +417,9 @@ public class ParallelMergeSorter {
 
 	private static class RunItem {
 		private RunInput runInput;
-		private Object item;
+		private Item item;
 
-		public RunItem(RunInput runInput, Object item) {
+		public RunItem(RunInput runInput, Item item) {
 			this.runInput = runInput;
 			this.item = item;
 		}

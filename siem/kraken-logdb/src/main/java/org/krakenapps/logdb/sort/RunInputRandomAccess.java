@@ -20,8 +20,11 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
 import org.krakenapps.codec.EncodingRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RunInputRandomAccess {
+	private final Logger logger = LoggerFactory.getLogger(RunInputRandomAccess.class);
 	public Run run;
 	private RandomAccessFile indexRaf;
 	private RandomAccessFile dataRaf;
@@ -37,7 +40,7 @@ class RunInputRandomAccess {
 		}
 	}
 
-	public Object get(long offset) throws IOException {
+	public Item get(long offset) throws IOException {
 		if (offset >= run.length)
 			throw new IndexOutOfBoundsException("offset=" + offset + ", run length=" + run.length);
 
@@ -55,7 +58,7 @@ class RunInputRandomAccess {
 		if (readBytes != len)
 			throw new IOException("insufficient merge data block, expected=" + len + ", actual=" + readBytes);
 
-		return EncodingRule.decode(ByteBuffer.wrap(buf, 0, len));
+		return (Item) EncodingRule.decode(ByteBuffer.wrap(buf, 0, len), SortCodec.instance);
 	}
 
 	public void close() {
@@ -63,7 +66,7 @@ class RunInputRandomAccess {
 			try {
 				indexRaf.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.error("kraken logdb: cannot close run", e);
 			}
 		}
 
@@ -71,7 +74,7 @@ class RunInputRandomAccess {
 			try {
 				dataRaf.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.error("kraken logdb: cannot close run", e);
 			}
 		}
 	}
