@@ -23,9 +23,14 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.cron.PeriodicJob;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.MessageHandler;
+import org.krakenapps.msgbus.MsgbusConfig;
 import org.krakenapps.msgbus.MsgbusException;
 import org.krakenapps.msgbus.PermissionChecker;
 import org.krakenapps.msgbus.Request;
@@ -42,8 +47,11 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "msgbus")
 @Provides
-public class MessageBusImpl extends ServiceTracker implements MessageBus {
+@PeriodicJob("* * * * *")
+public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnable {
 	private final Logger logger = LoggerFactory.getLogger(MessageBusImpl.class.getName());
+	private static Integer defaultSessionTimeout = 30;
+	private int timeout;
 
 	private ConcurrentMap<String, Set<String>> pluginMessageMap;
 	private ConcurrentMap<String, Session> sessionMap;
@@ -56,9 +64,12 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 	@Requires
 	private ResourceApi resourceApi;
 
+	@Requires
+	private ConfigService conf;
+
 	public MessageBusImpl(BundleContext bc) {
 		super(bc, PermissionChecker.class.getName(), null);
-
+		timeout = 0;
 		pluginMessageMap = new ConcurrentHashMap<String, Set<String>>();
 		sessionMap = new ConcurrentHashMap<String, Session>();
 		sessionEventListeners = Collections.newSetFromMap(new ConcurrentHashMap<SessionEventHandler, Boolean>());
@@ -69,12 +80,32 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 	@Validate
 	public void start() {
+		ConfigDatabase db = conf.ensureDatabase("kraken-msgbus");
+		Config c = db.findOne(MsgbusConfig.class, null);
+		MsgbusConfig msgbusConfig = ensureMsgbusConfig(db, c);
+		timeout = msgbusConfig.getTimeout() == null ? defaultSessionTimeout : msgbusConfig.getTimeout();
 		super.open();
 	}
 
 	@Invalidate
 	public void stop() {
 		super.close();
+	}
+
+	@Override
+	public void run() {
+		Collection<Session> sessions = getSessions();
+		Date currentTime = new Date();
+		for (Session s : sessions) {
+			long diff = (currentTime.getTime() - s.getLastAccessTime().getTime()) / (1000 * 60);
+			if (logger.isDebugEnabled())
+				logger.debug("kraken msgbus: session [{}] killed by timeout checker, diff time [{}], now [{}], access [{}]",
+						new Object[] { s.getGuid(), diff, currentTime, s.getLastAccessTime() });
+			if (diff > timeout) {
+				closeSession(s);
+				logger.info("kraken msgbus: session timeout, session guid [{}], timeout [{}]", s.getGuid(), getSessionTimeout());
+			}
+		}
 	}
 
 	@Override
@@ -138,7 +169,12 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 
 	@Override
 	public Session getSession(String guid) {
-		return sessionMap.get(guid);
+		Session session = sessionMap.get(guid);
+		if (session == null)
+			return null;
+
+		session.setLastAccessTime();
+		return session;
 	}
 
 	@Override
@@ -384,5 +420,32 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus {
 				respondMessage.setParameters(m);
 			}
 		}
+	}
+
+	@Override
+	public void setSessionTimeout(int minutes) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-msgbus");
+		Config c = db.findOne(MsgbusConfig.class, null);
+		MsgbusConfig msgbusConfig = ensureMsgbusConfig(db, c);
+		msgbusConfig.setTimeout(minutes);
+		db.update(c, msgbusConfig);
+		this.timeout = minutes;
+	}
+
+	@Override
+	public int getSessionTimeout() {
+		return timeout;
+	}
+
+	private MsgbusConfig ensureMsgbusConfig(ConfigDatabase db, Config c) {
+		MsgbusConfig msgbusConfig;
+		if (c == null) {
+			msgbusConfig = new MsgbusConfig();
+			msgbusConfig.setTimeout(30);
+			db.add(msgbusConfig);
+		} else {
+			msgbusConfig = c.getDocument(MsgbusConfig.class);
+		}
+		return msgbusConfig;
 	}
 }

@@ -34,4 +34,8 @@ public interface MessageBus {
 	void register(SessionEventHandler callback);
 
 	void unregister(SessionEventHandler callback);
+	
+	void setSessionTimeout(int minutes);
+	
+	int getSessionTimeout();	
 }
