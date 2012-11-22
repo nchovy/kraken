@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -120,7 +121,7 @@ public class BatchScript implements Script {
 	}
 
 	@ScriptUsage(description = "", arguments = {
-			@ScriptArgument(name = "file path", type = "string", description = "script file path"),
+			@ScriptArgument(name = "file path", type = "string", description = "script file path", autocompletion = PathAutoCompleter.class),
 			@ScriptArgument(name = "stop on fail", type = "boolean", description = "true if you want to stop script on fail", optional = true) })
 	public void executeFile(String[] args) {
 		try {

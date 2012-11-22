@@ -16,7 +16,9 @@
 package org.krakenapps.logger;
 
 import org.krakenapps.api.Script;
+import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
+import org.krakenapps.api.ScriptUsage;
 import org.slf4j.impl.KrakenLoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
 
@@ -47,6 +49,10 @@ public class LoggerScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "enable or disable logging", arguments = {
+			@ScriptArgument(name = "logger name", type = "string", description = "logger name (i.e. class name)", autocompletion = LoggerAutoCompleter.class),
+			@ScriptArgument(name = "level", type = "string", description = "debug, trace, info, warn, or error", autocompletion = LogLevelAutoCompleter.class),
+			@ScriptArgument(name = "switch", type = "string", description = "on or off", autocompletion = OnOffAutoCompleter.class) })
 	public void set(String[] args) {
 		if (args.length != 3) {
 			context.println("Usage: logger.set [name] [level] [on/off]");
@@ -70,6 +76,7 @@ public class LoggerScript implements Script {
 	 * 
 	 * @param args
 	 */
+	@ScriptUsage(description = "enable debug/trace logging", arguments = { @ScriptArgument(name = "logger name", type = "string", description = "logger name (i.e. class name)", autocompletion = LoggerAutoCompleter.class) })
 	public void on(String[] args) {
 		String name = args[0];
 		if (loggerFactory.hasLogger(name) == false) {
@@ -79,7 +86,7 @@ public class LoggerScript implements Script {
 
 		loggerFactory.setLogLevel(name, "trace", true);
 		loggerFactory.setLogLevel(name, "debug", true);
-		
+
 		context.println("set");
 	}
 
@@ -88,6 +95,7 @@ public class LoggerScript implements Script {
 	 * 
 	 * @param args
 	 */
+	@ScriptUsage(description = "disable debug/trace logging", arguments = { @ScriptArgument(name = "logger name", type = "string", description = "logger name (i.e. class name)", autocompletion = LoggerAutoCompleter.class) })
 	public void off(String[] args) {
 		String name = args[0];
 		if (loggerFactory.hasLogger(name) == false) {
@@ -97,7 +105,7 @@ public class LoggerScript implements Script {
 
 		loggerFactory.setLogLevel(name, "trace", false);
 		loggerFactory.setLogLevel(name, "debug", false);
-		
+
 		context.println("set");
 	}
 
