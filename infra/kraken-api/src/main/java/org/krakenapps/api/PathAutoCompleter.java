@@ -47,11 +47,14 @@ public class PathAutoCompleter implements ScriptAutoCompletionHelper {
 		else if (p == 0)
 			parent = "/";
 
+		List<ScriptAutoCompletion> paths = new ArrayList<ScriptAutoCompletion>();
 		String filePrefix = p >= 0 ? prefix.substring(p + 1) : prefix;
 		File parentFile = canonicalize(dir, parent);
+		if (parentFile == null)
+			return paths;
+		
 		boolean absolute = parent != null && (parent.startsWith("/") || isWindowsDriveRoot(parentFile.getAbsolutePath()));
 
-		List<ScriptAutoCompletion> paths = new ArrayList<ScriptAutoCompletion>();
 		File[] files = null;
 
 		// for windows drive root enumeration
@@ -60,6 +63,9 @@ public class PathAutoCompleter implements ScriptAutoCompletionHelper {
 		} else {
 			files = parentFile.listFiles();
 		}
+		
+		if (files == null)
+			return paths;
 
 		for (File f : files) {
 			String name = f.getName();
