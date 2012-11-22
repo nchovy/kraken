@@ -49,7 +49,7 @@ import org.krakenapps.ansicode.MoveToCode;
 import org.krakenapps.ansicode.SetColorCode;
 import org.krakenapps.ansicode.SetColorCode.Color;
 import org.krakenapps.api.DirectoryAutoCompleter;
-import org.krakenapps.api.FileAutoCompleter;
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -109,7 +109,7 @@ public class CoreScript implements Script {
 
 	}
 
-	@ScriptUsage(description = "print file content", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = FileAutoCompleter.class) })
+	@ScriptUsage(description = "print file content", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = PathAutoCompleter.class) })
 	public void cat(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 		File f = canonicalize(dir, args[0]);
@@ -139,7 +139,7 @@ public class CoreScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "edit file content", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = FileAutoCompleter.class) })
+	@ScriptUsage(description = "edit file content", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = PathAutoCompleter.class) })
 	public void edit(String[] args) {
 		try {
 			File dir = (File) context.getSession().getProperty("dir");
@@ -182,8 +182,8 @@ public class CoreScript implements Script {
 	}
 
 	@ScriptUsage(description = "copy file", arguments = {
-			@ScriptArgument(name = "source file path", type = "string", description = "source file path", autocompletion = FileAutoCompleter.class),
-			@ScriptArgument(name = "destination file path", type = "string", description = "destination file path", autocompletion = FileAutoCompleter.class) })
+			@ScriptArgument(name = "source file path", type = "string", description = "source file path", autocompletion = PathAutoCompleter.class),
+			@ScriptArgument(name = "destination file path", type = "string", description = "destination file path", autocompletion = PathAutoCompleter.class) })
 	public void cp(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
@@ -209,7 +209,7 @@ public class CoreScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "delete file", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = FileAutoCompleter.class) })
+	@ScriptUsage(description = "delete file", arguments = { @ScriptArgument(name = "file path", type = "string", description = "file path", autocompletion = PathAutoCompleter.class) })
 	public void rm(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
@@ -226,8 +226,8 @@ public class CoreScript implements Script {
 	}
 
 	@ScriptUsage(description = "move file", arguments = {
-			@ScriptArgument(name = "source file path", type = "string", description = "source file path", autocompletion = FileAutoCompleter.class),
-			@ScriptArgument(name = "destination file path", type = "string", description = "destination file path", autocompletion = FileAutoCompleter.class) })
+			@ScriptArgument(name = "source file path", type = "string", description = "source file path", autocompletion = PathAutoCompleter.class),
+			@ScriptArgument(name = "destination file path", type = "string", description = "destination file path", autocompletion = PathAutoCompleter.class) })
 	public void mv(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 
@@ -249,6 +249,7 @@ public class CoreScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "list files", arguments = { @ScriptArgument(name = "path", type = "string", description = "path", optional = true, autocompletion = PathAutoCompleter.class) })
 	public void ls(String[] args) throws IOException {
 		File dir = (File) context.getSession().getProperty("dir");
 		List<File> targets = new LinkedList<File>();

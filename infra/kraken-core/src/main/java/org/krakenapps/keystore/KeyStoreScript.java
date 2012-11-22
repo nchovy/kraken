@@ -26,6 +26,7 @@ import java.util.Enumeration;
 import java.util.Properties;
 
 import org.krakenapps.api.KeyStoreManager;
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -74,8 +75,7 @@ public class KeyStoreScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "List all aliases in keystore", arguments = { @ScriptArgument(name = "alias",
-			type = "string", description = "alias of the keystore") })
+	@ScriptUsage(description = "List all aliases in keystore", arguments = { @ScriptArgument(name = "alias", type = "string", description = "alias of the keystore") })
 	public void aliases(String[] args) {
 		String name = args[0];
 		KeyStore store = manager.getKeyStore(name);
@@ -116,7 +116,7 @@ public class KeyStoreScript implements Script {
 	@ScriptUsage(description = "register keystore", arguments = {
 			@ScriptArgument(name = "name", description = "the name of the key store"),
 			@ScriptArgument(name = "type", description = "the type of the key store. for example, JKS, PKCS12, etc."),
-			@ScriptArgument(name = "file path", description = "the file path of the key store"),
+			@ScriptArgument(name = "file path", description = "the file path of the key store", autocompletion = PathAutoCompleter.class),
 			@ScriptArgument(name = "password", description = "the password of the key store", optional = true) })
 	public void register(String[] args) {
 		String alias = args[0];
@@ -147,8 +147,7 @@ public class KeyStoreScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "unregister keystore", arguments = { @ScriptArgument(name = "name",
-			description = "alias of the key store") })
+	@ScriptUsage(description = "unregister keystore", arguments = { @ScriptArgument(name = "name", description = "alias of the key store") })
 	public void unregister(String[] args) {
 		String name = args[0];
 		manager.unregisterKeyStore(name);

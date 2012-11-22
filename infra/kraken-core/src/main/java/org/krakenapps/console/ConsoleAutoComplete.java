@@ -31,8 +31,11 @@ import org.krakenapps.api.ScriptUsage;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConsoleAutoComplete {
+	private final Logger logger = LoggerFactory.getLogger(ConsoleAutoComplete.class);
 	private BundleContext bundleContext;
 
 	public ConsoleAutoComplete(BundleContext bundleContext) {
@@ -70,15 +73,17 @@ public class ConsoleAutoComplete {
 				ScriptArgument arg = null;
 				if (argIndex < usage.arguments().length)
 					arg = usage.arguments()[argIndex];
-				
+
 				if (arg == null || arg.autocompletion() == ScriptAutoCompletionHelper.class)
 					return terms;
 
 				String nextToken = prefix.endsWith(" ") ? "" : tokens[tokens.length - 1];
 				ScriptAutoCompletionHelper helper = (ScriptAutoCompletionHelper) arg.autocompletion().newInstance();
 				return helper.matches(session, nextToken);
+			} catch (NoSuchMethodException e) {
+				logger.debug("kraken core: cannot auto-complete", e);
 			} catch (Throwable e) {
-				e.printStackTrace();
+				logger.error("kraken core: cannot auto-complete", e);
 			}
 		}
 

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Primitive;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -182,8 +184,7 @@ public class ConfScript implements Script {
 		try {
 			while (it.hasNext()) {
 				Config c = it.next();
-				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc="
-						+ Primitive.stringify(c.getDocument());
+				String s = "id=" + c.getId() + ", rev=" + c.getRevision() + ", doc=" + Primitive.stringify(c.getDocument());
 				context.println(s);
 			}
 		} finally {
@@ -269,7 +270,7 @@ public class ConfScript implements Script {
 
 	@ScriptUsage(description = "export db data", arguments = {
 			@ScriptArgument(name = "database name", type = "string", description = "database name"),
-			@ScriptArgument(name = "file path", type = "string", description = "export file path"),
+			@ScriptArgument(name = "file path", type = "string", description = "export file path", autocompletion = PathAutoCompleter.class),
 			@ScriptArgument(name = "export revision", type = "integer", description = "export revision id", optional = true) })
 	public void exportFile(String[] args) {
 		Integer rev = null;
@@ -309,7 +310,7 @@ public class ConfScript implements Script {
 
 	@ScriptUsage(description = "import db data", arguments = {
 			@ScriptArgument(name = "database name", type = "String", description = "database name"),
-			@ScriptArgument(name = "file path", type = "string", description = "target file path") })
+			@ScriptArgument(name = "file path", type = "string", description = "target file path", autocompletion = PathAutoCompleter.class) })
 	public void importFile(String[] args) {
 		ConfigDatabase db = conf.getDatabase(args[0]);
 		if (db == null) {
