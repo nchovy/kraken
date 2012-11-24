@@ -27,6 +27,7 @@ import java.util.Map;
 
 import javax.management.MBeanServer;
 
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -45,7 +46,7 @@ public class SunPerfScript implements Script {
 	}
 
 	@ScriptUsage(description = "dump .hprof file", arguments = {
-			@ScriptArgument(name = "path", type = "string", description = "dump file path"),
+			@ScriptArgument(name = "path", type = "string", description = "dump file path", autocompletion = PathAutoCompleter.class),
 			@ScriptArgument(name = "live only", type = "string", description = "if true dump only live objects") })
 	public void dumpHeap(String[] args) throws IOException {
 		MBeanServer platformMBeanServer = ManagementFactory.getPlatformMBeanServer();

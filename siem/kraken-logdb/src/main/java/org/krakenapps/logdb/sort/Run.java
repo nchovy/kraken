@@ -15,31 +15,32 @@
  */
 package org.krakenapps.logdb.sort;
 
-import java.io.File;
 import java.util.List;
 
 class Run {
 	public int id;
 	public int length;
-	public File indexFile;
-	public File dataFile;
-	public List<Object> cached;
+	public ReferenceCountedFile indexFile;
+	public ReferenceCountedFile dataFile;
+	public List<Item> cached;
 
 	// skip n objects
 	public int offset;
 
-	public Run(int id, int length, File indexFile, File dataFile) {
+	public Run(int id, int length, ReferenceCountedFile indexFile, ReferenceCountedFile dataFile) {
 		this(id, length, indexFile, dataFile, 0);
 	}
 
-	public Run(int id, int length, File indexFile, File dataFile, int offset) {
+	public Run(int id, int length, ReferenceCountedFile indexFile, ReferenceCountedFile dataFile, int offset) {
+		this.id = id;
 		this.length = length;
 		this.indexFile = indexFile;
 		this.dataFile = dataFile;
 		this.offset = offset;
 	}
 
-	public Run(int id, List<Object> cached) {
+	public Run(int id, List<Item> cached) {
+		this.id = id;
 		this.length = cached.size();
 		this.cached = cached;
 	}

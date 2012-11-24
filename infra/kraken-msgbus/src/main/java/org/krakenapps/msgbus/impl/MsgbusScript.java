@@ -3,6 +3,7 @@ package org.krakenapps.msgbus.impl;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.krakenapps.api.Primitive;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -10,11 +11,11 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.msgbus.AbstractSession;
 import org.krakenapps.msgbus.Message;
+import org.krakenapps.msgbus.Message.Type;
 import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.ResourceApi;
 import org.krakenapps.msgbus.ResourceHandler;
 import org.krakenapps.msgbus.Session;
-import org.krakenapps.msgbus.Message.Type;
 
 public class MsgbusScript implements Script {
 	private MessageBus msgbus;
@@ -167,5 +168,29 @@ public class MsgbusScript implements Script {
 
 			completed = true;
 		}
+	}
+
+	@ScriptUsage(description = "killSession", arguments = { @ScriptArgument(name = "session guid", type = "string", description = "session guid") })
+	public void killSession(String[] args) {
+		Session session = msgbus.getSession(args[0]);
+		if (session == null) {
+			context.println("session not found");
+			return;
+		}
+		msgbus.closeSession(session);
+		context.println("[" + session.getGuid() + "] closed");
+
+	}
+
+	@ScriptUsage(description = "set msgbus session timeout", arguments = { @ScriptArgument(name = "sesstion timeout", type = "string", description = "minute") })
+	public void setTimeout(String[] args) {
+
+		msgbus.setSessionTimeout(Integer.parseInt(args[0]));
+		context.println("set");
+		context.println("-------------------");
+	}
+
+	public void getTimeout(String[] args) {		
+		context.println("timeout=" + msgbus.getSessionTimeout());
 	}
 }

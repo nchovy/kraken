@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-msgbus</artifactId>
-	<version>1.5.2</version>
+	<version>1.6.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Message Bus</name>
 	<build>

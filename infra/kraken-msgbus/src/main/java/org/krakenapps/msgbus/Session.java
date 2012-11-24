@@ -1,6 +1,7 @@
 package org.krakenapps.msgbus;
 
 import java.net.InetAddress;
+import java.util.Date;
 import java.util.Locale;
 
 public interface Session {
@@ -34,4 +35,8 @@ public interface Session {
 	void send(Message msg);
 
 	void close();
+	
+	Date getLastAccessTime();
+	
+	void setLastAccessTime();
 }

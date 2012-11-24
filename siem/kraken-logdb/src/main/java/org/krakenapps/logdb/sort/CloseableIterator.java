@@ -18,5 +18,5 @@ package org.krakenapps.logdb.sort;
 import java.io.Closeable;
 import java.util.Iterator;
 
-public interface CloseableIterator extends Iterator<Object>, Closeable {
+public interface CloseableIterator extends Iterator<Item>, Closeable {
 }

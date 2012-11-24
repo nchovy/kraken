@@ -24,16 +24,21 @@ import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 
 import org.krakenapps.codec.EncodingRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class FileRunIterator implements CloseableIterator {
+	private final Logger logger = LoggerFactory.getLogger(FileRunIterator.class);
 	private static final int READ_BUFFER_SIZE = 1024 * 128;
+	private File f;
 	private InputStream bis;
-	private Object next;
+	private Item next;
 	private byte[] buf = new byte[640 * 1024];
 	private byte[] intbuf = new byte[4];
 	private long totalRead;
 
 	public FileRunIterator(File f) throws IOException {
+		this.f = f;
 		bis = new BufferedInputStream(new FileInputStream(f), READ_BUFFER_SIZE);
 	}
 
@@ -49,13 +54,13 @@ class FileRunIterator implements CloseableIterator {
 					readBytes = IoHelper.ensureRead(bis, buf, len);
 					totalRead += readBytes;
 					if (readBytes == len)
-						next = EncodingRule.decode(ByteBuffer.wrap(buf, 0, len));
+						next = (Item) EncodingRule.decode(ByteBuffer.wrap(buf, 0, len), SortCodec.instance);
 				}
 			} catch (IOException e) {
 				try {
 					close();
 				} catch (IOException e1) {
-					e1.printStackTrace();
+					logger.error("kraken logdb: cannot close file", e1);
 				}
 			}
 		}
@@ -64,11 +69,11 @@ class FileRunIterator implements CloseableIterator {
 	}
 
 	@Override
-	public Object next() {
+	public Item next() {
 		if (!hasNext())
 			throw new NoSuchElementException();
 
-		Object ret = next;
+		Item ret = next;
 		next = null;
 		return ret;
 	}
@@ -81,5 +86,6 @@ class FileRunIterator implements CloseableIterator {
 	@Override
 	public void close() throws IOException {
 		bis.close();
+		f.delete();
 	}
 }
