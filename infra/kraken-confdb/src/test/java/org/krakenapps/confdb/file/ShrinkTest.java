@@ -12,6 +12,7 @@ import java.net.Inet6Address;
 import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -75,7 +76,7 @@ public class ShrinkTest {
 				break;
 			assertTrue(compareObject(oldDocs.get(index), newDocs.get(index)));
 		}
-		// new File(db.getDbDirectory(), "export_" + rev + ".txt").delete();
+		new File(db.getDbDirectory(), "export_" + rev + ".txt").delete();
 	}
 
 	// Exist manifest and changeset, import data
@@ -185,6 +186,11 @@ public class ShrinkTest {
 			return false;
 		if (!oldMap.get("long").equals(newMap.get("long")))
 			return false;
+		if (!(oldMap.get("byte") == null)) {
+			byte[] oldByte = (byte[]) oldMap.get("byte");
+			byte[] newByte = (byte[]) newMap.get("byte");
+			return Arrays.equals(oldByte, newByte);
+		}
 
 		return true;
 	}
@@ -224,7 +230,7 @@ public class ShrinkTest {
 		Object[] os = new Object[2];
 		os[0] = o1;
 		os[1] = o2;
-		int[] i = new int[]{1,2,3};
+		int[] i = new int[] { 1, 2, 3 };
 
 		Map<String, Object> m = new HashMap<String, Object>();
 
@@ -247,18 +253,16 @@ public class ShrinkTest {
 	}
 
 	private Object createByteArray() {
-		byte[] byteBuffer = new byte[62];
-		int index = 0;
-		for (char c = 'A'; c <= 'Z'; c++)
-			byteBuffer[index++] = (byte) c;
+		byte[] binary = new byte[256];
+		byte b = Byte.MIN_VALUE;
+		int i = 0;
+		while (true) {
+			binary[i++] = b++;
+			if (b == Byte.MAX_VALUE)
+				break;
+		}
 
-		for (char c = 'a'; c <= 'z'; c++)
-			byteBuffer[index++] = (byte) c;
-
-		for (char c = '0'; c <= '9'; c++)
-			byteBuffer[index++] = (byte) c;
-
-		return byteBuffer;
+		return binary;
 	}
 
 	private void export(int rev) throws IOException {

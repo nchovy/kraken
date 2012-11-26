@@ -159,7 +159,7 @@ public class Exporter {
 		Class<?> c = doc.getClass().getComponentType();
 		if (c == byte.class) {
 			byte[] arr = (byte[]) doc;
-			return createList("blob", Base64.encodeString(new String(arr)));
+			return createList("blob", new String(Base64.encode(arr)));
 		} else if (c == int.class || c == double.class || c == float.class || c == long.class || c == short.class
 				|| c == boolean.class) {
 			return createList("list", doc);
