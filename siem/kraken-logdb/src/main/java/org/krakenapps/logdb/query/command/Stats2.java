@@ -16,6 +16,7 @@
 package org.krakenapps.logdb.query.command;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,10 +38,13 @@ public class Stats2 extends LogQueryCommand {
 	private Function[] values;
 	private ParallelMergeSorter sorter;
 
+	private Map<List<Object>, Function[]> buffer;
+
 	public Stats2(List<String> clause, Function[] values) {
 		this.clauses = clause;
 		this.values = values;
 		this.sorter = new ParallelMergeSorter(new ItemComparer());
+		this.buffer = new HashMap<List<Object>, Function[]>();
 	}
 
 	@Override
@@ -53,32 +57,52 @@ public class Stats2 extends LogQueryCommand {
 
 	@Override
 	public void push(LogMap m) {
-		Object[] keys = new Object[clauses.size()];
-		int i = 0;
+		List<Object> keys = new ArrayList<Object>(clauses.size());
 		for (String clause : clauses) {
 			Object keyValue = m.get(clause);
 			if (keyValue == null)
 				return;
 
-			keys[i++] = keyValue;
+			keys.add(keyValue);
 		}
 
 		try {
 			inputCount++;
-			sorter.add(new Item(keys, filt(m)));
+
+			Function[] fs = buffer.get(keys);
+			if (fs == null) {
+				fs = new Function[values.length];
+				for (int i = 0; i < fs.length; i++)
+					fs[i] = values[i].clone();
+
+				buffer.put(keys, fs);
+			}
+
+			for (Function f : fs)
+				f.put(m);
+
+			// flush
+			if (buffer.keySet().size() > 50000)
+				flush();
+
 		} catch (IOException e) {
 			throw new IllegalStateException("sort failed, query " + logQuery, e);
 		}
 	}
 
-	private Map<String, Object> filt(LogMap l) {
-		Map<String, Object> m = new HashMap<String, Object>();
-		for (Function f : values) {
-			String k = f.getTarget();
-			if (k != null)
-				m.put(k, l.get(k));
+	private void flush() throws IOException {
+		logger.debug("kraken logdb: flushing stats2 buffer, [{}] keys", buffer.keySet().size());
+
+		for (List<Object> keys : buffer.keySet()) {
+			Function[] fs = buffer.get(keys);
+			List<Object> l = new ArrayList<Object>();
+			for (Function f : fs)
+				l.add(f.serialize());
+
+			sorter.add(new Item(keys.toArray(), l));
 		}
-		return m;
+
+		buffer.clear();
 	}
 
 	@Override
@@ -86,12 +110,15 @@ public class Stats2 extends LogQueryCommand {
 		return true;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
-		logger.debug("kraken logdb: sort input count [{}]", inputCount);
+		logger.debug("kraken logdb: stats2 sort input count [{}]", inputCount);
 		CloseableIterator it = null;
 		try {
+			// last flush
+			flush();
+
+			// sort
 			it = sorter.sort();
 
 			Object[] lastKeys = null;
@@ -103,6 +130,8 @@ public class Stats2 extends LogQueryCommand {
 				count++;
 
 				if (lastKeys == null || !Arrays.equals(lastKeys, (Object[]) item.getKey())) {
+					if (logger.isDebugEnabled() && lastKeys != null)
+						logger.debug("kraken logdb: stats2 key compare [{}] != [{}]", lastKeys[0], ((Object[]) item.getKey())[0]);
 
 					// finalize last record
 					if (fs != null) {
@@ -115,8 +144,17 @@ public class Stats2 extends LogQueryCommand {
 						fs[i] = values[i].clone();
 				}
 
-				for (Function f : fs)
-					f.put(new LogMap((Map<String, Object>) item.getValue()));
+				int i = 0;
+				for (Function f : fs) {
+					Object[] l = (Object[]) ((Object[]) item.getValue())[i];
+					String name = (String) l[0];
+					String target = (String) l[1];
+					String keyName = (String) l[2];
+					Function f2 = Function.getFunction(name, target, keyName, Timechart.func);
+					f2.load(l);
+					f.merge(f2);
+					i++;
+				}
 
 				lastKeys = (Object[]) item.getKey();
 			}
