@@ -16,9 +16,10 @@
 package org.krakenapps.logdb.query.command;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.query.ObjectComparator;
@@ -31,24 +32,20 @@ import org.slf4j.LoggerFactory;
 public abstract class Function {
 	private static Logger logger = LoggerFactory.getLogger(Function.class);
 	private static Map<String, Class<? extends Function>> mapping;
+	private static Pattern p = Pattern.compile("[0-9]+$");
+
 	static {
 		mapping = new HashMap<String, Class<? extends Function>>();
 		mapping.put("avg", Average.class);
 		mapping.put("count", Count.class);
 		mapping.put("c", Count.class);
-		mapping.put("distinct_count", DistinctCount.class);
-		mapping.put("dc", DistinctCount.class);
 		mapping.put("first", First.class);
 		mapping.put("last", Last.class);
-		mapping.put("list", List.class);
 		mapping.put("max", Max.class);
 		mapping.put("min", Min.class);
 		mapping.put("mean", Average.class);
-		mapping.put("mode", Mode.class);
 		mapping.put("range", Range.class);
 		mapping.put("sum", Sum.class);
-		mapping.put("sumsq", SumSquare.class);
-		mapping.put("values", Values.class);
 	}
 
 	private String name;
@@ -77,7 +74,8 @@ public abstract class Function {
 		if (name == null)
 			return null;
 
-		String functionName = name.split("[0-9]+$")[0];
+		// String functionName = name.split("[0-9]+$")[0];
+		String functionName = p.split(name)[0];
 		Class<? extends Function> cls = mapping.get(functionName.toLowerCase());
 		if (cls == null && extClass != null)
 			cls = extClass.get(functionName.toLowerCase());
@@ -179,6 +177,25 @@ public abstract class Function {
 
 	abstract public void clean();
 
+	// when save serialized data to disk
+	public Object serialize() {
+		ArrayList<Object> l = new ArrayList<Object>();
+		l.add(name);
+		l.add(target);
+		l.add(keyName);
+		return l;
+	}
+
+	// when load swapped data from disk
+	public void load(Object value) {
+		Object[] l = (Object[]) value;
+		name = (String) l[0];
+		target = (String) l[1];
+		keyName = (String) l[2];
+	}
+
+	abstract public Function merge(Function func);
+
 	@Override
 	public String toString() {
 		if (keyName == null)
@@ -267,6 +284,31 @@ public abstract class Function {
 		public void clean() {
 			d = null;
 		}
+
+		@Override
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(d);
+			l.add(count);
+			return l;
+		}
+
+		@Override
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			this.d = (Double) l[3];
+			this.count = (Integer) l[4];
+		}
+
+		@Override
+		public Function merge(Function func) {
+			Average other = (Average) func;
+			this.d += other.d;
+			this.count += other.count;
+			return this;
+		}
 	}
 
 	protected static class Count extends Function {
@@ -289,47 +331,28 @@ public abstract class Function {
 		@Override
 		public void clean() {
 		}
-	}
 
-	protected static class DistinctCount extends Function {
-		private ObjectComparator comp = new ObjectComparator();
-		protected java.util.List<Object> objs = new ArrayList<Object>();
-
+		
 		@Override
-		protected void put(Object obj) {
-			int l = 0;
-			int r = objs.size();
-			while (l < r) {
-				int m = (l + r) / 2;
-				Object o = objs.get(m);
-				int c = comp.compare(obj, o);
-
-				if (c == 0)
-					return;
-				else if (c > 0)
-					l = m + 1;
-				else if (c < 0)
-					r = m;
-			}
-			objs.add((l + r) / 2, obj);
-		}
-
-		public java.util.List<Object> getObjs() {
-			return objs;
-		}
-
-		public void setObjs(java.util.List<Object> objs) {
-			this.objs = objs;
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(result);
+			return l;
 		}
 
 		@Override
-		public Object getResult() {
-			return objs.size();
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			result = (Long) l[3];
 		}
 
 		@Override
-		public void clean() {
-			objs = null;
+		public Function merge(Function func) {
+			Count c = (Count) func;
+			this.result += c.result;
+			return this;
 		}
 	}
 
@@ -359,6 +382,27 @@ public abstract class Function {
 		public void clean() {
 			first = null;
 		}
+
+		@Override
+		public Function merge(Function func) {
+			// ignore subsequent items
+			return this;
+		}
+
+		@Override
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(first);
+			return l;
+		}
+
+		@Override
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			first = l[3];
+		}
 	}
 
 	protected static class Last extends Function {
@@ -387,33 +431,27 @@ public abstract class Function {
 		public void clean() {
 			last = null;
 		}
-	}
-
-	protected static class List extends Function {
-		private java.util.List<Object> objs = new ArrayList<Object>();
 
 		@Override
-		protected void put(Object obj) {
-			if (obj != null)
-				objs.add(obj);
-		}
-
-		public java.util.List<Object> getObjs() {
-			return objs;
-		}
-
-		public void setObjs(java.util.List<Object> objs) {
-			this.objs = objs;
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(last);
+			return l;
 		}
 
 		@Override
-		public Object getResult() {
-			return objs;
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			last = l[3];
 		}
 
 		@Override
-		public void clean() {
-			objs = null;
+		public Function merge(Function func) {
+			Last last = (Last) func;
+			this.last = last.last;
+			return this;
 		}
 	}
 
@@ -444,6 +482,28 @@ public abstract class Function {
 		public void clean() {
 			max = null;
 		}
+
+		@Override
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(max);
+			return l;
+		}
+
+		@Override
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			this.max = l[3];
+		}
+
+		@Override
+		public Function merge(Function func) {
+			Max other = (Max) func;
+			put(other.max);
+			return this;
+		}
 	}
 
 	protected static class Min extends Function {
@@ -473,77 +533,27 @@ public abstract class Function {
 		public void clean() {
 			min = null;
 		}
-	}
-
-	protected static class Mode extends Function {
-		private java.util.List<Object> list = new ArrayList<Object>();
-		private Object result;
-		private int maxCount;
-		private int nowCount;
 
 		@Override
-		protected void put(Object obj) {
-			list.add(obj);
-		}
-
-		public java.util.List<Object> getList() {
-			return list;
-		}
-
-		public void setList(java.util.List<Object> list) {
-			this.list = list;
-		}
-
-		public int getMaxCount() {
-			return maxCount;
-		}
-
-		public void setMaxCount(int maxCount) {
-			this.maxCount = maxCount;
-		}
-
-		public int getNowCount() {
-			return nowCount;
-		}
-
-		public void setNowCount(int nowCount) {
-			this.nowCount = nowCount;
-		}
-
-		public void setResult(Object result) {
-			this.result = result;
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(min);
+			return l;
 		}
 
 		@Override
-		public Object getResult() {
-			Collections.sort(list, new ObjectComparator());
-
-			if (list.size() > 0) {
-				Object prev = null;
-				Object now = null;
-				for (int i = 0; i < list.size(); i++) {
-					now = list.get(i);
-					if (i == 0 || now.equals(prev))
-						nowCount++;
-					else {
-						nowCount = 1;
-					}
-
-					if (nowCount > maxCount) {
-						result = prev;
-						maxCount = nowCount;
-					}
-					prev = now;
-				}
-			}
-
-			return result;
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			this.min = l[3];
 		}
 
 		@Override
-		public void clean() {
-			list = null;
-			result = null;
+		public Function merge(Function func) {
+			Min other = (Min) func;
+			put(other.min);
+			return this;
 		}
 	}
 
@@ -586,6 +596,31 @@ public abstract class Function {
 			min = null;
 			max = null;
 		}
+
+		@Override
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(min);
+			l.add(max);
+			return l;
+		}
+
+		@Override
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			min = (Number) l[3];
+			max = (Number) l[4];
+		}
+
+		@Override
+		public Function merge(Function func) {
+			Range other = (Range) func;
+			this.min = NumberUtil.min(min, other.min);
+			this.max = NumberUtil.max(max, other.max);
+			return this;
+		}
 	}
 
 	protected static class Sum extends Function {
@@ -613,39 +648,28 @@ public abstract class Function {
 		public void clean() {
 			sum = null;
 		}
-	}
-
-	protected static class SumSquare extends Function {
-		private Number sum = 0L;
 
 		@Override
-		protected void put(Object obj) {
-			sum = NumberUtil.add(sum, NumberUtil.mul(obj, obj));
-		}
-
-		public Number getSum() {
-			return sum;
-		}
-
-		public void setSum(Number sum) {
-			this.sum = sum;
+		public Object serialize() {
+			@SuppressWarnings("unchecked")
+			List<Object> l = (List<Object>) super.serialize();
+			l.add(sum);
+			return l;
 		}
 
 		@Override
-		public Object getResult() {
-			return sum;
+		public void load(Object value) {
+			super.load(value);
+			Object[] l = (Object[]) value;
+			this.sum = (Number) l[3];
 		}
 
 		@Override
-		public void clean() {
-			sum = null;
+		public Function merge(Function func) {
+			Sum other = (Sum) func;
+			this.sum = NumberUtil.add(sum, other.sum);
+			return this;
 		}
 	}
 
-	protected static class Values extends DistinctCount {
-		@Override
-		public Object getResult() {
-			return objs;
-		}
-	}
 }
