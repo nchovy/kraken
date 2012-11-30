@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,6 +33,7 @@ import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.MessageHandler;
 import org.krakenapps.msgbus.MsgbusConfig;
 import org.krakenapps.msgbus.MsgbusException;
+import org.krakenapps.msgbus.MsgbusListener;
 import org.krakenapps.msgbus.PermissionChecker;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.ResourceApi;
@@ -60,13 +62,14 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 	private Set<PermissionChecker> permissionCheckers = Collections
 			.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
 	private final ExecutorService threadPool;
+	private CopyOnWriteArraySet<MsgbusListener> listeners;
 
 	@Requires
 	private ResourceApi resourceApi;
 
 	@Requires
 	private ConfigService conf;
-
+	
 	public MessageBusImpl(BundleContext bc) {
 		super(bc, PermissionChecker.class.getName(), null);
 		timeout = 0;
@@ -74,7 +77,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 		sessionMap = new ConcurrentHashMap<String, Session>();
 		sessionEventListeners = Collections.newSetFromMap(new ConcurrentHashMap<SessionEventHandler, Boolean>());
 		messageHandlerMap = new ConcurrentHashMap<String, Set<MessageHandler>>();
-
+		listeners = new CopyOnWriteArraySet<MsgbusListener>();
 		threadPool = Executors.newCachedThreadPool();
 	}
 
@@ -200,7 +203,14 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 
 		TaskRunner runner = new TaskRunner(session, message, handlers.iterator().next());
 		runner.run();
+				
 		return runner.respondMessage;
+	}
+	
+	private void triggerListener(Message message) {
+		for(MsgbusListener listener : listeners) {
+			listener.onSetConfiguration(message);			
+		}
 	}
 
 	@Override
@@ -216,6 +226,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 
 		for (MessageHandler handler : handlers) {
 			threadPool.execute(new TaskRunner(session, message, handler));
+			triggerListener(message);
 		}
 
 	}
@@ -448,4 +459,14 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 		}
 		return msgbusConfig;
 	}
+
+	@Override
+	public void addListener(MsgbusListener listener) {
+		listeners.add(listener);		
+	}
+
+	@Override
+	public void removeListener(MsgbusListener listener) {
+		listeners.remove(listener);		
+	}	
 }

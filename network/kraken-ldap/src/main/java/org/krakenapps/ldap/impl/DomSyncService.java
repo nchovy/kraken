@@ -435,6 +435,7 @@ public class DomSyncService implements LdapSyncService, Runnable {
 	private boolean updateDomUserFromDomainUser(Map<List<String>, OrganizationUnit> orgUnits, LdapUser user, User domUser) {
 		boolean updated = false;
 
+		domUser.setSourceType("ldap");
 		if (domUser.getLoginName() == null || !domUser.getLoginName().equals(user.getAccountName())) {
 			domUser.setLoginName(user.getAccountName());
 			updated = true;

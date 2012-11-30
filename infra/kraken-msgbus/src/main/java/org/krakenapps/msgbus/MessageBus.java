@@ -37,5 +37,9 @@ public interface MessageBus {
 	
 	void setSessionTimeout(int minutes);
 	
-	int getSessionTimeout();	
+	int getSessionTimeout();
+	
+	void addListener(MsgbusListener listener);
+	
+	void removeListener(MsgbusListener listener);
 }
