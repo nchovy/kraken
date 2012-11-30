@@ -15,8 +15,8 @@
  */
 package org.krakenapps.ldap.msgbus;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,6 +27,8 @@ import java.util.Set;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.codec.Base64;
+import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapProfile.CertificateType;
@@ -57,70 +59,109 @@ public class LdapPlugin {
 		this.bc = bc;
 	}
 
-	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void getProfiles(Request req, Response resp) {
 		List<Object> profiles = new ArrayList<Object>();
-		for (LdapProfile profile : ldap.getProfiles()) {
-			Map<String, Object> serialize = (Map<String, Object>) PrimitiveConverter.serialize(profile);
-			serialize.put("trust_store", (serialize.get("trust_store") != null));
-			profiles.add(serialize);
+		try {
+			for (LdapProfile profile : ldap.getProfiles())
+				profiles.add(profile.serialize());
+
+			resp.put("profiles", PrimitiveConverter.serialize(profiles));
+		} catch (Exception e) {
+			logger.error("kraken ldap: cannot obtain trust store", e);
+			throw new MsgbusException("ldap", "cannot obtain trust store");
 		}
-		resp.put("profiles", PrimitiveConverter.serialize(profiles));
 	}
 
-	@SuppressWarnings("unchecked")
 	@MsgbusMethod
 	public void getProfile(Request req, Response resp) {
-		String name = req.getString("name");
-		LdapProfile profile = ldap.getProfile(name);
-		if (profile == null)
-			throw new MsgbusException("ldap", "profile not found");
+		try {
+			String name = req.getString("name");
+			LdapProfile profile = ldap.getProfile(name);
+			if (profile == null)
+				throw new MsgbusException("ldap", "profile not found");
 
-		Map<String, Object> serialize = (Map<String, Object>) PrimitiveConverter.serialize(profile);
-		serialize.put("trust_store", (serialize.get("trust_store") != null));
-		resp.put("profile", serialize);
+			resp.put("profile", profile.serialize());
+		} catch (Exception e) {
+			logger.error("kraken ldap: cannot obtain trust store", e);
+			throw new MsgbusException("ldap", "cannot obtain trust store");
+		}
+	}
+
+	@MsgbusMethod
+	public void getTrustStore(Request req, Response resp) {
+		String name = req.getString("name");
+		if (name == null)
+			throw new MsgbusException("ldap", "name not found");
+
+		LdapProfile profile = ldap.getProfile(name);
+		try {
+			X509Certificate cert = profile.getX509Certificate();
+
+			if (cert == null)
+				throw new MsgbusException("ldap", "trust store not found");
+
+			resp.put("trust_store", new String(Base64.encode(cert.getEncoded())));
+		} catch (Exception e) {
+			logger.error("kraken ldap: cannot obtain trust store, name [{}]", name, e);
+			throw new MsgbusException("ldap", "cannot obtain trust store");
+		}
 	}
 
 	@MsgbusMethod
 	public void createProfile(Request req, Response resp) {
-		LdapProfile profile = PrimitiveConverter.parse(LdapProfile.class, req.getParams());
+		try {
+			LdapProfile profile = toProfile(new LdapProfile(), req.getParams());
 
-		if (req.has("cert_type") && req.has("cert_base64")) {
-			try {
-				CertificateType type = CertificateType.valueOf(req.getString("cert_type"));
+			if (req.has("cert_type") && req.has("cert_base64")) {
 				String base64 = req.getString("cert_base64");
-				profile.setTrustStore(type, base64);
-			} catch (Exception e) {
-				throw new MsgbusException("ldap", "invalid cert");
+				profile.setX509Certificate(Base64.decode(base64));
 			}
-		}
 
-		ldap.createProfile(profile);
+			ldap.createProfile(profile);
+		} catch (Exception e) {
+			throw new MsgbusException("ldap", "invalid cert");
+		}
 	}
 
 	@MsgbusMethod
 	public void updateProfile(Request req, Response resp) {
-		String name = req.getString("name");
-		LdapProfile profile = ldap.getProfile(name);
-		PrimitiveConverter.overwrite(profile, req.getParams());
+		try {
+			String name = req.getString("name");
+			LdapProfile profile = toProfile(ldap.getProfile(name), req.getParams());
 
-		if (req.has("cert_type") && req.has("cert_base64")) {
-			profile.unsetTrustStore();
-			try {
-				CertificateType type = CertificateType.valueOf(req.getString("cert_type"));
-				if (type == null)
-					profile.unsetTrustStore();
-				else {
-					String base64 = req.getString("cert_base64");
-					profile.setTrustStore(type, base64);
-				}
-			} catch (Exception e) {
-				throw new MsgbusException("ldap", "invalid cert");
+			byte[] cert = null;
+			if (req.has("cert_base64")) {
+				String base64 = req.getString("cert_base64");
+				cert = Base64.decode(base64);
 			}
+
+			profile.setX509Certificate(cert);
+
+			ldap.updateProfile(profile);
+		} catch (Exception e) {
+			throw new MsgbusException("ldap", "invalid cert");
+		}
+	}
+
+	public LdapProfile toProfile(LdapProfile profile, Map<String, Object> m) throws CertificateException {
+		profile.setName((String) m.get("name"));
+		profile.setDc((String) m.get("dc"));
+		profile.setAccount((String) m.get("account"));
+		profile.setPort((Integer) m.get("port"));
+		profile.setPassword((String) m.get("password"));
+		profile.setBaseDn((String) m.get("base_dn"));
+		profile.setServerType(LdapServerType.valueOf((String) m.get("server_type")));
+
+		if (m.containsKey("sync_interval"))
+			profile.setSyncInterval((Integer) m.get("sync_interval"));
+
+		if (m.containsKey("cert_type") && m.containsKey("trust_store")) {
+			profile.setType(CertificateType.valueOf((String) m.get("cert_type")));
+			profile.setX509Certificate(Base64.decode((String) m.get("trust_store")));
 		}
 
-		ldap.updateProfile(profile);
+		return profile;
 	}
 
 	@MsgbusMethod
@@ -187,7 +228,7 @@ public class LdapPlugin {
 	}
 
 	@MsgbusMethod
-	public void testConnection(Request req, Response resp) throws GeneralSecurityException, IOException {
+	public void testConnection(Request req, Response resp) {
 		String dc = req.getString("dc");
 		Integer port = req.getInteger("port");
 		String account = req.getString("account");
@@ -202,16 +243,21 @@ public class LdapPlugin {
 		profile.setPassword(password);
 		profile.setBaseDn(baseDn);
 
-		if (req.has("cert_type") && req.has("cert_base64")) {
-			String type = req.getString("cert_type");
-			String base64 = req.getString("cert_base64");
-			logger.debug("kraken-ldap: user certificate type [{}], base64 [{}]", type, base64);
-			profile.setTrustStore(CertificateType.valueOf(type), base64);
-			if (port == null)
-				profile.setPort(LDAPConnection.DEFAULT_SSL_PORT);
-		} else {
-			if (port == null)
-				profile.setPort(LDAPConnection.DEFAULT_PORT);
+		try {
+			if (req.has("cert_type") && req.has("cert_base64")) {
+				String type = req.getString("cert_type");
+				String base64 = req.getString("cert_base64");
+				logger.debug("kraken-ldap: user certificate type [{}], base64 [{}]", type, base64);
+				profile.setX509Certificate(Base64.decode(base64));
+				if (port == null)
+					profile.setPort(LDAPConnection.DEFAULT_SSL_PORT);
+			} else {
+				if (port == null)
+					profile.setPort(LDAPConnection.DEFAULT_PORT);
+			}
+		} catch (Exception e) {
+			logger.error("kraken ldap: cannot set trust store", e);
+			throw new MsgbusException("ldap", "invalid cert");
 		}
 
 		logger.trace("kraken ldap: create test ldap profile [{}]", profile.toString());
