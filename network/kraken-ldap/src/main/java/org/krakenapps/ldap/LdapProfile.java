@@ -21,9 +21,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.krakenapps.api.DateFormat;
 import org.krakenapps.api.FieldOption;
@@ -57,7 +64,12 @@ public class LdapProfile {
 	@FieldOption(nullable = false)
 	private String password;
 
+	@FieldOption(nullable = true)
+	private CertificateType type;
+
 	private byte[] trustStore;
+
+	private byte[] x509truststore;
 
 	/**
 	 * milliseconds unit
@@ -122,6 +134,14 @@ public class LdapProfile {
 		this.password = password;
 	}
 
+	public CertificateType getType() {
+		return type;
+	}
+
+	public void setType(CertificateType type) {
+		this.type = type;
+	}
+
 	public KeyStore getTrustStore() throws GeneralSecurityException, IOException {
 		return getTrustStore(DEFAULT_TRUSTSTORE_PASSWORD);
 	}
@@ -135,19 +155,66 @@ public class LdapProfile {
 		return ts;
 	}
 
+	public void setX509Certificate(byte[] x509) throws CertificateException {
+		if (x509 == null) {
+			this.trustStore = null;
+			this.x509truststore = null;
+			return;
+		}
+
+		setX509Certificate(new ByteArrayInputStream(x509));
+	}
+
+	public void setX509Certificate(InputStream is) throws CertificateException {
+		CertificateFactory cf = CertificateFactory.getInstance("X.509");
+		X509Certificate cert = (X509Certificate) cf.generateCertificate(is);
+		setX509Certificate(cert);
+	}
+
+	public void setX509Certificate(X509Certificate cert) throws CertificateEncodingException {
+		if (cert == null) {
+			this.trustStore = null;
+			this.x509truststore = null;
+			return;
+		}
+		this.type = CertificateType.X509;
+		this.x509truststore = cert.getEncoded();
+	}
+
+	public X509Certificate getX509Certificate() throws KeyStoreException, CertificateException, NoSuchAlgorithmException,
+			IOException {
+		if (x509truststore != null) {
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			InputStream is = new ByteArrayInputStream(x509truststore);
+			return (X509Certificate) cf.generateCertificate(is);
+		}
+
+		if (trustStore != null) {
+			KeyStore jks = KeyStore.getInstance("JKS");
+			jks.load(new ByteArrayInputStream(trustStore), DEFAULT_TRUSTSTORE_PASSWORD);
+			return (X509Certificate) jks.getCertificate("mykey");
+		}
+
+		return null;
+	}
+
+	@Deprecated
 	public void setTrustStore(CertificateType type, String base64EncodedCert) throws GeneralSecurityException, IOException {
 		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)));
 	}
 
+	@Deprecated
 	public void setTrustStore(CertificateType type, InputStream cert) throws GeneralSecurityException, IOException {
 		setTrustStore(type, cert, DEFAULT_TRUSTSTORE_PASSWORD);
 	}
 
+	@Deprecated
 	public void setTrustStore(CertificateType type, String base64EncodedCert, char[] password) throws GeneralSecurityException,
 			IOException {
 		setTrustStore(type, new ByteArrayInputStream(Base64.decode(base64EncodedCert)), password);
 	}
 
+	@Deprecated
 	public void setTrustStore(CertificateType type, InputStream cert, char[] password) throws GeneralSecurityException,
 			IOException {
 		KeyStore jks = KeyStore.getInstance("JKS");
@@ -169,8 +236,10 @@ public class LdapProfile {
 		this.trustStore = bos.toByteArray();
 	}
 
+	@Deprecated
 	public void unsetTrustStore() {
 		this.trustStore = null;
+		this.x509truststore = null;
 	}
 
 	public long getSyncInterval() {
@@ -216,8 +285,23 @@ public class LdapProfile {
 	@Override
 	public String toString() {
 		return String.format(
-				"%s [target=%s, host=%s:%d, account=%s, type=%s, base dn=%s, sync interval=%dms, last sync=%s, keystore=%s]",
-				name, targetDomain, dc, getPort(), account, serverType, baseDn, syncInterval,
-				DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), (trustStore != null));
+				"%s [target=%s, host=%s:%d, account=%s, type=%s, base dn=%s, sync interval=%dms, last sync=%s, ca=%s]", name,
+				targetDomain, dc, getPort(), account, serverType, baseDn, syncInterval,
+				DateFormat.format("yyyy-MM-dd HH:mm:ss", lastSync), x509truststore != null);
+	}
+
+	public Map<String, Object> serialize() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("name", name);
+		m.put("dc", dc);
+		m.put("account", account);
+		m.put("port", port);
+		m.put("password", password);
+		m.put("base_dn", baseDn);
+		m.put("server_type", serverType.toString());
+		m.put("sync_interval", syncInterval);
+		m.put("cert_type", type == null ? null : type.toString());
+		m.put("trust_store", getX509Certificate() != null);
+		return m;
 	}
 }

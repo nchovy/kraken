@@ -24,4 +24,8 @@ public interface NtpSyncService extends Runnable {
 	void stop();
 
 	boolean isRunning();
+	
+	void addListener(NtpSyncListener listener);
+	
+	void removeListener(NtpSyncListener listener);
 }

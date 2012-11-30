@@ -15,12 +15,14 @@
  */
 package org.krakenapps.ldap.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.StringTokenizer;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
+import javax.swing.JProgressBar;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -41,6 +44,7 @@ import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapService;
+import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -390,7 +394,13 @@ public class JLdapService implements LdapService {
 			throw new IllegalArgumentException("ldap password should be not null");
 
 		try {
-			KeyStore ks = profile.getTrustStore();
+			X509Certificate cert = profile.getX509Certificate();
+			KeyStore ks = null;
+			if (cert != null) {
+				ks = KeyStore.getInstance("JKS");
+				ks.load(null, null);
+				ks.setCertificateEntry("mykey", cert);
+			}
 
 			if (ks != null) {
 				SSLContext ctx = SSLContext.getInstance("SSL");

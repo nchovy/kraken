@@ -17,6 +17,7 @@ package org.krakenapps.ldap.impl;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Collection;
 
 import org.krakenapps.api.Script;
@@ -69,6 +70,7 @@ public class LdapScript implements Script {
 			@ScriptArgument(name = "base dn", type = "string", description = "LDAP base DN", optional = true),
 			@ScriptArgument(name = "truststore path", type = "string", description = "truststore file path", optional = true) })
 	public void createProfile(String[] args) {
+		FileInputStream is = null;
 		try {
 			LdapProfile profile = new LdapProfile();
 			profile.setName(args[0]);
@@ -84,13 +86,21 @@ public class LdapScript implements Script {
 				File file = new File(args[7]);
 				if (!file.exists())
 					throw new IllegalArgumentException("file not found");
-				profile.setTrustStore(CertificateType.X509, new FileInputStream(file));
+
+				is = new FileInputStream(file);
+				profile.setX509Certificate(is);
 			}
 
 			ldap.createProfile(profile);
 			context.println("created");
 		} catch (Exception e) {
 			context.println(e.getMessage());
+		} finally {
+			if (is != null)
+				try {
+					is.close();
+				} catch (IOException e) {
+				}
 		}
 	}
 
@@ -221,36 +231,36 @@ public class LdapScript implements Script {
 
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
-		
-		if(profile == null){
+
+		if (profile == null) {
 			context.println("ldap profile not found");
 			return;
 		}
-			
+
 		ldapSync.sync(profile);
 		context.println("sync success");
 	}
-	
-	@ScriptUsage(description = "unsync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name")})
+
+	@ScriptUsage(description = "unsync all organization units with kraken-dom", arguments = { @ScriptArgument(name = "profile name", type = "string", description = "profile name") })
 	public void unsync(String[] args) {
 		LdapSyncService ldapSync = getSyncService();
 		if (ldapSync == null) {
 			context.println("kraken-dom not found");
 			return;
 		}
-		
+
 		String profileName = args[0];
 		LdapProfile profile = ldap.getProfile(profileName);
-		
-		if(profile == null){
+
+		if (profile == null) {
 			context.println("ldap profile not found");
 			return;
 		}
-		
+
 		ldapSync.unsync(profile);
 		context.println("unsync success");
 	}
-	
+
 	@ScriptUsage(description = "unsync all organization units with kraken-dom")
 	public void unsyncAll(String[] args) {
 		LdapSyncService ldapSync = getSyncService();
@@ -258,10 +268,10 @@ public class LdapScript implements Script {
 			context.println("kraken-dom not found");
 			return;
 		}
-				
+
 		ldapSync.unsyncAll();
 		context.println("unsync success");
-	}	
+	}
 
 	@ScriptUsage(description = "set id attribute name. if id attribute name is not passed, it will be unset", arguments = {
 			@ScriptArgument(name = "profile name", type = "string", description = "profile name"),

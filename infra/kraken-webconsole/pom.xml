@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-webconsole</artifactId>
-	<version>2.4.0</version>
+	<version>2.4.1</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Web Console</name>
 	<build>

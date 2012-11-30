@@ -85,6 +85,8 @@ public class NtpClient {
 	}
 
 	public void setSystemTime(Date time) throws IOException {
+		Date currentTime = new Date();
+
 		String os = System.getProperty("os.name");
 		if (os.contains("Windows")) {
 			String newDate = new SimpleDateFormat("MM-dd-yy").format(time);
@@ -101,6 +103,16 @@ public class NtpClient {
 			String newTime = new SimpleDateFormat("MMddHHmmyyyy.ss").format(time);
 			Runtime.getRuntime().exec("date " + newTime);
 		}
+
+		String newTime = new SimpleDateFormat("MMddHHmmyyyy.ss").format(time);
+		logger.debug("kraken ntp: OS [{}] set system time {}", os, newTime);
+
+		long diff = Math.abs((currentTime.getTime() - time.getTime()) / 60 * 1000);
+		if (diff >= 30) {
+			logger.info("kraken ntp: OS [{}] set recieve time [{}], current time [{}]", new Object[] { os, newTime,
+					new SimpleDateFormat("MMddHHmmyyyy.ss").format(currentTime) });
+		}
+
 	}
 
 	public Date sync() throws IOException {
