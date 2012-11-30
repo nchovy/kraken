@@ -15,9 +15,7 @@
  */
 package org.krakenapps.logdb.query.command;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -178,12 +176,17 @@ public abstract class Function {
 	abstract public void clean();
 
 	// when save serialized data to disk
-	public Object serialize() {
-		ArrayList<Object> l = new ArrayList<Object>();
-		l.add(name);
-		l.add(target);
-		l.add(keyName);
+	public Object[] serialize() {
+		Object[] l = new Object[3];
+		serialize(l);
 		return l;
+	}
+
+	protected int serialize(Object[] arr) {
+		arr[0] = name;
+		arr[1] = target;
+		arr[2] = keyName;
+		return 3;
 	}
 
 	// when load swapped data from disk
@@ -286,11 +289,11 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(d);
-			l.add(count);
+		public Object[] serialize() {
+			Object[] l = new Object[5];
+			int i = super.serialize(l);
+			l[i++] = d;
+			l[i++] = count;
 			return l;
 		}
 
@@ -332,12 +335,11 @@ public abstract class Function {
 		public void clean() {
 		}
 
-		
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(result);
+		public Object[] serialize() {
+			Object[] l = new Object[4];
+			int i = super.serialize(l);
+			l[i++] = result;
 			return l;
 		}
 
@@ -390,10 +392,10 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(first);
+		public Object[] serialize() {
+			Object[] l = new Object[4];
+			int i = super.serialize(l);
+			l[i++] = first;
 			return l;
 		}
 
@@ -433,10 +435,10 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(last);
+		public Object[] serialize() {
+			Object[] l = new Object[4];
+			int i = super.serialize(l);
+			l[i++] = last;
 			return l;
 		}
 
@@ -484,10 +486,10 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(max);
+		public Object[] serialize() {
+			Object[] l = new Object[4];
+			int i = super.serialize(l);
+			l[i++] = max;
 			return l;
 		}
 
@@ -535,10 +537,10 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(min);
+		public Object[] serialize() {
+			Object[] l = new Object[4];
+			int i = super.serialize(l);
+			l[i++] = min;
 			return l;
 		}
 
@@ -598,11 +600,11 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(min);
-			l.add(max);
+		public Object[] serialize() {
+			Object[] l = new Object[5];
+			int i = super.serialize(l);
+			l[i++] = min;
+			l[i++] = max;
 			return l;
 		}
 
@@ -650,10 +652,10 @@ public abstract class Function {
 		}
 
 		@Override
-		public Object serialize() {
-			@SuppressWarnings("unchecked")
-			List<Object> l = (List<Object>) super.serialize();
-			l.add(sum);
+		public Object[] serialize() {
+			Object[] l = new Object[4];
+			int i = super.serialize(l);
+			l[i++] = sum;
 			return l;
 		}
 

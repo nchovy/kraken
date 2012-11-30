@@ -14,7 +14,6 @@ import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
-import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogScript;
 import org.krakenapps.logdb.LogScriptInput;
 import org.krakenapps.logdb.LogScriptOutput;
@@ -40,14 +39,19 @@ public class JythonLogScript implements Script {
 	public void scripts(String[] args) {
 		context.println("Log Scripts");
 		context.println("-------------");
-		for (String name : scriptRegistry.getScriptNames()) {
-			context.println(name + ": " + scriptRegistry.getLogScript(name));
+		for (String workspace : scriptRegistry.getWorkspaceNames()) {
+			context.println("Workspace: " + workspace);
+			for (String name : scriptRegistry.getScriptNames(workspace)) {
+				context.println("  " + name);
+			}
 		}
 	}
 
-	@ScriptUsage(description = "print script", arguments = { @ScriptArgument(name = "script name", type = "string", description = "script name") })
+	@ScriptUsage(description = "print script", arguments = {
+			@ScriptArgument(name = "workspace name", type = "string", description = "workspace name"),
+			@ScriptArgument(name = "script name", type = "string", description = "script name") })
 	public void script(String[] args) {
-		String s = scriptRegistry.getScript(args[0]);
+		String s = scriptRegistry.getScriptCode(args[0], args[1]);
 		if (s == null) {
 			context.println("script not found");
 			return;
@@ -57,16 +61,17 @@ public class JythonLogScript implements Script {
 	}
 
 	@ScriptUsage(description = "print script", arguments = {
+			@ScriptArgument(name = "workspace name", type = "string", description = "workspace name"),
 			@ScriptArgument(name = "script name", type = "string", description = "script name"),
 			@ScriptArgument(name = "line", type = "string", description = "test data") })
 	public void testrun(String[] args) {
-		LogScript s = scriptRegistry.getLogScript(args[0]);
+		LogScript s = scriptRegistry.newLogScript(args[0], args[1], null);
 		if (s == null) {
 			context.println("script not found");
 			return;
 		}
 
-		s.handle(new ConsoleInput(args[1]), new ConsoleOutput());
+		s.handle(new ConsoleInput(args[2]), new ConsoleOutput());
 	}
 
 	private class ConsoleInput implements LogScriptInput {
@@ -90,26 +95,35 @@ public class JythonLogScript implements Script {
 
 	private class ConsoleOutput implements LogScriptOutput {
 		@Override
-		public void write(LogMap data) {
+		public void write(Map<String, Object> data) {
 			context.println(Primitive.stringify(data));
 		}
 	}
 
 	@ScriptUsage(description = "import script file", arguments = {
+			@ScriptArgument(name = "workspace name", type = "string", description = "workspace name"),
 			@ScriptArgument(name = "script name", type = "string", description = "script name"),
 			@ScriptArgument(name = "file path", type = "string", description = "absolute or relative file path") })
 	public void load(String[] args) {
 		File dir = (File) context.getSession().getProperty("dir");
-		File f = canonicalize(dir, args[1]);
+		File f = canonicalize(dir, args[2]);
 		try {
 			String s = readAllLines(f);
-			scriptRegistry.addScript(args[0], s);
+			scriptRegistry.setScript(args[0], args[1], s);
 			context.println("loaded " + countLines(s) + " lines");
 		} catch (FileNotFoundException e) {
 			context.println("file not found: " + f.getAbsolutePath());
 		} catch (IOException e) {
 			context.println(e.getMessage());
 		}
+	}
+
+	@ScriptUsage(description = "unload script", arguments = {
+			@ScriptArgument(name = "workspace name", type = "string", description = "workspace name"),
+			@ScriptArgument(name = "script name", type = "string", description = "script name") })
+	public void unload(String[] args) {
+		scriptRegistry.removeScript(args[0], args[1]);
+		context.println("unloaded");
 	}
 
 	private static int countLines(String s) {

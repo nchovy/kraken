@@ -15,6 +15,8 @@
  */
 package org.krakenapps.logdb.impl;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,17 +27,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
+import org.krakenapps.logdb.CsvLookupRegistry;
 import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryService;
-import org.krakenapps.logdb.LogScript;
+import org.krakenapps.logdb.LogScriptFactory;
 import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
@@ -51,16 +55,18 @@ public class LogDBScript implements Script {
 	private DataSourceRegistry dsr;
 	private MapReduceService mapreduce;
 	private LogScriptRegistry scriptRegistry;
+	private CsvLookupRegistry csvRegistry;
 	private ScriptContext context;
 	private LookupHandlerRegistry lookup;
 
 	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter, LogScriptRegistry scriptRegistry,
-			LookupHandlerRegistry lookup) {
+			LookupHandlerRegistry lookup, CsvLookupRegistry csvRegistry) {
 		this.qs = qs;
 		this.dsr = dsr;
 		this.mapreduce = arbiter;
 		this.scriptRegistry = scriptRegistry;
 		this.lookup = lookup;
+		this.csvRegistry = csvRegistry;
 	}
 
 	@Override
@@ -68,11 +74,55 @@ public class LogDBScript implements Script {
 		this.context = context;
 	}
 
+	public void csvLookups(String[] args) {
+		context.println("CSV Mapping Files");
+		context.println("-------------------");
+		for (File f : csvRegistry.getCsvFiles()) {
+			context.println(f.getAbsolutePath());
+		}
+	}
+
+	@ScriptUsage(description = "create new log query script workspace", arguments = { @ScriptArgument(name = "workspace name", type = "string", description = "log query script workspace name") })
+	public void createScriptWorkspace(String[] args) {
+		scriptRegistry.createWorkspace(args[0]);
+		context.println("created");
+	}
+
+	@ScriptUsage(description = "remove log query script workspace", arguments = { @ScriptArgument(name = "workspace name", type = "string", description = "log query script workspace name") })
+	public void dropScriptWorkspace(String[] args) {
+		scriptRegistry.dropWorkspace(args[0]);
+		context.println("dropped");
+	}
+
+	@ScriptUsage(description = "register csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "csv (comma separated value) file path. first line should be column headers.", autocompletion = PathAutoCompleter.class) })
+	public void registerCsvLookup(String[] args) throws IOException {
+		try {
+			File f = new File(args[0]);
+			csvRegistry.registerCsvFile(f);
+			context.println("registered");
+		} catch (IllegalStateException e) {
+			context.println(e);
+		}
+	}
+
+	@ScriptUsage(description = "unregister csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "registered csv file path", autocompletion = PathAutoCompleter.class) })
+	public void unregisterCsvLookup(String[] args) {
+		File f = new File(args[0]);
+		csvRegistry.unregisterCsvFile(f);
+		context.println("unregistered");
+	}
+
 	public void scripts(String[] args) {
 		context.println("Log Scripts");
 		context.println("--------------");
-		for (LogScript script : scriptRegistry.getScripts())
-			context.println(script);
+
+		for (String workspace : scriptRegistry.getWorkspaceNames()) {
+			context.println("Workspace: " + workspace);
+			for (String name : scriptRegistry.getScriptFactoryNames(workspace)) {
+				LogScriptFactory factory = scriptRegistry.getScriptFactory(workspace, name);
+				context.println("  " + name + " - " + factory);
+			}
+		}
 	}
 
 	public void datasources(String[] args) {
@@ -120,8 +170,8 @@ public class LogDBScript implements Script {
 
 			if (query.getCommands() != null) {
 				for (LogQueryCommand cmd : query.getCommands()) {
-					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(), cmd.getQueryString(),
-							cmd.getPushCount()));
+					context.println(String.format("    [%s] %s \t/ passed %d data to next query", cmd.getStatus(),
+							cmd.getQueryString(), cmd.getPushCount()));
 				}
 			} else
 				context.println("    null");

@@ -95,9 +95,10 @@ public class Stats2 extends LogQueryCommand {
 
 		for (List<Object> keys : buffer.keySet()) {
 			Function[] fs = buffer.get(keys);
-			List<Object> l = new ArrayList<Object>();
+			Object[] l = new Object[fs.length];
+			int i = 0;
 			for (Function f : fs)
-				l.add(f.serialize());
+				l[i++] = f.serialize();
 
 			sorter.add(new Item(keys.toArray(), l));
 		}

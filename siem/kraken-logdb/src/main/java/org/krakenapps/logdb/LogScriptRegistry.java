@@ -1,13 +1,25 @@
 package org.krakenapps.logdb;
 
-import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public interface LogScriptRegistry {
-	Collection<LogScript> getScripts();
+	Set<String> getWorkspaceNames();
+	
+	void createWorkspace(String name);
 
-	LogScript getScript(String name);
+	void dropWorkspace(String name);
 
-	void addScript(String name, LogScript script);
+	Set<String> getScriptFactoryNames(String workspace);
 
-	void removeScript(String name);
+	List<LogScriptFactory> getScriptFactories(String workspace);
+	
+	LogScriptFactory getScriptFactory(String workspace, String name);
+
+	LogScript newScript(String workspace, String name, Map<String, Object> params);
+
+	void addScriptFactory(String workspace, String name, LogScriptFactory factory);
+
+	void removeScriptFactory(String workspace, String name);
 }

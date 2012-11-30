@@ -10,4 +10,5 @@
 	<instance component="logdb-lookup-registry" />
 	<instance component="log-script-registry" />
 	<instance component="data-source-registry" />
+	<instance component="logdb-csv-lookup-registry" />
 </ipojo>

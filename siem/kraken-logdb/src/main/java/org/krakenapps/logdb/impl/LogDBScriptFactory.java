@@ -21,6 +21,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
+import org.krakenapps.logdb.CsvLookupRegistry;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogScriptRegistry;
@@ -48,10 +49,13 @@ public class LogDBScriptFactory implements ScriptFactory {
 	
 	@Requires
 	private LookupHandlerRegistry lookup;
+	
+	@Requires
+	private CsvLookupRegistry csvLookup;
 
 	@Override
 	public Script createScript() {
-		return new LogDBScript(qs, dsr, mapreduce, scriptRegistry, lookup);
+		return new LogDBScript(qs, dsr, mapreduce, scriptRegistry, lookup, csvLookup);
 	}
 
 }

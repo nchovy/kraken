@@ -1,7 +1,7 @@
 package org.krakenapps.logdb;
 
-import org.krakenapps.logdb.LogQueryCommand.LogMap;
+import java.util.Map;
 
 public interface LogScriptOutput {
-	void write(LogMap data);
+	void write(Map<String, Object> data);
 }

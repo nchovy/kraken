@@ -1,19 +1,22 @@
 package org.krakenapps.logdb.jython;
 
-import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 
 import org.krakenapps.logdb.LogScript;
 
 public interface JythonLogScriptRegistry {
-	Collection<String> getScriptNames();
+	Set<String> getWorkspaceNames();
+	
+	void dropWorkspace(String name);
 
-	String getScript(String name);
+	Set<String> getScriptNames(String workspace);
 
-	LogScript getLogScript(String name);
+	String getScriptCode(String workspace, String name);
 
-	void addScript(String name, String script);
+	LogScript newLogScript(String workspace, String name, Map<String, Object> params);
 
-	void updateScript(String name, String script);
+	void setScript(String workspace, String name, String script);
 
-	void removeScript(String name);
+	void removeScript(String workspace, String name);
 }
