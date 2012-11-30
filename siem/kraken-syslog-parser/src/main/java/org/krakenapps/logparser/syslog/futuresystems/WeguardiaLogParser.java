@@ -17,10 +17,16 @@ public class WeguardiaLogParser implements LogParser {
 
 	private final Logger logger = LoggerFactory.getLogger(WeguardiaLogParser.class.getName());
 
+	private DelimiterParser parser;
+
+	public WeguardiaLogParser() {
+		parser = new DelimiterParser(";", columnHeaders);
+	}
+
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		try {
-			Map<String, Object> m = new DelimiterParser(";", columnHeaders).parse(params);
+			Map<String, Object> m = parser.parse(params);
 
 			// parse date
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd HHmmss");
@@ -30,7 +36,6 @@ public class WeguardiaLogParser implements LogParser {
 			// parse src port
 			String sport = (String) m.get("sport");
 			if (sport != null) {
-				sport = sport.trim();
 				if (!sport.isEmpty())
 					m.put("sport", Integer.valueOf(sport));
 				else
@@ -40,7 +45,6 @@ public class WeguardiaLogParser implements LogParser {
 			// parse dst port
 			String dport = (String) m.get("dport");
 			if (dport != null) {
-				dport = dport.trim();
 				if (!dport.isEmpty())
 					m.put("dport", Integer.valueOf(dport));
 				else
@@ -50,7 +54,6 @@ public class WeguardiaLogParser implements LogParser {
 			// parse count
 			String count = (String) m.get("count");
 			if (count != null) {
-				count = count.trim();
 				if (!count.isEmpty())
 					m.put("count", Integer.valueOf(count));
 				else
