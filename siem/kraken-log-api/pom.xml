@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-log-api</artifactId>
-	<version>1.4.4</version>
+	<version>1.4.5</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log API</name>
 	<build>

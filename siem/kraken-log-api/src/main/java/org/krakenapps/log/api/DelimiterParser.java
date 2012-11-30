@@ -2,6 +2,7 @@ package org.krakenapps.log.api;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 public class DelimiterParser implements LogParser {
 	private final String delimiter;
@@ -27,16 +28,22 @@ public class DelimiterParser implements LogParser {
 		if (line == null)
 			return params;
 
-		String[] tokens = line.split(delimiter);
-
-		Map<String, Object> m = new HashMap<String, Object>(tokens.length);
+		Map<String, Object> m = new HashMap<String, Object>();
 		m.putAll(params);
 		m.remove("line");
-		for (int i = 0; i < tokens.length; i++) {
+
+		StringTokenizer tok = new StringTokenizer(line, delimiter);
+		int i = 0;
+		while (tok.hasMoreTokens()) {
+			String token = tok.nextToken();
+			if (token != null)
+				token = token.trim();
+
 			if (columnHeaders != null && i < columnHeaders.length)
-				m.put(columnHeaders[i], tokens[i].trim());
+				m.put(columnHeaders[i], token);
 			else
-				m.put("column" + Integer.toString(i), tokens[i]);
+				m.put("column" + Integer.toString(i), token);
+			i++;
 		}
 
 		return m;
