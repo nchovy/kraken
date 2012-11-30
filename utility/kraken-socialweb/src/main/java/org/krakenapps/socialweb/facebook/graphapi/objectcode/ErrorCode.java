@@ -183,6 +183,7 @@ public enum ErrorCode {
 	FQL_EC_UNRESOLVED_DEPENDENCY(614),//	 Unresolved dependency in multiquery	 fql.multiquery
 	FQL_EC_INVALID_SEARCH(615),//	 This search is invalid	 fql.query,fql.multiquery
 	FQL_EC_TOO_MANY_FRIENDS_FOR_PRELOAD(617),//	 The user you queried against has too many friends to be used with Preload FQL, in order to avoid out of memory errors	 fql.query,fql.multiquery
+	//FQL: This error is returned when the field name is sometimes valid, but not all the time. For example, if you run fql.query on the Metrics FQL table, you can get this error because some metrics are queryable only over the daily period, as opposed to the weekly or monthly periods.
 	
 	Ref_API_EC_REF_SET_FAILED(700),//	 Unknown failure in storing ref data. Please try again.
 	
@@ -254,6 +255,54 @@ public enum ErrorCode {
 	CreditsFrontEnd_AppInvalidItemParam(1383051),	//The application is sending invalid item parameters (For example, price or quantity of the items is invalid).
 	CreditsFrontEnd_EmptyAppId(1383052),	//Empty App ID.
 	
+	//Back End Error Codes
+	BackEnd_API_EC_PAYMENTS_UNKNOWN(1150),	 //	 Unknown error	
+	BackEnd_API_EC_PAYMENTS_APP_INVALID(1151),	 //Application is not enabled for using Facebook Credits.	
+	BackEnd_API_EC_PAYMENTS_DATABASE(1152),	// A database error occurred.	
+	BackEnd_API_EC_PAYMENTS_PERMISSION_DENIED(1153),	// Permission denied to check order details.	
+	BackEnd_API_EC_PAYMENTS_APP_NO_RESPONSE(1154),	 //Payments callback to the application failed.	
+	BackEnd_API_EC_PAYMENTS_APP_ERROR_RESPONSE(1155),//	 Payments callback to the application received error response.	
+	BackEnd_API_EC_PAYMENTS_INVALID_ORDER(1156),	// The supplied order ID is invalid.	
+	BackEnd_API_EC_PAYMENTS_INVALID_PARAM(1157),//	 One of the Payments parameters is invalid.	
+	BackEnd_API_EC_PAYMENTS_INVALID_OPERATION(1158),//	 The operation is invalid.	
+	BackEnd_API_EC_PAYMENTS_PAYMENT_FAILED(1159),//	 Failed in processing the payment.	
+	BackEnd_API_EC_PAYMENTS_DISABLED(1160),//	 Facebook Credits system is disabled.	
+	BackEnd_API_EC_PAYMENTS_INSUFFICIENT_BALANCE(1161),//	 Insufficient balance.	
+	BackEnd_API_EC_PAYMENTS_EXCEED_CREDIT_BALANCE_LIMIT(1162),//	 Exceed credit balance limit.	
+	BackEnd_API_EC_PAYMENTS_EXCEED_CREDIT_DAILY_PURCHASE_LIMIT(1163),//	 Exceed daily credit purchase limit.	
+	BackEnd_API_EC_PAYMENTS_EXCEED_CREDIT_DAILY_SPEND_LIMIT(1164),//	 Exceed daily credit spend limit.	
+	BackEnd_API_EC_PAYMENTS_INVALID_FUNDING_AMOUNT(1166),//	 Credits purchased from funding source do not match the spend order amount.	
+	BackEnd_API_EC_PAYMENTS_NON_REFUNDABLE_PAYMENT_METHOD(1167),//	 The funding source is a non-refundable payment method.	
+	BackEnd_API_EC_PAYMENTS_USER_THROTTLED(1168),//	 Application is configured to throttle some users.	
+	BackEnd_API_EC_PAYMENTS_LOGIN_REQUIRED(1169),//	 User is not logged in.	
+	BackEnd_API_EC_APP_INFO_FETCH_FAILURE(1170),//	 Error retrieving application information.	
+	BackEnd_API_EC_INVALID_APP_INFO(1171),//	 Invalid application information returned.	
+	BackEnd_API_EC_PAYMENTS_APP_INSUFFICIENT_BALANCE(1172),//	 Application has insufficient balance (app2user).
+	
+//	Data Store API Errors
+	DataStore_API_EC_DATA_UNKNOWN_ERROR(800),//	 Unknown data store API error	
+	DataStore_API_EC_DATA_INVALID_OPERATION(801),//	 Invalid operation	
+	DataStore_API_EC_DATA_QUOTA_EXCEEDED(802),//	 Data store allowable quota was exceeded	
+	DataStore_API_EC_DATA_OBJECT_NOT_FOUND(803),//	 Specified object cannot be found	
+	DataStore_API_EC_DATA_OBJECT_ALREADY_EXISTS(804),//	 Specified object already exists	
+	DataStore_API_EC_DATA_DATABASE_ERROR(805),//	 A database error occurred. Please try again	
+	DataStore_API_EC_DATA_CREATE_TEMPLATE_ERROR(806),//	 Unable to add FBML template to template database. Please try again.	
+	DataStore_API_EC_DATA_TEMPLATE_EXISTS_ERROR(807),//	 No active template bundle with that ID or handle exists.	
+	DataStore_API_EC_DATA_TEMPLATE_HANDLE_TOO_LONG(808),//	 Template bundle handles must contain less than or equal to 32 characters.	
+	DataStore_API_EC_DATA_TEMPLATE_HANDLE_ALREADY_IN_USE(809),//	 Template bundle handle already identifies a previously registered template bundle, and handles can not be reused.	
+	DataStore_API_EC_DATA_TOO_MANY_TEMPLATE_BUNDLES(810),//	 Application has too many active template bundles, and some must be deactivated before new ones can be registered.	
+	DataStore_API_EC_DATA_MALFORMED_ACTION_LINK(811),//	 One of more of the supplied action links was improperly formatted.	
+	DataStore_API_EC_DATA_TEMPLATE_USES_RESERVED_TOKEN(812),//	 One …or more of your templates is using a token reserved by Facebook, such as {*mp3*} or {*video*}.
+	
+	//Mobile/SMS Errors
+	Mobile_API_EC_SMS_INVALID_SESSION(850),//	 Invalid sms session.	
+	Mobile_API_EC_SMS_MSG_LEN(851),//	 Invalid sms message length.	
+	Mobile_API_EC_SMS_USER_QUOTA(852),//	 Over user daily sms quota.	
+	Mobile_API_EC_SMS_USER_ASLEEP(853),//	 Unable to send sms to user at this time.	
+	Mobile_API_EC_SMS_APP_QUOTA(854),//	 Over application daily sms quota/rate limit.	
+	Mobile_API_EC_SMS_NOT_REGISTERED(855),//	 User is not registered for Facebook Mobile Texts	
+	Mobile_API_EC_SMS_NOTIFICATIONS_OFF(856),//	 User has SMS notifications turned off	
+	Mobile_API_EC_SMS_CARRIER_DISABLE(857),//	 SMS application disallowed by mobile operator
 	
 	InfoSection_API_EC_INFO_NO_INFORMATION(1050),//	 No information has been set for this user	
 	InfoSection_API_EC_INFO_SET_FAILED(1051);//	 Setting info failed. Check the formatting of your info fields
