@@ -1,11 +1,10 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
 import java.util.ArrayList;
-
-import javax.security.auth.callback.LanguageCallback;
-
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Achievement;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
+import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Like;
 
 
 public class User implements FacebookGraphObject{
@@ -100,7 +99,50 @@ public class User implements FacebookGraphObject{
 		public String CONN_television = "television";
 		public String CONN_updates = "updates";
 		public String CONN_videos = "videos";
-		
+		//acounts
+		private Achievement achievements;
+		//activities;
+		Album albums;
+		//apprequest -> message:String data:String
+		//Book
+		Checkin checkins;
+		Event events;
+		//Family
+		//feed
+		FriendList friendlists;
+		// FriendRequest
+		Friends friends;
+		//games
+		Group groups;
+		//Home
+		//inbox
+		//interest
+		Like likes;
+		//Links
+		//location
+		//Movies
+		//Music
+		//MutualFriends
+		Note notes;
+		//Notification
+		//outbox
+		//payments
+		//permissions
+		Photo photos;
+		//Photos uploaded
+		//picture/
+		//pokes
+		Post posts;
+		Question questions;
+		//scores
+		//sharedposts
+		//statuses
+		ArrayList<From> subscribedto;
+		ArrayList<From> subscrivers;
+		//tagged
+		//television
+		//updates
+		//videos
 		
 		public FbConnection(){
 		}
@@ -174,6 +216,7 @@ public class User implements FacebookGraphObject{
 		private String year;
 		private String type;
 		private School school;
+		
 		private class School{
 			private String name;
 			private String id;
