@@ -32,9 +32,12 @@ public class ScriptParser implements LogQueryParser {
 	@Override
 	public Object parse(Binding b) {
 		String name = (String) b.getChildren()[1].getValue();
-		LogScript script = scriptRegistry.getScript(name);
+		LogScript script = scriptRegistry.newScript("localhost", name, null);
 		if (script == null)
 			throw new IllegalArgumentException("log script not found: " + name);
+		
+		// TODO: parameter passing
+		script.init(null);
 
 		List<String> args = new ArrayList<String>();
 		if (b.getChildren().length >= 3)

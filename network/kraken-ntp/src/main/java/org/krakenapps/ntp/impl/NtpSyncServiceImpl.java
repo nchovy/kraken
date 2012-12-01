@@ -2,7 +2,9 @@ package org.krakenapps.ntp.impl;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
@@ -12,6 +14,7 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.cron.CronService;
 import org.krakenapps.cron.Schedule;
 import org.krakenapps.ntp.NtpClient;
+import org.krakenapps.ntp.NtpSyncListener;
 import org.krakenapps.ntp.NtpSyncService;
 import org.osgi.service.prefs.BackingStoreException;
 import org.osgi.service.prefs.Preferences;
@@ -35,8 +38,11 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 
 	private NtpClient client;
 	private String cronExp = "*/10 * * * *";
+	
+	private CopyOnWriteArraySet<NtpSyncListener> listeners;
 
 	public NtpSyncServiceImpl() {
+		listeners = new CopyOnWriteArraySet<NtpSyncListener>();
 	}
 
 	private void ensureClient() {
@@ -118,10 +124,22 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 	@Override
 	public void run() {
 		try {
-			if (client != null)
-				client.sync();
+			if (client != null) {
+				Date newTime = client.sync();
+				triggerListeners(newTime);
+			}
 		} catch (Throwable t) {
 			logger.error("kraken ntp: cannot sync time", t);
+		}
+	}
+	
+	private void triggerListeners(Date newTime) {
+		for (NtpSyncListener listener : listeners) {
+			try {
+				listener.onSetTime(newTime);
+			} catch (Throwable t) {
+				logger.warn("kraken ntp: ntp sync listener should not throw any exception", t);
+			}
 		}
 	}
 
@@ -149,6 +167,16 @@ public class NtpSyncServiceImpl implements NtpSyncService {
 	@Override
 	public boolean isRunning() {
 		return getCronJobId() != null;
+	}
+
+	@Override
+	public void addListener(NtpSyncListener listener) {
+		listeners.add(listener);
+	}
+
+	@Override
+	public void removeListener(NtpSyncListener listener) {
+		listeners.remove(listener);
 	}
 
 	private Integer getCronJobId() {

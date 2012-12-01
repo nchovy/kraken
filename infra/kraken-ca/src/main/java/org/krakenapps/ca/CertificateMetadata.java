@@ -6,12 +6,19 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Date;
 
+import org.krakenapps.api.FieldOption;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Certificate metadata that contains certificate binary
  * 
  * @author xeraph
  */
 public class CertificateMetadata {
+
+	@FieldOption(skip = true)
+	private final Logger logger = LoggerFactory.getLogger(CertificateMetadata.class.getName());
 	/**
 	 * "jks" or "pkcs12" string
 	 */
@@ -110,6 +117,8 @@ public class CertificateMetadata {
 			else
 				store = KeyStore.getInstance(type.toUpperCase());
 
+			logger.debug("kraken ca: request get certificate, type [{}], password [{}], binary [{}]", new Object[] { type,
+					password, binary });
 			store.load(is, password == null ? null : password.toCharArray());
 			return (X509Certificate) store.getCertificate("public");
 

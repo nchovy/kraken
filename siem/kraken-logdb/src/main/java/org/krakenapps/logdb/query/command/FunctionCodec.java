@@ -38,17 +38,17 @@ public class FunctionCodec implements CustomCodec {
 		typeCode = new HashMap<Class<?>, Byte>();
 		typeCode.put(Function.Average.class, (byte) 128);
 		typeCode.put(Function.Count.class, (byte) 129);
-		typeCode.put(Function.DistinctCount.class, (byte) 130);
+		// typeCode.put(Function.DistinctCount.class, (byte) 130);
 		typeCode.put(Function.First.class, (byte) 131);
 		typeCode.put(Function.Last.class, (byte) 132);
-		typeCode.put(Function.List.class, (byte) 133);
+		// typeCode.put(Function.ValueList.class, (byte) 133);
 		typeCode.put(Function.Max.class, (byte) 134);
 		typeCode.put(Function.Min.class, (byte) 135);
-		typeCode.put(Function.Mode.class, (byte) 136);
+		// typeCode.put(Function.Mode.class, (byte) 136);
 		typeCode.put(Function.Range.class, (byte) 137);
 		typeCode.put(Function.Sum.class, (byte) 138);
-		typeCode.put(Function.SumSquare.class, (byte) 139);
-		typeCode.put(Function.Values.class, (byte) 140);
+		// typeCode.put(Function.SumSquare.class, (byte) 139);
+		// typeCode.put(Function.Values.class, (byte) 140);
 		typeCode.put(Timechart.PerSecond.class, (byte) 141);
 		typeCode.put(Timechart.PerMinute.class, (byte) 142);
 		typeCode.put(Timechart.PerHour.class, (byte) 143);
@@ -113,37 +113,36 @@ public class FunctionCodec implements CustomCodec {
 		} else if (code == (byte) 129) {
 			datas.add(((Function.Count) value).getResult());
 		} else if (code == (byte) 130) {
-			datas.add(((Function.DistinctCount) value).getObjs());
+			// datas.add(((Function.DistinctCount) value).getObjs());
 		} else if (code == (byte) 131) {
 			datas.add(((Function.First) value).getFirst());
 		} else if (code == (byte) 132) {
 			datas.add(((Function.Last) value).getLast());
 		} else if (code == (byte) 133) {
-			datas.add(((Function.List) value).getObjs());
+			// datas.add(((Function.ValueList) value).getObjs());
 		} else if (code == (byte) 134) {
 			datas.add(((Function.Max) value).getMax());
 		} else if (code == (byte) 135) {
 			datas.add(((Function.Min) value).getMin());
 		} else if (code == (byte) 136) {
-			datas.add(((Function.Mode) value).getResult());
-			datas.add(((Function.Mode) value).getMaxCount());
-			datas.add(((Function.Mode) value).getNowCount());
+			// datas.add(((Function.Mode) value).getResult());
+			// datas.add(((Function.Mode) value).getMaxCount());
+			// datas.add(((Function.Mode) value).getNowCount());
 		} else if (code == (byte) 137) {
 			datas.add(((Function.Range) value).getMax());
 			datas.add(((Function.Range) value).getMin());
 		} else if (code == (byte) 138) {
 			datas.add(((Function.Sum) value).getSum());
 		} else if (code == (byte) 139) {
-			datas.add(((Function.SumSquare) value).getSum());
+			// datas.add(((Function.SumSquare) value).getSum());
 		} else if (code == (byte) 140) {
-			datas.add(((Function.Values) value).getObjs());
+			// datas.add(((Function.Values) value).getObjs());
 		} else if (code == (byte) 141 || code == (byte) 142 || code == (byte) 143 || code == (byte) 144) {
 			datas.add(((Timechart.PerTime) value).getAmount());
 		}
 		return datas;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public Object decode(ByteBuffer bb) {
 		int beginPosition = bb.position();
@@ -166,30 +165,36 @@ public class FunctionCodec implements CustomCodec {
 		} else if (code == (byte) 129) {
 			((Function.Count) func).setResult((Long) EncodingRule.decode(bb));
 		} else if (code == (byte) 130) {
-			((Function.DistinctCount) func).setObjs((List<Object>) EncodingRule.decode(bb));
+			// ((Function.DistinctCount) func).setObjs((List<Object>)
+			// EncodingRule.decode(bb));
 		} else if (code == (byte) 131) {
 			((Function.First) func).setFirst(EncodingRule.decode(bb));
 		} else if (code == (byte) 132) {
 			((Function.Last) func).setLast(EncodingRule.decode(bb));
 		} else if (code == (byte) 133) {
-			((Function.List) func).setObjs((List<Object>) EncodingRule.decode(bb));
+			// ((Function.ValueList) func).setObjs((List<Object>)
+			// EncodingRule.decode(bb));
 		} else if (code == (byte) 134) {
 			((Function.Max) func).setMax(EncodingRule.decode(bb));
 		} else if (code == (byte) 135) {
 			((Function.Min) func).setMin(EncodingRule.decode(bb));
 		} else if (code == (byte) 136) {
-			((Function.Mode) func).setResult(EncodingRule.decode(bb));
-			((Function.Mode) func).setMaxCount((Integer) EncodingRule.decode(bb));
-			((Function.Mode) func).setNowCount((Integer) EncodingRule.decode(bb));
+			// ((Function.Mode) func).setResult(EncodingRule.decode(bb));
+			// ((Function.Mode) func).setMaxCount((Integer)
+			// EncodingRule.decode(bb));
+			// ((Function.Mode) func).setNowCount((Integer)
+			// EncodingRule.decode(bb));
 		} else if (code == (byte) 137) {
 			((Function.Range) func).setMax((Number) EncodingRule.decode(bb));
 			((Function.Range) func).setMin((Number) EncodingRule.decode(bb));
 		} else if (code == (byte) 138) {
 			((Function.Sum) func).setSum((Number) EncodingRule.decode(bb));
 		} else if (code == (byte) 139) {
-			((Function.SumSquare) func).setSum((Number) EncodingRule.decode(bb));
+			// ((Function.SumSquare) func).setSum((Number)
+			// EncodingRule.decode(bb));
 		} else if (code == (byte) 140) {
-			((Function.Values) func).setObjs((List<Object>) EncodingRule.decode(bb));
+			// ((Function.Values) func).setObjs((List<Object>)
+			// EncodingRule.decode(bb));
 		} else if (code == (byte) 141 || code == (byte) 142 || code == (byte) 143 || code == (byte) 144) {
 			((Timechart.PerTime) func).setAmount((Long) EncodingRule.decode(bb));
 		}
@@ -203,6 +208,5 @@ public class FunctionCodec implements CustomCodec {
 	public int getObjectLength(ByteBuffer bb) {
 		throw new UnsupportedOperationException();
 	}
-	
 	
 }

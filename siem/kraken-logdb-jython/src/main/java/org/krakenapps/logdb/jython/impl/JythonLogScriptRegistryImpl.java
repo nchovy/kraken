@@ -1,6 +1,9 @@
 package org.krakenapps.logdb.jython.impl;
 
-import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -15,17 +18,23 @@ import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.jython.JythonService;
 import org.krakenapps.logdb.LogScript;
+import org.krakenapps.logdb.LogScriptFactory;
 import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.jython.JythonLogScriptRegistry;
 import org.python.core.PyObject;
 import org.python.util.PythonInterpreter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "jython-logscript-registry")
 @Provides
 public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
+	private final Logger logger = LoggerFactory.getLogger(JythonLogScriptRegistryImpl.class);
+
 	@Requires
 	private ConfigService conf;
 
@@ -35,14 +44,11 @@ public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
 	@Requires
 	private LogScriptRegistry logScriptRegistry;
 
-	private PythonInterpreter interpreter;
-	private ConcurrentMap<String, PyObject> scripts;
+	private ConcurrentMap<String, ConcurrentMap<String, PyObject>> workspaceScripts;
 
 	@Validate
 	public void start() {
-		scripts = new ConcurrentHashMap<String, PyObject>();
-		interpreter = jython.newInterpreter();
-		jython.registerInterpreter("logdb", interpreter);
+		workspaceScripts = new ConcurrentHashMap<String, ConcurrentMap<String, PyObject>>();
 
 		// load scripts
 		ConfigDatabase db = conf.ensureDatabase("kraken-logdb-jython");
@@ -50,25 +56,44 @@ public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
 		ConfigIterator it = col.findAll();
 		try {
 			for (LogScriptConfig sc : it.getDocuments(LogScriptConfig.class)) {
-				PyObject o = eval(sc.name, sc.script);
-				scripts.put(sc.name, o);
+				try {
+					PyObject o = eval(sc.name, sc.script);
+
+					ConcurrentMap<String, PyObject> scripts = new ConcurrentHashMap<String, PyObject>();
+					ConcurrentMap<String, PyObject> old = workspaceScripts.putIfAbsent(sc.workspace, scripts);
+					if (old != null)
+						scripts = old;
+
+					scripts.put(sc.name, o);
+				} catch (Throwable t) {
+					logger.error("kraken logdb jython: cannot load script [" + sc.name + "]", t);
+				}
 			}
 		} finally {
 			it.close();
 		}
 
 		// register all
-		for (String name : scripts.keySet()) {
-			LogScript s = getLogScript(name);
-			logScriptRegistry.addScript(name, s);
+		for (String workspace : workspaceScripts.keySet()) {
+			ConcurrentMap<String, PyObject> scripts = workspaceScripts.get(workspace);
+			for (String name : scripts.keySet())
+				try {
+					PyObject factory = scripts.get(name);
+					logScriptRegistry.addScriptFactory(workspace, name, new LogScriptFactoryImpl(factory));
+				} catch (Throwable t) {
+					logger.error("kraken logdb jython: cannot register script [" + name + "]", t);
+				}
 		}
 	}
 
 	@Invalidate
 	public void stop() {
 		if (logScriptRegistry != null) {
-			for (String name : scripts.keySet())
-				logScriptRegistry.removeScript(name);
+			for (String workspace : workspaceScripts.keySet()) {
+				ConcurrentMap<String, PyObject> scripts = workspaceScripts.get(workspace);
+				for (String name : scripts.keySet())
+					logScriptRegistry.removeScriptFactory(workspace, name);
+			}
 		}
 
 		if (jython != null)
@@ -76,15 +101,29 @@ public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
 	}
 
 	@Override
-	public Collection<String> getScriptNames() {
+	public Set<String> getWorkspaceNames() {
+		return Collections.unmodifiableSet(workspaceScripts.keySet());
+	}
+
+	@Override
+	public void dropWorkspace(String name) {
+
+	}
+
+	@Override
+	public Set<String> getScriptNames(String workspace) {
+		ConcurrentMap<String, PyObject> scripts = workspaceScripts.get(workspace);
+		if (scripts == null)
+			return null;
 		return scripts.keySet();
 	}
 
 	@Override
-	public String getScript(String name) {
+	public String getScriptCode(String workspace, String name) {
 		ConfigDatabase db = conf.ensureDatabase("kraken-logdb-jython");
 		ConfigCollection col = db.ensureCollection("scripts");
-		Config c = col.findOne(Predicates.field("name", name));
+
+		Config c = col.findOne(getPredicate(workspace, name));
 		if (c == null)
 			return null;
 
@@ -93,40 +132,52 @@ public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
 	}
 
 	@Override
-	public LogScript getLogScript(String name) {
-		PyObject o = scripts.get(name);
-		PyObject instance = o.__call__();
+	public LogScript newLogScript(String workspace, String name, Map<String, Object> params) {
+		ConcurrentMap<String, PyObject> scripts = workspaceScripts.get(workspace);
+		if (scripts == null)
+			return null;
+
+		PyObject factory = scripts.get(name);
+		if (factory == null)
+			return null;
+
+		PyObject instance = factory.__call__();
 		return (LogScript) instance.__tojava__(LogScript.class);
 	}
 
 	@Override
-	public void addScript(String name, String script) {
+	public void setScript(String workspace, String name, String script) {
+		PyObject factory = eval(name, script);
+
+		ConcurrentMap<String, PyObject> scripts = new ConcurrentHashMap<String, PyObject>();
+		ConcurrentMap<String, PyObject> old = workspaceScripts.putIfAbsent(workspace, scripts);
+		if (old != null)
+			scripts = old;
+
+		scripts.put(name, factory);
+
 		ConfigDatabase db = conf.ensureDatabase("kraken-logdb-jython");
 		ConfigCollection col = db.ensureCollection("scripts");
-		LogScriptConfig sc = new LogScriptConfig(name, script);
-		col.add(PrimitiveConverter.serialize(sc));
-		scripts.put(name, eval(name, script));
+		Config c = col.findOne(getPredicate(workspace, name));
+
+		if (c == null) {
+			LogScriptConfig sc = new LogScriptConfig(workspace, name, script);
+			col.add(PrimitiveConverter.serialize(sc));
+
+			// add to logdb script registry
+			logScriptRegistry.addScriptFactory(workspace, name, new LogScriptFactoryImpl(factory));
+		} else {
+			LogScriptConfig sc = new LogScriptConfig(workspace, name, script);
+			c.setDocument(PrimitiveConverter.serialize(sc));
+			col.update(c);
+			
+			logScriptRegistry.removeScriptFactory(workspace, name);
+			logScriptRegistry.addScriptFactory(workspace, name, new LogScriptFactoryImpl(factory));
+		}
 	}
 
 	@Override
-	public void updateScript(String name, String script) {
-		ConfigDatabase db = conf.ensureDatabase("kraken-logdb-jython");
-		ConfigCollection col = db.ensureCollection("scripts");
-		Config c = col.findOne(Predicates.field("name", name));
-		if (c == null)
-			throw new IllegalStateException("script not found: " + name);
-
-		LogScriptConfig sc = new LogScriptConfig(name, script);
-		c.setDocument(PrimitiveConverter.serialize(sc));
-		col.update(c);
-
-		scripts.put(name, eval(name, script));
-	}
-
-	@Override
-	public void removeScript(String name) {
-		scripts.remove(name);
-
+	public void removeScript(String workspace, String name) {
 		ConfigDatabase db = conf.ensureDatabase("kraken-logdb-jython");
 		ConfigCollection col = db.ensureCollection("scripts");
 		Config c = col.findOne(Predicates.field("name", name));
@@ -134,14 +185,39 @@ public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
 			throw new IllegalStateException("script not found: " + name);
 
 		col.remove(c);
+
+		// remove from memory
+		ConcurrentMap<String, PyObject> scripts = workspaceScripts.get(workspace);
+		if (scripts == null)
+			return;
+
+		scripts.remove(name);
+
+		// remove from logdb script registry
+		logScriptRegistry.removeScriptFactory(workspace, name);
 	}
 
 	private PyObject eval(String name, String script) {
+		PythonInterpreter interpreter = jython.newInterpreter();
+		interpreter.exec("from org.krakenapps.logdb import LogScript");
+		interpreter.exec("from org.krakenapps.logdb import BaseLogScript");
 		interpreter.exec(script);
-		return interpreter.get(name);
+		PyObject clazz = interpreter.get(name);
+		if (clazz == null)
+			throw new IllegalStateException("cannot eval jython script " + name);
+
+		return clazz;
+	}
+
+	private Predicate getPredicate(String workspace, String name) {
+		Map<String, Object> pred = new HashMap<String, Object>();
+		pred.put("name", name);
+		pred.put("workspace", workspace);
+		return Predicates.field(pred);
 	}
 
 	private static class LogScriptConfig {
+		private String workspace;
 		private String name;
 		private String script;
 
@@ -149,9 +225,41 @@ public class JythonLogScriptRegistryImpl implements JythonLogScriptRegistry {
 		public LogScriptConfig() {
 		}
 
-		public LogScriptConfig(String name, String script) {
+		public LogScriptConfig(String workspace, String name, String script) {
+			this.workspace = workspace;
 			this.name = name;
 			this.script = script;
 		}
 	}
+
+	private static class LogScriptFactoryImpl implements LogScriptFactory {
+
+		private PyObject factory;
+
+		public LogScriptFactoryImpl(PyObject factory) {
+			this.factory = factory;
+		}
+
+		@Override
+		public LogScript create(Map<String, Object> params) {
+			PyObject instance = factory.__call__();
+			return (LogScript) instance.__tojava__(LogScript.class);
+		}
+
+		@Override
+		public String getDescription() {
+			PyObject __doc__ = factory.getDoc();
+			String doc = (String) __doc__.__tojava__(String.class);
+			if (doc == null)
+				return "N/A";
+			
+			return doc.trim();
+		}
+
+		@Override
+		public String toString() {
+			return getDescription();
+		}
+	}
+
 }

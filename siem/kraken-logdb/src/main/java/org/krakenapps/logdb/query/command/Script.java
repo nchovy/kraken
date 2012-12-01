@@ -40,7 +40,7 @@ public class Script extends LogQueryCommand {
 
 	@Override
 	public void eof() {
-		script.eof();
+		script.eof(output);
 		super.eof();
 	}
 
@@ -64,8 +64,8 @@ public class Script extends LogQueryCommand {
 
 	private class DefaultScriptOutput implements LogScriptOutput {
 		@Override
-		public void write(LogMap data) {
-			out(data);
+		public void write(Map<String, Object> data) {
+			out(new LogMap(data));
 		}
 	}
 }

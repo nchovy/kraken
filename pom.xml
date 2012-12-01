@@ -178,7 +178,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-confdb</artifactId>
-				<version>0.10.5</version>
+				<version>0.10.6</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -283,7 +283,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-ldap</artifactId>
-				<version>2.0.2</version>
+				<version>2.0.5</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -483,12 +483,12 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-log-api</artifactId>
-				<version>1.4.4</version>
+				<version>1.4.5</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-logdb</artifactId>
-				<version>0.5.12</version>
+				<version>0.7.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -508,7 +508,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-logdb-jython</artifactId>
-				<version>0.1.0</version>
+				<version>0.2.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -563,7 +563,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-syslog-parser</artifactId>
-				<version>1.4.0</version>
+				<version>1.8.1</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -594,6 +594,11 @@
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-util-directoryfile</artifactId>
 				<version>1.0.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.jcraft</groupId>
+				<artifactId>jsch</artifactId>
+				<version>0.1.48</version>
 			</dependency>
 
 			<!-- Testing -->

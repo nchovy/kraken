@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb-jython</artifactId>
-	<version>0.1.0</version>
+	<version>0.2.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken LogDB Jython Scripting</name>
 	<build>
@@ -23,7 +23,9 @@
 						<Bundle-SymbolicName>org.krakenapps.logdb.jython</Bundle-SymbolicName>
 						<Export-Package>org.krakenapps.logdb.jython;version=${project.version}</Export-Package>
 						<Private-Package>org.krakenapps.logdb.jython.impl</Private-Package>
-						<Import-Package>*</Import-Package>
+						<Import-Package>
+						    org.krakenapps.logdb;version="0.7.0",
+						    *</Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
