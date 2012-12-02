@@ -10,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.Facebook;
+import org.krakenapps.socialweb.facebook.jsonobject.Comment;
 import org.krakenapps.socialweb.facebook.jsonobject.User;
 
 /**
@@ -19,7 +20,7 @@ import org.krakenapps.socialweb.facebook.jsonobject.User;
  */
 public class example {
 	public static void main(String[] argv) {
-		String access_token= "";// YOUR ACCESS_TOKEN Here
+		String access_token= ""; /* YOUR ACCESS_TOKEN Here*/
 		String callback_url = null;
 		Facebook graph;
 		JSONObject basicInfo;
@@ -31,7 +32,7 @@ public class example {
 		/*usage*/
 		try {
 			basicInfo = graph.getBasicInfo("me" /* or YOUR_FACEBOK_ID*/); // you can access your basic profile on the Facebook. "me" is word already occupied in Facebook.
-			// TODO here
+			// TODO here you can get your id, name, gender, age.. etc.
 			
 			feed = graph.getBasicInfo("me", "feed");
 			jsonArrayList = graph.getSpecificInfo(feed.getString("id"), "comments"); // or other things as following
@@ -39,7 +40,11 @@ public class example {
 			for(int index = 0; index < jsonArrayList.size(); index ++){
 				JSONArray tmp = jsonArrayList.get(index);
 				for(int i = 0 ; i<tmp.length(); i++){
+					JSONObject json = tmp.getJSONObject(i);
 					//TODO here
+					// For example 
+					Comment comment = new Comment();
+					comment.parseJson(json);
 				}
 			}
 			

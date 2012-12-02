@@ -12,6 +12,11 @@ import org.krakenapps.pcap.decoder.srvsvc.structure.containers.SessionInfo10Cont
 import org.krakenapps.pcap.decoder.srvsvc.structure.containers.SessionInfo1Container;
 import org.krakenapps.pcap.decoder.srvsvc.structure.containers.SessionInfo2Container;
 import org.krakenapps.pcap.decoder.srvsvc.structure.containers.SessionInfo502Container;
+import org.krakenapps.pcap.decoder.srvsvc.structure.containers.ShareInfo0Container;
+import org.krakenapps.pcap.decoder.srvsvc.structure.containers.ShareInfo1Container;
+import org.krakenapps.pcap.decoder.srvsvc.structure.containers.ShareInfo2Container;
+import org.krakenapps.pcap.decoder.srvsvc.structure.containers.ShareInfo501Container;
+import org.krakenapps.pcap.decoder.srvsvc.structure.containers.ShareInfo503Container;
 import org.krakenapps.pcap.decoder.srvsvc.structure.containers.infos.ConnectionInfo0;
 import org.krakenapps.pcap.decoder.srvsvc.structure.containers.infos.ConnectionInfo1;
 
@@ -68,7 +73,21 @@ public class ContainerTypeMapper {
 		case NetrShareAdd :
 			return null;
 		case NetrShareEnum :
-			return null;
+			switch(level){
+			case 0:
+				return (ContainerInterface) new ShareInfo0Container();
+			case 1:
+				return (ContainerInterface) new ShareInfo1Container();
+			case 2:
+				return (ContainerInterface) new ShareInfo2Container();
+			case 501:
+				return (ContainerInterface) new ShareInfo501Container();
+			case 503:
+				return (ContainerInterface) new ShareInfo503Container();
+			default :
+				new IllegalAccessException(this+" : invalid Level Type");
+				return null;	
+			}
 		case NetrShareGetInfo :
 			return null;
 		case NetrShareSetInfo :
