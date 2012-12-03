@@ -8,7 +8,7 @@ public interface CsvLookupRegistry {
 
 	Set<File> getCsvFiles();
 
-	void registerCsvFile(File f) throws IOException;
+	void loadCsvFile(File f) throws IOException;
 
-	void unregisterCsvFile(File f);
+	void unloadCsvFile(File f);
 }

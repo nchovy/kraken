@@ -3,6 +3,7 @@ package org.krakenapps.logdb.impl;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,6 +22,8 @@ import org.krakenapps.confdb.Predicates;
 import org.krakenapps.logdb.CsvLookupRegistry;
 import org.krakenapps.logdb.LookupHandler;
 import org.krakenapps.logdb.LookupHandlerRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import au.com.bytecode.opencsv.CSVReader;
 
@@ -34,6 +37,7 @@ import au.com.bytecode.opencsv.CSVReader;
 @Component(name = "logdb-csv-lookup-registry")
 @Provides
 public class CsvLookupRegistryImpl implements CsvLookupRegistry {
+	private final Logger logger = LoggerFactory.getLogger(CsvLookupRegistryImpl.class);
 
 	@Requires
 	private ConfigService conf;
@@ -43,12 +47,28 @@ public class CsvLookupRegistryImpl implements CsvLookupRegistry {
 
 	@Validate
 	public void start() {
-
+		for (File f : getCsvFiles()) {
+			String name = getLookupName(f);
+			try {
+				logger.debug("kraken logdb: adding csv lookup handler [{}]", name);
+				lookup.addLookupHandler(name, new CsvLookupHandler(f));
+			} catch (Throwable t) {
+				logger.error("kraken logdb: cannot add csv lookup handler - " + name, t);
+			}
+		}
 	}
 
 	@Invalidate
 	public void stop() {
-
+		for (File f : getCsvFiles()) {
+			String name = getLookupName(f);
+			try {
+				logger.debug("kraken logdb: removing csv lookup handler [{}]", name);
+				lookup.removeLookupHandler(name);
+			} catch (Throwable t) {
+				logger.error("kraken logdb: cannot remove csv lookup handler - " + name, t);
+			}
+		}
 	}
 
 	@Override
@@ -67,7 +87,7 @@ public class CsvLookupRegistryImpl implements CsvLookupRegistry {
 	}
 
 	@Override
-	public void registerCsvFile(File f) throws IOException {
+	public void loadCsvFile(File f) throws IOException {
 		if (f == null)
 			throw new IllegalArgumentException("csv path should not be null");
 
@@ -88,17 +108,17 @@ public class CsvLookupRegistryImpl implements CsvLookupRegistry {
 		if (c != null)
 			throw new IllegalStateException("csv path already exists: " + f.getAbsolutePath());
 
+		// add to lookup handler service
+		lookup.addLookupHandler(getLookupName(f), new CsvLookupHandler(f));
+
 		// add
 		Map<String, Object> doc = new HashMap<String, Object>();
 		doc.put("path", f.getAbsolutePath());
 		col.add(doc);
-
-		// add to lookup handler service
-		lookup.addLookupHandler(getLookupName(f), new CsvLookupHandler(f));
 	}
 
 	@Override
-	public void unregisterCsvFile(File f) {
+	public void unloadCsvFile(File f) {
 		if (f == null)
 			throw new IllegalArgumentException("csv path should not be null");
 
@@ -117,13 +137,13 @@ public class CsvLookupRegistryImpl implements CsvLookupRegistry {
 	}
 
 	private String getLookupName(File f) {
-		return "csv$" + f.getName() + "$" + f.hashCode();
+		return "csv$" + f.getName();
 	}
 
 	private class CsvLookupHandler implements LookupHandler {
 		private String keyFieldName;
-		private String valueFieldName;
-		private Map<String, String> mappings = new HashMap<String, String>();
+		private ArrayList<String> valueFieldNames;
+		private Map<String, Map<String, String>> mappings = new HashMap<String, Map<String, String>>();
 
 		public CsvLookupHandler(File f) throws IOException {
 			CSVReader reader = new CSVReader(new FileReader(f));
@@ -136,22 +156,35 @@ public class CsvLookupRegistryImpl implements CsvLookupRegistry {
 				throw new IllegalStateException("not enough columns (should be 2 or more)");
 
 			keyFieldName = nextLine[0];
-			valueFieldName = nextLine[1];
+			valueFieldNames = new ArrayList<String>(nextLine.length - 1);
+			for (int i = 1; i < nextLine.length; i++)
+				valueFieldNames.add(nextLine[i]);
 
 			while ((nextLine = reader.readNext()) != null) {
-				mappings.put(nextLine[0], nextLine[1]);
+				Map<String, String> values = new HashMap<String, String>();
+				for (int i = 1; i < nextLine.length; i++) {
+					String valueFieldName = valueFieldNames.get(i - 1);
+					String value = nextLine[i];
+					values.put(valueFieldName, value);
+				}
+
+				mappings.put(nextLine[0], values);
 			}
 		}
 
 		@Override
-		public Object lookup(String srcField, String dstField, Object value) {
+		public Object lookup(String srcField, String dstField, Object srcValue) {
 			if (!srcField.equals(keyFieldName))
 				return null;
 
-			if (!dstField.equals(valueFieldName))
+			if (!valueFieldNames.contains(dstField))
 				return null;
 
-			return mappings.get(value.toString());
+			Map<String, String> valueMappings = mappings.get(srcValue.toString());
+			if (valueMappings == null)
+				return null;
+
+			return valueMappings.get(dstField);
 		}
 	}
 }
