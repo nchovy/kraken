@@ -15,11 +15,8 @@
  */
 package org.krakenapps.webconsole.impl;
 
-import java.io.StringReader;
+import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,12 +24,12 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.base64.Base64;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
 import org.krakenapps.msgbus.Message;
 import org.krakenapps.msgbus.Session;
 import org.slf4j.Logger;
@@ -50,7 +47,7 @@ public class KrakenMessageDecoder {
 		text = text.trim();
 		if (text.length() == 0)
 			return null;
-		
+
 		if (logger.isDebugEnabled())
 			logger.debug("kraken webconsole: debug websocket frame length {}, json [{}]", text.length(), text);
 
@@ -60,15 +57,24 @@ public class KrakenMessageDecoder {
 		// decrypt if msg is encrypted
 		if (session.has("enc_key")) {
 			try {
-				JSONTokener tokenizer = new JSONTokener(new StringReader(text));
-				JSONArray container = (JSONArray) tokenizer.nextValue();
-				JSONObject header = container.getJSONObject(0);
-				JSONObject body = container.getJSONObject(1);
+				// jackson
+				JsonNode container = new ObjectMapper().readTree(text);
 
-				if (header.has("iv") && body.has("data")) {
-					String data = body.getString("data");
+				// 같은 작업 찾아야 할 부분
+				// jackson
+				Map<String, Object> header = new ObjectMapper().readValue(container.get(0),
+						new TypeReference<Map<String, Object>>() {
+						});
 
-					byte[] iv = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(header.getString("iv").getBytes())));
+				Map<String, Object> body = new ObjectMapper().readValue(container.get(1),
+						new TypeReference<Map<String, Object>>() {
+						});
+
+				if (header.containsKey("iv") && body.containsKey("data")) {
+					String data = body.get("data").toString();
+
+					byte[] iv = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(header.get("iv").toString()
+							.getBytes())));
 					byte[] buf = ByteUtil.asArray(Base64.decode(ChannelBuffers.wrappedBuffer(data.getBytes())));
 					byte[] key = ByteUtil.asByteArray(UUID.fromString(session.getString("enc_key")));
 					SecretKeySpec secret = new SecretKeySpec(key, "AES");
@@ -88,69 +94,32 @@ public class KrakenMessageDecoder {
 		}
 
 		try {
-			JSONTokener tokenizer = new JSONTokener(new StringReader(text));
-			JSONArray container = (JSONArray) tokenizer.nextValue();
-			JSONObject header = container.getJSONObject(0);
-			JSONObject body = container.getJSONObject(1);
+			// jackson
+			JsonNode container = new ObjectMapper().readTree(text);
+
+			// 같은 작업 찾아야 할 부분
+			// jackson
+			Map<String, Object> header = new ObjectMapper().readValue(container.get(0), new TypeReference<Map<String, Object>>() {
+			});
+
+			Map<String, Object> body = new ObjectMapper().readValue(container.get(1), new TypeReference<Map<String, Object>>() {
+			});
 
 			Message msg = new Message();
-
-			msg.setGuid(header.getString("guid").trim());
-			msg.setType(Message.Type.valueOf(header.getString("type").trim()));
-			msg.setSource(header.getString("source"));
-			msg.setTarget(header.getString("target"));
-			msg.setMethod(header.getString("method").trim());
-			msg.setParameters(parse(body));
+			msg.setGuid((String) header.get("guid"));
+			msg.setType(Message.Type.valueOf((String) header.get("type")));
+			msg.setSource((String) header.get("source"));
+			msg.setTarget((String) header.get("target"));
+			msg.setMethod((String) header.get("method"));
+			msg.setParameters(body);
 
 			return msg;
-		} catch (JSONException e) {
-			logger.error("kraken webconsole: invalid json => " + text, e);
+		} catch (JsonProcessingException e) {
+			logger.error("kraken webconsoke: invalid json Processing", e);
+		} catch (IOException e) {
+			logger.error("kraken webconsoke: invalid json read", e);
 		}
 		return null;
 	}
 
-	private static Map<String, Object> parse(JSONObject obj) {
-		Map<String, Object> m = new HashMap<String, Object>();
-		String[] names = JSONObject.getNames(obj);
-		if (names == null)
-			return m;
-
-		for (String key : names) {
-			try {
-				Object value = obj.get(key);
-				if (value == JSONObject.NULL)
-					value = null;
-				else if (value instanceof JSONArray)
-					value = parse((JSONArray) value);
-				else if (value instanceof JSONObject)
-					value = parse((JSONObject) value);
-
-				m.put(key, value);
-			} catch (JSONException e) {
-				e.printStackTrace();
-			}
-		}
-
-		return m;
-	}
-
-	private static List<Object> parse(JSONArray arr) {
-		List<Object> list = new ArrayList<Object>();
-		for (int i = 0; i < arr.length(); i++) {
-			try {
-				Object o = arr.get(i);
-				if (o == JSONObject.NULL)
-					list.add(null);
-				else if (o instanceof JSONArray)
-					list.add(parse((JSONArray) o));
-				else if (o instanceof JSONObject)
-					list.add(parse((JSONObject) o));
-				else
-					list.add(o);
-			} catch (JSONException e) {
-				e.printStackTrace();
-			}
-		}
-		return list;
-	}
 }
