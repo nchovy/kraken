@@ -11,10 +11,10 @@ public class SessionInfo502 {
 
 	String sesi502_cname;
 	String sesi502_username;
-	int sesi502_num_opens;
-	int sesi502_time;
-	int sesi502_idle_time;
-	int sesi502_user_flags;
+	short sesi502_num_opens;
+	short sesi502_time;
+	short sesi502_idle_time;
+	short sesi502_user_flags;
 	String sesi502_cltype_name;
 	String sesi502_transport;
 	public String getSesi502_cname() {
@@ -29,28 +29,28 @@ public class SessionInfo502 {
 	public void setSesi502_username(String sesi502_username) {
 		this.sesi502_username = sesi502_username;
 	}
-	public int getSesi502_num_opens() {
+	public short getSesi502_num_opens() {
 		return sesi502_num_opens;
 	}
-	public void setSesi502_num_opens(int sesi502_num_opens) {
+	public void setSesi502_num_opens(short sesi502_num_opens) {
 		this.sesi502_num_opens = sesi502_num_opens;
 	}
-	public int getSesi502_time() {
+	public short getSesi502_time() {
 		return sesi502_time;
 	}
-	public void setSesi502_time(int sesi502_time) {
+	public void setSesi502_time(short sesi502_time) {
 		this.sesi502_time = sesi502_time;
 	}
-	public int getSesi502_idle_time() {
+	public short getSesi502_idle_time() {
 		return sesi502_idle_time;
 	}
-	public void setSesi502_idle_time(int sesi502_idle_time) {
+	public void setSesi502_idle_time(short sesi502_idle_time) {
 		this.sesi502_idle_time = sesi502_idle_time;
 	}
-	public int getSesi502_user_flags() {
+	public short getSesi502_user_flags() {
 		return sesi502_user_flags;
 	}
-	public void setSesi502_user_flags(int sesi502_user_flags) {
+	public void setSesi502_user_flags(short sesi502_user_flags) {
 		this.sesi502_user_flags = sesi502_user_flags;
 	}
 	public String getSesi502_cltype_name() {
