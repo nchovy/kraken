@@ -213,7 +213,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-msgbus</artifactId>
-				<version>1.6.0</version>
+				<version>1.6.1</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -223,7 +223,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-webconsole</artifactId>
-				<version>2.4.0</version>
+				<version>2.5.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
