@@ -30,7 +30,8 @@ public class JuniperSessionLogParser {
 	}
 
 	public Map<String, Object> parse(String line) {
-		Map<String, Object> map = new HashMap<String, Object>();
+		// hashtable threshold will be 30 (max 24~25 tokens)
+		Map<String, Object> map = new HashMap<String, Object>(40);
 		int pos = 0;
 		int limit = 0;
 		pos = parseDeviceId(line, map, pos);
@@ -58,7 +59,10 @@ public class JuniperSessionLogParser {
 				limit = line.length();
 
 			if ("port".equals(key)) {
-				key = oldKey.replace(" ip", " ") + key;
+				if (oldKey.equals("src-xlated ip"))
+					key = "src-xlated port";
+				else
+					key = "dst-xlated port";
 			} else if ("service".equals(key)) {
 				limit = line.indexOf("proto", limit) - 1;
 			}
