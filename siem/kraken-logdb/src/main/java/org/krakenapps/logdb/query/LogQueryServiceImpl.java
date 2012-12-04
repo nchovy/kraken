@@ -60,6 +60,7 @@ import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logdb.query.parser.TermParser;
 import org.krakenapps.logdb.query.parser.TextFileParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
+import org.krakenapps.logdb.query.parser.TimechartParser2;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.osgi.framework.BundleContext;
@@ -109,7 +110,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		List<Class<? extends LogQueryParser>> parserClazzes = Arrays.asList(DropParser.class, EvalParser.class,
 				SearchParser.class, FieldsParser.class, FunctionParser.class, OptionCheckerParser.class, OptionParser.class,
 				RenameParser.class, ReplaceParser.class, SortParser.class, StatsParser.class, TermParser.class,
-				TimechartParser.class, Stats2Parser.class, Sort2Parser.class);
+				TimechartParser.class, Stats2Parser.class, Sort2Parser.class, TimechartParser2.class);
 
 		List<LogQueryParser> parsers = new ArrayList<LogQueryParser>();
 		for (Class<? extends LogQueryParser> clazz : parserClazzes) {
