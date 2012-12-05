@@ -20,7 +20,7 @@ import org.krakenapps.socialweb.facebook.jsonobject.User;
  */
 public class example {
 	public static void main(String[] argv) {
-		String access_token= "AAACEdEose0cBAGItDgNcX7BuondNuUAI1GmoVhjTWHb4ec1IMoZC85i8aEd4lOz8NwZB86pmfZCXYrIYTPs3TfCSrN0vZBmd0iIUwdsZCcZAHUHZC7VY199"; /* YOUR ACCESS_TOKEN Here*/
+		String access_token= ""; /* YOUR ACCESS_TOKEN Here*/
 		String callback_url = null;
 		Facebook graph;
 		JSONObject basicInfo;
