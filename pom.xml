@@ -22,7 +22,7 @@
 		<module>reporting</module>
 		<module>honeypot</module>
 		<module>utility</module>
-	</modules>
+  </modules>
 	<url>http://krakenapps.org</url>
 	<inceptionYear>2008</inceptionYear>
 	<scm>

@@ -28,7 +28,7 @@ public class Facebook {
 		accessToken = token;
 		callbackURL = URL;
 	}
-	public JSONObject getBasicInfo(String userId, String objectId) throws IOException{
+	public JSONObject getBasicInfo(String userId, String objectId) throws IOException, JSONException{
 		URL url = new URL(graph+userId+"/"+objectId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -38,28 +38,27 @@ public class Facebook {
 			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
-			System.out.println(tmp);
+//			System.out.println(tmp);
 			bf.append(tmp);
 		}
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	
 	public JSONObject getBasicInfo(String userId) throws IOException, JSONException{
 		URL url = new URL(graph+userId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
-		BufferedReader bf = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 		
 		StringBuffer me = new StringBuffer();
 		while(true){
-			String tmp = bf.readLine();
+			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
-			System.out.println(tmp);
+//			System.out.println(tmp);
 			me.append(tmp);
 		}
-		new JSONObject(me);
-		return new JSONObject(me);
+		return new JSONObject(me.toString());
 	}
 	/*
 	 * use following getSpecificInfo function like this Facebook fb = new Facebook();
@@ -113,12 +112,12 @@ public class Facebook {
 				break;
 			bf.append(tmp);
 		}
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	
 	/*designed searching method*/
 	
-	public JSONObject getSearchResult(String searchCommend , String types) throws IOException{
+	public JSONObject getSearchResult(String searchCommend , String types) throws IOException, JSONException{
 		URL url = new URL(graph+"q="+searchCommend+"&type="+types +"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -131,12 +130,11 @@ public class Facebook {
 				break;
 			bf.append(tmp);
 		}
-		new JSONObject(bf);
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	
 	//TODO fql design
-	public JSONObject getFqlOnlinePresence(String userId) throws IOException{
+	public JSONObject getFqlOnlinePresence(String userId) throws IOException, JSONException{
 		URL url = new URL(fql+"SELECT%20online_presence%20FROM%20user%20WHERE%20uid="+userId+"&access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -149,8 +147,7 @@ public class Facebook {
 				break;
 			bf.append(tmp);
 		}
-		new JSONObject(bf);
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	//getter and setter
 	public String getGraph() {

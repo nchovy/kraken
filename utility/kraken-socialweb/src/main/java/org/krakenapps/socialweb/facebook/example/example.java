@@ -20,7 +20,7 @@ import org.krakenapps.socialweb.facebook.jsonobject.User;
  */
 public class example {
 	public static void main(String[] argv) {
-		String access_token= ""; /* YOUR ACCESS_TOKEN Here*/
+		String access_token= "AAACEdEose0cBAGItDgNcX7BuondNuUAI1GmoVhjTWHb4ec1IMoZC85i8aEd4lOz8NwZB86pmfZCXYrIYTPs3TfCSrN0vZBmd0iIUwdsZCcZAHUHZC7VY199"; /* YOUR ACCESS_TOKEN Here*/
 		String callback_url = null;
 		Facebook graph;
 		JSONObject basicInfo;
@@ -33,11 +33,12 @@ public class example {
 		try {
 			basicInfo = graph.getBasicInfo("me" /* or YOUR_FACEBOK_ID*/); // you can access your basic profile on the Facebook. "me" is word already occupied in Facebook.
 			// TODO here you can get your id, name, gender, age.. etc.
+			System.out.println(basicInfo.getString("id"));
 			
 			feed = graph.getBasicInfo("me", "feed");
-			jsonArrayList = graph.getSpecificInfo(feed.getString("id"), "comments"); // or other things as following
-			//jsonArrayList = graph.getSpecificInfo(feed.getString("id"), "likes"); 
-			for(int index = 0; index < jsonArrayList.size(); index ++){
+			jsonArrayList = graph.getSpecificInfo( ((JSONObject) (((JSONArray) feed.get("data")).get(0))).getString("id"), "comments"); // or other things as following
+	//		jsonArrayList = graph.getSpecificInfo(feed.getString("id"), "likes"); 
+	/*		for(int index = 0; index < jsonArrayList.size(); index ++){
 				JSONArray tmp = jsonArrayList.get(index);
 				for(int i = 0 ; i<tmp.length(); i++){
 					JSONObject json = tmp.getJSONObject(i);
@@ -46,7 +47,7 @@ public class example {
 					Comment comment = new Comment();
 					comment.parseJson(json);
 				}
-			}
+			}*/
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
