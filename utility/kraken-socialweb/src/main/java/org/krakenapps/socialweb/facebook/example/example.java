@@ -26,7 +26,6 @@ public class example {
 		JSONObject basicInfo;
 		JSONObject feed;
 		ArrayList<JSONArray> jsonArrayList;
-		User user;
 		
 		graph = new Facebook( access_token, callback_url);
 		/*usage*/
@@ -37,8 +36,8 @@ public class example {
 			
 			feed = graph.getBasicInfo("me", "feed");
 			jsonArrayList = graph.getSpecificInfo( ((JSONObject) (((JSONArray) feed.get("data")).get(0))).getString("id"), "comments"); // or other things as following
-	//		jsonArrayList = graph.getSpecificInfo(feed.getString("id"), "likes"); 
-	/*		for(int index = 0; index < jsonArrayList.size(); index ++){
+			jsonArrayList = graph.getSpecificInfo(((JSONObject) (((JSONArray) feed.get("data")).get(0))).getString("id"), "likes"); 
+			for(int index = 0; index < jsonArrayList.size(); index ++){
 				JSONArray tmp = jsonArrayList.get(index);
 				for(int i = 0 ; i<tmp.length(); i++){
 					JSONObject json = tmp.getJSONObject(i);
@@ -47,7 +46,7 @@ public class example {
 					Comment comment = new Comment();
 					comment.parseJson(json);
 				}
-			}*/
+			}
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
