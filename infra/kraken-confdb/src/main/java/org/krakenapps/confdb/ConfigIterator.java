@@ -34,6 +34,8 @@ public interface ConfigIterator extends Iterator<Config> {
 
 	<T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback, int offset, int limit);
 
+	<T> Collection<T> getObjects(ObjectBuilder<T> builder, int offset, int limit);
+
 	int count();
 
 	void close();

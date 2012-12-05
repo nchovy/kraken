@@ -94,22 +94,34 @@ public class LogDBScript implements Script {
 		context.println("dropped");
 	}
 
-	@ScriptUsage(description = "register csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "csv (comma separated value) file path. first line should be column headers.", autocompletion = PathAutoCompleter.class) })
-	public void registerCsvLookup(String[] args) throws IOException {
+	@ScriptUsage(description = "load csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "csv (comma separated value) file path. first line should be column headers.", autocompletion = PathAutoCompleter.class) })
+	public void loadCsvLookup(String[] args) throws IOException {
 		try {
 			File f = new File(args[0]);
-			csvRegistry.registerCsvFile(f);
-			context.println("registered");
+			csvRegistry.loadCsvFile(f);
+			context.println("loaded " + f.getAbsolutePath());
 		} catch (IllegalStateException e) {
 			context.println(e);
 		}
 	}
 
-	@ScriptUsage(description = "unregister csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "registered csv file path", autocompletion = PathAutoCompleter.class) })
-	public void unregisterCsvLookup(String[] args) {
+	@ScriptUsage(description = "reload csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "csv (comma separated value) file path. first line should be column headers.", autocompletion = PathAutoCompleter.class) })
+	public void reloadCsvLookup(String[] args) throws IOException {
+		try {
+			File f = new File(args[0]);
+			csvRegistry.unloadCsvFile(f);
+			csvRegistry.loadCsvFile(f);
+			context.println("reloaded");
+		} catch (IllegalStateException e) {
+			context.println(e);
+		}
+	}
+
+	@ScriptUsage(description = "unload csv lookup mapping file", arguments = { @ScriptArgument(name = "path", type = "string", description = "registered csv file path", autocompletion = PathAutoCompleter.class) })
+	public void unloadCsvLookup(String[] args) {
 		File f = new File(args[0]);
-		csvRegistry.unregisterCsvFile(f);
-		context.println("unregistered");
+		csvRegistry.unloadCsvFile(f);
+		context.println("unloaded" + f.getAbsolutePath());
 	}
 
 	public void scripts(String[] args) {

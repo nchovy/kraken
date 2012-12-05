@@ -41,6 +41,9 @@ public interface UserApi extends EntityEventProvider<User> {
 
 	Collection<User> getUsers(String domain, Predicate pred);
 
+	Collection<String> getLoginNames(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred, int offset,
+			int limit);
+
 	User findUser(String domain, String loginName);
 
 	User getUser(String domain, String loginName);

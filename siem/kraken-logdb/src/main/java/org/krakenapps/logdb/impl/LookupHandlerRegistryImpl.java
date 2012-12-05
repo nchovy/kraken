@@ -40,7 +40,9 @@ public class LookupHandlerRegistryImpl implements LookupHandlerRegistry {
 
 	@Override
 	public void addLookupHandler(String name, LookupHandler handler) {
-		lookupHandlers.put(name, handler);
+		LookupHandler old = lookupHandlers.putIfAbsent(name, handler);
+		if (old != null)
+			throw new IllegalStateException("lookup handler name conflict: " + name);
 	}
 
 	@Override

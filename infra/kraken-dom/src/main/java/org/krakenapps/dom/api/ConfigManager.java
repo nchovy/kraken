@@ -7,6 +7,7 @@ import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigParser;
+import org.krakenapps.confdb.ObjectBuilder;
 import org.krakenapps.confdb.Predicate;
 
 public interface ConfigManager {
@@ -27,6 +28,10 @@ public interface ConfigManager {
 	<T> Collection<T> all(String domain, Class<T> cls, Predicate pred, int offset, int limit);
 
 	<T> T find(String domain, Class<T> cls, Predicate pred);
+
+	<T> Collection<T> findObjects(String domain, Class<?> cls, ObjectBuilder<T> builder);
+
+	<T> Collection<T> findObjects(String domain, Class<?> cls, ObjectBuilder<T> builder, Predicate pred, int offset, int limit);
 
 	<T> T get(String domain, Class<T> cls, Predicate pred, String notFoundMessage);
 

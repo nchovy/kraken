@@ -8,6 +8,7 @@ import org.krakenapps.api.PrimitiveParseCallback;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigParser;
+import org.krakenapps.confdb.ObjectBuilder;
 
 class EmptyIterator implements ConfigIterator {
 	@Override
@@ -50,6 +51,11 @@ class EmptyIterator implements ConfigIterator {
 
 	@Override
 	public <T> Collection<T> getDocuments(Class<T> cls, PrimitiveParseCallback callback, int offset, int limit) {
+		return new ArrayList<T>();
+	}
+
+	@Override
+	public <T> Collection<T> getObjects(ObjectBuilder<T> builder, int offset, int limit) {
 		return new ArrayList<T>();
 	}
 

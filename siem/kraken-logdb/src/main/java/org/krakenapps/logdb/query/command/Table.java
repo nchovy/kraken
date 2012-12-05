@@ -16,15 +16,13 @@
 package org.krakenapps.logdb.query.command;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 
+import org.krakenapps.log.api.LogParser;
+import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
-import org.krakenapps.log.api.LogParser;
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.command.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,21 +125,26 @@ public class Table extends LogQueryCommand {
 	private class LogSearchCallbackImpl implements LogSearchCallback {
 		@Override
 		public void onLog(Log log) {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("_table", log.getTableName());
-			m.put("_id", log.getId());
-			m.put("_time", log.getDate());
+			Map<String, Object> m = null;
 
 			if (parser != null) {
 				Map<String, Object> parsed = parser.parse(log.getData());
 				if (parsed != null) {
-					m.putAll(parsed);
+					parsed.put("_table", log.getTableName());
+					parsed.put("_id", log.getId());
+					parsed.put("_time", log.getDate());
+					m = parsed;
 				} else {
 					logger.debug("kraken logdb: cannot parse log [{}]", log.getData());
+					return;
 				}
 			} else {
-				m.putAll(log.getData());
+				m = log.getData();
+				m.put("_table", log.getTableName());
+				m.put("_id", log.getId());
+				m.put("_time", log.getDate());
 			}
+
 			write(new LogMap(m));
 		}
 
