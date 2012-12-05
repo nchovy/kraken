@@ -494,7 +494,13 @@ public abstract class AbstractLogger implements Logger, Runnable {
 		String start = DateFormat.format(format, lastStartDate);
 		String run = DateFormat.format(format, lastRunDate);
 		String log = DateFormat.format(format, lastLogDate);
+		String status = getStatus().toString().toLowerCase();
+		if (isPassive)
+			status += " (passive)";
+		else
+			status += " (interval=" + interval + "ms)";
+
 		return String.format("name=%s, factory=%s, status=%s, log count=%d, last start=%s, last run=%s, last log=%s",
-				getFullName(), factoryFullName, getStatus().toString().toLowerCase(), getLogCount(), start, run, log);
+				getFullName(), factoryFullName, status, getLogCount(), start, run, log);
 	}
 }

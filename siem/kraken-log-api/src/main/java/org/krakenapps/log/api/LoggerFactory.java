@@ -20,7 +20,21 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Properties;
 
+import org.osgi.framework.BundleContext;
+
 public interface LoggerFactory {
+	/**
+	 * logger factory registry calls onStart() when logger factory component is
+	 * registered to OSGi service registry
+	 */
+	void onStart(BundleContext bc);
+
+	/**
+	 * logger factory registry calls onStop() when logger factory component is
+	 * unregistering from OSGi service registry
+	 */
+	void onStop();
+
 	String getFullName();
 
 	String getNamespace();
@@ -41,8 +55,7 @@ public interface LoggerFactory {
 
 	Logger newLogger(String namespace, String name, String description, Properties config);
 
-	Logger newLogger(String namespace, String name, String description, long logCount, Date lastLogDate,
-			Properties config);
+	Logger newLogger(String namespace, String name, String description, long logCount, Date lastLogDate, Properties config);
 
 	void deleteLogger(String name);
 

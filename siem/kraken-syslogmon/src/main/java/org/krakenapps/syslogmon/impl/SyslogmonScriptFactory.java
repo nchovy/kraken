@@ -14,6 +14,7 @@ public class SyslogmonScriptFactory implements ScriptFactory {
 	@Requires
 	private SyslogClassifierRegistry classifierRegistry;
 
+	@SuppressWarnings("unused")
 	@ServiceProperty(name = "alias", value = "syslogmon")
 	private String alias;
 
@@ -21,5 +22,4 @@ public class SyslogmonScriptFactory implements ScriptFactory {
 	public Script createScript() {
 		return new SyslogmonScript(classifierRegistry);
 	}
-
 }

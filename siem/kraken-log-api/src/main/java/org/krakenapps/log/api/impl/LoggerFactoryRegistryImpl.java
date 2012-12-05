@@ -29,8 +29,8 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerFactory;
-import org.krakenapps.log.api.LoggerFactoryRegistryEventListener;
 import org.krakenapps.log.api.LoggerFactoryRegistry;
+import org.krakenapps.log.api.LoggerFactoryRegistryEventListener;
 import org.osgi.framework.BundleContext;
 
 @Component(name = "logger-factory-registry")
@@ -104,6 +104,8 @@ public class LoggerFactoryRegistryImpl implements LoggerFactoryRegistry, LoggerF
 		// remove
 		loggerFactories.remove(loggerFactory.getFullName());
 
+		slog.info("kraken log api: logger factory [{}] removed", loggerFactory.getFullName());
+
 		// trigger callbacks
 		for (LoggerFactoryRegistryEventListener callback : callbacks) {
 			try {
@@ -115,8 +117,7 @@ public class LoggerFactoryRegistryImpl implements LoggerFactoryRegistry, LoggerF
 	}
 
 	@Override
-	public Logger newLogger(String factoryName, String loggerNamespace, String loggerName, String description,
-			Properties config) {
+	public Logger newLogger(String factoryName, String loggerNamespace, String loggerName, String description, Properties config) {
 		if (factoryName == null)
 			throw new IllegalArgumentException("name must be not null");
 

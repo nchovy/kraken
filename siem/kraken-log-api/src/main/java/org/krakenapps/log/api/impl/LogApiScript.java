@@ -184,11 +184,13 @@ public class LogApiScript implements Script {
 
 	@ScriptUsage(description = "start the logger", arguments = {
 			@ScriptArgument(name = "logger fullname", type = "string", description = "the logger fullname to start"),
-			@ScriptArgument(name = "interval", type = "int", description = "thread sleep time in milliseconds") })
+			@ScriptArgument(name = "interval", type = "int", description = "sleep time of active logger thread in milliseconds. 60000ms by default. passive logger will ignore interval", optional = true) })
 	public void startLogger(String[] args) {
 		try {
 			String fullName = args[0];
-			int interval = Integer.parseInt(args[1]);
+			int interval = 60000;
+			if (args.length > 1)
+				interval = Integer.parseInt(args[1]);
 
 			Logger logger = loggerRegistry.getLogger(fullName);
 			if (logger == null) {
@@ -196,7 +198,10 @@ public class LogApiScript implements Script {
 				return;
 			}
 
-			logger.start(interval);
+			if (logger.isPassive())
+				logger.start();
+			else
+				logger.start(interval);
 			context.println("logger started");
 		} catch (NumberFormatException e) {
 			context.println("interval should be number in milliseconds");
@@ -221,7 +226,9 @@ public class LogApiScript implements Script {
 				return;
 			}
 
-			context.println("waiting...");
+			if (!logger.isPassive())
+				context.println("waiting...");
+			
 			logger.stop(maxWaitTime);
 			context.println("logger stopped");
 		} catch (Exception e) {

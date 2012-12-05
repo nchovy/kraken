@@ -36,21 +36,18 @@ import org.krakenapps.log.api.LoggerFactoryEventListener;
 import org.krakenapps.log.api.LoggerFactoryRegistryEventListener;
 import org.krakenapps.log.api.LoggerRegistry;
 import org.krakenapps.log.api.LoggerRegistryEventListener;
-import org.osgi.framework.BundleContext;
 
 @Component(name = "logger-registry")
 @Provides(specifications = { LoggerRegistry.class })
-public class LoggerRegistryImpl implements LoggerRegistry, LoggerFactoryRegistryEventListener, LoggerFactoryEventListener, LogPipe {
+public class LoggerRegistryImpl implements LoggerRegistry, LoggerFactoryRegistryEventListener, LoggerFactoryEventListener,
+		LogPipe {
 	private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LoggerRegistryImpl.class.getName());
-	private BundleContext bc;
-	private LoggerFactoryTracker tracker;
 	private ConcurrentMap<String, Logger> loggers;
 	private Set<LoggerRegistryEventListener> callbacks;
 	private ConcurrentMap<String, Set<LogPipe>> pipeMap;
 	private boolean isOpen = false;
 
-	public LoggerRegistryImpl(BundleContext bc) {
-		this.bc = bc;
+	public LoggerRegistryImpl() {
 		loggers = new ConcurrentHashMap<String, Logger>();
 		callbacks = Collections.newSetFromMap(new ConcurrentHashMap<LoggerRegistryEventListener, Boolean>());
 		pipeMap = new ConcurrentHashMap<String, Set<LogPipe>>();
@@ -64,20 +61,12 @@ public class LoggerRegistryImpl implements LoggerRegistry, LoggerFactoryRegistry
 	@Validate
 	public void start() {
 		callbacks.clear();
-
-		tracker = new LoggerFactoryTracker(bc, this);
-		tracker.open();
-
 		isOpen = true;
 	}
 
 	@Invalidate
 	public void stop() {
 		isOpen = false;
-
-		if (tracker != null)
-			tracker.close();
-
 		callbacks.clear();
 	}
 

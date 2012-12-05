@@ -22,16 +22,19 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
 
 public class LoggerFactoryTracker extends ServiceTracker {
+	private BundleContext bc;
 	private LoggerFactoryRegistryEventListener listener;
 
-	public LoggerFactoryTracker(BundleContext context, LoggerFactoryRegistryEventListener listener) {
-		super(context, LoggerFactory.class.getName(), null);
+	public LoggerFactoryTracker(BundleContext bc, LoggerFactoryRegistryEventListener listener) {
+		super(bc, LoggerFactory.class.getName(), null);
+		this.bc = bc;
 		this.listener = listener;
 	}
 
 	@Override
 	public Object addingService(ServiceReference reference) {
 		LoggerFactory loggerFactory = (LoggerFactory) super.addingService(reference);
+		loggerFactory.onStart(bc);
 		listener.factoryAdded(loggerFactory);
 		return loggerFactory;
 	}
@@ -39,6 +42,7 @@ public class LoggerFactoryTracker extends ServiceTracker {
 	@Override
 	public void removedService(ServiceReference reference, Object service) {
 		LoggerFactory loggerFactory = (LoggerFactory) service;
+		loggerFactory.onStop();
 		listener.factoryRemoved(loggerFactory);
 		super.removedService(reference, service);
 	}
