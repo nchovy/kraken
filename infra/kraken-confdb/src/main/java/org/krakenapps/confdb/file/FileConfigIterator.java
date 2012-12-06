@@ -32,6 +32,7 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.Manifest;
+import org.krakenapps.confdb.ObjectBuilder;
 import org.krakenapps.confdb.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,12 +171,11 @@ class FileConfigIterator implements ConfigIterator {
 			int count = 0;
 
 			ArrayList<Config> configs = new ArrayList<Config>();
-			ConfigIterator it = this;
-			while (it.hasNext()) {
+			while (hasNext()) {
 				if (count >= limit)
 					break;
 
-				Config next = it.next();
+				Config next = next();
 				if (p++ < offset)
 					continue;
 
@@ -192,9 +192,8 @@ class FileConfigIterator implements ConfigIterator {
 	public Collection<Object> getDocuments() {
 		try {
 			Collection<Object> docs = new ArrayList<Object>();
-			ConfigIterator it = this;
-			while (it.hasNext())
-				docs.add(it.next().getDocument());
+			while (hasNext())
+				docs.add(next().getDocument());
 			return docs;
 		} finally {
 			close();
@@ -218,12 +217,11 @@ class FileConfigIterator implements ConfigIterator {
 			int count = 0;
 
 			Collection<T> docs = new ArrayList<T>();
-			ConfigIterator it = this;
-			while (it.hasNext()) {
+			while (hasNext()) {
 				if (count >= limit)
 					break;
 
-				Config next = it.next();
+				Config next = next();
 				if (p++ < offset)
 					continue;
 
@@ -231,6 +229,33 @@ class FileConfigIterator implements ConfigIterator {
 				count++;
 			}
 			return docs;
+		} finally {
+			close();
+		}
+	}
+
+	@Override
+	public <T> Collection<T> getObjects(ObjectBuilder<T> builder, int offset, int limit) {
+		try {
+			int p = 0;
+			int count = 0;
+
+			Collection<T> objects = new ArrayList<T>();
+			while (hasNext()) {
+				if (count >= limit)
+					break;
+
+				Config next = next();
+				if (p++ < offset)
+					continue;
+
+				T obj = builder.build(next);
+				if (obj == null)
+					continue;
+				objects.add(obj);
+				count++;
+			}
+			return objects;
 		} finally {
 			close();
 		}

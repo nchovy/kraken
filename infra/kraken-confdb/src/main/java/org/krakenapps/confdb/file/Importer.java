@@ -83,11 +83,13 @@ public class Importer {
 		t.back();
 
 		int i = 0;
+		List<String> importColNames = new ArrayList<String>();
 		while (true) {
 			if (i++ != 0)
 				t.nextClean();
 
 			String colName = (String) t.nextValue();
+			importColNames.add(colName);
 			CollectionEntry collectionEntry = checkCollectionEntry(manifest, colName);
 			manifest.add(collectionEntry);
 
@@ -146,6 +148,13 @@ public class Importer {
 			char delimiter = t.nextClean();
 			if (delimiter == '}')
 				break;
+		}
+
+		for (String colName : db.getCollectionNames()) {
+			if (importColNames.contains(colName))
+				continue;
+			configChanges.add(new ConfigChange(CommitOp.DropCol, colName, 0, 0));
+			manifest.remove(new CollectionEntry(db.getCollectionId(colName), colName));
 		}
 	}
 

@@ -35,6 +35,7 @@ import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.ConfigTransaction;
+import org.krakenapps.confdb.ObjectBuilder;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
@@ -265,6 +266,49 @@ public class UserApiImpl extends DefaultEntityEventProvider<User> implements Use
 	@Override
 	public User getUser(String domain, String loginName) {
 		return cfg.get(domain, cls, getPred(loginName), NOT_FOUND);
+	}
+
+	@Override
+	public Collection<String> getLoginNames(String domain, String orgUnitGuid, boolean includeChildren, Predicate pred,
+			int offset, int limit) {
+		if (orgUnitGuid == null && includeChildren)
+			return cfg.findObjects(domain, cls, new LoginNameFetcher(), pred, offset, limit);
+
+		Collection<String> loginNames = cfg.findObjects(domain, cls, new LoginNameFetcher(),
+				Predicates.and(pred, Predicates.field("orgUnit/guid", orgUnitGuid)), offset, limit);
+
+		int dec = Math.min(offset, loginNames.size());
+		if (offset == dec) // offset <= users
+			limit -= loginNames.size() - offset;
+		offset -= dec;
+
+		if (includeChildren) {
+			OrganizationUnit parent = orgUnitApi.getOrganizationUnit(domain, orgUnitGuid);
+			for (OrganizationUnit ou : parent.getChildren()) {
+				if (limit <= 0)
+					break;
+
+				Collection<String> childUsers = getLoginNames(domain, ou.getGuid(), includeChildren, pred, offset, limit);
+				dec = Math.min(offset, childUsers.size());
+				if (offset == dec) // offset <= child users
+					limit -= childUsers.size() - offset;
+				offset -= dec;
+
+				loginNames.addAll(childUsers);
+			}
+		}
+
+		return loginNames;
+	}
+
+	private class LoginNameFetcher implements ObjectBuilder<String> {
+		@Override
+		public String build(Config c) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> m = (Map<String, Object>) c.getDocument();
+			String loginName = (String) m.get("login_name");
+			return loginName;
+		}
 	}
 
 	@Override

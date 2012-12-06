@@ -20,6 +20,7 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigParser;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.ObjectBuilder;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.krakenapps.dom.api.ConfigManager;
@@ -136,6 +137,24 @@ public class ConfigManagerImpl implements ConfigManager {
 	}
 
 	@Override
+	public <T> Collection<T> findObjects(String domain, Class<?> cls, ObjectBuilder<T> builder) {
+		return findObjects(domain, cls, builder, null, 0, Integer.MAX_VALUE);
+	}
+
+	@Override
+	public <T> Collection<T> findObjects(String domain, Class<?> cls, ObjectBuilder<T> builder, Predicate pred, int offset,
+			int limit) {
+		ConfigIterator it = null;
+		try {
+			it = getDatabase(domain).ensureCollection(cls).find(pred);
+			return it.getObjects(builder, offset, limit);
+		} finally {
+			if (it != null)
+				it.close();
+		}
+	}
+
+	@Override
 	public <T> T get(String domain, Class<T> cls, Predicate pred, String notFoundMessage) {
 		T t = find(domain, cls, pred);
 		if (t == null)
@@ -181,14 +200,14 @@ public class ConfigManagerImpl implements ConfigManager {
 			Object state) {
 		if (docs.isEmpty())
 			return;
-		
+
 		Collection<EntityState> entities = new ArrayList<EntityState>();
-		
-		for(T doc : docs) {
+
+		for (T doc : docs) {
 			EntityState es = new EntityState(doc, state);
 			entities.add(es);
 		}
-		
+
 		xact.checkAddability(cls, entities);
 
 		ConfigDatabase db = xact.getConfigDatabase();
@@ -244,7 +263,7 @@ public class ConfigManagerImpl implements ConfigManager {
 
 		if (db.findOne(cls, pred) != null)
 			throw new DOMException(alreadyExistMessage);
-		
+
 		xact.checkAddability(cls, new EntityState(doc, state));
 		xact.add(doc, state);
 	}
