@@ -1,7 +1,6 @@
 package org.krakenapps.logparser.syslog.futuresystems;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 
@@ -18,19 +17,38 @@ public class WeguardiaLogParser implements LogParser {
 	private final Logger logger = LoggerFactory.getLogger(WeguardiaLogParser.class.getName());
 
 	private DelimiterParser parser;
+	private ThreadLocal<Calendar> dateFormatters;
 
 	public WeguardiaLogParser() {
 		parser = new DelimiterParser(";", columnHeaders);
+		dateFormatters = new ThreadLocal<Calendar>() {
+			@Override
+			protected Calendar initialValue() {
+				return Calendar.getInstance();
+			}
+		};
+	}
+
+	private Date parse(Calendar c, String s) {
+		c.set(Calendar.YEAR, Integer.valueOf(s.substring(0, 4)));
+		c.set(Calendar.MONTH, Integer.valueOf(s.substring(4, 6)) - 1);
+		c.set(Calendar.DAY_OF_MONTH, Integer.valueOf(s.substring(6, 8)));
+
+		c.set(Calendar.HOUR_OF_DAY, Integer.valueOf(s.substring(9, 11)));
+		c.set(Calendar.MINUTE, Integer.valueOf(s.substring(11, 13)));
+		c.set(Calendar.SECOND, Integer.valueOf(s.substring(13, 15)));
+		c.set(Calendar.MILLISECOND, 0);
+		return c.getTime();
 	}
 
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
 		try {
 			Map<String, Object> m = parser.parse(params);
+			Calendar c = dateFormatters.get();
 
 			// parse date
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd HHmmss");
-			Date d = dateFormat.parse((String) m.get("date"));
+			Date d = parse(c, (String) m.get("date"));
 			m.put("date", d);
 
 			// parse src port
@@ -61,7 +79,7 @@ public class WeguardiaLogParser implements LogParser {
 			}
 
 			return m;
-		} catch (ParseException e) {
+		} catch (Exception e) {
 			logger.warn("kraken syslog parser: cannot parse weguardia log [{}]", params);
 		}
 		return null;
