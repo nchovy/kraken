@@ -136,7 +136,7 @@ public class Stats2 extends LogQueryCommand {
 
 					// finalize last record
 					if (fs != null) {
-						pass(fs, item);
+						pass(fs, lastKeys);
 					}
 
 					// prepare new record
@@ -161,7 +161,7 @@ public class Stats2 extends LogQueryCommand {
 			}
 
 			if (item != null)
-				pass(fs, item);
+				pass(fs, lastKeys);
 
 			logger.debug("kraken logdb: sorted stats2 input [{}]", count);
 		} catch (IOException e) {
@@ -178,11 +178,11 @@ public class Stats2 extends LogQueryCommand {
 		}
 	}
 
-	private void pass(Function[] fs, Item item) {
+	private void pass(Function[] fs, Object[] keys) {
 		Map<String, Object> m = new HashMap<String, Object>();
 
 		for (int i = 0; i < clauses.size(); i++)
-			m.put(clauses.get(i), ((Object[]) item.getKey())[i]);
+			m.put(clauses.get(i), keys[i]);
 
 		for (int i = 0; i < values.length; i++)
 			m.put(values[i].toString(), fs[i].getResult());
