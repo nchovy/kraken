@@ -33,7 +33,7 @@ import org.krakenapps.msgbus.MessageBus;
 import org.krakenapps.msgbus.MessageHandler;
 import org.krakenapps.msgbus.MsgbusConfig;
 import org.krakenapps.msgbus.MsgbusException;
-import org.krakenapps.msgbus.MsgbusListener;
+import org.krakenapps.msgbus.MessageListener;
 import org.krakenapps.msgbus.PermissionChecker;
 import org.krakenapps.msgbus.Request;
 import org.krakenapps.msgbus.ResourceApi;
@@ -62,14 +62,14 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 	private Set<PermissionChecker> permissionCheckers = Collections
 			.newSetFromMap(new ConcurrentHashMap<PermissionChecker, Boolean>());
 	private final ExecutorService threadPool;
-	private CopyOnWriteArraySet<MsgbusListener> listeners;
+	private CopyOnWriteArraySet<MessageListener> listeners;
 
 	@Requires
 	private ResourceApi resourceApi;
 
 	@Requires
 	private ConfigService conf;
-	
+
 	public MessageBusImpl(BundleContext bc) {
 		super(bc, PermissionChecker.class.getName(), null);
 		timeout = 0;
@@ -77,7 +77,7 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 		sessionMap = new ConcurrentHashMap<String, Session>();
 		sessionEventListeners = Collections.newSetFromMap(new ConcurrentHashMap<SessionEventHandler, Boolean>());
 		messageHandlerMap = new ConcurrentHashMap<String, Set<MessageHandler>>();
-		listeners = new CopyOnWriteArraySet<MsgbusListener>();
+		listeners = new CopyOnWriteArraySet<MessageListener>();
 		threadPool = Executors.newCachedThreadPool();
 	}
 
@@ -203,13 +203,17 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 
 		TaskRunner runner = new TaskRunner(session, message, handlers.iterator().next());
 		runner.run();
-				
+
 		return runner.respondMessage;
 	}
-	
-	private void triggerListener(Message message) {
-		for(MsgbusListener listener : listeners) {
-			listener.onSetConfiguration(message);			
+
+	private void triggerListener(Session session, Message message) {
+		for (MessageListener listener : listeners) {
+			try {
+				listener.onMessage(session, message);
+			} catch (Throwable t) {
+				logger.warn("kraken msgbus: msgbus call listener should not throw any exception", t);
+			}
 		}
 	}
 
@@ -226,9 +230,9 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 
 		for (MessageHandler handler : handlers) {
 			threadPool.execute(new TaskRunner(session, message, handler));
-			triggerListener(message);
 		}
 
+		triggerListener(session, message);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -461,12 +465,12 @@ public class MessageBusImpl extends ServiceTracker implements MessageBus, Runnab
 	}
 
 	@Override
-	public void addListener(MsgbusListener listener) {
-		listeners.add(listener);		
+	public void addMessageListener(MessageListener listener) {
+		listeners.add(listener);
 	}
 
 	@Override
-	public void removeListener(MsgbusListener listener) {
-		listeners.remove(listener);		
-	}	
+	public void removeMessageListener(MessageListener listener) {
+		listeners.remove(listener);
+	}
 }
