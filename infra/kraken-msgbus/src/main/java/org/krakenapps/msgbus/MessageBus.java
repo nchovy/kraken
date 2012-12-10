@@ -34,12 +34,12 @@ public interface MessageBus {
 	void register(SessionEventHandler callback);
 
 	void unregister(SessionEventHandler callback);
-	
+
+	void addMessageListener(MessageListener listener);
+
+	void removeMessageListener(MessageListener listener);
+
 	void setSessionTimeout(int minutes);
-	
+
 	int getSessionTimeout();
-	
-	void addListener(MsgbusListener listener);
-	
-	void removeListener(MsgbusListener listener);
 }

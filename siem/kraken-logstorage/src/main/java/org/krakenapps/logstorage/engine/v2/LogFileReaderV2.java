@@ -51,6 +51,7 @@ public class LogFileReaderV2 extends LogFileReader {
 	private ByteBuffer dataBuffer;
 
 	private Inflater decompresser = new Inflater();
+	private long totalCount;
 
 	public LogFileReaderV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this.indexPath = indexPath;
@@ -62,17 +63,25 @@ public class LogFileReaderV2 extends LogFileReader {
 
 		long length = indexFile.length() - 4;
 		long pos = indexFileHeader.size();
-		long logCount = 0;
 		while (pos < length) {
 			indexFile.seek(pos);
 			IndexBlockHeader header = new IndexBlockHeader(indexFile);
 			header.fp = pos;
-			logCount += header.logCount;
+			header.ascLogCount = totalCount;
+			totalCount += header.logCount;
 			indexBlockHeaders.add(header);
 			pos += 4 + header.logCount * INDEX_ITEM_SIZE;
 		}
+
+		long t = 0;
+		for (int i = indexBlockHeaders.size() - 1; i >= 0; i--) {
+			IndexBlockHeader h = indexBlockHeaders.get(i);
+			h.dscLogCount = t;
+			t += h.logCount;
+		}
+
 		logger.trace("kraken logstorage: {} has {} blocks, {} logs.",
-				new Object[] { indexPath.getName(), indexBlockHeaders.size(), logCount });
+				new Object[] { indexPath.getName(), indexBlockHeaders.size(), totalCount });
 
 		this.dataFile = new RandomAccessFile(dataPath, "r");
 		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile, dataPath);
@@ -113,6 +122,10 @@ public class LogFileReaderV2 extends LogFileReader {
 			value |= extraData[i] & 0xFF;
 		}
 		return value;
+	}
+
+	public long count() {
+		return totalCount;
 	}
 
 	@Override
@@ -265,6 +278,10 @@ public class LogFileReaderV2 extends LogFileReader {
 		private int firstId;
 		private int logCount;
 
+		// except this block's log count
+		private long ascLogCount;
+		private long dscLogCount;
+
 		private IndexBlockHeader(RandomAccessFile f) throws IOException {
 			try {
 				this.logCount = f.readInt();
@@ -274,6 +291,12 @@ public class LogFileReaderV2 extends LogFileReader {
 			}
 			this.firstId = indexBlockNextId;
 			indexBlockNextId += logCount;
+		}
+
+		@Override
+		public String toString() {
+			return "index block header, fp=" + fp + ", first_id=" + firstId + ", count=" + logCount + ", asc=" + ascLogCount
+					+ ", dsc=" + dscLogCount + "]";
 		}
 	}
 
@@ -298,6 +321,155 @@ public class LogFileReaderV2 extends LogFileReader {
 			this.endDate = dataBlockHeader.getLong();
 			this.origLength = dataBlockHeader.getInt();
 			this.compressedLength = dataBlockHeader.getInt();
+		}
+	}
+
+	public LogCursor getCursor() {
+		return getCursor(false);
+	}
+
+	public LogCursor getCursor(boolean ascending) {
+		return new LogCursorImpl(ascending);
+	}
+
+	private class LogCursorImpl implements LogCursor {
+		// offset of next log
+		private long pos;
+
+		private IndexBlockHeader currentIndexHeader;
+		private int currentIndexBlockNo;
+		private DataBlockHeader currentDataHeader;
+		private ArrayList<Integer> currentOffsets = new ArrayList<Integer>();
+
+		private final boolean ascending;
+
+		public LogCursorImpl(boolean ascending) {
+			this.ascending = ascending;
+			if (ascending) {
+				currentIndexHeader = indexBlockHeaders.get(0);
+				currentDataHeader = dataBlockHeaders.get(0);
+				currentIndexBlockNo = 0;
+			} else {
+				currentIndexHeader = indexBlockHeaders.get(indexBlockHeaders.size() - 1);
+				currentDataHeader = dataBlockHeaders.get(dataBlockHeaders.size() - 1);
+				currentIndexBlockNo = indexBlockHeaders.size() - 1;
+			}
+
+			replaceBuffer();
+		}
+
+		public void skip(long offset) {
+			if (offset <= 0)
+				throw new IllegalArgumentException("offset should be positive");
+
+			pos += offset;
+
+			int relative = getRelativeOffset();
+			if (relative >= currentIndexHeader.logCount)
+				replaceBuffer();
+		}
+
+		private void replaceBuffer() {
+			Integer next = findIndexBlock(pos);
+			if (next == null)
+				return;
+
+			currentIndexBlockNo = next;
+			currentIndexHeader = indexBlockHeaders.get(currentIndexBlockNo);
+			currentDataHeader = dataBlockHeaders.get(currentIndexBlockNo);
+
+			// read log data offsets from index block
+			try {
+				ByteBuffer indexBuffer = ByteBuffer.allocate(currentIndexHeader.logCount * 4);
+				indexFile.seek(currentIndexHeader.fp + 4);
+				indexFile.read(indexBuffer.array());
+				currentOffsets = new ArrayList<Integer>(currentIndexHeader.logCount + 2);
+				for (int i = 0; i < currentIndexHeader.logCount; i++)
+					currentOffsets.add(indexBuffer.getInt());
+			} catch (IOException e) {
+				throw new IllegalStateException("cannot load data offsets from index file", e);
+			}
+		}
+
+		/**
+		 * 
+		 * @param offset
+		 *            relative offset from file begin or file end
+		 * @return the index block number
+		 */
+		private Integer findIndexBlock(long offset) {
+			int no = currentIndexBlockNo;
+			int blockCount = indexBlockHeaders.size();
+
+			while (true) {
+				if (no < 0 || no >= blockCount)
+					return null;
+
+				IndexBlockHeader h = indexBlockHeaders.get(no);
+				if (ascending) {
+					if (offset < h.ascLogCount)
+						no--;
+					else if (h.logCount + h.ascLogCount <= offset)
+						no++;
+					else
+						return no;
+				} else {
+					if (offset < h.dscLogCount)
+						no++;
+					else if (h.logCount + h.dscLogCount <= offset)
+						no--;
+					else
+						return no;
+				}
+			}
+
+		}
+
+		@Override
+		public boolean hasNext() {
+			return pos < totalCount;
+		}
+
+		@Override
+		public LogRecord next() {
+			if (!hasNext())
+				throw new IllegalStateException("log file is closed: " + dataPath.getAbsolutePath());
+
+			int relative = getRelativeOffset();
+
+			try {
+				// absolute log offset in block (consider ordering)
+				int n = ascending ? relative : (int) (currentIndexHeader.logCount - relative - 1);
+				if (n < 0)
+					throw new IllegalStateException("n " + n + ", current index no: " + currentIndexBlockNo
+							+ ", current index count " + currentIndexHeader.logCount + ", relative " + relative);
+				LogRecord record = getLogRecord(currentDataHeader, currentOffsets.get(n));
+				pos++;
+				return record;
+			} catch (IOException e) {
+				throw new IllegalStateException(e);
+			} finally {
+				// replace block if needed
+				if (++relative >= currentIndexHeader.logCount) {
+					replaceBuffer();
+				}
+			}
+		}
+
+		private int getRelativeOffset() {
+			// accumulated log count except current block
+			long accCount = ascending ? currentIndexHeader.ascLogCount : currentIndexHeader.dscLogCount;
+
+			// relative offset in block
+			int relative = (int) (pos - accCount);
+			if (relative < 0)
+				throw new IllegalStateException("relative bug check: " + relative + ", pos " + pos + ", acc: " + accCount);
+			return relative;
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException("log remove() is not supported");
 		}
 	}
 }

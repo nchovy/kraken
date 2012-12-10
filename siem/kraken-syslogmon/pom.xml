@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-syslogmon</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Syslog Monitor</name>
 	<build>
@@ -22,7 +22,7 @@
 					<instructions>
 						<Bundle-SymbolicName>org.krakenapps.syslogmon</Bundle-SymbolicName>
 						<Export-Package>org.krakenapps.syslogmon;version=${project.version}</Export-Package>
-						<Import-Package>*</Import-Package>
+						<Import-Package>org.krakenapps.log.api;version="1.5.0",*</Import-Package>
 						<Private-Package>org.krakenapps.syslogmon.impl</Private-Package>
 					</instructions>
 				</configuration>

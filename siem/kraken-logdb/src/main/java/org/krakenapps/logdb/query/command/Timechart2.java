@@ -219,13 +219,16 @@ public class Timechart2 extends LogQueryCommand {
 			}
 
 			// if key value is changed
+			boolean reset = false;
 			if (lastKeyFieldValue != null && !lastKeyFieldValue.equals(keyFieldValue)) {
-				setOutputAndReset(output, fs, keyFieldValue);
+				setOutputAndReset(output, fs, lastKeyFieldValue);
+				reset = true;
 			}
 
 			// until _time is changed
 			if (lastTime != null && !lastTime.equals(time)) {
-				setOutputAndReset(output, fs, keyFieldValue);
+				if (!reset)
+					setOutputAndReset(output, fs, lastKeyFieldValue);
 
 				// write to next pipeline
 				output.put("_time", lastTime);

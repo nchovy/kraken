@@ -111,9 +111,9 @@ public class ShrinkTest {
 
 		importData((int) logs.get(logs.size() - 1).getRev());
 
-		assertEquals(2, db.getCollectionNames().size());
+		assertEquals(1, db.getCollectionNames().size());
 		assertTrue(db.getCollectionNames().contains("testcol1"));
-		assertTrue(db.getCollectionNames().contains("testcol2"));
+		assertFalse(db.getCollectionNames().contains("testcol2"));
 		assertEquals(2, db.getManifest(null).getCollectionId("testcol1"));
 
 		importData((int) logs.get(logs.size() - 1).getRev());

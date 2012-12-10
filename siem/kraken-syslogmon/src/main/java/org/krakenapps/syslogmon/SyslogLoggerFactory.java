@@ -14,10 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.log.api.AbstractLoggerFactory;
 import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
@@ -26,6 +24,7 @@ import org.krakenapps.log.api.StringConfigType;
 import org.krakenapps.syslog.Syslog;
 import org.krakenapps.syslog.SyslogListener;
 import org.krakenapps.syslog.SyslogServerRegistry;
+import org.osgi.framework.BundleContext;
 
 @Component(name = "syslog-logger-factory")
 @Provides
@@ -34,24 +33,28 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 	/**
 	 * remote ip to logger mappings
 	 */
-	private ConcurrentMap<InetAddress, SyslogLogger> loggerMappings;
+	private ConcurrentMap<InetAddress, SyslogLogger> loggerMappings = new ConcurrentHashMap<InetAddress, SyslogLogger>();
 	private List<LoggerConfigOption> configs;
 
 	@Requires
 	private SyslogServerRegistry syslogRegistry;
 
-	@Validate
-	public void start() {
-		loggerMappings = new ConcurrentHashMap<InetAddress, SyslogLogger>();
+	@Override
+	public void onStart(BundleContext bc) {
+		super.onStart(bc);
 
 		prepareConfigOptions();
 		syslogRegistry.addSyslogListener(this);
 	}
 
-	@Invalidate
-	public void stop() {
+	@Override
+	public void onStop() {
+		loggerMappings.clear();
+
 		if (syslogRegistry != null)
 			syslogRegistry.removeSyslogListener(this);
+
+		super.onStop();
 	}
 
 	private void prepareConfigOptions() {
@@ -97,6 +100,7 @@ public class SyslogLoggerFactory extends AbstractLoggerFactory implements Syslog
 		try {
 			InetAddress remote = InetAddress.getByName(spec.getConfig().getProperty("remote_ip"));
 			SyslogLogger logger = new SyslogLogger(spec, this);
+			logger.setPassive(true);
 			String facility = spec.getConfig().getProperty("facility");
 			if (facility == null)
 				throw new IllegalArgumentException("syslog facility is required");

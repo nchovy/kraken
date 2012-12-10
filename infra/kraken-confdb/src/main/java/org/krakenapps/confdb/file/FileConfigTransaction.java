@@ -23,7 +23,6 @@ import java.util.Map;
 
 import org.krakenapps.confdb.CollectionEntry;
 import org.krakenapps.confdb.CommitOp;
-import org.krakenapps.confdb.ConfigCache;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigEntry;

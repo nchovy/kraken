@@ -21,16 +21,11 @@ public class DelimiterParser implements LogParser {
 
 	@Override
 	public Map<String, Object> parse(Map<String, Object> params) {
-		String line = null;
-		if (params.containsKey(targetField))
-			line = (String) params.get(targetField);
-
+		String line = (String) params.get(targetField);
 		if (line == null)
 			return params;
 
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.putAll(params);
-		m.remove("line");
+		HashMap<String, Object> m = new HashMap<String, Object>(40);
 
 		StringTokenizer tok = new StringTokenizer(line, delimiter);
 		int i = 0;
