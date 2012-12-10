@@ -31,7 +31,7 @@ public class Post implements FacebookGraphObject{
 	private ArrayList<Property> properties;
 	private String icon;
 	private ArrayList<Action> actions;
-	private String privacy;
+	private Privcy privacy;
 	private String type;
 	private Like likes;
 	private Place place;
@@ -57,6 +57,7 @@ public class Post implements FacebookGraphObject{
 		with_tags = new ArrayList<From>();
 		comments = new ArrayList<Comment>();
 		application = new From();
+		privacy = new Privcy();
 	}
 	private class FbConnection{
 		public String CONN_comments = "comments";
@@ -134,6 +135,36 @@ public class Post implements FacebookGraphObject{
 		}
 		public void setLink(String link) {
 			this.link = link;
+		}
+	}
+	private class Privcy{
+		private String value;
+		private String networks;
+		private String allow;
+		private String deny;
+		public String getValue() {
+			return value;
+		}
+		public void setValue(String value) {
+			this.value = value;
+		}
+		public String getNetworks() {
+			return networks;
+		}
+		public void setNetworks(String networks) {
+			this.networks = networks;
+		}
+		public String getAllow() {
+			return allow;
+		}
+		public void setAllow(String allow) {
+			this.allow = allow;
+		}
+		public String getDeny() {
+			return deny;
+		}
+		public void setDeny(String deny) {
+			this.deny = deny;
 		}
 	}
 	
@@ -276,13 +307,12 @@ public class Post implements FacebookGraphObject{
 		this.icon = icon;
 	}
 
-
-	public String getPrivacy() {
+	public Privcy getPrivacy() {
 		return privacy;
 	}
 
 
-	public void setPrivacy(String privacy) {
+	public void setPrivacy(Privcy privacy) {
 		this.privacy = privacy;
 	}
 
@@ -451,7 +481,16 @@ public class Post implements FacebookGraphObject{
 				actions.add(new Action(actionArray.getJSONObject(i).getString("name"),actionArray.getJSONObject(i).getString("link")));
 			}
 			
-			//TODO : Privacy parsing
+			JSONObject privacyObject = json.getJSONObject("privacy");
+			privacy.setValue(privacyObject.getString("value"));
+			if(privacy.getValue().equals("CUSTOM")){
+				if(privacyObject.containsKey("allow")){
+					privacy.setAllow(privacyObject.getString("allow"));
+				}
+				if(privacyObject.containsKey("deny")){
+					privacy.setDeny(privacyObject.getString("deny"));
+				}
+			}
 			
 			type = json.getString("type");
 			
@@ -465,10 +504,26 @@ public class Post implements FacebookGraphObject{
 			likes.setLikeList(likeList);
 			
 			//TODO : Place parsing
+			JSONObject placeObject = json.getJSONObject("place");
+			place.setId(placeObject.getString("id"));
+			place.setName(placeObject.getString("name"));
+			place.setLongitude(placeObject.getJSONObject("location").getInt("longitude"));
+			place.setLatitude(placeObject.getJSONObject("location").getInt("latitude"));
 
 			story = json.getString("story");
-			//story_tags;
-			//with_tags;
+
+			JSONObject storyTagObject = json.getJSONObject("story_tag");
+			JSONArray storyTagArray = storyTagObject.getJSONArray("data");
+			for(int i =0; i <storyTagArray.length() ; i++){
+				story_tags.add(new From(storyTagArray.getJSONObject(i).getString("id"),storyTagArray.getJSONObject(i).getString("name")));
+			}
+			
+			JSONObject withTagObject = json.getJSONObject("with_tag");
+			JSONArray withTagArray = withTagObject.getJSONArray("data");
+			for(int i =0; i <withTagArray.length() ; i++){
+				with_tags.add(new From(storyTagArray.getJSONObject(i).getString("id"),storyTagArray.getJSONObject(i).getString("name")));
+			}
+			
 			JSONObject commentObject = json.getJSONObject("comments");
 			JSONArray commentArray = commentObject.getJSONArray("data");
 			for(int i =0 ; i<commentObject.getInt("count"); i++){
