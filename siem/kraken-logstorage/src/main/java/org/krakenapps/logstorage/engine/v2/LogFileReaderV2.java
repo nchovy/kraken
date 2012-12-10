@@ -63,7 +63,6 @@ public class LogFileReaderV2 extends LogFileReader {
 
 		long length = indexFile.length() - 4;
 		long pos = indexFileHeader.size();
-		// System.out.println("-------------");
 		while (pos < length) {
 			indexFile.seek(pos);
 			IndexBlockHeader header = new IndexBlockHeader(indexFile);
@@ -80,8 +79,6 @@ public class LogFileReaderV2 extends LogFileReader {
 			h.dscLogCount = t;
 			t += h.logCount;
 		}
-
-		System.out.println("index block count " + indexBlockHeaders.size());
 
 		logger.trace("kraken logstorage: {} has {} blocks, {} logs.",
 				new Object[] { indexPath.getName(), indexBlockHeaders.size(), totalCount });
