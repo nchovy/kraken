@@ -5,6 +5,14 @@ public class From {
 	String id;
 	String name;
 
+	public From(String id, String name){
+		this.id = id;
+		this.name = name;
+	}
+	public From(){
+		this.id = null;
+		this.name = null;
+	}
 	public String getId() {
 		return id;
 	}
