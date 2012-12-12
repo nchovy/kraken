@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine;
+package org.krakenapps.logstorage.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,9 +21,6 @@ import java.io.RandomAccessFile;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-
-import org.krakenapps.logstorage.engine.v1.LogFileWriterV1;
-import org.krakenapps.logstorage.engine.v2.LogFileWriterV2;
 
 public abstract class LogFileWriter {
 	public static LogFileWriter getLogFileWriter(File indexPath, File dataPath, String defaultLogVersion)
@@ -64,7 +61,7 @@ public abstract class LogFileWriter {
 
 	public abstract Date getLastFlush();
 
-	public abstract int getCount();
+	public abstract long getCount();
 
 	public abstract void write(LogRecord data) throws IOException;
 

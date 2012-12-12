@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v2;
+package org.krakenapps.logstorage.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,11 +26,6 @@ import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import org.krakenapps.logstorage.engine.InvalidLogFileHeaderException;
-import org.krakenapps.logstorage.engine.LogFileHeader;
-import org.krakenapps.logstorage.engine.LogFileReader;
-import org.krakenapps.logstorage.engine.LogRecord;
-import org.krakenapps.logstorage.engine.LogRecordCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +124,7 @@ public class LogFileReaderV2 extends LogFileReader {
 	}
 
 	@Override
-	public LogRecord find(int id) throws IOException {
+	public LogRecord find(long id) throws IOException {
 		int l = 0;
 		int r = indexBlockHeaders.size();
 		while (l < r) {
@@ -151,22 +146,22 @@ public class LogFileReaderV2 extends LogFileReader {
 	}
 
 	@Override
-	public void traverse(int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		traverse(0, limit, callback);
 	}
 
 	@Override
-	public void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(long offset, long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		traverse(null, null, offset, limit, callback);
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(Date from, Date to, long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		traverse(from, to, 0, limit, callback);
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
+	public void traverse(Date from, Date to, long offset, long limit, LogRecordCallback callback) throws IOException,
 			InterruptedException {
 		for (int i = indexBlockHeaders.size() - 1; i >= 0; i--) {
 			IndexBlockHeader index = indexBlockHeaders.get(i);
@@ -179,7 +174,7 @@ public class LogFileReaderV2 extends LogFileReader {
 			Long fromTime = (from == null) ? null : from.getTime();
 			Long toTime = (to == null) ? null : to.getTime();
 			if ((fromTime == null || data.endDate >= fromTime) && (toTime == null || data.startDate <= toTime)) {
-				int matched = readBlock(index, data, fromTime, toTime, offset, limit, callback);
+				long matched = readBlock(index, data, fromTime, toTime, offset, limit, callback);
 				if (matched < offset)
 					offset -= matched;
 				else {
@@ -194,10 +189,10 @@ public class LogFileReaderV2 extends LogFileReader {
 		}
 	}
 
-	private int readBlock(IndexBlockHeader index, DataBlockHeader data, Long from, Long to, int offset, int limit,
+	private long readBlock(IndexBlockHeader index, DataBlockHeader data, Long from, Long to, long offset, long limit,
 			LogRecordCallback callback) throws IOException, InterruptedException {
 		List<Integer> offsets = new ArrayList<Integer>();
-		int matched = 0;
+		long matched = 0;
 
 		indexFile.seek(index.fp + 4);
 		ByteBuffer indexBuffer = ByteBuffer.allocate(index.logCount * 4);
@@ -252,14 +247,19 @@ public class LogFileReaderV2 extends LogFileReader {
 
 			dataBuffer.clear();
 			dataFile.seek(header.fp + 24L);
-			dataFile.readFully(buf, 0, header.compressedLength);
-			decompresser.setInput(buf, 0, header.compressedLength);
-			try {
-				dataBuffer.limit(header.origLength);
-				decompresser.inflate(dataBuffer.array());
-				decompresser.reset();
-			} catch (DataFormatException e) {
-				throw new IOException(e);
+
+			if (header.origLength != header.compressedLength) {
+				dataFile.readFully(buf, 0, header.compressedLength);
+				decompresser.setInput(buf, 0, header.compressedLength);
+				try {
+					dataBuffer.limit(header.origLength);
+					decompresser.inflate(dataBuffer.array());
+					decompresser.reset();
+				} catch (DataFormatException e) {
+					throw new IOException(e);
+				}
+			} else {
+				dataFile.readFully(dataBuffer.array(), 0, header.origLength);
 			}
 		}
 	}
@@ -324,15 +324,20 @@ public class LogFileReaderV2 extends LogFileReader {
 		}
 	}
 
-	public LogCursor getCursor() {
+	/**
+	 * descending order by default
+	 * 
+	 * @return log record cursor
+	 */
+	public LogRecordCursor getCursor() {
 		return getCursor(false);
 	}
 
-	public LogCursor getCursor(boolean ascending) {
+	public LogRecordCursor getCursor(boolean ascending) {
 		return new LogCursorImpl(ascending);
 	}
 
-	private class LogCursorImpl implements LogCursor {
+	private class LogCursorImpl implements LogRecordCursor {
 		// offset of next log
 		private long pos;
 
@@ -345,6 +350,10 @@ public class LogFileReaderV2 extends LogFileReader {
 
 		public LogCursorImpl(boolean ascending) {
 			this.ascending = ascending;
+
+			if (indexBlockHeaders.size() == 0)
+				return;
+
 			if (ascending) {
 				currentIndexHeader = indexBlockHeaders.get(0);
 				currentDataHeader = dataBlockHeaders.get(0);
@@ -359,8 +368,11 @@ public class LogFileReaderV2 extends LogFileReader {
 		}
 
 		public void skip(long offset) {
-			if (offset <= 0)
-				throw new IllegalArgumentException("offset should be positive");
+			if (offset == 0)
+				return;
+
+			if (offset < 0)
+				throw new IllegalArgumentException("negative offset is not allowed");
 
 			pos += offset;
 

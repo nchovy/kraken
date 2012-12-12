@@ -308,7 +308,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-rpc</artifactId>
-				<version>1.6.3</version>
+				<version>1.6.5</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -483,12 +483,12 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-log-api</artifactId>
-				<version>1.5.0</version>
+				<version>1.5.1</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-logdb</artifactId>
-				<version>0.7.1</version>
+				<version>0.8.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>
@@ -523,7 +523,7 @@
 			<dependency>
 				<groupId>org.krakenapps</groupId>
 				<artifactId>kraken-logstorage</artifactId>
-				<version>1.10.1</version>
+				<version>1.11.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.krakenapps</groupId>

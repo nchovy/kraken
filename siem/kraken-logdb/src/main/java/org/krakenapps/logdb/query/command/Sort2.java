@@ -111,6 +111,9 @@ public class Sort2 extends LogQueryCommand {
 			}
 		}
 
+		// support sorter cache GC when query processing is ended
+		sorter = null;
+		
 		super.eof();
 	}
 

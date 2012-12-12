@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v1;
+package org.krakenapps.logstorage.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,12 +23,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.krakenapps.logstorage.engine.BufferedRandomAccessFileReader;
-import org.krakenapps.logstorage.engine.InvalidLogFileHeaderException;
-import org.krakenapps.logstorage.engine.LogFileHeader;
-import org.krakenapps.logstorage.engine.LogFileReader;
-import org.krakenapps.logstorage.engine.LogRecord;
-import org.krakenapps.logstorage.engine.LogRecordCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +63,7 @@ public class LogFileReaderV1 extends LogFileReader {
 	}
 
 	@Override
-	public LogRecord find(int id) throws IOException {
+	public LogRecord find(long id) throws IOException {
 		Long pos = null;
 		for (BlockHeader header : blockHeaders) {
 			if (id < header.firstId + header.blockLength / INDEX_ITEM_SIZE) {
@@ -98,22 +92,22 @@ public class LogFileReaderV1 extends LogFileReader {
 	}
 
 	@Override
-	public void traverse(int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		traverse(0, limit, callback);
 	}
 
 	@Override
-	public void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(long offset, long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		traverse(null, null, offset, limit, callback);
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(Date from, Date to, long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		traverse(from, to, 0, limit, callback);
 	}
 
 	@Override
-	public void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException {
+	public void traverse(Date from, Date to, long offset, long limit, LogRecordCallback callback) throws IOException, InterruptedException {
 		int matched = 0;
 
 		int block = blockHeaders.size() - 1;

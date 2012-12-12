@@ -34,10 +34,10 @@ import org.krakenapps.logdb.query.command.Stats2;
 public class Stats2Parser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("stats2", this, k("stats2 "), ref("option"), ref("function"), option(k("by "), ref("stats_field")));
+		syntax.add("stats", this, k("stats "), ref("option"), ref("function"), option(k("by "), ref("stats_field")));
 		syntax.add("stats_field", new StatsFieldParser(), new StringPlaceholder(new char[] { ' ', ',' }),
 				option(ref("stats_field")));
-		syntax.addRoot("stats2");
+		syntax.addRoot("stats");
 	}
 
 	@SuppressWarnings("unchecked")

@@ -15,18 +15,14 @@
  */
 package org.krakenapps.logdb;
 
-import java.util.Map;
-
-import org.krakenapps.logdb.query.FileBufferList;
-
 public interface LogQueryCallback {
 	int offset();
 
 	int limit();
-	
+
 	void onQueryStatusChange();
 
-	void onPageLoaded(FileBufferList<Map<String, Object>> result);
+	void onPageLoaded();
 
 	void onEof();
 }

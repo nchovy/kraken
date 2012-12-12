@@ -15,10 +15,12 @@
  */
 package org.krakenapps.logdb.query;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.SyntaxProvider;
@@ -151,6 +154,12 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
+	public void purge() {
+		if (result != null)
+			result.purge();
+	}
+
+	@Override
 	public void cancel() {
 		if (result == null)
 			return;
@@ -170,17 +179,43 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
-	public List<Map<String, Object>> getResult() {
+	public LogResultSet getResult() throws IOException {
 		if (result != null)
 			return result.getResult();
 		return null;
 	}
 
 	@Override
-	public List<Map<String, Object>> getResult(int offset, int limit) {
-		if (result != null)
-			return result.getResult(offset, limit);
-		return null;
+	public List<Map<String, Object>> getResultAsList() throws IOException {
+		return getResultAsList(0, Integer.MAX_VALUE);
+	}
+
+	@Override
+	public List<Map<String, Object>> getResultAsList(long offset, int limit) throws IOException {
+		LinkedList<Map<String, Object>> l = new LinkedList<Map<String, Object>>();
+
+		LogResultSet rs = getResult();
+		if (rs == null)
+			return null;
+
+		try {
+			long p = 0;
+			long count = 0;
+			while (rs.hasNext()) {
+				if (count >= limit)
+					break;
+
+				Map<String, Object> m = rs.next();
+				if (p++ < offset)
+					continue;
+
+				l.add(m);
+				count++;
+			}
+		} finally {
+			rs.close();
+		}
+		return l;
 	}
 
 	@Override

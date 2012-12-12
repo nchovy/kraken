@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Future Systems
+ * Copyright 2010 NCHOVY
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v2;
+package org.krakenapps.logstorage.file;
 
-import java.util.Iterator;
-
-import org.krakenapps.logstorage.engine.LogRecord;
-
-public interface LogCursor extends Iterator<LogRecord> {
-	void skip(long offset);
+public interface LogRecordCallback {
+	/**
+	 * Callback when log data is loaded
+	 * 
+	 * @return True if log is matched
+	 */
+	boolean onLog(LogRecord logData) throws InterruptedException;
 }

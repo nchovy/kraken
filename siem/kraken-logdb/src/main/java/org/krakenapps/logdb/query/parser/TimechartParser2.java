@@ -36,11 +36,11 @@ public class TimechartParser2 implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
 		// @formatter:off
-		syntax.add("timechart2", new TimechartParser2(), k("timechart2 "), ref("option"), ref("timechart_function2"),
+		syntax.add("timechart", new TimechartParser2(), k("timechart "), ref("option"), ref("timechart_function"),
 				option(rule(k("by "), new StringPlaceholder())));
-		syntax.add("timechart_function2", new FunctionParser(), new FunctionPlaceholder(Timechart2.func),
-				option(k("as "), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function2")));
-		syntax.addRoot("timechart2");
+		syntax.add("timechart_function", new FunctionParser(), new FunctionPlaceholder(Timechart2.func),
+				option(k("as "), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function")));
+		syntax.addRoot("timechart");
 		// @formatter:on
 	}
 

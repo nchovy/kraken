@@ -40,6 +40,7 @@ import org.krakenapps.logdb.query.FileBufferList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Deprecated
 public class FileBufferList<E> implements List<E> {
 	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
 	private static int BYTEBUFFER_CAPACITY = 655360; // 640KB

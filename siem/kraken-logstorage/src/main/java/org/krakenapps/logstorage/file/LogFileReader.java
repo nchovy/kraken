@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine;
+package org.krakenapps.logstorage.file;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Date;
-
-import org.krakenapps.logstorage.engine.v1.LogFileReaderV1;
-import org.krakenapps.logstorage.engine.v2.LogFileReaderV2;
 
 public abstract class LogFileReader {
 	public static LogFileReader getLogFileReader(File indexPath, File dataPath) throws InvalidLogFileHeaderException, IOException {
@@ -54,16 +51,16 @@ public abstract class LogFileReader {
 		return reader;
 	}
 
-	public abstract LogRecord find(int id) throws IOException;
+	public abstract LogRecord find(long id) throws IOException;
 
-	public abstract void traverse(int limit, LogRecordCallback callback) throws IOException, InterruptedException;
+	public abstract void traverse(long limit, LogRecordCallback callback) throws IOException, InterruptedException;
 
-	public abstract void traverse(int offset, int limit, LogRecordCallback callback) throws IOException, InterruptedException;
+	public abstract void traverse(long offset, long limit, LogRecordCallback callback) throws IOException, InterruptedException;
 
-	public abstract void traverse(Date from, Date to, int limit, LogRecordCallback callback) throws IOException,
+	public abstract void traverse(Date from, Date to, long limit, LogRecordCallback callback) throws IOException,
 			InterruptedException;
 
-	public abstract void traverse(Date from, Date to, int offset, int limit, LogRecordCallback callback) throws IOException,
+	public abstract void traverse(Date from, Date to, long offset, long limit, LogRecordCallback callback) throws IOException,
 			InterruptedException;
 
 	public abstract void close() throws IOException;

@@ -37,6 +37,7 @@ import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogScriptFactory;
@@ -45,7 +46,6 @@ import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
 import org.krakenapps.logdb.mapreduce.MapReduceService;
 import org.krakenapps.logdb.mapreduce.RemoteQuery;
-import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.command.RpcFrom;
 import org.krakenapps.rpc.RpcConnection;
 import org.krakenapps.rpc.RpcConnectionProperties;
@@ -191,7 +191,7 @@ public class LogDBScript implements Script {
 	}
 
 	@ScriptUsage(description = "run query", arguments = { @ScriptArgument(name = "query", type = "string", description = "query string") })
-	public void query(String[] args) {
+	public void query(String[] args) throws IOException {
 		long begin = System.currentTimeMillis();
 		LogQuery lq = qs.createQuery(args[0]);
 		qs.startQuery(lq.getId());
@@ -203,10 +203,14 @@ public class LogDBScript implements Script {
 			}
 		} while (!lq.isEnd());
 
-		List<Map<String, Object>> results = lq.getResult();
-		for (Map<String, Object> m : results)
-			printMap(m);
-		((FileBufferList<Map<String, Object>>) results).close();
+		LogResultSet rs = lq.getResult();
+		try {
+			while (rs.hasNext()) {
+				printMap(rs.next());
+			}
+		} finally {
+			rs.close();
+		}
 
 		qs.removeQuery(lq.getId());
 		context.println(String.format("%.1fs", (System.currentTimeMillis() - begin) / (double) 1000));
@@ -333,7 +337,7 @@ public class LogDBScript implements Script {
 			context.println(q);
 	}
 
-	public void mrquery(String[] args) {
+	public void mrquery(String[] args) throws IOException {
 		MapReduceQueryStatus q = mapreduce.createQuery(args[0]);
 		if (q == null) {
 			context.println("mapreduce query failed");
@@ -351,10 +355,13 @@ public class LogDBScript implements Script {
 			}
 		} while (!lq.isEnd());
 
-		List<Map<String, Object>> results = lq.getResult();
-		for (Map<String, Object> m : results)
-			printMap(m);
-		((FileBufferList<Map<String, Object>>) results).close();
+		LogResultSet rs = lq.getResult();
+		try {
+			while (rs.hasNext())
+				printMap(rs.next());
+		} finally {
+			rs.close();
+		}
 
 		qs.removeQuery(lq.getId());
 	}

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine;
+package org.krakenapps.logstorage.file;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 
 public class BufferedRandomAccessFileReader implements DataInput {
 	private static final int BUFFER_SIZE = 8192;
-	private Logger logger = LoggerFactory.getLogger(BufferedRandomAccessFileReader.class);
-	private RandomAccessFile file;
+	private final Logger logger = LoggerFactory.getLogger(BufferedRandomAccessFileReader.class);
+	private final RandomAccessFile file;
 	private ByteBuffer buf;
 	private DataInputStream dataInputStream;
 

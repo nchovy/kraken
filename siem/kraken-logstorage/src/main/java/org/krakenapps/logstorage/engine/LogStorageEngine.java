@@ -48,8 +48,11 @@ import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.LogWriterStatus;
-import org.krakenapps.logstorage.engine.v2.LogFileFixReport;
-import org.krakenapps.logstorage.engine.v2.LogFileRepairer;
+import org.krakenapps.logstorage.file.LogFileFixReport;
+import org.krakenapps.logstorage.file.LogFileReader;
+import org.krakenapps.logstorage.file.LogFileRepairer;
+import org.krakenapps.logstorage.file.LogRecord;
+import org.krakenapps.logstorage.file.LogRecordCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

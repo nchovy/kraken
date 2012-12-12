@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 NCHOVY
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine;
+package org.krakenapps.logstorage.file;
 
-public interface LogRecordCallback {
-	/**
-	 * Callback when log data is loaded
-	 * 
-	 * @return True if log is matched
-	 */
-	boolean onLog(LogRecord logData) throws InterruptedException;
+import java.io.IOException;
+
+public class InvalidLogFileHeaderException extends IOException {
+
+	public InvalidLogFileHeaderException(Throwable e) {
+		super(e);
+	}
+
+	public InvalidLogFileHeaderException(String string) {
+		super(string);
+	}
+
+	private static final long serialVersionUID = 1L;
 }

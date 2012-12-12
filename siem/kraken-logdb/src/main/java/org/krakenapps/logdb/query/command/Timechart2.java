@@ -174,6 +174,9 @@ public class Timechart2 extends LogQueryCommand {
 		try {
 			// last flush
 			flush();
+			
+			// reclaim buffer (GC support)
+			buffer = null;
 
 			// sort
 			it = sorter.sort();
@@ -191,6 +194,9 @@ public class Timechart2 extends LogQueryCommand {
 			}
 			super.eof();
 		}
+
+		// support sorter cache GC when query processing is ended
+		sorter = null;
 
 		super.eof();
 	}

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v2;
+package org.krakenapps.logstorage.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,10 +25,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.zip.Deflater;
 
-import org.krakenapps.logstorage.engine.InvalidLogFileHeaderException;
-import org.krakenapps.logstorage.engine.LogFileHeader;
-import org.krakenapps.logstorage.engine.LogFileWriter;
-import org.krakenapps.logstorage.engine.LogRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +43,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 	private RandomAccessFile indexFile;
 	private RandomAccessFile dataFile;
-	private int count;
+	private long count;
 	private byte[] intbuf = new byte[4];
 	private byte[] longbuf = new byte[8];
 	private long lastKey;
@@ -61,6 +57,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 	private ByteBuffer dataBuffer;
 	private byte[] compressed;
 	private Deflater compresser;
+	private int compressLevel;
 
 	private File indexPath;
 	private File dataPath;
@@ -73,15 +70,18 @@ public class LogFileWriterV2 extends LogFileWriter {
 	}
 
 	// TODO: block size modification does not work
-	private LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException,
-			InvalidLogFileHeaderException {
+	private LogFileWriterV2(File indexPath, File dataPath, int blockSize) throws IOException, InvalidLogFileHeaderException {
 		this(indexPath, dataPath, blockSize, DEFAULT_LEVEL);
 		this.indexPath = indexPath;
 		this.dataPath = dataPath;
 	}
 
-	private LogFileWriterV2(File indexPath, File dataPath, int blockSize, int level) throws IOException,
+	public LogFileWriterV2(File indexPath, File dataPath, int blockSize, int level) throws IOException,
 			InvalidLogFileHeaderException {
+		// level 0 will not use compression (no zip metadata overhead)
+		if (level < 0 || level > 9)
+			throw new IllegalArgumentException("compression level should be between 0 and 9");
+
 		boolean indexExists = indexPath.exists();
 		boolean dataExists = dataPath.exists();
 		this.indexFile = new RandomAccessFile(indexPath, "rw");
@@ -93,6 +93,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 		this.compressed = new byte[blockSize];
 		this.compresser = new Deflater(level);
+		this.compressLevel = level;
 
 		// get index file header
 		LogFileHeader indexFileHeader = null;
@@ -154,7 +155,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 	}
 
 	@Override
-	public int getCount() {
+	public long getCount() {
 		return count;
 	}
 
@@ -162,16 +163,16 @@ public class LogFileWriterV2 extends LogFileWriter {
 	public void write(LogRecord data) throws IOException {
 		// do not remove this condition (date.toString() takes many CPU time)
 		if (logger.isDebugEnabled())
-			logger.debug("kraken logstorage: write new log, idx [{}], dat [{}], id {}, time {}", new Object[] {
-					indexPath.getAbsolutePath(), dataPath.getAbsolutePath(), data.getId(), data.getDate().toString() });
+			logger.debug("kraken logstorage: write new log, idx [{}], dat [{}], id {}, time {}",
+					new Object[] { indexPath.getAbsolutePath(), dataPath.getAbsolutePath(), data.getId(),
+							data.getDate().toString() });
 
 		// check validity
 		long newKey = data.getId();
 		if (newKey <= lastKey)
 			throw new IllegalArgumentException("invalid key: " + newKey + ", last key was " + lastKey);
 
-		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime())
-				|| indexBuffer.remaining() < INDEX_ITEM_SIZE
+		if ((blockEndLogTime != null && blockEndLogTime > data.getDate().getTime()) || indexBuffer.remaining() < INDEX_ITEM_SIZE
 				|| dataBuffer.remaining() < 20 + data.getData().remaining())
 			flush();
 
@@ -252,16 +253,27 @@ public class LogFileWriterV2 extends LogFileWriter {
 		dataFile.write(intbuf);
 
 		// compress data
-		compresser.setInput(dataBuffer.array(), 0, dataBuffer.limit());
-		compresser.finish();
-		int compressedSize = compresser.deflate(compressed);
+		byte[] output = null;
+		int outputSize = 0;
+
+		if (compressLevel > 0) {
+			compresser.setInput(dataBuffer.array(), 0, dataBuffer.limit());
+			compresser.finish();
+			int compressedSize = compresser.deflate(compressed);
+
+			output = compressed;
+			outputSize = compressedSize;
+		} else {
+			output = dataBuffer.array();
+			outputSize = dataBuffer.limit();
+		}
 
 		// write compressed size
-		prepareInt(compressedSize, intbuf);
+		prepareInt(outputSize, intbuf);
 		dataFile.write(intbuf);
 
 		// write compressed logs
-		dataFile.write(compressed, 0, compressedSize);
+		dataFile.write(output, 0, outputSize);
 
 		dataBuffer.clear();
 		compresser.reset();

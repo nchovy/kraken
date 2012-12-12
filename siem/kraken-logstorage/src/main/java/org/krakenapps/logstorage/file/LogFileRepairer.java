@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v2;
+package org.krakenapps.logstorage.file;
 
 import java.io.EOFException;
 import java.io.File;
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import org.krakenapps.logstorage.engine.LogFileHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

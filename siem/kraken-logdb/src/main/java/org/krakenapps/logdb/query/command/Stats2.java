@@ -118,6 +118,9 @@ public class Stats2 extends LogQueryCommand {
 		try {
 			// last flush
 			flush();
+			
+			// reclaim buffer (GC support)
+			buffer = null;
 
 			// sort
 			it = sorter.sort();
@@ -174,6 +177,10 @@ public class Stats2 extends LogQueryCommand {
 				} catch (IOException e) {
 				}
 			}
+
+			// support sorter cache GC when query processing is ended
+			sorter = null;
+
 			super.eof();
 		}
 	}

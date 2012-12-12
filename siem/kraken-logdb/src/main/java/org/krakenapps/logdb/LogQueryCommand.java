@@ -18,7 +18,6 @@ package org.krakenapps.logdb;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.krakenapps.logdb.query.FileBufferList;
 
 public abstract class LogQueryCommand {
@@ -81,14 +80,6 @@ public abstract class LogQueryCommand {
 
 	public abstract void push(LogMap m);
 
-	public void push(FileBufferList<Map<String, Object>> buf) {
-		if (buf != null) {
-			for (Map<String, Object> m : buf)
-				push(new LogMap(m));
-			buf.close();
-		}
-	}
-
 	protected final void write(LogMap m) {
 		pushCount++;
 		if (next != null && next.status != Status.End) {
@@ -101,6 +92,16 @@ public abstract class LogQueryCommand {
 		}
 	}
 
+	@Deprecated
+	public void push(FileBufferList<Map<String, Object>> buf) {
+		if (buf != null) {
+			for (Map<String, Object> m : buf)
+				push(new LogMap(m));
+			buf.close();
+		}
+	}
+
+	@Deprecated
 	protected final void write(FileBufferList<Map<String, Object>> buf) {
 		pushCount += buf.size();
 		if (next != null && next.status != Status.End) {

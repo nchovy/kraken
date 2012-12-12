@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v2;
+package org.krakenapps.logstorage.file;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

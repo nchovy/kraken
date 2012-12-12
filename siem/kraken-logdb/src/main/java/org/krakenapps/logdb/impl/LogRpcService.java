@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logdb.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -31,7 +32,6 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogTimelineCallback;
-import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -190,7 +190,7 @@ public class LogRpcService extends SimpleRpcService {
 	}
 
 	@RpcMethod(name = "getResult")
-	public Map<String, Object> getResult(int id, int offset, int limit) {
+	public Map<String, Object> getResult(int id, int offset, int limit) throws IOException {
 		return LogQueryHelper.getResultData(qs, id, offset, limit);
 	}
 
@@ -232,7 +232,7 @@ public class LogRpcService extends SimpleRpcService {
 		}
 
 		@Override
-		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
+		public void onPageLoaded() {
 			try {
 				logger.info("kraken logdb: page loaded for query [{}], offset [{}], limit [{}]", new Object[] { query,
 						offset, limit });

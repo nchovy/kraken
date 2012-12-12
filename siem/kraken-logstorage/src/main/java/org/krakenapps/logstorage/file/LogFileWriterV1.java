@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.engine.v1;
+package org.krakenapps.logstorage.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,10 +25,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import org.krakenapps.logstorage.engine.InvalidLogFileHeaderException;
-import org.krakenapps.logstorage.engine.LogFileHeader;
-import org.krakenapps.logstorage.engine.LogFileWriter;
-import org.krakenapps.logstorage.engine.LogRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +43,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	private final int maxLogBuffering;
 	private RandomAccessFile indexFile;
 	private RandomAccessFile dataFile;
-	private int count;
+	private long count;
 	private byte[] intbuf = new byte[4];
 	private byte[] longbuf = new byte[8];
 	private long lastKey;
@@ -143,7 +139,7 @@ public class LogFileWriterV1 extends LogFileWriter {
 	}
 
 	@Override
-	public int getCount() {
+	public long getCount() {
 		return count;
 	}
 
