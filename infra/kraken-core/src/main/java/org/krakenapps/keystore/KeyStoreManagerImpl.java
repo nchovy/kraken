@@ -40,20 +40,25 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicates;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class KeyStoreManagerImpl implements KeyStoreManager {
 	private final Logger logger = LoggerFactory.getLogger(KeyStoreManagerImpl.class.getName());
 	private ConfigService conf;
+	private Preferences prefs;
 	private Map<String, KeyStore> keyStoreMap;
 	private Map<String, Properties> keyStoreProps;
 
-	public KeyStoreManagerImpl(ConfigService conf) {
+	public KeyStoreManagerImpl(ConfigService conf, Preferences prefs) {
 		this.conf = conf;
+		this.prefs = prefs;
 		this.keyStoreMap = new ConcurrentHashMap<String, KeyStore>();
 		this.keyStoreProps = new ConcurrentHashMap<String, Properties>();
 
+		migrateKeyStores();
 		loadKeyStoreFiles();
 	}
 
@@ -254,7 +259,47 @@ public class KeyStoreManagerImpl implements KeyStoreManager {
 		KeyStoreConfig ksc = c.getDocument(KeyStoreConfig.class);
 		if (ksc.getPassword() == null)
 			return null;
-		
+
 		return ksc.getPassword().toCharArray();
 	}
+
+	private void migrateKeyStores() {
+		Preferences prefs = getKeyStorePreferences();
+		try {
+			String[] names = prefs.childrenNames();
+			if (names.length == 0)
+				return;
+
+			for (String alias : names) {
+				Preferences p = prefs.node(alias);
+				String type = p.get("type", null);
+
+				String pp = p.get("password", null);
+				char[] password = null;
+				if (pp != null)
+					password = pp.toCharArray();
+				String path = p.get("path", null);
+
+				try {
+					registerKeyStore(alias, type, path, password);
+				} catch (Exception e) {
+					logger.warn("kraken core: cannot migrate keystore entry", e);
+				}
+				p.removeNode();
+			}
+
+			prefs.flush();
+			prefs.sync();
+		} catch (BackingStoreException e) {
+			logger.warn("kraken core: cannot migrate keystore preferences", e);
+		}
+
+		keyStoreMap.clear();
+		keyStoreProps.clear();
+	}
+
+	private Preferences getKeyStorePreferences() {
+		return prefs.node("/keystore");
+	}
+
 }
