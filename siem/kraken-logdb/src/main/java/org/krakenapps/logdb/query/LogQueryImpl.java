@@ -186,6 +186,21 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
+	public Long getResultCount() throws IOException {
+		if (result == null)
+			return null;
+
+		LogResultSet rs = null;
+		try {
+			rs = result.getResult();
+			return rs.size();
+		} finally {
+			if (rs != null)
+				rs.close();
+		}
+	}
+
+	@Override
 	public List<Map<String, Object>> getResultAsList() throws IOException {
 		return getResultAsList(0, Integer.MAX_VALUE);
 	}

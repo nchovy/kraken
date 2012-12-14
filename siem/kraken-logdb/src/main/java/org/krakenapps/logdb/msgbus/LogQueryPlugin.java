@@ -257,7 +257,7 @@ public class LogQueryPlugin {
 				Map<String, Object> m = new HashMap<String, Object>();
 				m.put("id", query.getId());
 				m.put("type", "status_change");
-				m.put("count", query.getResult().size());
+				m.put("count", query.getResultCount());
 				pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
 				pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
 			} catch (IOException e) {
@@ -284,7 +284,7 @@ public class LogQueryPlugin {
 				Map<String, Object> m = new HashMap<String, Object>();
 				m.put("id", query.getId());
 				m.put("type", "eof");
-				m.put("total_count", query.getResult().size());
+				m.put("total_count", query.getResultCount());
 				pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
 				pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
 				query.unregisterQueryCallback(this);
@@ -327,7 +327,7 @@ public class LogQueryPlugin {
 				m.put("values", values);
 				pushApi.push(orgDomain, "logdb-query-timeline-" + query.getId(), m);
 
-				m.put("count", query.getResult().size());
+				m.put("count", query.getResultCount());
 				pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m); // deprecated
 
 				Object[] trace = new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,

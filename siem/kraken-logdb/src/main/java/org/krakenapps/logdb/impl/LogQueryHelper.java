@@ -50,7 +50,7 @@ public class LogQueryHelper {
 			Map<String, Object> m = new HashMap<String, Object>();
 
 			m.put("result", getPage(query, offset, limit));
-			m.put("count", query.getResult().size());
+			m.put("count", query.getResultCount());
 
 			Fields fields = null;
 			for (LogQueryCommand command : query.getCommands()) {

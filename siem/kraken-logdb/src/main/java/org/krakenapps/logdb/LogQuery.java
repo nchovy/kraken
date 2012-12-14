@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 public interface LogQuery extends Runnable {
 	int getId();
 
@@ -35,8 +34,13 @@ public interface LogQuery extends Runnable {
 
 	Date getLastStarted();
 
+	/**
+	 * @return current loaded result count or null if query is not started
+	 */
+	Long getResultCount() throws IOException;
+
 	LogResultSet getResult() throws IOException;
-	
+
 	List<Map<String, Object>> getResultAsList() throws IOException;
 
 	List<Map<String, Object>> getResultAsList(long offset, int limit) throws IOException;
