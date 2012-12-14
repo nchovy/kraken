@@ -11,6 +11,7 @@
 	<artifactId>kraken-dns</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken DNS</name>
+	<version>0.2.0</version>
 	<build>
 		<plugins>
 			<plugin>
@@ -19,12 +20,15 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>org.krakenapps.dns
-						</Bundle-SymbolicName>
-						<Export-Package>org.krakenapps.dns;version=${project.version}
+						<Bundle-SymbolicName>org.krakenapps.dns</Bundle-SymbolicName>
+						<Export-Package>
+						    	org.krakenapps.dns;version=${project.version},
+						    	org.krakenapps.dns.rr;version=${project.version}
 						</Export-Package>
 						<Import-Package>*</Import-Package>
-						<Private-Package>org.krakenapps.dns.impl
+						<Private-Package>
+						    org.krakenapps.dns.nameserver,
+						    org.krakenapps.dns.script,
 						</Private-Package>
 					</instructions>
 				</configuration>
@@ -54,6 +58,10 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
 		</dependency>
 	</dependencies>
 </project>
