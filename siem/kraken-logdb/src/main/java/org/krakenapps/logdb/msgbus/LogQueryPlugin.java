@@ -331,7 +331,7 @@ public class LogQueryPlugin {
 				pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m); // deprecated
 
 				Object[] trace = new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
-						Arrays.toString(values), query.getResult().size() };
+						Arrays.toString(values), query.getResultCount() };
 				logger.trace("kraken logstorage: timeline callback => "
 						+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}", trace);
 			} catch (IOException e) {
