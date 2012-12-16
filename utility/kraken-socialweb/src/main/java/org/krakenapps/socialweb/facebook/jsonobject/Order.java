@@ -1,6 +1,9 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import java.util.Set;
+
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 
 
 public class Order implements FacebookGraphObject{
@@ -84,6 +87,14 @@ public class Order implements FacebookGraphObject{
 	}
 	public void setUpdated_time(String updated_time) {
 		this.updated_time = updated_time;
+	}
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 	

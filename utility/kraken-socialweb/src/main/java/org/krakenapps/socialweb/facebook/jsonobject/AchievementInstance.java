@@ -1,10 +1,12 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
@@ -20,8 +22,6 @@ public class AchievementInstance implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	
 	public AchievementInstance(){
-		from = new From();
-		application = new From();
 		likes = new Like();
 		achievement = new Achievement();
 		comments = new ArrayList<Comment>();
@@ -35,13 +35,12 @@ public class AchievementInstance implements FacebookGraphObject{
 			id = json.getString("id");
 			
 			JSONObject fromObject = json.getJSONObject("from");
-			this.from.setId(fromObject.getString("id"));
-			this.from.setName(fromObject.getString("name"));
+			from = new From(fromObject.getString("id"),fromObject.getString("name"));
+
 			createdTime = json.getString("created_time");
 			
 			JSONObject applicationObject = json.getJSONObject("application");
-			application.setId(applicationObject.getString("id"));
-			application.setName(applicationObject.getString("name"));
+			application = new From(applicationObject.getString("id"),applicationObject.getString("name"));
 			
 			JSONObject achiveObject = json.getJSONObject("achivement");
 			achievement.setId(achiveObject.getString("id"));
@@ -51,12 +50,11 @@ public class AchievementInstance implements FacebookGraphObject{
 			
 			JSONObject likeObject = json.getJSONObject("likes");
 			JSONArray likeArray = likeObject.getJSONArray("data");
-			likes.setCount(likeObject.getInt("count"));
-			ArrayList<From> likeList = new ArrayList<From>(likes.getCount());
-			for(int i=0; i<likes.getCount(); i++){
+			ArrayList<From> likeList = new ArrayList<From>(likeObject.getInt("count"));
+			for(int i=0; i<likeObject.getInt("count"); i++){
 				likeList.add(new From(likeArray.getJSONObject(i).getString("id"),likeArray.getJSONObject(i).getString("name")));
 			}
-			likes.setLikeList(likeList);
+			likes = new Like(likeList , likeObject.getInt("count"));
 			
 			JSONObject commentObject = json.getJSONObject("comments");
 			JSONArray commentArray = commentObject.getJSONArray("data");
@@ -144,6 +142,15 @@ public class AchievementInstance implements FacebookGraphObject{
 
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
+	}
+
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }

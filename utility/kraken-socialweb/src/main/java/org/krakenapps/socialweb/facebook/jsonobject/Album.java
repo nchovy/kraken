@@ -1,8 +1,11 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
 import java.util.ArrayList;
+import java.util.Set;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 
@@ -22,7 +25,6 @@ public class Album implements FacebookGraphObject{
 	private boolean canUpload;
 	private FbConnection fbConnection;
 	public Album(){
-		from = new From();
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
@@ -67,11 +69,7 @@ public class Album implements FacebookGraphObject{
 			this.pictures = pictures;
 		}
 	}
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+
 	public String getId() {
 		return id;
 	}
@@ -156,5 +154,35 @@ public class Album implements FacebookGraphObject{
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
 	}
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 	
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			JSONObject fromObject = json.getJSONObject("from");
+			from = new From(fromObject.getString("id"), fromObject.getString("name"));
+			name = json.getString("name");
+			description = json.getString("description");
+			location = json.getString("location");
+			link = json.getString("link");
+			coverPhotoID = json.getString("cover_photo");
+			privacy = json.getString("privacy");
+			count = json.getInt("count");
+			type = json.getString("type"); //profile,mobile,wall,normal,album
+			createdTime = json.getString("created_time");
+			updatedTime = json.getString("updated_time");
+			canUpload = json.getBoolean("can_upload");
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
 }

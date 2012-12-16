@@ -1,8 +1,13 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
+
 import java.util.ArrayList;
+import java.util.Set;
 
 
 
@@ -21,11 +26,8 @@ public class Checkin implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	public Checkin(){
 		fbConnection = new FbConnection();
-		from = new From();
-		tags = new From();
 		place = new Place();
 		application = new CheckinApplication();
-		likes = new Like();
 		comments = new ArrayList<Comment>(); // limited number object.
 	}
 	private class FbConnection{
@@ -52,11 +54,6 @@ public class Checkin implements FacebookGraphObject{
 		
 	}
 	
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 
 	public String getId() {
 		return id;
@@ -145,5 +142,60 @@ public class Checkin implements FacebookGraphObject{
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
 	}
+
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 	
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+		
+			JSONObject fromObject = json.getJSONObject("from");
+			from = new From(json.getString("id") , json.getString("name"));
+			JSONObject tagsObject = json.getJSONObject("tags");
+			tags = new From(json.getString("id") , json.getString("name"));
+			
+			JSONObject placeObject = json.getJSONObject("place");
+			place = new Place(placeObject.getString("id"), placeObject.getString("name"), placeObject.getJSONObject("location").getInt("longitude"), placeObject.getJSONObject("location").getInt("latitude"));
+			
+			JSONObject applicationObject = json.getJSONObject("application");
+			application = new CheckinApplication(applicationObject.getString("id"), applicationObject.getString("canvasName"), applicationObject.getString("namespace"));
+			
+			createdTime = json.getString("created_time");
+			
+			JSONObject likeObject = json.getJSONObject("likes");
+			JSONArray likeArray = likeObject.getJSONArray("data");
+			ArrayList<From> likeList = new ArrayList<From>(likeObject.getInt("count"));
+			for(int i=0; i<likeObject.getInt("count"); i++){
+				likeList.add(new From(likeArray.getJSONObject(i).getString("id"),likeArray.getJSONObject(i).getString("name")));
+			}
+			likes = new Like(likeList , likeObject.getInt("count"));
+			
+			message = json.getString("message");
+			
+			JSONObject commentObject = json.getJSONObject("comments");
+			JSONArray commentArray = commentObject.getJSONArray("data");
+			for(int i =0 ; i<commentObject.getInt("count"); i++){
+				Comment tmp = new Comment();
+				tmp.setId(commentArray.getJSONObject(i).getString("id"));
+				tmp.setFrom(new From(commentArray.getJSONObject(i).getJSONObject("from").getString("id"), commentArray.getJSONObject(i).getJSONObject("from").getString("name")));
+				tmp.setMessage(commentArray.getJSONObject(i).getString("message"));
+				tmp.setCreateTime(commentArray.getJSONObject(i).getString("created_time"));
+				comments.add(tmp);
+			}
+			
+			type = json.getString("type");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return 0;
+	}
 }
