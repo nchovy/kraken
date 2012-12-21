@@ -88,23 +88,23 @@ public class ProxyResolverProviderImpl implements ProxyResolverProvider {
 
 		@Override
 		public DnsMessage resolve(DnsMessage query) throws IOException {
-
-			DatagramSocket socket = new DatagramSocket();
-			socket.setSoTimeout(5000);
-
-			ByteBuffer buf = DnsMessageCodec.encode(query);
-			DatagramPacket queryPacket = new DatagramPacket(buf.array(), buf.limit());
-			queryPacket.setAddress(dnsAddr);
-			queryPacket.setPort(53);
-
-			logger.debug("kraken dns: proxy sent query, {}", query);
-			socket.send(queryPacket);
-
 			byte[] rx = new byte[65536];
 			DatagramPacket replyPacket = new DatagramPacket(rx, rx.length);
-			socket.receive(replyPacket);
-
+			DatagramSocket socket = null;
 			try {
+				socket = new DatagramSocket();
+				socket.setSoTimeout(5000);
+
+				ByteBuffer buf = DnsMessageCodec.encode(query);
+				DatagramPacket queryPacket = new DatagramPacket(buf.array(), buf.limit());
+				queryPacket.setAddress(dnsAddr);
+				queryPacket.setPort(53);
+
+				logger.debug("kraken dns: proxy sent query, {}", query);
+				socket.send(queryPacket);
+
+				socket.receive(replyPacket);
+
 				DnsMessage response = DnsMessageCodec
 						.decode(ByteBuffer.wrap(rx, replyPacket.getOffset(), replyPacket.getLength()));
 
@@ -113,6 +113,9 @@ public class ProxyResolverProviderImpl implements ProxyResolverProvider {
 			} catch (Throwable t) {
 				logger.error("kraken dns: proxy response parse error - " + DnsDump.dumpPacket(replyPacket));
 				throw new IllegalStateException("cannot parse nameserver response", t);
+			} finally {
+				if (socket != null)
+					socket.close();
 			}
 		}
 	}
