@@ -5,11 +5,11 @@ import java.net.DatagramPacket;
 public class EmptyDnsMessageListener implements DnsEventListener {
 
 	@Override
-	public void onReceive(DnsMessage query) {
+	public void onReceive(DatagramPacket packet, DnsMessage query) {
 	}
 
 	@Override
-	public void onSend(DnsMessage query, DnsMessage response) {
+	public void onSend(DatagramPacket queryPacket, DnsMessage query, DatagramPacket responsePacket, DnsMessage response) {
 	}
 
 	@Override
@@ -17,7 +17,7 @@ public class EmptyDnsMessageListener implements DnsEventListener {
 	}
 
 	@Override
-	public void onDrop(DnsMessage query, Throwable t) {
+	public void onDrop(DatagramPacket packet, DnsMessage query, Throwable t) {
 	}
 
 }

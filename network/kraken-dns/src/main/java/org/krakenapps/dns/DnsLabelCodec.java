@@ -30,12 +30,16 @@ public class DnsLabelCodec {
 				break;
 
 			if ((b & 0xc0) != 0) {
-				int nextOffset = b;
+				int nextOffset = b & 0x3f;
 				b = bb.get();
-				nextOffset = (nextOffset << 8) | b;
+				nextOffset = (nextOffset << 8) | (b & 0xff);
 				ByteBuffer dup = bb.duplicate();
 				dup.position(nextOffset);
-				return decode(dup);
+				String prefix = sb.toString();
+				if (prefix.isEmpty())
+					return decode(dup);
+				else
+					return prefix + "." + decode(dup);
 			}
 
 			int len = b & 0x3f;

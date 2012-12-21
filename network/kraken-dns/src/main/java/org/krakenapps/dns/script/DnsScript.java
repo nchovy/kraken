@@ -28,6 +28,8 @@ import org.krakenapps.dns.DnsCache;
 import org.krakenapps.dns.DnsCacheEntry;
 import org.krakenapps.dns.DnsCacheKey;
 import org.krakenapps.dns.DnsMessage;
+import org.krakenapps.dns.DnsResolverProvider;
+import org.krakenapps.dns.ProxyResolverProvider;
 import org.krakenapps.dns.DnsResourceRecord.Clazz;
 import org.krakenapps.dns.DnsResourceRecord.Type;
 import org.krakenapps.dns.DnsService;
@@ -44,9 +46,11 @@ public class DnsScript implements Script {
 	private final Logger logger = LoggerFactory.getLogger(DnsScript.class);
 	private ScriptContext context;
 	private DnsService dns;
+	private ProxyResolverProvider proxy;
 
-	public DnsScript(DnsService dns) {
+	public DnsScript(DnsService dns, ProxyResolverProvider proxy) {
 		this.dns = dns;
+		this.proxy = proxy;
 	}
 
 	@Override
@@ -125,26 +129,54 @@ public class DnsScript implements Script {
 		}
 	}
 
-	private class DnsEventPrinter extends EmptyDnsMessageListener {
+	public void providers(String[] args) {
+		context.println("Resolver Providers");
+		context.println("--------------------");
 
-		@Override
-		public void onReceive(DnsMessage query) {
-			context.println("[RECV] " + query);
+		for (DnsResolverProvider provider : dns.getResolverProviders()) {
+			context.println(provider.getName() + ": " + provider);
+		}
+	}
+
+	public void proxyNameServer(String[] args) {
+		InetAddress addr;
+		try {
+			if (args.length > 0) {
+				addr = InetAddress.getByName(args[0]);
+				proxy.setNameServer(addr);
+				context.println("set");
+			} else {
+				context.println(proxy.getNameServer().getHostAddress());
+			}
+		} catch (UnknownHostException e) {
+			context.println("invalid nameserver address");
+		}
+	}
+
+	private class DnsEventPrinter extends EmptyDnsMessageListener {
+		private String getRemoteAddress(DatagramPacket packet) {
+			return packet.getAddress().getHostAddress() + ":" + packet.getPort();
 		}
 
 		@Override
-		public void onSend(DnsMessage query, DnsMessage response) {
-			context.println("[SENT] " + response);
+		public void onReceive(DatagramPacket queryPacket, DnsMessage query) {
+			context.println("[RECV " + getRemoteAddress(queryPacket) + "] " + query);
+		}
+
+		@Override
+		public void onSend(DatagramPacket queryPacket, DnsMessage query, DatagramPacket responsePacket, DnsMessage response) {
+			context.println("[SENT " + getRemoteAddress(responsePacket) + "] " + response);
 		}
 
 		@Override
 		public void onError(DatagramPacket packet, Throwable t) {
-			context.println("[ERROR] " + toHexDump(packet.getData(), packet.getOffset(), packet.getLength()));
+			context.println("[ERROR " + getRemoteAddress(packet) + "] "
+					+ toHexDump(packet.getData(), packet.getOffset(), packet.getLength()));
 		}
 
 		@Override
-		public void onDrop(DnsMessage query, Throwable t) {
-			context.println("[DROP] " + query);
+		public void onDrop(DatagramPacket queryPacket, DnsMessage query, Throwable t) {
+			context.println("[DROP " + getRemoteAddress(queryPacket) + "] " + query);
 		}
 
 		private String toHexDump(byte[] buf, int offset, int length) {

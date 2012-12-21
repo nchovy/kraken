@@ -2,4 +2,5 @@
 <iPOJO>
     <instance component="dns-service" />
 	<instance component="dns-script-factory" />
+	<instance component="dns-proxy-resolver-provider" />
 </iPOJO>

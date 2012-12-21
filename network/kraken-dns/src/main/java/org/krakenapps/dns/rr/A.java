@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import org.krakenapps.dns.DnsResourceRecord;
 
 public class A extends DnsResourceRecord {
-	private int ttl;
 	private InetAddress address;
 
 	public A() {
@@ -40,16 +39,15 @@ public class A extends DnsResourceRecord {
 		this.ttl = ttl;
 	}
 
-	public static DnsResourceRecord decode(ByteBuffer bb) {
+	public static DnsResourceRecord decode(ByteBuffer bb, boolean isQuestion) {
 		A a = new A();
 
-		if (bb.remaining() == 0)
+		if (isQuestion)
 			return a;
 
-		a.ttl = bb.getInt();
 		int rdlen = bb.getShort();
 		if (rdlen != 4)
-			throw new IllegalStateException("type A record's rdlen should be 4");
+			throw new IllegalStateException("type A record's rdlen (" + rdlen + ") should be 4");
 
 		byte[] b = new byte[4];
 		bb.get(b);
@@ -63,19 +61,8 @@ public class A extends DnsResourceRecord {
 
 	@Override
 	public void encode(ByteBuffer bb) {
-		if (address != null) {
-			bb.putInt(ttl);
-			bb.putShort((short) 4);
-			bb.put(address.getAddress());
-		}
-	}
-
-	public int getTtl() {
-		return ttl;
-	}
-
-	public void setTtl(int ttl) {
-		this.ttl = ttl;
+		bb.putShort((short) 4);
+		bb.put(address.getAddress());
 	}
 
 	public InetAddress getAddress() {

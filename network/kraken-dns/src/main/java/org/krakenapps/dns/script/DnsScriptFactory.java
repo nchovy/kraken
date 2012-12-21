@@ -7,6 +7,7 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.dns.DnsService;
+import org.krakenapps.dns.ProxyResolverProvider;
 
 @Component(name = "dns-script-factory")
 @Provides
@@ -19,9 +20,11 @@ public class DnsScriptFactory implements ScriptFactory {
 	@Requires
 	private DnsService dns;
 
+	@Requires
+	private ProxyResolverProvider proxy;
+
 	@Override
 	public Script createScript() {
-		return new DnsScript(dns);
+		return new DnsScript(dns, proxy);
 	}
-
 }
