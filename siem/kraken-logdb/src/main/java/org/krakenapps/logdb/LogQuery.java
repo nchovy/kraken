@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logdb;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -29,11 +30,20 @@ public interface LogQuery extends Runnable {
 
 	void cancel();
 
+	void purge();
+
 	Date getLastStarted();
 
-	List<Map<String, Object>> getResult();
+	/**
+	 * @return current loaded result count or null if query is not started
+	 */
+	Long getResultCount() throws IOException;
 
-	List<Map<String, Object>> getResult(int offset, int limit);
+	LogResultSet getResult() throws IOException;
+
+	List<Map<String, Object>> getResultAsList() throws IOException;
+
+	List<Map<String, Object>> getResultAsList(long offset, int limit) throws IOException;
 
 	List<LogQueryCommand> getCommands();
 

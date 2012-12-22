@@ -15,9 +15,6 @@
  */
 package org.krakenapps.dns;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * @author mindori
  */
@@ -31,16 +28,50 @@ public class DnsFlags {
 	// reserved bit(== 0)
 	private boolean isAnswerAuthenticated;
 	private boolean isNonAuthenticatedDataOK;
-	private byte replyCode;
-	private final Logger logger = LoggerFactory.getLogger(DnsFlags.class
-			.getName());
-
-	public DnsFlags(short flags) {
-		setFlags(flags);
-	}
+	private DnsResponseCode responseCode = DnsResponseCode.NO_ERROR;
 
 	public DnsFlags() {
+	}
 
+	public DnsFlags(short bits) {
+		setBits(bits);
+	}
+
+	public short getBits() {
+		short bits = 0;
+		bits |= bit(!isQuery) << 15;
+		bits |= opCode << 11;
+		bits |= bit(isAuthoritativeAnswer) << 10;
+		bits |= bit(isTruncated) << 9;
+		bits |= bit(isRecursionDesired) << 8;
+		bits |= bit(isRecursionAvailable) << 7;
+		bits |= bit(isAnswerAuthenticated) << 5;
+		bits |= bit(isNonAuthenticatedDataOK) << 4;
+		bits |= responseCode.getCode();
+		return bits;
+	}
+
+	private int bit(boolean b) {
+		return b ? 1 : 0;
+	}
+
+	public void setBits(short bits) {
+		short s = bits;
+
+		setQuery(((s & 0x8000) >> 15) == 0);
+		setOpCode((byte) ((s & 0x7800) >> 11));
+		setAuthoritativeAnswer(((s & 0x0400) >> 10) != 0);
+		setTruncated(((s & 0x0200) >> 9) != 0);
+		setRecursionDesired(((s & 0x0100) >> 8) != 0);
+		setRecursionAvailable(((s & 0x0080) >> 7) != 0);
+		setAnswerAuthenticated(((s & 0x0020) >> 5) != 0);
+		setNonAuthenticatedDataOK(((s & 0x0010) >> 4) != 0);
+
+		DnsResponseCode rcode = DnsResponseCode.parse(s & 0xf);
+		if (rcode == null)
+			throw new IllegalStateException("invalid response code: " + (s & 0xf));
+
+		setResponseCode(rcode);
 	}
 
 	public boolean isQuery() {
@@ -56,6 +87,9 @@ public class DnsFlags {
 	}
 
 	public void setOpCode(byte opCode) {
+		if (opCode < 0 || opCode > 2)
+			throw new IllegalArgumentException("invalid dns opcode: " + opCode);
+
 		this.opCode = opCode;
 	}
 
@@ -107,79 +141,79 @@ public class DnsFlags {
 		this.isNonAuthenticatedDataOK = isNonAuthenticatedDataOK;
 	}
 
-	public byte getReplyCode() {
-		return replyCode;
+	public DnsResponseCode getResponseCode() {
+		return responseCode;
 	}
 
-	public void setReplyCode(byte replyCode) {
-		this.replyCode = replyCode;
+	public void setResponseCode(DnsResponseCode responseCode) {
+		this.responseCode = responseCode;
 	}
 
-	private void setFlags(short flags) {
-		short s = flags;
-		int flagState;
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		if (opCode == 0)
+			sb.append("standard query");
+		else if (opCode == 1)
+			sb.append("inverse query");
+		else if (opCode == 2)
+			sb.append("server status request");
 
-		flagState = (s & 0x8000) >> 15;
-		if (flagState == 0)
-			setQuery(true);
+		if (!isQuery)
+			sb.append(" response ");
 		else
-			setQuery(false);
+			sb.append(" ");
 
-		flagState = (s & 0x7800) >> 11;
-		byte b = (byte) flagState;
-		setOpCode(b);
+		String flagsDesc = getFlagsDesc();
+		if (!flagsDesc.isEmpty()) {
+			sb.append("(");
+			sb.append(flagsDesc);
+			sb.append(") ");
+		}
 
-		flagState = (s & 0x0400) >> 10;
-		if (flagState == 0)
-			setAuthoritativeAnswer(false);
-		else
-			setAuthoritativeAnswer(true);
-
-		flagState = (s & 0x0200) >> 9;
-		if (flagState == 0)
-			setTruncated(false);
-		else
-			setTruncated(true);
-
-		flagState = (s & 0x0100) >> 8;
-		if (flagState == 0)
-			setRecursionDesired(false);
-		else
-			setRecursionDesired(true);
-
-		flagState = (s & 0x0080) >> 7;
-		if (flagState == 0)
-			setRecursionAvailable(false);
-		else
-			setRecursionAvailable(true);
-
-		flagState = (s & 0x0020) >> 5;
-		if (flagState == 0)
-			setAnswerAuthenticated(false);
-		else
-			setAnswerAuthenticated(true);
-
-		flagState = (s & 0x0010) >> 4;
-		if (flagState == 0)
-			setNonAuthenticatedDataOK(false);
-		else
-			setNonAuthenticatedDataOK(true);
-
-		flagState = s & 0x000F;
-		b = (byte) flagState;
-		setReplyCode(b);
-		printFlags();
+		return sb.toString();
 	}
 
-	private void printFlags() {
-		logger.info("isQuery : " + isQuery());
-		logger.info("opCode : " + getOpCode());
-		logger.info("isAuthoritativeAnswer : " + isAuthoritativeAnswer());
-		logger.info("isTruncated : " + isTruncated());
-		logger.info("isRecursionDesired : " + isRecursionDesired());
-		logger.info("isRecursionAvailable: " + isRecursionAvailable());
-		logger.info("isAnswerAuthenticated : " + isAnswerAuthenticated());
-		logger.info("isNotAuthenticatedDataOK : " + isNonAuthenticatedDataOK());
-		logger.info("replyCode : " + getReplyCode());
+	private String getFlagsDesc() {
+		StringBuilder sb = new StringBuilder();
+		boolean first = true;
+
+		if (isAuthoritativeAnswer) {
+			sb.append("AA");
+			if (!first) {
+				sb.append(" ");
+				first = false;
+			}
+		}
+
+		if (isTruncated) {
+			sb.append("TC");
+			if (!first) {
+				sb.append(" ");
+				first = false;
+			}
+		}
+
+		if (isRecursionDesired) {
+			sb.append("RD");
+			if (!first) {
+				sb.append(" ");
+				first = false;
+			}
+		}
+
+		if (isRecursionAvailable) {
+			sb.append("RA");
+			if (!first) {
+				sb.append(" ");
+				first = false;
+			}
+		}
+
+		if (responseCode != DnsResponseCode.NO_ERROR)
+			sb.append(responseCode.getDescription());
+
+		return sb.toString();
 	}
+
 }

@@ -36,6 +36,7 @@ import org.krakenapps.codec.EncodingRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Deprecated
 public class FileBufferMap<K, V> implements Map<K, V> {
 	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
 	private static int BYTEBUFFER_CAPACITY = 655360; // 640KB

@@ -3,6 +3,7 @@ package org.krakenapps.socialweb.facebook.jsonobject;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 
@@ -21,11 +22,6 @@ public class FriendList implements FacebookGraphObject {
 		}
 		private String CONN_members = "members";
 		private ArrayList<Friends> friends;
-	}
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 	public String getId() {
 		return id;
@@ -50,6 +46,19 @@ public class FriendList implements FacebookGraphObject {
 	}
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
+	}
+	
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			name = json.getString("name");
+			list_type = json.getString("list_type");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return 0;
 	}
 	/* (non-Javadoc)
 	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)

@@ -15,14 +15,17 @@
  */
 package org.krakenapps.logdb.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.query.command.Fields;
 
 public class LogQueryHelper {
@@ -41,13 +44,13 @@ public class LogQueryHelper {
 		return result;
 	}
 
-	public static Map<String, Object> getResultData(LogQueryService qs, int id, int offset, int limit) {
+	public static Map<String, Object> getResultData(LogQueryService qs, int id, int offset, int limit) throws IOException {
 		LogQuery query = qs.getQuery(id);
 		if (query != null) {
 			Map<String, Object> m = new HashMap<String, Object>();
 
-			m.put("result", query.getResult(offset, limit));
-			m.put("count", query.getResult().size());
+			m.put("result", getPage(query, offset, limit));
+			m.put("count", query.getResultCount());
 
 			Fields fields = null;
 			for (LogQueryCommand command : query.getCommands()) {
@@ -62,6 +65,26 @@ public class LogQueryHelper {
 			return m;
 		}
 		return null;
+	}
+
+	private static List<Object> getPage(LogQuery query, int offset, int limit) throws IOException {
+		List<Object> l = new LinkedList<Object>();
+		LogResultSet rs = query.getResult();
+		try {
+			rs.skip(offset);
+
+			long count = 0;
+			while (rs.hasNext()) {
+				if (count >= limit)
+					break;
+
+				l.add(rs.next());
+				count++;
+			}
+		} finally {
+			rs.close();
+		}
+		return l;
 	}
 
 }

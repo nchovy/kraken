@@ -1,9 +1,5 @@
 package org.krakenapps.logdb;
 
-import java.util.Map;
-
-import org.krakenapps.logdb.query.FileBufferList;
-
 public abstract class EmptyLogQueryCallback implements LogQueryCallback {
 
 	@Override
@@ -21,7 +17,7 @@ public abstract class EmptyLogQueryCallback implements LogQueryCallback {
 	}
 
 	@Override
-	public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
+	public void onPageLoaded() {
 	}
 
 	@Override

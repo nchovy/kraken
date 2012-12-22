@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -170,9 +169,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		}
 
 		try {
-			FileBufferList<Map<String, Object>> fbl = (FileBufferList<Map<String, Object>>) lq.getResult();
-			if (fbl != null)
-				fbl.close();
+			lq.purge();
 		} catch (Throwable t) {
 			logger.error("kraken logdb: cannot close file buffer list for query " + lq.getId(), t);
 		}

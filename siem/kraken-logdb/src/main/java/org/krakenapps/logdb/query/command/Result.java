@@ -15,30 +15,45 @@
  */
 package org.krakenapps.logdb.query.command;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
+import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.FileBufferList;
+import org.krakenapps.logdb.LogResultSet;
+import org.krakenapps.logstorage.file.LogRecordCursor;
+import org.krakenapps.logstorage.file.LogFileReaderV2;
+import org.krakenapps.logstorage.file.LogFileWriterV2;
+import org.krakenapps.logstorage.file.LogRecord;
 
 public class Result extends LogQueryCommand {
-	private FileBufferList<Map<String, Object>> result;
+	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
+	private LogFileWriterV2 writer;
+	private File indexPath;
+	private File dataPath;
+	private long count;
+
 	private Set<LogQueryCallback> callbacks;
 	private Queue<LogQueryCallbackInfo> callbackQueue;
 	private Integer nextCallback;
 	private long nextStatusChangeCallback;
 
 	public Result() throws IOException {
-		result = new FileBufferList<Map<String, Object>>();
 		callbacks = new HashSet<LogQueryCallback>();
 		callbackQueue = new PriorityQueue<Result.LogQueryCallbackInfo>(11, new CallbackInfoComparator());
+
+		indexPath = File.createTempFile("result", ".idx", BASE_DIR);
+		dataPath = File.createTempFile("result", ".dat", BASE_DIR);
+		writer = new LogFileWriterV2(indexPath, dataPath, 640 * 1024, 0);
 	}
 
 	private class LogQueryCallbackInfo {
@@ -95,11 +110,18 @@ public class Result extends LogQueryCommand {
 
 	@Override
 	public void push(LogMap m) {
-		result.add(m.map());
+		try {
+			synchronized (writer) {
+				writer.write(convert(m.map()));
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+		count++;
 
-		while (nextCallback != null && result.size() >= nextCallback) {
+		while (nextCallback != null && count >= nextCallback) {
 			LogQueryCallback callback = callbackQueue.poll().callback;
-			callback.onPageLoaded(result);
+			callback.onPageLoaded();
 			if (callbackQueue.isEmpty())
 				nextCallback = null;
 			else
@@ -111,6 +133,15 @@ public class Result extends LogQueryCommand {
 				callback.onQueryStatusChange();
 			nextStatusChangeCallback = System.currentTimeMillis() + 2000;
 		}
+	}
+
+	private LogRecord convert(Map<String, Object> m) {
+		int length = EncodingRule.lengthOf(m);
+		ByteBuffer bb = ByteBuffer.allocate(length);
+		EncodingRule.encode(bb, m);
+		bb.flip();
+		LogRecord logdata = new LogRecord(new Date(), count + 1, bb);
+		return logdata;
 	}
 
 	@Override
@@ -132,20 +163,75 @@ public class Result extends LogQueryCommand {
 			nextCallback = this.callbackQueue.peek().size;
 	}
 
-	public FileBufferList<Map<String, Object>> getResult() {
-		return result;
-	}
+	public LogResultSet getResult() throws IOException {
+		synchronized (writer) {
+			writer.flush();
+		}
 
-	public List<Map<String, Object>> getResult(int offset, int limit) {
-		if (offset + limit > result.size())
-			limit = result.size() - offset;
-		return result.subList(offset, offset + limit);
+		LogFileReaderV2 reader = new LogFileReaderV2(indexPath, dataPath);
+		return new LogResultSetImpl(reader);
 	}
 
 	@Override
 	public void eof() {
+		try {
+			synchronized (writer) {
+				writer.close();
+			}
+		} catch (IOException e) {
+		}
+
 		super.eof();
 		for (LogQueryCallback callback : callbacks)
 			callback.onEof();
+	}
+
+	public void purge() {
+		indexPath.delete();
+		dataPath.delete();
+	}
+
+	private static class LogResultSetImpl implements LogResultSet {
+		private LogFileReaderV2 reader;
+		private LogRecordCursor cursor;
+
+		public LogResultSetImpl(LogFileReaderV2 reader) {
+			this.reader = reader;
+			this.cursor = reader.getCursor(true);
+		}
+
+		@Override
+		public long size() {
+			return reader.count();
+		}
+
+		@Override
+		public boolean hasNext() {
+			return cursor.hasNext();
+		}
+
+		@Override
+		public Map<String, Object> next() {
+			LogRecord next = cursor.next();
+			return EncodingRule.decodeMap(next.getData());
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void skip(long n) {
+			cursor.skip(n);
+		}
+
+		@Override
+		public void close() {
+			try {
+				reader.close();
+			} catch (IOException e) {
+			}
+		}
 	}
 }

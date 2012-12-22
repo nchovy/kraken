@@ -24,6 +24,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.krakenapps.logstorage.file.LogFileWriter;
+import org.krakenapps.logstorage.file.LogRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

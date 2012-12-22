@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <iPOJO>
-	<component className="org.krakenapps.dns.impl.DnsScriptFactory"
-		name="dnsScriptFactory" immediate="true" factory="false">
-		<provides>
-			<property name="alias" type="string" value="dns" />
-		</provides>
-	</component>
-	<instance component="dnsScriptFactory" />
+    <instance component="dns-service" />
+	<instance component="dns-script-factory" />
 </iPOJO>

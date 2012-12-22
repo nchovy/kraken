@@ -34,10 +34,10 @@ import org.krakenapps.logdb.query.parser.Sort2Parser;
 public class Sort2Parser implements LogQueryParser {
 	@Override
 	public void addSyntax(Syntax syntax) {
-		syntax.add("sort2", this, k("sort2 "), ref("option"), ref("sort_field2"));
-		syntax.add("sort_field2", new Sort2Parser.SortFieldParser(),
+		syntax.add("sort", this, k("sort "), ref("option"), ref("sort_field"));
+		syntax.add("sort_field", new Sort2Parser.SortFieldParser(),
 				repeat(rule(option(choice(t("+"), t("-"))), new StringPlaceholder(new char[] { ' ', ',' }))));
-		syntax.addRoot("sort2");
+		syntax.addRoot("sort");
 	}
 
 	@SuppressWarnings("unchecked")

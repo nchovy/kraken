@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logdb.msgbus;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,7 +35,6 @@ import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.impl.LogQueryHelper;
-import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -206,7 +206,7 @@ public class LogQueryPlugin {
 	}
 
 	@MsgbusMethod
-	public void getResult(Request req, Response resp) {
+	public void getResult(Request req, Response resp) throws IOException {
 		int id = req.getInteger("id");
 		int offset = req.getInteger("offset");
 		int limit = req.getInteger("limit");
@@ -253,32 +253,44 @@ public class LogQueryPlugin {
 
 		@Override
 		public void onQueryStatusChange() {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("id", query.getId());
-			m.put("type", "status_change");
-			m.put("count", query.getResult().size());
-			pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
-			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
+			try {
+				Map<String, Object> m = new HashMap<String, Object>();
+				m.put("id", query.getId());
+				m.put("type", "status_change");
+				m.put("count", query.getResultCount());
+				pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
+				pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
+			} catch (IOException e) {
+				logger.error("kraken logdb: msgbus push fail", e);
+			}
 		}
 
 		@Override
-		public void onPageLoaded(FileBufferList<Map<String, Object>> result) {
-			Map<String, Object> m = LogQueryHelper.getResultData(service, query.getId(), offset, limit);
-			m.put("id", query.getId());
-			m.put("type", "page_loaded");
-			pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
-			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
+		public void onPageLoaded() {
+			try {
+				Map<String, Object> m = LogQueryHelper.getResultData(service, query.getId(), offset, limit);
+				m.put("id", query.getId());
+				m.put("type", "page_loaded");
+				pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
+				pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
+			} catch (IOException e) {
+				logger.error("kraken logdb: msgbus push fail", e);
+			}
 		}
 
 		@Override
 		public void onEof() {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("id", query.getId());
-			m.put("type", "eof");
-			m.put("total_count", query.getResult().size());
-			pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
-			pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
-			query.unregisterQueryCallback(this);
+			try {
+				Map<String, Object> m = new HashMap<String, Object>();
+				m.put("id", query.getId());
+				m.put("type", "eof");
+				m.put("total_count", query.getResultCount());
+				pushApi.push(orgDomain, "logdb-query-" + query.getId(), m);
+				pushApi.push(orgDomain, "logstorage-query-" + query.getId(), m); // deprecated
+				query.unregisterQueryCallback(this);
+			} catch (IOException e) {
+				logger.error("kraken logdb: msgbus push fail", e);
+			}
 		}
 	}
 
@@ -305,22 +317,26 @@ public class LogQueryPlugin {
 
 		@Override
 		protected void callback(Date beginTime, SpanValue spanValue, int[] values, boolean isEnd) {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("id", query.getId());
-			m.put("type", isEnd ? "eof" : "periodic");
-			m.put("span_field", spanValue.getFieldName());
-			m.put("span_amount", spanValue.getAmount());
-			m.put("begin", beginTime);
-			m.put("values", values);
-			pushApi.push(orgDomain, "logdb-query-timeline-" + query.getId(), m);
+			try {
+				Map<String, Object> m = new HashMap<String, Object>();
+				m.put("id", query.getId());
+				m.put("type", isEnd ? "eof" : "periodic");
+				m.put("span_field", spanValue.getFieldName());
+				m.put("span_amount", spanValue.getAmount());
+				m.put("begin", beginTime);
+				m.put("values", values);
+				pushApi.push(orgDomain, "logdb-query-timeline-" + query.getId(), m);
 
-			m.put("count", query.getResult().size());
-			pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m); // deprecated
+				m.put("count", query.getResultCount());
+				pushApi.push(orgDomain, "logstorage-query-timeline-" + query.getId(), m); // deprecated
 
-			Object[] trace = new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
-					Arrays.toString(values), query.getResult().size() };
-			logger.trace("kraken logstorage: timeline callback => "
-					+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}", trace);
+				Object[] trace = new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
+						Arrays.toString(values), query.getResultCount() };
+				logger.trace("kraken logstorage: timeline callback => "
+						+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}", trace);
+			} catch (IOException e) {
+				logger.error("kraken logdb: msgbus push fail", e);
+			}
 		}
 	}
 }
