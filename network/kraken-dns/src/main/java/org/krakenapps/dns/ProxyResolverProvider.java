@@ -15,16 +15,10 @@
  */
 package org.krakenapps.dns;
 
-import java.util.Set;
+import java.net.InetAddress;
 
-public interface DnsCache {
-	DnsCacheEntry lookup(DnsCacheKey key);
+public interface ProxyResolverProvider extends DnsResolverProvider {
+	InetAddress getNameServer();
 
-	Set<DnsCacheKey> getKeys();
-
-	void putEntry(DnsCacheKey key, DnsCacheEntry entry);
-
-	void removeEntry(DnsCacheKey key);
-
-	void clear();
+	void setNameServer(InetAddress addr);
 }

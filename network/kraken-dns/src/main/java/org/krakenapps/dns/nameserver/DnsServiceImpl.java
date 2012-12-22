@@ -1,12 +1,28 @@
+/*
+ * Copyright 2012 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.dns.nameserver;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -23,10 +39,13 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.dns.DnsCache;
 import org.krakenapps.dns.DnsCacheEntry;
 import org.krakenapps.dns.DnsCacheKey;
+import org.krakenapps.dns.DnsDump;
 import org.krakenapps.dns.DnsEventListener;
 import org.krakenapps.dns.DnsFlags;
 import org.krakenapps.dns.DnsMessage;
 import org.krakenapps.dns.DnsMessageCodec;
+import org.krakenapps.dns.DnsResolver;
+import org.krakenapps.dns.DnsResolverProvider;
 import org.krakenapps.dns.DnsResourceRecord;
 import org.krakenapps.dns.DnsService;
 import org.krakenapps.dns.DnsServiceConfig;
@@ -41,6 +60,8 @@ public class DnsServiceImpl implements DnsService {
 	private final Logger logger = LoggerFactory.getLogger(DnsServiceImpl.class);
 	private DnsCache cache;
 	private CopyOnWriteArraySet<DnsEventListener> listeners;
+	private ConcurrentHashMap<String, DnsResolverProvider> providers;
+
 	private DatagramSocket socket;
 	private Thread t;
 	private ThreadPoolExecutor executor;
@@ -48,11 +69,13 @@ public class DnsServiceImpl implements DnsService {
 	private LinkedBlockingQueue<Runnable> queue;
 	private AtomicLong recvCount;
 	private AtomicLong dropCount;
+	private String defaultResolverName = "proxy";
 	private volatile boolean doStop;
 
 	public DnsServiceImpl() {
 		cache = new Cache();
 		listeners = new CopyOnWriteArraySet<DnsEventListener>();
+		providers = new ConcurrentHashMap<String, DnsResolverProvider>();
 		recvCount = new AtomicLong();
 		dropCount = new AtomicLong();
 		queue = new LinkedBlockingQueue<Runnable>();
@@ -116,6 +139,48 @@ public class DnsServiceImpl implements DnsService {
 		doStop = true;
 		t.interrupt();
 		t = null;
+	}
+
+	@Override
+	public List<DnsResolverProvider> getResolverProviders() {
+		return new ArrayList<DnsResolverProvider>(providers.values());
+	}
+
+	@Override
+	public DnsResolver newDefaultResolver() {
+		DnsResolverProvider provider = providers.get(defaultResolverName);
+		if (provider == null)
+			throw new IllegalStateException("dns resolver provider not found: " + defaultResolverName);
+
+		return provider.newResolver();
+	}
+
+	@Override
+	public void setDefaultResolverProvider(String name) {
+		if (!providers.containsKey(name))
+			throw new IllegalStateException("dns resolver provider not found: " + name);
+
+		this.defaultResolverName = name;
+	}
+
+	@Override
+	public void registerProvider(DnsResolverProvider provider) {
+		if (provider == null)
+			throw new IllegalArgumentException("dns resolver provider should be not null");
+
+		DnsResolverProvider old = providers.putIfAbsent(provider.getName(), provider);
+		if (old != null)
+			throw new IllegalStateException("dns resolver provider name conflicts: " + provider.getName());
+	}
+
+	@Override
+	public void unregisterProvider(DnsResolverProvider provider) {
+		if (provider == null)
+			throw new IllegalArgumentException("dns resolver provider should be not null");
+
+		DnsResolverProvider old = providers.get(provider.getName());
+		if (old == provider)
+			providers.remove(provider.getName());
 	}
 
 	@Override
@@ -215,7 +280,7 @@ public class DnsServiceImpl implements DnsService {
 				// fire query callbacks
 				for (DnsEventListener listener : listeners) {
 					try {
-						listener.onReceive(query);
+						listener.onReceive(packet, query);
 					} catch (Throwable t) {
 						logger.warn("kraken dns: dns listener should not throw any exception", t);
 					}
@@ -229,7 +294,7 @@ public class DnsServiceImpl implements DnsService {
 
 						for (DnsEventListener listener : listeners) {
 							try {
-								listener.onDrop(query, null);
+								listener.onDrop(packet, query, null);
 							} catch (Throwable t) {
 								logger.warn("kraken dns: dns listener should not throw any exception", t);
 							}
@@ -239,6 +304,7 @@ public class DnsServiceImpl implements DnsService {
 					}
 
 					ByteBuffer rbuf = DnsMessageCodec.encode(reply);
+					int limit = rbuf.limit();
 
 					DatagramPacket r = new DatagramPacket(rbuf.array(), rbuf.limit(), packet.getAddress(), packet.getPort());
 					socket.send(r);
@@ -246,14 +312,23 @@ public class DnsServiceImpl implements DnsService {
 					// fire response callbacks
 					for (DnsEventListener listener : listeners) {
 						try {
-							listener.onSend(query, reply);
+							listener.onSend(packet, query, r, reply);
 						} catch (Throwable t) {
 							logger.warn("kraken dns: dns listener should not throw any exception", t);
 						}
 					}
+
+					try {
+						ByteBuffer b = ByteBuffer.wrap(rbuf.array(), 0, limit);
+						DnsMessageCodec.decode(b);
+					} catch (Throwable t) {
+						String hex = DnsDump.dumpPacket(r);
+						logger.error("kraken: malformed sent - " + hex, t);
+					}
+
 				} else {
 					String remote = packet.getAddress().getHostAddress();
-					String dump = dumpPacket();
+					String dump = DnsDump.dumpPacket(packet);
 					logger.error("kraken dns: empty query from [{}], raw packet => [{}]", remote, dump);
 				}
 			} catch (Throwable t) {
@@ -267,54 +342,39 @@ public class DnsServiceImpl implements DnsService {
 				}
 
 				// dump raw packet for future debugging
-				String dump = dumpPacket();
+				String dump = DnsDump.dumpPacket(packet);
 				String remote = packet.getAddress().getHostAddress();
 				logger.error("kraken dns: cannot handle query from [" + remote + "], raw packet => [" + dump + "]", t);
 			}
 		}
 
-		private DnsMessage resolve() throws UnknownHostException {
+		private DnsMessage resolve() throws IOException {
 			DnsResourceRecord qr = query.getQuestions().get(0);
 			String domain = qr.getName();
 			DnsCacheKey key = new DnsCacheKey(domain, DnsResourceRecord.Type.A, DnsResourceRecord.Clazz.IN);
 			DnsCacheEntry entry = cache.lookup(key);
-			if (entry == null)
-				return null;
+			if (entry == null) {
+				DnsResolver resolver = newDefaultResolver();
+				return resolver.resolve(query);
+			} else {
+				DnsMessage cached = entry.getResponse();
 
-			DnsMessage cached = entry.getResponse();
+				DnsMessage reply = new DnsMessage();
+				reply.setId(query.getId());
+				DnsFlags flags = new DnsFlags();
+				flags.setQuery(false);
+				reply.setFlags(flags);
+				reply.setQuestionCount(1);
+				reply.setAnswerCount(cached.getAnswers().size());
 
-			DnsMessage reply = new DnsMessage();
-			reply.setId(query.getId());
-			DnsFlags flags = new DnsFlags();
-			flags.setQuery(false);
-			reply.setFlags(flags);
-			reply.setQuestionCount(1);
-			reply.setAnswerCount(cached.getAnswers().size());
+				reply.addQuestion(new A(domain));
 
-			reply.addQuestion(new A(domain));
+				for (DnsResourceRecord rr : cached.getAnswers()) {
+					reply.addAnswer(rr);
+				}
 
-			for (DnsResourceRecord rr : cached.getAnswers()) {
-				reply.addAnswer(rr);
+				return reply;
 			}
-
-			return reply;
-		}
-
-		private String dumpPacket() {
-			StringBuilder sb = new StringBuilder();
-			byte[] buf = packet.getData();
-			int offset = packet.getOffset();
-			int length = packet.getLength();
-
-			sb.append("byte[] b = new byte[] { ");
-			for (int i = 0; i < length; i++) {
-				if (i != 0)
-					sb.append(", ");
-				sb.append(String.format("(byte) 0x%02x", buf[i + offset]));
-			}
-			sb.append("};");
-
-			return sb.toString();
 		}
 	}
 }

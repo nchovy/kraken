@@ -59,9 +59,11 @@ class RunOutput {
 			cacheCount.addAndGet(length);
 
 			File indexFile = null;
-			File dataFile = File.createTempFile("mergedata", ".tmp");
+			File tmpDir = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/sort");
+			tmpDir.mkdirs();
+			File dataFile = File.createTempFile("run", ".dat", tmpDir);
 			if (!noIndexWrite) {
-				indexFile = File.createTempFile("mergeindex", ".tmp");
+				indexFile = File.createTempFile("run", ".idx", tmpDir);
 				logger.debug("kraken logdb: creating run output index [{}]", indexFile.getAbsolutePath());
 				indexFos = new FileOutputStream(indexFile);
 				indexBos = new BufferedOutputStream(indexFos, WRITE_BUFFER_SIZE);

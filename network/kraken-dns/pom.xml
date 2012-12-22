@@ -11,7 +11,7 @@
 	<artifactId>kraken-dns</artifactId>
 	<packaging>bundle</packaging>
 	<name>Kraken DNS</name>
-	<version>0.2.0</version>
+	<version>0.3.0</version>
 	<build>
 		<plugins>
 			<plugin>
@@ -25,9 +25,10 @@
 						    	org.krakenapps.dns;version=${project.version},
 						    	org.krakenapps.dns.rr;version=${project.version}
 						</Export-Package>
-						<Import-Package>*</Import-Package>
+						<Import-Package>!org.junit,*</Import-Package>
 						<Private-Package>
 						    org.krakenapps.dns.nameserver,
+						    org.krakenapps.dns.resolver,
 						    org.krakenapps.dns.script,
 						</Private-Package>
 					</instructions>

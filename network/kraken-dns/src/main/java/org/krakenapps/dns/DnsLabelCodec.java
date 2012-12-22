@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.dns;
 
 import java.nio.ByteBuffer;
@@ -30,12 +45,16 @@ public class DnsLabelCodec {
 				break;
 
 			if ((b & 0xc0) != 0) {
-				int nextOffset = b;
+				int nextOffset = b & 0x3f;
 				b = bb.get();
-				nextOffset = (nextOffset << 8) | b;
+				nextOffset = (nextOffset << 8) | (b & 0xff);
 				ByteBuffer dup = bb.duplicate();
 				dup.position(nextOffset);
-				return decode(dup);
+				String prefix = sb.toString();
+				if (prefix.isEmpty())
+					return decode(dup);
+				else
+					return prefix + "." + decode(dup);
 			}
 
 			int len = b & 0x3f;

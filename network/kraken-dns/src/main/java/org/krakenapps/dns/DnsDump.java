@@ -15,16 +15,25 @@
  */
 package org.krakenapps.dns;
 
-import java.util.Set;
+import java.net.DatagramPacket;
 
-public interface DnsCache {
-	DnsCacheEntry lookup(DnsCacheKey key);
+public class DnsDump {
+	
+	public static String dumpPacket(DatagramPacket packet) {
+		StringBuilder sb = new StringBuilder();
+		byte[] buf = packet.getData();
+		int offset = packet.getOffset();
+		int length = packet.getLength();
 
-	Set<DnsCacheKey> getKeys();
+		sb.append("byte[] b = new byte[] { ");
+		for (int i = 0; i < length; i++) {
+			if (i != 0)
+				sb.append(", ");
+			sb.append(String.format("(byte) 0x%02x", buf[i + offset]));
+		}
+		sb.append("};");
 
-	void putEntry(DnsCacheKey key, DnsCacheEntry entry);
+		return sb.toString();
+	}
 
-	void removeEntry(DnsCacheKey key);
-
-	void clear();
 }

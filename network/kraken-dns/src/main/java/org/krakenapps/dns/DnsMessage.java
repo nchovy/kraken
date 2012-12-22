@@ -23,7 +23,7 @@ import java.util.ArrayList;
  */
 public class DnsMessage {
 	private int id;
-	private DnsFlags flags;
+	private DnsFlags flags = new DnsFlags();
 	private int questionCount;
 	private int answerCount;
 	private int authorityCount;

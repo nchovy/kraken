@@ -179,39 +179,45 @@ public class DnsFlags {
 		boolean first = true;
 
 		if (isAuthoritativeAnswer) {
-			sb.append("AA");
-			if (!first) {
-				sb.append(" ");
+			if (first)
 				first = false;
-			}
+			else
+				sb.append(" ");
+			sb.append("AA");
 		}
 
 		if (isTruncated) {
-			sb.append("TC");
-			if (!first) {
-				sb.append(" ");
+			if (first)
 				first = false;
-			}
+			else
+				sb.append(" ");
+			sb.append("TC");
 		}
 
 		if (isRecursionDesired) {
-			sb.append("RD");
-			if (!first) {
-				sb.append(" ");
+			if (first)
 				first = false;
-			}
+			else
+				sb.append(" ");
+			sb.append("RD");
 		}
 
 		if (isRecursionAvailable) {
-			sb.append("RA");
-			if (!first) {
-				sb.append(" ");
+			if (first)
 				first = false;
-			}
+			else
+				sb.append(" ");
+			sb.append("RA");
 		}
 
-		if (responseCode != DnsResponseCode.NO_ERROR)
+		if (responseCode != DnsResponseCode.NO_ERROR) {
+			if (first)
+				first = false;
+			else
+				sb.append(" ");
+			
 			sb.append(responseCode.getDescription());
+		}
 
 		return sb.toString();
 	}

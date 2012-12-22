@@ -21,47 +21,38 @@ import java.nio.ByteBuffer;
 
 import org.krakenapps.dns.DnsResourceRecord;
 
-public class A extends DnsResourceRecord {
+/**
+ * DNS Extensions to Support IP Version 6 {@link http
+ * ://tools.ietf.org/html/rfc3596}
+ * 
+ * @author xeraph
+ * 
+ */
+public class AAAA extends DnsResourceRecord {
 	private InetAddress address;
 
-	public A() {
-	}
-
-	public A(String name) {
-		this.name = name;
-		this.type = 1;
-		this.clazz = 1;
-	}
-
-	public A(String name, InetAddress address, int ttl) {
-		this(name);
-		this.address = address;
-		this.ttl = ttl;
-	}
-
 	public static DnsResourceRecord decode(ByteBuffer bb, boolean isQuestion) {
-		A a = new A();
-
+		AAAA aaaa = new AAAA();
 		if (isQuestion)
-			return a;
+			return aaaa;
 
 		int rdlen = bb.getShort();
-		if (rdlen != 4)
-			throw new IllegalStateException("type A record's rdlen (" + rdlen + ") should be 4");
+		if (rdlen != 16)
+			throw new IllegalStateException("type AAAA record's rdlen (" + rdlen + ") should be 16 (128bit)");
 
-		byte[] b = new byte[4];
+		byte[] b = new byte[16];
 		bb.get(b);
 		try {
-			a.address = InetAddress.getByAddress(b);
+			aaaa.address = InetAddress.getByAddress(b);
 		} catch (UnknownHostException e) {
 		}
 
-		return a;
+		return aaaa;
 	}
 
 	@Override
 	public void encode(ByteBuffer bb) {
-		bb.putShort((short) 4);
+		bb.putShort((short) 16);
 		bb.put(address.getAddress());
 	}
 
@@ -76,9 +67,8 @@ public class A extends DnsResourceRecord {
 	@Override
 	public String toString() {
 		if (address == null)
-			return "A " + name;
+			return "AAAA " + name;
 		else
-			return "A " + address.getHostAddress();
+			return "AAAA " + address.getHostAddress();
 	}
-
 }

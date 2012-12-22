@@ -18,6 +18,14 @@ package org.krakenapps.dns;
 import java.nio.ByteBuffer;
 
 import org.krakenapps.dns.rr.A;
+import org.krakenapps.dns.rr.AAAA;
+import org.krakenapps.dns.rr.CNAME;
+import org.krakenapps.dns.rr.MX;
+import org.krakenapps.dns.rr.NS;
+import org.krakenapps.dns.rr.PTR;
+import org.krakenapps.dns.rr.SOA;
+import org.krakenapps.dns.rr.SRV;
+import org.krakenapps.dns.rr.TXT;
 
 /**
  * @author mindori
@@ -37,16 +45,16 @@ public class DnsMessageCodec {
 		bb.putShort((short) msg.getAdditionalCount());
 
 		for (DnsResourceRecord rr : msg.getQuestions())
-			encodeResourceRecord(bb, rr);
+			encodeResourceRecord(bb, rr, true);
 
 		for (DnsResourceRecord rr : msg.getAnswers())
-			encodeResourceRecord(bb, rr);
+			encodeResourceRecord(bb, rr, false);
 
 		for (DnsResourceRecord rr : msg.getAuthorities())
-			encodeResourceRecord(bb, rr);
+			encodeResourceRecord(bb, rr, false);
 
 		for (DnsResourceRecord rr : msg.getAdditionals())
-			encodeResourceRecord(bb, rr);
+			encodeResourceRecord(bb, rr, false);
 
 		bb.flip();
 
@@ -64,25 +72,25 @@ public class DnsMessageCodec {
 		msg.setAdditionalCount(bb.getShort() & 0xffff);
 
 		for (int i = 0; i < msg.getQuestionCount(); i++) {
-			DnsResourceRecord rr = decodeResourceRecord(bb);
+			DnsResourceRecord rr = decodeResourceRecord(bb, true);
 			if (rr != null)
 				msg.addQuestion(rr);
 		}
 
 		for (int i = 0; i < msg.getAnswerCount(); i++) {
-			DnsResourceRecord rr = decodeResourceRecord(bb);
+			DnsResourceRecord rr = decodeResourceRecord(bb, false);
 			if (rr != null)
 				msg.addAnswer(rr);
 		}
 
 		for (int i = 0; i < msg.getAuthorityCount(); i++) {
-			DnsResourceRecord rr = decodeResourceRecord(bb);
+			DnsResourceRecord rr = decodeResourceRecord(bb, false);
 			if (rr != null)
 				msg.addAuthority(rr);
 		}
 
 		for (int i = 0; i < msg.getAdditionalCount(); i++) {
-			DnsResourceRecord rr = decodeResourceRecord(bb);
+			DnsResourceRecord rr = decodeResourceRecord(bb, false);
 			if (rr != null)
 				msg.addAdditional(rr);
 		}
@@ -90,33 +98,63 @@ public class DnsMessageCodec {
 		return msg;
 	}
 
-	private static void encodeResourceRecord(ByteBuffer bb, DnsResourceRecord rr) {
+	private static void encodeResourceRecord(ByteBuffer bb, DnsResourceRecord rr, boolean isQuestion) {
 		DnsLabelCodec.encode(bb, rr.getName());
 		bb.putShort((short) rr.getType());
 		bb.putShort((short) rr.getClazz());
-		rr.encode(bb);
+
+		if (!isQuestion) {
+			bb.putInt(rr.getTtl());
+			rr.encode(bb);
+		}
 	}
 
-	private static DnsResourceRecord decodeResourceRecord(ByteBuffer bb) {
+	private static DnsResourceRecord decodeResourceRecord(ByteBuffer bb, boolean isQuestion) {
 		String label = DnsLabelCodec.decode(bb);
 		int type = bb.getShort() & 0xffff;
 		int clazz = bb.getShort() & 0xffff;
-
+		int ttl = 0;
 		DnsResourceRecord rr = null;
+		if (!isQuestion) {
+			ttl = bb.getInt();
+		}
+
 		switch (type) {
 		case 1:
-			rr = A.decode(bb);
+			rr = A.decode(bb, isQuestion);
+			break;
+		case 2:
+			rr = NS.decode(bb, isQuestion);
+			break;
+		case 5:
+			rr = CNAME.decode(bb, isQuestion);
+			break;
+		case 6:
+			rr = SOA.decode(bb, isQuestion);
+			break;
+		case 12:
+			rr = PTR.decode(bb, isQuestion);
+			break;
+		case 15:
+			rr = MX.decode(bb, isQuestion);
+			break;
+		case 16:
+			rr = TXT.decode(bb, isQuestion);
+			break;
+		case 28:
+			rr = AAAA.decode(bb, isQuestion);
+			break;
+		case 33:
+			rr = SRV.decode(bb, isQuestion);
 			break;
 		default:
-			System.out.println("rr type " + type + " not supported");
-			break;
+			throw new IllegalStateException("rr type " + type + " not supported");
 		}
 
-		if (rr != null) {
-			rr.setName(label);
-			rr.setType(type);
-			rr.setClazz(clazz);
-		}
+		rr.setName(label);
+		rr.setType(type);
+		rr.setClazz(clazz);
+		rr.setTtl(ttl);
 
 		return rr;
 	}

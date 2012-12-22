@@ -15,16 +15,8 @@
  */
 package org.krakenapps.dns;
 
-import java.util.Set;
+import java.io.IOException;
 
-public interface DnsCache {
-	DnsCacheEntry lookup(DnsCacheKey key);
-
-	Set<DnsCacheKey> getKeys();
-
-	void putEntry(DnsCacheKey key, DnsCacheEntry entry);
-
-	void removeEntry(DnsCacheKey key);
-
-	void clear();
+public interface DnsResolver {
+	DnsMessage resolve(DnsMessage query) throws IOException;
 }
