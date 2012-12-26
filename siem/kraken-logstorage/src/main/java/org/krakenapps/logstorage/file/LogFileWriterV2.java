@@ -230,6 +230,10 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 	@Override
 	public void flush() throws IOException {
+		// check if writer is closed
+		if (indexFile == null || dataFile == null)
+			return;
+
 		if (indexBuffer.position() == 0)
 			return;
 
