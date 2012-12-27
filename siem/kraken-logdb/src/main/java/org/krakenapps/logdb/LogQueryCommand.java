@@ -18,11 +18,12 @@ package org.krakenapps.logdb;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.krakenapps.logdb.query.FileBufferList;
 
 public abstract class LogQueryCommand {
 	public static enum Status {
-		Waiting, Running, End
+		Waiting, Running, End, Finalizing
 	}
 
 	private String queryString;
@@ -125,14 +126,14 @@ public abstract class LogQueryCommand {
 	public void eof() {
 		status = Status.End;
 
-		if (next != null && next.status != Status.End)
+		if (next != null && next.status != Status.End && next.status != Status.Finalizing)
 			next.eof();
 
 		if (logQuery != null) {
 			if (callbackTimeline) {
 				for (LogTimelineCallback callback : logQuery.getTimelineCallbacks())
 					callback.eof();
-				logQuery.getTimelineCallbacks().clear();
+				logQuery.clearTimelineCallbacks();
 			}
 			if (logQuery.getCommands().get(0).status != Status.End)
 				logQuery.getCommands().get(0).eof();

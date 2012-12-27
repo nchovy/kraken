@@ -103,11 +103,11 @@ public class Table extends LogQueryCommand {
 			status = Status.Running;
 			storage.search(tableName, from, to, offset, limit, new LogSearchCallbackImpl());
 		} catch (InterruptedException e) {
-			logger.trace("kraken logstorage: query interrupted");
+			logger.trace("kraken logdb: query interrupted");
 		} catch (Exception e) {
-			logger.error("kraken logstorage: table exception", e);
+			logger.error("kraken logdb: table exception", e);
 		} catch (Error e) {
-			logger.error("kraken logstorage: table error", e);
+			logger.error("kraken logdb: table error", e);
 		}
 		eof();
 	}

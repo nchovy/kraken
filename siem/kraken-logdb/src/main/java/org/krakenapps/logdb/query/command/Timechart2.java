@@ -170,11 +170,13 @@ public class Timechart2 extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+
 		CloseableIterator it = null;
 		try {
 			// last flush
 			flush();
-			
+
 			// reclaim buffer (GC support)
 			buffer = null;
 
@@ -258,10 +260,12 @@ public class Timechart2 extends LogQueryCommand {
 			lastKeyFieldValue = keyFieldValue;
 		}
 
-		// write last item
-		output.put("_time", lastTime);
-		setOutputAndReset(output, fs, lastKeyFieldValue);
-		write(new LogMap(output));
+		// write last item (can be null if input count is 0)
+		if (lastTime != null) {
+			output.put("_time", lastTime);
+			setOutputAndReset(output, fs, lastKeyFieldValue);
+			write(new LogMap(output));
+		}
 	}
 
 	private void setOutputAndReset(Map<String, Object> output, Function[] fs, String keyFieldValue) {

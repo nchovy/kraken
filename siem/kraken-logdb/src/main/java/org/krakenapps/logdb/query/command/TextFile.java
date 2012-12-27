@@ -61,7 +61,7 @@ public class TextFile extends LogQueryCommand {
 				i++;
 			}
 		} catch (Throwable t) {
-			logger.error("kraken logstorage: file error", t);
+			logger.error("kraken logdb: file error", t);
 		}
 
 		eof();

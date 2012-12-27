@@ -40,6 +40,7 @@ public class Script extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		script.eof(output);
 		super.eof();
 	}

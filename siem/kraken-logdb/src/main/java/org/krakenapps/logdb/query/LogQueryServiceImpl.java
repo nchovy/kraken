@@ -116,7 +116,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 			try {
 				parsers.add(clazz.newInstance());
 			} catch (Exception e) {
-				logger.error("kraken logstorage: failed to add syntax: " + clazz.getSimpleName(), e);
+				logger.error("kraken logdb: failed to add syntax: " + clazz.getSimpleName(), e);
 			}
 		}
 
@@ -162,12 +162,15 @@ public class LogQueryServiceImpl implements LogQueryService {
 		}
 
 		try {
+			lq.clearTimelineCallbacks();
+			lq.clearQueryCallbacks();
+			
 			if (!lq.isEnd())
 				lq.cancel();
 		} catch (Throwable t) {
-			logger.error("kraken logdb: cannot cancel query " + lq.getId(), t);
+			logger.error("kraken logdb: cannot cancel query " + lq, t);
 		}
-
+		
 		try {
 			lq.purge();
 		} catch (Throwable t) {

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.logdb.LogQueryCallback;
@@ -47,13 +48,19 @@ public class Result extends LogQueryCommand {
 	private Integer nextCallback;
 	private long nextStatusChangeCallback;
 
+	/**
+	 * index and data file is deleted by user request
+	 */
+	private volatile boolean purged;
+
 	public Result() throws IOException {
-		callbacks = new HashSet<LogQueryCallback>();
+		callbacks = new CopyOnWriteArraySet<LogQueryCallback>();
 		callbackQueue = new PriorityQueue<Result.LogQueryCallbackInfo>(11, new CallbackInfoComparator());
 
 		indexPath = File.createTempFile("result", ".idx", BASE_DIR);
 		dataPath = File.createTempFile("result", ".dat", BASE_DIR);
 		writer = new LogFileWriterV2(indexPath, dataPath, 640 * 1024, 0);
+		BASE_DIR.mkdirs();
 	}
 
 	private class LogQueryCallbackInfo {
@@ -164,6 +171,12 @@ public class Result extends LogQueryCommand {
 	}
 
 	public LogResultSet getResult() throws IOException {
+		if (purged) {
+			String msg = "query result file is already purged, index=" + indexPath.getAbsolutePath() + ", data="
+					+ dataPath.getAbsolutePath();
+			throw new IOException(msg);
+		}
+
 		synchronized (writer) {
 			writer.flush();
 		}
@@ -174,6 +187,8 @@ public class Result extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+
 		try {
 			synchronized (writer) {
 				writer.close();
@@ -187,6 +202,14 @@ public class Result extends LogQueryCommand {
 	}
 
 	public void purge() {
+		purged = true;
+
+		// clear query callbacks
+		callbacks.clear();
+		callbackQueue.clear();
+		nextCallback = null;
+
+		// delete files
 		indexPath.delete();
 		dataPath.delete();
 	}

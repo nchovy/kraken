@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.query.ObjectComparator;
 import org.krakenapps.logdb.sort.CloseableIterator;
 import org.krakenapps.logdb.sort.Item;
@@ -84,6 +85,7 @@ public class Sort2 extends LogQueryCommand {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		// TODO: use LONG instead!
 		int count = limit != null ? limit : Integer.MAX_VALUE;
 

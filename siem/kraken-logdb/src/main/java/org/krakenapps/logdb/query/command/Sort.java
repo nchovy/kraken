@@ -19,9 +19,9 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.Map;
 
+import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.ObjectComparator;
-import org.krakenapps.logdb.LogQueryCommand;
 
 public class Sort extends LogQueryCommand {
 	private Integer limit;
@@ -80,6 +80,7 @@ public class Sort extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		if (limit == null) {
 			write(buf);
 		} else {

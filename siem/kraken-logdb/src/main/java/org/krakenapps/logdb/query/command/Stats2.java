@@ -113,6 +113,8 @@ public class Stats2 extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+		
 		logger.debug("kraken logdb: stats2 sort input count [{}]", inputCount);
 		CloseableIterator it = null;
 		try {
