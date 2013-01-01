@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogResultSet;
@@ -59,7 +60,7 @@ public class Result extends LogQueryCommand {
 
 		indexPath = File.createTempFile("result", ".idx", BASE_DIR);
 		dataPath = File.createTempFile("result", ".dat", BASE_DIR);
-		writer = new LogFileWriterV2(indexPath, dataPath, 640 * 1024, 0);
+		writer = new LogFileWriterV2(indexPath, dataPath, 1024 * 1024, 1);
 		BASE_DIR.mkdirs();
 	}
 
@@ -143,10 +144,8 @@ public class Result extends LogQueryCommand {
 	}
 
 	private LogRecord convert(Map<String, Object> m) {
-		int length = EncodingRule.lengthOf(m);
-		ByteBuffer bb = ByteBuffer.allocate(length);
-		EncodingRule.encode(bb, m);
-		bb.flip();
+		FastEncodingRule enc = new FastEncodingRule();
+		ByteBuffer bb = enc.encode(m);
 		LogRecord logdata = new LogRecord(new Date(), count + 1, bb);
 		return logdata;
 	}
