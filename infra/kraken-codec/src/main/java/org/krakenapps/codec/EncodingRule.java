@@ -80,7 +80,7 @@ public class EncodingRule {
 		} else if (value instanceof List<?>) {
 			encodeArray(bb, (List<?>) value, cc);
 		} else if (value.getClass().isArray()) {
-			Class c = value.getClass().getComponentType();
+			Class<?> c = value.getClass().getComponentType();
 			if (c == byte.class) {
 				encodeBlob(bb, (byte[]) value);
 			} else if (c == int.class) {
@@ -146,7 +146,7 @@ public class EncodingRule {
 		} else if (value instanceof List<?>) {
 			return lengthOfArray((List<?>) value, cc);
 		} else if (value.getClass().isArray()) {
-			Class c = value.getClass().getComponentType();
+			Class<?> c = value.getClass().getComponentType();
 			if (c == byte.class) {
 				return lengthOfBlob((byte[]) value);
 			} else if (c == int.class) {
@@ -391,7 +391,8 @@ public class EncodingRule {
 			throw new TypeMismatchException(ZINT32_TYPE, type, bb.position() - 1);
 
 		int zvalue = (int) decodeRawNumber(bb);
-		return (int) (((zvalue >> 1) & 0x7FFFFFFF) ^ -(zvalue & 1));
+		int v = (int) (((zvalue >> 1) & 0x7FFFFFFF) ^ -(zvalue & 1));
+		return v;
 	}
 
 	public static void encodeShort(ByteBuffer bb, short value) {
@@ -419,6 +420,8 @@ public class EncodingRule {
 		}
 	}
 
+	private static final Charset utf8 = Charset.forName("utf-8");
+
 	public static String decodeString(ByteBuffer bb) {
 		byte type = bb.get();
 		if (type != STRING_TYPE)
@@ -429,7 +432,7 @@ public class EncodingRule {
 		int oldLimit = bb.limit();
 		bb.limit(bb.position() + length);
 
-		CharBuffer cb = Charset.forName("utf-8").decode(bb);
+		CharBuffer cb = utf8.decode(bb);
 		String value = cb.toString();
 		bb.limit(oldLimit);
 
@@ -573,7 +576,7 @@ public class EncodingRule {
 
 		int length = (int) decodeRawNumber(bb);
 
-		Map<String, Object> m = new HashMap<String, Object>();
+		HashMap<String, Object> m = new HashMap<String, Object>();
 
 		while (length > 0) {
 			int before = bb.remaining();
@@ -830,9 +833,12 @@ public class EncodingRule {
 				return 5; // max length for int
 			else
 				return 3; // max length for short
+		} else {
+			if (value <= 127)
+				return 1;
+			if (value <= 16383)
+				return 2;
 		}
-		if (value == 0)
-			return 1;
 
 		return (63 - Long.numberOfLeadingZeros(value)) / 7 + 1;
 	}
