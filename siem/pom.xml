@@ -43,5 +43,6 @@
 		<!--module>kraken-ipmanager</module-->
 		<module>kraken-snmptrap-parser</module>
     <module>kraken-eventstorage</module>
+    <module>kraken-logdb-httpinput</module>
   </modules>
 </project>
