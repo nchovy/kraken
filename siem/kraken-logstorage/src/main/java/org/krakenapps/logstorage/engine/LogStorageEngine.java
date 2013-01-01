@@ -39,6 +39,7 @@ import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
@@ -213,11 +214,10 @@ public class LogStorageEngine implements LogStorage {
 					try {
 						LogFileFixReport report = new LogFileRepairer().fix(indexPath, dataPath);
 						if (report != null)
-							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName,
-									report);
+							logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
 					} catch (IOException e) {
-						logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile()
-								+ "], data [" + dataPath.getAbsolutePath() + "]", e);
+						logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
+								+ dataPath.getAbsolutePath() + "]", e);
 					}
 				}
 			}
@@ -268,8 +268,9 @@ public class LogStorageEngine implements LogStorage {
 				if (report != null)
 					logger.info("kraken logstorage: fixed log table [{}], detail report: \n{}", tableName, report);
 			} catch (IOException e) {
-				logger.error("kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
-						+ dataPath.getAbsolutePath() + "]", e);
+				logger.error(
+						"kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
+								+ dataPath.getAbsolutePath() + "]", e);
 			}
 		}
 		logger.info("kraken logstorage: all table verifications are completed");
@@ -313,8 +314,7 @@ public class LogStorageEngine implements LogStorage {
 		for (File f : tableDir.listFiles()) {
 			if (f.isFile() && (f.getName().endsWith(".idx") || f.getName().endsWith(".dat"))) {
 				if (!f.delete())
-					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(),
-							tableName);
+					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
 			}
 		}
 
@@ -412,10 +412,8 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	private LogRecord convert(Log log) {
-		int length = EncodingRule.lengthOf(log.getData());
-		ByteBuffer bb = ByteBuffer.allocate(length);
-		EncodingRule.encode(bb, log.getData());
-		bb.flip();
+		FastEncodingRule enc = new FastEncodingRule();
+		ByteBuffer bb = enc.encode(log.getData());
 		LogRecord logdata = new LogRecord(log.getDate(), log.getId(), bb);
 		return logdata;
 	}
@@ -477,8 +475,8 @@ public class LogStorageEngine implements LogStorage {
 			if (logdata == null) {
 				if (logger.isTraceEnabled()) {
 					String dayText = DateUtil.getDayText(day);
-					logger.trace("kraken logstorage: log [table={}, date={}, id={}] not found", new Object[] {
-							tableName, dayText, id });
+					logger.trace("kraken logstorage: log [table={}, date={}, id={}] not found", new Object[] { tableName,
+							dayText, id });
 				}
 				return null;
 			}
@@ -509,8 +507,7 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(Date from, Date to, int offset, int limit, LogSearchCallback callback)
-			throws InterruptedException {
+	public int search(Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException {
 		verify();
 
 		int found = 0;
@@ -536,8 +533,7 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
-	public int search(String tableName, Date from, Date to, int limit, LogSearchCallback callback)
-			throws InterruptedException {
+	public int search(String tableName, Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException {
 		return search(tableName, from, to, 0, limit, callback);
 	}
 
@@ -597,8 +593,7 @@ public class LogStorageEngine implements LogStorage {
 					ListIterator<LogRecord> li = buffer.listIterator(buffer.size());
 					while (li.hasPrevious()) {
 						LogRecord logData = li.previous();
-						if ((from == null || logData.getDate().after(from))
-								&& (to == null || logData.getDate().before(to))) {
+						if ((from == null || logData.getDate().after(from)) && (to == null || logData.getDate().before(to))) {
 							if (offset > 0) {
 								offset--;
 								continue;

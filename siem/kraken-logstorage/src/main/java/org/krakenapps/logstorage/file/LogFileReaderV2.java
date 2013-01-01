@@ -47,6 +47,7 @@ public class LogFileReaderV2 extends LogFileReader {
 
 	private Inflater decompresser = new Inflater();
 	private long totalCount;
+	private boolean useDeflater;
 
 	public LogFileReaderV2(File indexPath, File dataPath) throws IOException, InvalidLogFileHeaderException {
 		this.indexPath = indexPath;
@@ -82,9 +83,14 @@ public class LogFileReaderV2 extends LogFileReader {
 		LogFileHeader dataFileHeader = LogFileHeader.extractHeader(dataFile, dataPath);
 		if (dataFileHeader.version() != 2)
 			throw new InvalidLogFileHeaderException("version not match");
+
+		byte[] ext = dataFileHeader.getExtraData();
 		int dataBlockSize = getInt(dataFileHeader.getExtraData());
 		dataBuffer = ByteBuffer.allocate(dataBlockSize);
 		buf = new byte[dataBlockSize];
+
+		if (new String(ext, 4, ext.length - 4).trim().equals("deflater"))
+			useDeflater = true;
 
 		length = dataFile.length();
 		pos = dataFileHeader.size();
@@ -248,7 +254,9 @@ public class LogFileReaderV2 extends LogFileReader {
 			dataBuffer.clear();
 			dataFile.seek(header.fp + 24L);
 
-			if (header.origLength != header.compressedLength) {
+			// assume deflate if original length != compress length for backward
+			// compatibility
+			if (useDeflater || header.origLength != header.compressedLength) {
 				dataFile.readFully(buf, 0, header.compressedLength);
 				decompresser.setInput(buf, 0, header.compressedLength);
 				try {

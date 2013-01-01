@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logstorage</artifactId>
-	<version>1.11.0</version>
+	<version>1.11.2</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log Storage</name>
 	<build>
@@ -30,9 +30,10 @@
 							org.krakenapps.logstorage.script
 						</Private-Package>
 						<Import-Package>
-						    org.krakenapps.msgbus;resolution:=optional,
+							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
-						   	*
+							org.krakenapps.codec;version=2.2.0,
+							*
 						</Import-Package>
 					</instructions>
 				</configuration>
