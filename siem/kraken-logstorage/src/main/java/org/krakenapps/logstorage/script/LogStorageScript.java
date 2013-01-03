@@ -23,6 +23,9 @@ import java.io.InputStreamReader;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -142,6 +145,8 @@ public class LogStorageScript implements Script {
 		context.println("Tables");
 		context.println("--------");
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+		ArrayList<TableInfo> tables = new ArrayList<TableInfo>();
 		for (String tableName : tableRegistry.getTableNames()) {
 			int tableId = tableRegistry.getTableId(tableName);
 			Iterator<Date> it = storage.getLogDates(tableName).iterator();
@@ -150,7 +155,28 @@ public class LogStorageScript implements Script {
 				lastDay = it.next();
 
 			String lastRecord = lastDay != null ? dateFormat.format(lastDay) : "none";
-			context.println("[" + tableId + "] " + tableName + ": " + lastRecord);
+			tables.add(new TableInfo(tableId, "[" + tableId + "] " + tableName + ": " + lastRecord));
+		}
+
+		// sort by id and print all
+		Collections.sort(tables, new Comparator<TableInfo>() {
+			@Override
+			public int compare(TableInfo o1, TableInfo o2) {
+				return o1.id - o2.id;
+			}
+		});
+
+		for (TableInfo t : tables)
+			context.println(t.info);
+	}
+
+	private class TableInfo {
+		public int id;
+		public String info;
+
+		public TableInfo(int id, String info) {
+			this.id = id;
+			this.info = info;
 		}
 	}
 
