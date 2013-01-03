@@ -67,9 +67,20 @@ public class RpcClient {
 			}
 		});
 
-		ChannelFuture channelFuture = bootstrap.connect(props.getRemoteAddress());
-		Channel channel = channelFuture.awaitUninterruptibly().getChannel();
-		return doPostConnectSteps(channel, props);
+		Channel channel = null;
+		try {
+			ChannelFuture channelFuture = bootstrap.connect(props.getRemoteAddress());
+			channel = channelFuture.awaitUninterruptibly().getChannel();
+			return doPostConnectSteps(channel, props);
+		} catch (Exception e) {
+			if (channel != null)
+				channel.close();
+
+			// shutdown executors
+			bootstrap.releaseExternalResources();
+
+			throw new RuntimeException("rpc connection failed", e);
+		}
 	}
 
 	public RpcConnection connectSsl(RpcConnectionProperties props) {
@@ -128,7 +139,11 @@ public class RpcClient {
 		} catch (Exception e) {
 			if (channel != null)
 				channel.close();
-			throw new RuntimeException("ssl connection failed", e);
+
+			// shutdown executors
+			bootstrap.releaseExternalResources();
+
+			throw new RuntimeException("rpc-ssl connection failed", e);
 		}
 	}
 
