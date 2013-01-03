@@ -20,7 +20,6 @@ import java.util.Comparator;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.query.ObjectComparator;
 import org.krakenapps.logdb.sort.CloseableIterator;
 import org.krakenapps.logdb.sort.Item;

@@ -26,8 +26,6 @@ import org.krakenapps.codec.EncodedStringCache;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.codec.TypeMismatchException;
 import org.krakenapps.codec.UnsupportedTypeException;
-import org.krakenapps.logdb.query.command.Function;
-import org.krakenapps.logdb.query.command.Timechart;
 import org.krakenapps.logdb.sort.SortCodec;
 
 public class FunctionCodec implements CustomCodec {
@@ -208,5 +206,5 @@ public class FunctionCodec implements CustomCodec {
 	public int getObjectLength(ByteBuffer bb) {
 		throw new UnsupportedOperationException();
 	}
-	
+
 }

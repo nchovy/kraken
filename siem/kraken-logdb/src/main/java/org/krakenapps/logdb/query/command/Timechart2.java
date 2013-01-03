@@ -222,8 +222,12 @@ public class Timechart2 extends LogQueryCommand {
 			// init functions at first time
 			if (fs == null) {
 				fs = new Function[values.length];
-				for (int i = 0; i < fs.length; i++)
-					fs[i] = values[i].clone();
+				for (int i = 0; i < values.length; i++)
+					fs[i] = loadFunction(item, i);
+
+				lastTime = time;
+				lastKeyFieldValue = keyFieldValue;
+				continue;
 			}
 
 			// if key value is changed
@@ -243,9 +247,14 @@ public class Timechart2 extends LogQueryCommand {
 				write(new LogMap(output));
 				output = new HashMap<String, Object>();
 
-				// reset function values
-				for (int i = 0; i < fs.length; i++)
-					fs[i] = values[i].clone();
+				// change merge set
+				fs = new Function[values.length];
+				for (int i = 0; i < values.length; i++)
+					fs[i] = loadFunction(item, i);
+
+				lastTime = time;
+				lastKeyFieldValue = keyFieldValue;
+				continue;
 			}
 
 			// merge all
@@ -283,10 +292,6 @@ public class Timechart2 extends LogQueryCommand {
 			for (Function f : fs)
 				output.put(f.toString(), f.getResult());
 		}
-
-		// reset function values
-		for (int i = 0; i < fs.length; i++)
-			fs[i] = values[i].clone();
 	}
 
 	private Function loadFunction(Item item, int i) {

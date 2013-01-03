@@ -308,6 +308,9 @@ public class LogFileWriterV2 extends LogFileWriter {
 	}
 
 	public void sync() throws IOException {
+		if (indexFile == null || dataFile == null)
+			return;
+
 		dataFile.getFD().sync();
 		indexFile.getFD().sync();
 	}

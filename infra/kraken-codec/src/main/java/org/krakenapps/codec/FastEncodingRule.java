@@ -49,7 +49,7 @@ public class FastEncodingRule {
 		return encode(value, null);
 	}
 
-	public ByteBuffer encode(Object value, CustomCodec cc) {
+	public ByteBuffer encode(Object value, FastCustomCodec cc) {
 		BinaryForm bf = preencode(value, cc);
 		ByteBuffer bb = ByteBuffer.allocate(bf.totalLength);
 		encode(bb, bf);
@@ -80,19 +80,19 @@ public class FastEncodingRule {
 			bb.put(bf.payloadBytes);
 			break;
 		case EncodingRule.MAP_TYPE:
-			bb.put(bf.lengthBytes);
-			for (BinaryForm c : bf.children) {
-				encode(bb, c);
-			}
-			break;
 		case EncodingRule.ARRAY_TYPE:
 			bb.put(bf.lengthBytes);
-			for (BinaryForm c : bf.children) {
+			for (BinaryForm c : bf.children)
 				encode(bb, c);
-			}
 			break;
 		default:
-			throw new IllegalStateException("not supported type: " + bf.type);
+			bb.put(bf.lengthBytes);
+			if (bf.payloadBytes != null) {
+				bb.put(bf.payloadBytes);
+			} else if (bf.children != null) {
+				for (BinaryForm c : bf.children)
+					encode(bb, c);
+			}
 		}
 	}
 
@@ -100,7 +100,7 @@ public class FastEncodingRule {
 		return preencode(value, null);
 	}
 
-	public BinaryForm preencode(Object value, CustomCodec cc) {
+	public BinaryForm preencode(Object value, FastCustomCodec cc) {
 		if (value == null) {
 			BinaryForm bf = new BinaryForm();
 			bf.type = EncodingRule.NULL_TYPE;
@@ -151,9 +151,12 @@ public class FastEncodingRule {
 			} else {
 				return preencodeArray((Object[]) value, cc);
 			}
+		} else {
+			if (cc != null)
+				return cc.preencode(this, value);
+			else
+				throw new UnsupportedTypeException(value.getClass().getName());
 		}
-
-		throw new IllegalArgumentException("not supported type: " + value.getClass());
 	}
 
 	private BinaryForm preencodeIp6(Inet6Address value) {
@@ -174,7 +177,7 @@ public class FastEncodingRule {
 		return bf;
 	}
 
-	private BinaryForm preencodeMap(Object value, CustomCodec cc) {
+	private BinaryForm preencodeMap(Object value, FastCustomCodec cc) {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> map = (Map<String, Object>) value;
 
@@ -317,11 +320,11 @@ public class FastEncodingRule {
 		return preencodeArray(array, null);
 	}
 
-	public BinaryForm preencodeArray(Object[] array, CustomCodec cc) {
+	public BinaryForm preencodeArray(Object[] array, FastCustomCodec cc) {
 		return preencodeArray(Arrays.asList(array), cc);
 	}
 
-	public BinaryForm preencodeArray(List<?> array, CustomCodec cc) {
+	public BinaryForm preencodeArray(List<?> array, FastCustomCodec cc) {
 		BinaryForm bf = new BinaryForm();
 		bf.type = EncodingRule.ARRAY_TYPE;
 		bf.children = new BinaryForm[array.size()];

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,6 @@
  */
 package org.krakenapps.codec;
 
-import java.nio.ByteBuffer;
-
-public interface CustomCodec {
-	void encode(ByteBuffer bb, Object value);
-
-	int lengthOf(Object value);
-
-	int getObjectLength(ByteBuffer bb);
-
-	Object decode(ByteBuffer bb);
+public interface FastCustomCodec extends CustomCodec {
+	BinaryForm preencode(FastEncodingRule enc, Object value);
 }

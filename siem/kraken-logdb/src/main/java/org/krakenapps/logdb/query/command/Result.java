@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -32,10 +31,10 @@ import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogResultSet;
-import org.krakenapps.logstorage.file.LogRecordCursor;
 import org.krakenapps.logstorage.file.LogFileReaderV2;
 import org.krakenapps.logstorage.file.LogFileWriterV2;
 import org.krakenapps.logstorage.file.LogRecord;
+import org.krakenapps.logstorage.file.LogRecordCursor;
 
 public class Result extends LogQueryCommand {
 	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
@@ -178,6 +177,7 @@ public class Result extends LogQueryCommand {
 
 		synchronized (writer) {
 			writer.flush();
+			writer.sync();
 		}
 
 		LogFileReaderV2 reader = new LogFileReaderV2(indexPath, dataPath);
