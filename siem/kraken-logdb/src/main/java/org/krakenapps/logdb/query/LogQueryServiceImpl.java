@@ -60,6 +60,7 @@ import org.krakenapps.logdb.query.parser.TermParser;
 import org.krakenapps.logdb.query.parser.TextFileParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
 import org.krakenapps.logdb.query.parser.TimechartParser2;
+import org.krakenapps.logdb.query.parser.ZipFileParser;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.osgi.framework.BundleContext;
@@ -126,6 +127,7 @@ public class LogQueryServiceImpl implements LogQueryService {
 		parsers.add(new LookupParser(lookupRegistry));
 		parsers.add(new ScriptParser(bc, scriptRegistry));
 		parsers.add(new TextFileParser(parserFactoryRegistry));
+		parsers.add(new ZipFileParser(parserFactoryRegistry));
 		parsers.add(new OutputCsvParser());
 
 		syntaxProvider.addParsers(parsers);
@@ -164,13 +166,13 @@ public class LogQueryServiceImpl implements LogQueryService {
 		try {
 			lq.clearTimelineCallbacks();
 			lq.clearQueryCallbacks();
-			
+
 			if (!lq.isEnd())
 				lq.cancel();
 		} catch (Throwable t) {
 			logger.error("kraken logdb: cannot cancel query " + lq, t);
 		}
-		
+
 		try {
 			lq.purge();
 		} catch (Throwable t) {
