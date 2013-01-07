@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems, Inc.
+ * Copyright 2013 Future Systems, Inc.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,13 @@
  */
 package org.krakenapps.confdb;
 
-import java.util.List;
+public abstract class BaseConfigServiceListener implements ConfigServiceListener {
+	@Override
+	public void onCreateDatabase(ConfigDatabase db) {
+	}
 
-public interface ConfigService {
-	ConfigDatabase getDatabase(String name);
+	@Override
+	public void onDropDatabase(String dbName) {
+	}
 
-	ConfigDatabase getDatabase(String name, Integer rev);
-
-	ConfigDatabase ensureDatabase(String name);
-
-	ConfigDatabase createDatabase(String name);
-
-	void dropDatabase(String name);
-
-	List<String> getDatabaseNames();
-
-	void addListener(ConfigServiceListener listener);
-
-	void removeListener(ConfigServiceListener listener);
 }
