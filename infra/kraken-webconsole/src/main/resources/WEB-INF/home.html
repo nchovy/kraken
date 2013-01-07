@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>Launcher</title>
+	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<style>
+
+.v-stretch {
+	height: 100%;
+}
+
+.h-stretch {
+	width: 100%;
+}
+
+.main {
+	/* box-sizing: border-box; */
+	position: absolute;
+	top: 0;
+	bottom: 40px;
+}
+
+.mainframe iframe, table {
+	border: 0px;
+	padding: 0;
+	margin: 0;
+}
+
+.mainlauncher {
+	background-color: #333;
+	min-height: 100%;
+}
+
+table, tr, td, tbody {
+	padding: 0;
+	margin: 0;
+}
+
+.navbar-inverse .navbar-inner {
+	background-image: -webkit-linear-gradient(top, #6A8FB2, #587DA0);
+}
+
+.navbar .nav .active > a, .navbar .nav .active > a:hover {
+	background-color: #104B72;
+}
+
+.navbar .nav > li > a {
+	color: #BCD5EA;
+	/* 90AAC2 */
+}
+
+.navbar .brand {
+	color: #fff;
+}
+
+.page {
+	clear: both;
+	/* box-sizing: border-box; */
+}
+
+.page li {
+	float: left;
+	list-style: none;
+	/* text-align: center; */
+	width: 340px;
+	overflow: hidden;
+}
+
+.page img {
+	width: 64px;
+	height: 64px;
+	margin: 10px 20px;
+}
+
+legend {
+	color: white;
+}
+	</style>
+
+	<script type="text/javascript" data-main="/script/home" src="/require.js"></script>
+
+	<script type="text/html" id="header">
+		<ul data-bind="foreach: items" class="nav">
+			<li>
+				<a data-bind="attr: { href: 'home.html?program=' + path }, click: onSelect">
+					<span data-bind="text: name"></span>
+					<span data-bind="if: isActive">
+						<i class="icon-remove" data-bind="click: closeProgram"></i>
+					</span>
+				</a>
+			</li>
+		</ul>
+	</script>
+
+	<script type="text/html" id="launcher">
+		<legend data-bind="text: pack"></legend>
+		<ul data-bind="foreach: items">
+			<li>
+				<a data-bind="attr: { href: 'home.html?program=' + path }, click: onSelect"><img></img><span data-bind="text: name"></span></a>
+			</li>
+		</ul>
+	</script>
+
+	<script type="text/html" id="launcherSystem">
+		<ul data-bind="foreach: items">
+			<li>
+				<a data-bind="attr: { href: 'home.html?program=' + path }, click: onSelect"><img></img><span data-bind="text: name"></span></a>
+			</li>
+		</ul>
+	</script>
+
+</head>
+<body>
+
+
+<div class="main h-stretch">
+	<div class="mainframe v-stretch">
+	</div>
+</div>
+
+<div class="main h-stretch" id="div-launcher">
+	<div class="mainlauncher">
+		<div class="pull-left" id="pack-system" style="width: 220px" data-bind="Kuro.List: self, tmpl: launcher"></div>
+		<div class="pull-left" id="pack-all" style="width: 75%; border-left: 1px solid gray; padding-left: 30px"></div>
+		<div style="clear:both; height: 60px"></div>
+	</div>
+</div>
+
+<div class="navbar navbar-inverse navbar-fixed-bottom">
+	<div class="navbar-inner">
+		<button id="start" class="btn btn-inverse pull-left active" href="#" style="margin-left: 30px">Start</button>
+		<div class="container" data-bind="Kuro.List: self, tmpl: header"></div>
+	</div>
+</div>
+</body>
+</html>
