@@ -1,0 +1,82 @@
+	::-webkit-scrollbar, .spret-scrollbar {
+		background-color: #dfdfdf;
+	}
+
+	.spret-scrollbar {
+		width: 17px;
+		top: 29px;
+		bottom: 17px;
+		box-sizing: border-box;
+	}
+
+	::-webkit-scrollbar-thumb, .spret-thumb {
+		box-sizing: border-box;
+		border: 1px solid #aaa;
+		background-color: #fff;
+	}
+
+	.spret-thumb {
+		min-height: 15px;
+		max-height: 100%;
+	}
+
+	::-webkit-scrollbar-thumb:hover, .spret-thumb:active, .spret-thumb:hover {
+		background-color: #999;
+	}
+
+	.spret-scrollspn {
+		width: 100%;
+	}
+
+	td.spret-idx {
+		background-color: #FFFB85;
+	}
+
+	.ghost {
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+		outline: 0;
+		position: fixed;
+	}
+
+	.spret-canvas th, .spret-canvas td {
+		border: 1px solid transparent;
+		border-top: 1px solid #d4d4d4;
+		border-left: 1px solid #d4d4d4;
+	}
+
+	.spret-canvas {
+		border: 0;
+	}
+
+	.spret-canvas th:first-child, .spret-canvas td:first-child {
+		border-left: 0
+	}
+
+	.spret-canvas {
+		margin-bottom: 0;
+		font-size: 0.9em;
+		border-bottom: 1px solid #d4d4d4;
+	}
+
+	.spret-canvas td {
+		white-space: nowrap;
+	}
+
+	.table-bordered thead:first-child tr:first-child th:first-child,
+	.table-bordered thead:first-child tr:first-child th:last-child {
+		border-radius: 0;
+	}
+
+	tr.lasttop td {
+		height: 0px;
+		/* line-height: 5px; */
+		padding-top: 0;
+		padding-bottom: 0;
+	}
+
+	tr.lasttop td * {
+		margin: 0 !important;
+		color: transparent !important;
+	}
