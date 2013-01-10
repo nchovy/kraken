@@ -1,0 +1,15 @@
+.hidden {
+	display: none;
+}
+
+form.form-horizontal {
+	margin: 10px 20px 20px 20px;
+}
+
+.v-stretch {
+	height: 100%;
+}
+
+.h-stretch {
+	width: 100%;
+}
