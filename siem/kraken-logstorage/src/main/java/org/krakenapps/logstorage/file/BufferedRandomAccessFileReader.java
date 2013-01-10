@@ -26,12 +26,8 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class BufferedRandomAccessFileReader implements DataInput {
 	private static final int BUFFER_SIZE = 8192;
-	private final Logger logger = LoggerFactory.getLogger(BufferedRandomAccessFileReader.class);
 	private final RandomAccessFile file;
 	private ByteBuffer buf;
 	private DataInputStream dataInputStream;
@@ -267,7 +263,6 @@ public class BufferedRandomAccessFileReader implements DataInput {
 		if (buf.capacity() < bufSize) {
 			if (bufSize != buf.capacity()) {
 				buf = ByteBuffer.allocate(bufSize);
-				logger.trace(String.format("kraken logstorage: lsp: %d, size: %d", bufStartPos, bufSize));
 			}
 		}
 		int read = file.read(buf.array());

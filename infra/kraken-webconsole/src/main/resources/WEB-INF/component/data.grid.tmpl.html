@@ -1,0 +1,28 @@
+<script type="text/html" id="tmpl.default.Kuro.Data.Grid">
+	<table class="ko-grid table table-bordered table-striped" cellspacing="0">
+		<thead>
+			<tr data-bind="foreach: columns">
+				<th data-bind="attr: { 'data-index': $index }">
+					<span data-bind="text: headerText"></span>
+				</th>
+			</tr>
+		</thead>
+		<tbody data-bind="foreach: itemsOnCurrentPage">
+			<tr data-bind="foreach: $parent.columns">
+				<td data-bind="text: typeof rowText == 'function' ? rowText($parent) : $parent[rowText] "></td>
+			</tr>
+		</tbody>
+	</table>
+</script>
+
+<script type="text/html" id="tmpl.default.Kuro.Data.Grid.Pager">
+	<div class="ko-grid-pageLinks pagination">
+		<ul>
+			<!-- ko foreach: ko.utils.range(0, maxPageIndex) -->
+			<li data-bind="css: { active: $data == $root.currentPageIndex() }">
+				<a href="#" data-bind="text: $data + 1, click: function() { $root.currentPageIndex($data) }"></a>
+			</li>
+			<!-- /ko -->
+		</ul>
+	</div>
+</script>
