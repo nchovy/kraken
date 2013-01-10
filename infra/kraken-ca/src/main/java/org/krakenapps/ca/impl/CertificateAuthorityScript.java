@@ -16,7 +16,11 @@
 package org.krakenapps.ca.impl;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -30,6 +34,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.krakenapps.api.PathAutoCompleter;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
@@ -65,6 +70,78 @@ public class CertificateAuthorityScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	@ScriptUsage(description = "import certificate authority", arguments = {
+			@ScriptArgument(name = "name", type = "string", description = "authority name"),
+			@ScriptArgument(name = "file path", type = "string", description = "import file path", autocompletion = PathAutoCompleter.class) })
+	public void importAuthority(String[] args) {
+		InputStream is = null;
+		try {
+			File dir = (File) context.getSession().getProperty("dir");
+			File importFile = canonicalize(dir, args[1]);
+
+			if (!importFile.exists()) {
+				context.println("file does not exists: " + importFile.getAbsolutePath());
+				return;
+			}
+
+			if (!importFile.isFile()) {
+				context.println("invalid file: " + importFile.getAbsolutePath());
+				return;
+			}
+
+			if (!importFile.canRead()) {
+				context.println("cannot read file, check read permission: " + importFile.getAbsolutePath());
+				return;
+			}
+
+			is = new FileInputStream(importFile);
+			ca.importAuthority(args[0], is);
+		} catch (IOException e) {
+			logger.error("kraken ca: cannot import authority", e);
+			context.println(e.getMessage());
+		} finally {
+			if (is != null)
+				try {
+					is.close();
+				} catch (IOException e) {
+				}
+		}
+	}
+
+	@ScriptUsage(description = "export certificate authority", arguments = {
+			@ScriptArgument(name = "name", type = "string", description = "authority name"),
+			@ScriptArgument(name = "file path", type = "string", description = "export file path", autocompletion = PathAutoCompleter.class) })
+	public void exportAuthority(String[] args) {
+		OutputStream os = null;
+		try {
+			File dir = (File) context.getSession().getProperty("dir");
+			File exportFile = canonicalize(dir, args[1]);
+
+			if (exportFile.exists()) {
+				context.println("file already exists: " + exportFile.getAbsolutePath());
+				return;
+			}
+
+			os = new FileOutputStream(exportFile);
+			ca.exportAuthority(args[0], os);
+		} catch (IOException e) {
+			logger.error("kraken-ca: cannot export authority", e);
+		} finally {
+			if (os != null)
+				try {
+					os.close();
+				} catch (IOException e) {
+				}
+		}
+	}
+
+	private File canonicalize(File dir, String path) {
+		if (path.startsWith("/"))
+			return new File(path);
+		else
+			return new File(dir, path);
 	}
 
 	@ScriptUsage(description = "export certificate", arguments = {

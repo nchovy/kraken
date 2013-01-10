@@ -1,9 +1,26 @@
+/*
+ * Copyright 2013 Future Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.ca;
 
 import java.math.BigInteger;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
+
+import org.krakenapps.confdb.Predicate;
 
 public class MockCertificateAuthority implements CertificateAuthority {
 	private String name;
@@ -105,4 +122,28 @@ public class MockCertificateAuthority implements CertificateAuthority {
 	public void removeListener(CertEventListener listener) {
 	}
 
+	@Override
+	public Collection<CertificateMetadata> getCertificates(Predicate pred) {
+		return null;
+	}
+
+	@Override
+	public CertificateMetadataIterator getCertificateIterator() {
+		return new CertificateMetadataIterator(new MockConfigIterator(certs));
+	}
+
+	@Override
+	public CertificateMetadataIterator getCertificateIterator(Predicate pred) {
+		return new CertificateMetadataIterator(new MockConfigIterator(certs));
+	}
+
+	@Override
+	public RevokedCertificateIterator getRevokedCertificateIterator() {
+		return new RevokedCertificateIterator(new MockConfigIterator(revoked));
+	}
+
+	@Override
+	public RevokedCertificateIterator getRevokedCertificateIterator(Predicate pred) {
+		return new RevokedCertificateIterator(new MockConfigIterator(revoked));
+	}
 }

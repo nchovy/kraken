@@ -15,24 +15,34 @@
  */
 package org.krakenapps.ca;
 
-public abstract class BaseCertificateAuthorityListener implements CertificateAuthorityListener {
-	@Override
-	public void onCreateAuthority(CertificateAuthority authority) {
+import java.util.Iterator;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigIterator;
+
+public class CertificateMetadataIterator implements Iterator<CertificateMetadata> {
+	private ConfigIterator configIt;
+
+	public CertificateMetadataIterator(ConfigIterator configIt) {
+		this.configIt = configIt;
 	}
 
 	@Override
-	public void onImportAuthority(CertificateAuthority authority) {
+	public boolean hasNext() {
+		return configIt.hasNext();
 	}
 
 	@Override
-	public void onRemoveAuthority(String name) {
+	public CertificateMetadata next() {
+		Config c = configIt.next();
+		return c.getDocument(CertificateMetadata.class);
+	}
+
+	public void close() {
+		configIt.close();
 	}
 
 	@Override
-	public void onRevokeCert(CertificateAuthority authority, CertificateMetadata cm, RevocationReason reason) {
-	}
-
-	@Override
-	public void onIssueCert(CertificateAuthority authority, CertificateMetadata cm) {
+	public void remove() {
+		throw new UnsupportedOperationException();
 	}
 }
