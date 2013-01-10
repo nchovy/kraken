@@ -802,7 +802,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 		for (ConfigDatabaseListener listener : listeners) {
 			try {
-				listener.onImport();
+				listener.onImport(this);
 			} catch (Throwable t) {
 				logger.error("kraken confdb: import database callback should not throw any exception", t);
 			}

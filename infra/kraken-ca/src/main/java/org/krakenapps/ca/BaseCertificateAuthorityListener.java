@@ -13,10 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.confdb;
+package org.krakenapps.ca;
 
-public abstract class BaseConfigDatabaseListener implements ConfigDatabaseListener {
+public abstract class BaseCertificateAuthorityListener implements CertificateAuthorityListener {
 	@Override
-	public void onImport(ConfigDatabase db) {
+	public void onCreateAuthority(CertificateAuthority ca) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onRemoveAuthority(String name) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onRevokeCert(CertificateAuthority ca, CertificateMetadata cm, RevocationReason reason) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onIssueCert(CertificateAuthority ca, CertificateMetadata cm) {
+		// TODO Auto-generated method stub
+
 	}
 }

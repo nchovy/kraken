@@ -16,5 +16,5 @@
 package org.krakenapps.confdb;
 
 public interface ConfigDatabaseListener {
-	void onImport();
+	void onImport(ConfigDatabase db);
 }
