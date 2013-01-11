@@ -37,6 +37,18 @@ Date.prototype.getISODateString = function() {
 		+ pad(this.getMilliseconds());
 }
 
+Date.prototype.getISODateOnlyString = function() {
+	return this.getFullYear() + '/'
+		+ pad(this.getMonth() + 1) + '/'
+		+ pad(this.getDate());
+}
+
+Date.prototype.getISOTimeString = function() {
+	return pad(this.getHours()) + ':'
+		+ pad(this.getMinutes()) + ':'
+		+ pad(this.getSeconds());
+}
+
 Array.prototype.orderBy = function(property) {
 	var arr = [];
 	for (var i = 0; i < this.length; i++) {
