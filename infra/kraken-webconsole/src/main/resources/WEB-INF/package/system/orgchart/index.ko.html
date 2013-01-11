@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
-	<title>Organization Chart</title>
+	<title>조직도</title>
 	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
 	<link href="/css/spreadsheet.css" rel="stylesheet"/>
 	<link href="/css/common.css" rel="stylesheet"/>
@@ -36,15 +36,15 @@
 <body>
 <aside id="modalNewUser" class="modal hidden">
 	<form class="form-horizontal">
-		<legend>Add New User</legend>
+		<legend>사용자 추가</legend>
 		<div class="control-group">
-			<label class="control-label">Login Name</label>
+			<label class="control-label">로그인 계정</label>
 			<div class="controls">
 				<input type="text" id="txtlogin">
 			</div>
 		</div>
 		<div class="control-group">
-			<label class="control-label">Name</label>
+			<label class="control-label">성명</label>
 			<div class="controls">
 				<input type="text">
 			</div>
@@ -86,18 +86,18 @@
 			<div class="navbar-inner">
 				<ul class="nav">
 					<li class="active">
-						<a href="#">Organization</a>
+						<a href="#">부서별</a>
 					</li>
 					<li>
-						<a href="#">Group</a>
+						<a href="#">그룹별</a>
 					</li>
 				</ul>
 			</div>
 		</div>
 		<div class="toolbar">
 			<div class="btn-group">
-				<button class="btn">Select...</button>
-				<button class="btn" id="btnOpenModalAdd">Add</button>
+				<button class="btn">선택 부서에 대해...</button>
+				<button class="btn" id="btnOpenModalAdd">추가</button>
 			</div>
 		</div>
 		<div id="treeview" data-bind="Kuro.Tree: self"></div>
@@ -105,12 +105,12 @@
 	<div class="split-right ani1">
 		<div class="navbar navbar-fixed-top ani1">
 			<div class="navbar-inner">
-				<a class="brand" href="#">&nbsp;&nbsp;Test</a>
+				<a class="brand" href="#">&nbsp;&nbsp;테스트팀</a>
 				<div class="btn-group">
-					<button class="btn" id="btnRefresh">Refresh</button>
-					<button class="btn">Remove</button>
-					<button class="btn" id="btnAdd">Add</button>
-					<button class="btn">Select...</button>
+					<button class="btn" id="btnRefresh">새로고침</button>
+					<button class="btn">선택삭제</button>
+					<button class="btn" id="btnAdd">추가</button>
+					<button class="btn">선택한 사용자에 대해...</button>
 				</div>
 			</div>
 		</div>
@@ -125,72 +125,72 @@
 			<button class="btn btn-info pull-left" style="margin-left: 10px; margin-right: 20px" id="btnBack">Back</button>
 			<a class="brand" href="#">NCHOVY</a>
 			<div class="btn-group">
-				<button class="btn">Remove</button>
-				<button class="btn">Select...</button>
+				<button class="btn">선택삭제</button>
+				<button class="btn">선택한 사용자에 대해...</button>
 			</div>
 		</div>
 	</div>
 	<div class="detail-contents">
 		<form class="form-horizontal">
-			<legend>General</legend>
+			<legend>기본 정보</legend>
 			<div class="control-group">
-				<label class="control-label">E-mail</label>
+				<label class="control-label">이메일</label>
 				<div class="controls">
 					<input type="text">
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Phone</label>
+				<label class="control-label">전화</label>
 				<div class="controls">
 					<input type="text">
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Created At</label>
+				<label class="control-label">생성일</label>
 				<div class="controls">
 					2012-05-02 20:50:23
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Modified At</label>
+				<label class="control-label">수정일</label>
 				<div class="controls">
 					2012-05-02 20:50:23
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Other</label>
+				<label class="control-label">기타</label>
 				<div class="controls">
 					<textarea></textarea>
 				</div>
 			</div>
 
-			<legend>Administrator</legend>
+			<legend>관리자 정보</legend>
 			<div class="control-group">
-				<label class="control-label">E-mail</label>
+				<label class="control-label">이메일</label>
 				<div class="controls">
 					<input type="text">
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Phone</label>
+				<label class="control-label">전화</label>
 				<div class="controls">
 					<input type="text">
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Created At</label>
+				<label class="control-label">생성일</label>
 				<div class="controls">
 					2012-05-02 20:50:23
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Modified At</label>
+				<label class="control-label">수정일</label>
 				<div class="controls">
 					2012-05-02 20:50:23
 				</div>
 			</div>
 			<div class="control-group">
-				<label class="control-label">Other</label>
+				<label class="control-label">기타</label>
 				<div class="controls">
 					<textarea></textarea>
 				</div>
