@@ -36,6 +36,8 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js"], function(ko, logdbMan
 
 			this.input = ko.observable(inputStr);
 
+			this.nowQuerying = ko.observable(false);
+
 			this.search = function(a, b) {
 				if(that.input().length === 0) {
 					console.log("please type query");
@@ -49,6 +51,19 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js"], function(ko, logdbMan
 				if(!!that.onSearch) {
 					that.onSearch(that, a, b);
 				}
+			}
+
+			this.Logdb.on("created", function() {
+				that.nowQuerying(true);
+			});
+
+			this.Logdb.on("loaded", function() {
+				that.nowQuerying(false);
+			})
+
+			this.stop = function() {
+				that.Logdb.stop();
+				that.nowQuerying(false);
 			}
 		},
 		ViewModel: logdbManager.ViewModel
