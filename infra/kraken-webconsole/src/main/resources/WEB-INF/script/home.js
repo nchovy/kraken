@@ -3,12 +3,14 @@ require([
 	"/lib/knockout-2.1.0.debug.js",
 	"/core/connection.js",
 	"/core/program.js",
+	"/core/locale.js",
 	"/core/page.js",
 	"/component/list.js",
 	"/component/util.js"
 ], 
 
-function(_$, ko, socket, programManager, pageManager, List, Util) {
+function(_$, ko, socket, programManager, Locale, pageManager, List, Util) {
+	console.log(Locale);
 
 	(function() {
 		var listNowRunning = [];
