@@ -74,10 +74,6 @@
 	</build>
 	<dependencies>
 		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-api</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
