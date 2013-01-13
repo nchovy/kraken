@@ -1,4 +1,4 @@
-define(["/lib/jquery.js", "/core/connection.js", "/component/list.js"], function(_$, socket, List) {
+define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/list.js"], function(_$, Locale, socket, List) {
 	var programManager = (function() {
 
 		var programs;
@@ -66,27 +66,45 @@ define(["/lib/jquery.js", "/core/connection.js", "/component/list.js"], function
 		}
 
 		this.launch = function(program) {
+			var localedUrl = "package/" + program.pack + "/" + program.path + "/index." + Locale.getCurrentLocale() + ".html";
+			var defUrl = "package/" + program.pack + "/" + program.path + "/index.html";
+			if(Locale.getCurrentLocale() == "en") {
+				localedUrl = defUrl;
+			}
+
 			var iframe = $("<iframe>").attr("data-program", program.path)
 					.addClass("v-stretch")
 					.addClass("h-stretch")
-					.attr("src", "package/" + program.pack + "/" + program.path + "/index.html")
 					.appendTo(".mainframe");
 
-			var loadingdiv = $("<div>").css("position", "absolute")
-					.css("background", "url('../images/random_grey_variations.png')")
-					.css("top", "0px")
-					.css("left", "0px")
-					.addClass("v-stretch")
-					.addClass("h-stretch")
-					.appendTo(".mainframe")
+			var request = $.ajax({
+				url: localedUrl,
+				//type: 'POST',
+				//data: {},
+				success: function() {
+					iframe.attr("src", localedUrl);
+				},
+				error: function() {
+					iframe.attr("src", defUrl);
+				},
+				complete: function() {
+					var loadingdiv = $("<div>").css("position", "absolute")
+							.css("background", "url('../images/random_grey_variations.png')")
+							.css("top", "0px")
+							.css("left", "0px")
+							.addClass("v-stretch")
+							.addClass("h-stretch")
+							.appendTo(".mainframe")
 
-			$(iframe.get(0).contentDocument).ready(function($) {
-				setTimeout(function() {
-					loadingdiv.fadeOut(function() {
-						$(this).remove();
+					$(iframe.get(0).contentDocument).ready(function($) {
+						setTimeout(function() {
+							loadingdiv.fadeOut(function() {
+								$(this).remove();
+							});
+						}, 300)
 					});
-				}, 300)
-			});
+				}
+			})
 		}
 
 		this.exit = function(program) {
@@ -103,18 +121,16 @@ define(["/lib/jquery.js", "/core/connection.js", "/component/list.js"], function
 		}
 	})();
 
-	// programManager는 static 해야하기 때문에, parent.window 객체에 단 하나의 programManager를 등록시킨다.
-	// 이때 사용 가능한 프로그램을 가져와서 등록한다.
-	if(!parent.Core) {
-		parent.Core = {};
-		if(!parent.Core.Program) {
-			console.log("register programManager globally, cache programs");
-			parent.Core.Program = programManager;
-		}
-	}
-	else {
-		//console.log("no need register");
+	
+	var Core = parent.Core;
+	if(!Core) {
+		Core = parent.Core = {};
 	}
 
-	return parent.Core.Program;
+	if(!Core.Program) {
+		console.log("register Program manager globally");
+		parent.Core.Program = programManager;
+	}
+
+	return Core.Program;
 });

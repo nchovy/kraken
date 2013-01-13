@@ -15,14 +15,17 @@ var Logdb = function() {
 	var activeId;
 	var that = this;
 
+	var eventObj = {};
 	var callback = {
 		created: function(query, query_id) {
 			if(isDebug) {
 				console.group("created");
 			}
 
-			if(!!that.created) {
-				that.created(query, query_id, that);
+			if(!!eventObj.created) {
+				$.each(eventObj.created, function(i, fn) { 
+					fn.call(that, query, query_id);
+				});
 			}
 
 			if(isDebug) {
@@ -45,9 +48,13 @@ var Logdb = function() {
 			if(isDebug) {
 				console.group("pageLoaded");
 			}
-			if(!!that.pageLoaded) {
-				that.pageLoaded(m);
+
+			if(!!eventObj.pageLoaded) {
+				$.each(eventObj.pageLoaded, function(i, fn) { 
+					fn.call(that, m);
+				});
 			}
+
 			if(isDebug) {
 				console.groupEnd();
 			}
@@ -57,6 +64,13 @@ var Logdb = function() {
 				console.group("loaded");
 				console.log(m);
 			}
+
+			if(!!eventObj.loaded) {
+				$.each(eventObj.loaded, function(i, fn) { 
+					fn.call(that, m);
+				});
+			}
+
 			if(isDebug) {
 				console.groupEnd();
 			}
@@ -65,9 +79,13 @@ var Logdb = function() {
 			if(isDebug) {
 				console.group("onTimeline");
 			}
-			if(!!that.onTimeline) {
-				that.onTimeline(m, that);
+			
+			if(!!eventObj.onTimeline) {
+				$.each(eventObj.onTimeline, function(i, fn) { 
+					fn.call(that, m);
+				});
 			}
+
 			if(isDebug) {
 				console.groupEnd();
 			}
@@ -264,9 +282,12 @@ var Logdb = function() {
 			console.log("stop");
 		}
 
-		if(!!callback) {
-			callback();
-		}
+		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.stopQuery", { "id": activeId }, function(m) {
+			console.log(m)
+			if(!!callback) {
+				callback();
+			}
+		});
 	}
 
 
@@ -307,6 +328,13 @@ var Logdb = function() {
 		}
 	}
 
+	this.on = function(eventName, fn) {
+		if(!eventObj[eventName]) {
+			eventObj[eventName] = [];
+		}
+		eventObj[eventName].push(fn);
+	}
+
 }
 
 var logdbManager = (function() {
@@ -331,15 +359,16 @@ var logdbManager = (function() {
 })();
 
 
-// static
-if(!parent.logdbManager) {
-	console.log("register logdbManager globally, cache programs");
-	parent.logdbManager = logdbManager;
-}
-else {
-	//console.log("no need register");
-}
+	var Core = parent.Core;
+	if(!Core) {
+		Core = parent.Core = {};
+	}
 
-return parent.logdbManager;
+	if(!Core.LogDB) {
+		console.log("register LogDB manager globally");
+		parent.Core.LogDB = logdbManager;
+	}
+
+	return Core.LogDB;
 
 });

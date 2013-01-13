@@ -15,8 +15,19 @@
  */
 package org.krakenapps.ca;
 
-public interface CertEventListener {
-	void onRevoked(CertificateAuthority authority, CertificateMetadata cm, RevocationReason reason);
+public interface CertificateAuthorityListener {
+	/**
+	 * fire event after a new certificate authority is created
+	 * 
+	 * @param authority
+	 */
+	void onCreateAuthority(CertificateAuthority authority);
 
-	void onIssued(CertificateAuthority authority, CertificateMetadata cm);
+	void onImportAuthority(CertificateAuthority authority);
+
+	void onRemoveAuthority(String name);
+
+	void onRevokeCert(CertificateAuthority authority, CertificateMetadata cm, RevocationReason reason);
+
+	void onIssueCert(CertificateAuthority authority, CertificateMetadata cm);
 }

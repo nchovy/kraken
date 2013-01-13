@@ -30,15 +30,18 @@ import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.ca.CertEventListener;
 import org.krakenapps.ca.CertificateAuthority;
 import org.krakenapps.ca.CertificateMetadata;
+import org.krakenapps.ca.CertificateMetadataIterator;
 import org.krakenapps.ca.CertificateRequest;
 import org.krakenapps.ca.RevocationReason;
 import org.krakenapps.ca.RevokedCertificate;
+import org.krakenapps.ca.RevokedCertificateIterator;
 import org.krakenapps.ca.util.CertificateBuilder;
 import org.krakenapps.ca.util.CertificateExporter;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
+import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,11 +143,24 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
-	public List<CertificateMetadata> getCertificates() {
+	public CertificateMetadataIterator getCertificateIterator() {
+		return getCertificateIterator(null);
+	}
+
+	@Override
+	public CertificateMetadataIterator getCertificateIterator(Predicate pred) {
+		ConfigCollection certs = db.ensureCollection("certs");
+		ConfigIterator it = certs.find(pred);
+
+		return new CertificateMetadataIterator(it);
+	}
+
+	@Override
+	public List<CertificateMetadata> getCertificates(Predicate pred) {
 		ConfigCollection certs = db.ensureCollection("certs");
 
 		List<CertificateMetadata> l = new LinkedList<CertificateMetadata>();
-		ConfigIterator it = certs.findAll();
+		ConfigIterator it = certs.find(pred);
 		try {
 			while (it.hasNext()) {
 				Config c = it.next();
@@ -158,13 +174,19 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
+	public List<CertificateMetadata> getCertificates() {
+		return getCertificates(null);
+	}
+
+	@Override
 	public BigInteger getLastSerial() {
 		ConfigCollection col = db.ensureCollection("metadata");
 		Config c = col.findOne(Predicates.field("type", "serial"));
 		if (c == null)
 			return new BigInteger("1");
 
-		return new BigInteger((String) c.getDocument());
+		CertSerial s = PrimitiveConverter.parse(CertSerial.class, c.getDocument());
+		return new BigInteger(s.serial);
 	}
 
 	@Override
@@ -236,13 +258,30 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 		for (CertEventListener listener : listeners) {
 			try {
-				listener.onIssued(cm);
+				listener.onIssued(this, cm);
 			} catch (Throwable t) {
-				logger.error("kraken ca: certificate revoke callback should not throw any exception", t);
+				logger.error("kraken ca: certificate issue callback should not throw any exception", t);
 			}
 		}
 
 		return cm;
+	}
+
+	@Override
+	public void importCertificate(CertificateMetadata cm) {
+		ConfigCollection certs = db.ensureCollection("certs");
+		Object c = PrimitiveConverter.serialize(cm);
+		certs.add(c, "kraken-ca", "import certificate, " + cm.getSubjectDn());
+
+		logger.info("kraken ca: import new certificate [{}]", cm.getSubjectDn());
+
+		for (CertEventListener listener : listeners) {
+			try {
+				listener.onIssued(this, cm);
+			} catch (Throwable t) {
+				logger.error("kraken ca: certificate issue callback should not throw any exception", t);
+			}
+		}
 	}
 
 	public static void validateSignatureAlgorithm(String algorithm) {
@@ -271,7 +310,7 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 		for (CertEventListener listener : listeners) {
 			try {
-				listener.onRevoked(cm, reason);
+				listener.onRevoked(this, cm, reason);
 			} catch (Throwable t) {
 				logger.error("kraken ca: certificate revoke callback should not throw any exception", t);
 			}
@@ -313,6 +352,19 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 	}
 
 	@Override
+	public RevokedCertificateIterator getRevokedCertificateIterator() {
+		return getRevokedCertificateIterator(null);
+	}
+
+	@Override
+	public RevokedCertificateIterator getRevokedCertificateIterator(Predicate pred) {
+		ConfigCollection revoked = db.ensureCollection("revoked");
+
+		ConfigIterator it = revoked.find(pred);
+		return new RevokedCertificateIterator(it);
+	}
+
+	@Override
 	public String toString() {
 		return name + ": " + getRootCertificate().getSubjectDn();
 	}
@@ -328,11 +380,15 @@ public class CertificateAuthorityImpl implements CertificateAuthority {
 
 	@Override
 	public void addListener(CertEventListener listener) {
+		if (listener == null)
+			throw new IllegalArgumentException("listener should be not null");
 		listeners.add(listener);
 	}
 
 	@Override
 	public void removeListener(CertEventListener listener) {
+		if (listener == null)
+			throw new IllegalArgumentException("listener should be not null");
 		listeners.remove(listener);
 	}
 }
