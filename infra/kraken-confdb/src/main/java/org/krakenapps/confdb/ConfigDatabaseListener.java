@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.ca;
+package org.krakenapps.confdb;
 
-public interface CertEventListener {
-	void onRevoked(CertificateAuthority authority, CertificateMetadata cm, RevocationReason reason);
-
-	void onIssued(CertificateAuthority authority, CertificateMetadata cm);
+public interface ConfigDatabaseListener {
+	void onImport(ConfigDatabase db);
 }

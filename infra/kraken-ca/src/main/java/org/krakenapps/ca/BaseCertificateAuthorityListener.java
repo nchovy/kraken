@@ -15,8 +15,24 @@
  */
 package org.krakenapps.ca;
 
-public interface CertEventListener {
-	void onRevoked(CertificateAuthority authority, CertificateMetadata cm, RevocationReason reason);
+public abstract class BaseCertificateAuthorityListener implements CertificateAuthorityListener {
+	@Override
+	public void onCreateAuthority(CertificateAuthority authority) {
+	}
 
-	void onIssued(CertificateAuthority authority, CertificateMetadata cm);
+	@Override
+	public void onImportAuthority(CertificateAuthority authority) {
+	}
+
+	@Override
+	public void onRemoveAuthority(String name) {
+	}
+
+	@Override
+	public void onRevokeCert(CertificateAuthority authority, CertificateMetadata cm, RevocationReason reason) {
+	}
+
+	@Override
+	public void onIssueCert(CertificateAuthority authority, CertificateMetadata cm) {
+	}
 }

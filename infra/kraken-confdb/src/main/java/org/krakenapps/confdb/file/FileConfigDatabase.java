@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.krakenapps.api.PrimitiveConverter;
@@ -47,6 +48,7 @@ import org.krakenapps.confdb.ConfigCache;
 import org.krakenapps.confdb.ConfigChange;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
+import org.krakenapps.confdb.ConfigDatabaseListener;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.ConfigTransactionCache;
@@ -108,6 +110,8 @@ public class FileConfigDatabase implements ConfigDatabase {
 	// config cache
 	private FileConfigCache configCache;
 
+	private CopyOnWriteArraySet<ConfigDatabaseListener> listeners;
+
 	public FileConfigDatabase(File baseDir, String name) throws IOException {
 		this(baseDir, name, null);
 	}
@@ -131,6 +135,7 @@ public class FileConfigDatabase implements ConfigDatabase {
 		manifestDatFile = new File(dbDir, "manifest.dat");
 		lockFile = new File(dbDir, "write.lock");
 		counterFile = new File(dbDir, "col.id");
+		listeners = new CopyOnWriteArraySet<ConfigDatabaseListener>();
 	}
 
 	/**
@@ -794,6 +799,14 @@ public class FileConfigDatabase implements ConfigDatabase {
 		} catch (ParseException e) {
 			throw new IllegalStateException(e);
 		}
+
+		for (ConfigDatabaseListener listener : listeners) {
+			try {
+				listener.onImport(this);
+			} catch (Throwable t) {
+				logger.error("kraken confdb: import database callback should not throw any exception", t);
+			}
+		}
 	}
 
 	@Override
@@ -916,5 +929,19 @@ public class FileConfigDatabase implements ConfigDatabase {
 				return false;
 			return true;
 		}
+	}
+
+	@Override
+	public void addListener(ConfigDatabaseListener listener) {
+		if (listener == null)
+			throw new IllegalArgumentException("listener should not be null");
+		listeners.add(listener);
+	}
+
+	@Override
+	public void removeListener(ConfigDatabaseListener listener) {
+		if (listener == null)
+			throw new IllegalArgumentException("listener should not be null");
+		listeners.add(listener);
 	}
 }

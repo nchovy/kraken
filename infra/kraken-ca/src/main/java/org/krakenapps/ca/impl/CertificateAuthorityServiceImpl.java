@@ -1,7 +1,14 @@
 package org.krakenapps.ca.impl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.Security;
 import java.security.cert.X509Certificate;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -9,19 +16,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.felix.ipojo.annotations.Component;
+import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.ca.CertEventListener;
 import org.krakenapps.ca.CertificateAuthority;
+import org.krakenapps.ca.CertificateAuthorityListener;
 import org.krakenapps.ca.CertificateAuthorityService;
 import org.krakenapps.ca.CertificateMetadata;
 import org.krakenapps.ca.CertificateRequest;
+import org.krakenapps.ca.RevocationReason;
 import org.krakenapps.ca.util.CertificateBuilder;
 import org.krakenapps.ca.util.CertificateExporter;
+import org.krakenapps.confdb.BaseConfigDatabaseListener;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
@@ -29,10 +42,14 @@ import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.ConfigTransaction;
 import org.krakenapps.confdb.Predicates;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(name = "certificate-authority")
 @Provides
 public class CertificateAuthorityServiceImpl implements CertificateAuthorityService {
+	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityServiceImpl.class.getName());
+	private static File baseDir = new File(System.getProperty("kraken.data.dir"), "kraken-ca");
 
 	// install JCE provider
 	static {
@@ -45,22 +62,44 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 
 	private ConcurrentMap<String, CertificateAuthority> authorities;
 
-	@SuppressWarnings("unchecked")
+	private CopyOnWriteArraySet<CertificateAuthorityListener> listeners;
+
+	private CertificateListener certListener;
+
+	public CertificateAuthorityServiceImpl() {
+		authorities = new ConcurrentHashMap<String, CertificateAuthority>();
+		listeners = new CopyOnWriteArraySet<CertificateAuthorityListener>();
+		certListener = new CertificateListener();
+	}
+
 	@Validate
 	public void start() {
-		authorities = new ConcurrentHashMap<String, CertificateAuthority>();
+		initializeCache();
+	}
+
+	@Invalidate
+	public void stop() {
+		for (CertificateAuthority authority : getAuthorities())
+			authority.removeListener(certListener);
+
+	}
+
+	private void initializeCache() {
 		ConfigDatabase master = conf.ensureDatabase("kraken-ca");
 		ConfigCollection col = master.ensureCollection("authority");
 		ConfigIterator it = col.findAll();
 
+		authorities.clear();
 		try {
 			while (it.hasNext()) {
 				Config c = it.next();
+				@SuppressWarnings("unchecked")
 				Map<String, Object> doc = (Map<String, Object>) c.getDocument();
 				String name = (String) doc.get("name");
 
 				ConfigDatabase db = conf.ensureDatabase("kraken-ca-" + name);
 				CertificateAuthority authority = new CertificateAuthorityImpl(db, name);
+				authority.addListener(certListener);
 				authorities.put(authority.getName(), authority);
 			}
 		} finally {
@@ -125,6 +164,15 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		metadata = ca.ensureCollection("metadata");
 		metadata.add(doc, "kraken-ca", "added " + name + " authority");
 
+		authority.addListener(certListener);
+		for (CertificateAuthorityListener listener : listeners) {
+			try {
+				listener.onCreateAuthority(authority);
+			} catch (Throwable t) {
+				logger.error("kraken ca: create authority callback should not throw any exception", t);
+			}
+		}
+
 		return authority;
 	}
 
@@ -154,7 +202,115 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		ConfigDatabase ca = conf.ensureDatabase("kraken-ca");
 		ConfigCollection col = ca.ensureCollection("authority");
 		Config c = col.findOne(Predicates.field("name", name));
-		if (c != null)
+		if (c != null) {
 			col.remove(c, false, "kraken-ca", "removed authority: " + name);
+
+			for (CertificateAuthorityListener listener : listeners) {
+				try {
+					listener.onRemoveAuthority(name);
+				} catch (Throwable t) {
+					logger.error("kraken ca: remove authority callback should not throw any exception", t);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void addListener(CertificateAuthorityListener listener) {
+		if (listener == null)
+			throw new IllegalStateException("certificate authority listener should be not null");
+		listeners.add(listener);
+	}
+
+	@Override
+	public void removeListener(CertificateAuthorityListener listener) {
+		if (listener == null)
+			throw new IllegalStateException("certificate authority listener should be not null");
+		listeners.remove(listener);
+	}
+
+	@Override
+	public CertificateAuthority importAuthority(String name, InputStream is) throws IOException {
+		File exportFile = File.createTempFile(name, ".cdb", baseDir);
+		OutputStream os = null;
+		try {
+			os = new FileOutputStream(exportFile);
+			CertificateAuthorityFormatter.convertToInternalFormat(is, os);
+		} catch (ParseException e) {
+			throw new IOException(e);
+		} finally {
+			if (os != null)
+				try {
+					os.close();
+				} catch (IOException e) {
+				}
+		}
+
+		InputStream cdbIs = null;
+		ConfigDatabase db = conf.getDatabase("kraken-ca-" + name);
+		if (db != null)
+			throw new IllegalStateException("authority [" + name + "] already exists");
+
+		db = conf.createDatabase(name);
+		try {
+			cdbIs = new FileInputStream(exportFile);
+			db.importData(cdbIs);
+		} finally {
+			if (cdbIs != null)
+				try {
+					cdbIs.close();
+				} catch (IOException e) {
+				}
+			exportFile.delete();
+		}
+
+		CertificateAuthority authority = getAuthority(name);
+		authority.addListener(certListener);
+
+		for (CertificateAuthorityListener listener : listeners) {
+			try {
+				listener.onImportAuthority(authority);
+			} catch (Throwable t) {
+				logger.error("kraken ca: import authority callback should not throw any exception", t);
+			}
+		}
+
+		ConfigDatabase ca = conf.ensureDatabase("kraken-ca");
+		ConfigCollection metadata = ca.ensureCollection("metadata");
+		Map<String, Object> doc = new HashMap<String, Object>();
+		doc.put("name", name);
+		doc.put("created_at", new Date());
+		metadata.add(doc, "kraken-ca", "added " + name + " authority");
+
+		return authority;
+	}
+
+	@Override
+	public void exportAuthority(String name, OutputStream os) throws IOException {
+		CertificateAuthorityFormatter.exportAuthority(getAuthority(name), os);
+	}
+
+	private class CertificateListener implements CertEventListener {
+		@Override
+		public void onRevoked(CertificateAuthority ca, CertificateMetadata cm, RevocationReason reason) {
+			for (CertificateAuthorityListener listener : listeners) {
+				try {
+					listener.onRevokeCert(ca, cm, reason);
+				} catch (Throwable t) {
+					logger.error("kraken ca: certificate revoke callback should not throw any exception", t);
+				}
+			}
+		}
+
+		@Override
+		public void onIssued(CertificateAuthority ca, CertificateMetadata cm) {
+			for (CertificateAuthorityListener listener : listeners) {
+				try {
+					listener.onIssueCert(ca, cm);
+				} catch (Throwable t) {
+					logger.error("kraken ca: certificate issue callback should not throw any exception", t);
+				}
+			}
+		}
 	}
 }
