@@ -39,7 +39,15 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.logstorage.IndexTokenizerFactory;
+import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
+import org.krakenapps.logstorage.LogIndexConfig;
+import org.krakenapps.logstorage.LogIndexCursor;
+import org.krakenapps.logstorage.LogIndexItem;
+import org.krakenapps.logstorage.LogIndexQuery;
+import org.krakenapps.logstorage.LogIndexer;
+import org.krakenapps.logstorage.LogKey;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -52,17 +60,107 @@ public class LogStorageScript implements Script {
 	private ScriptContext context;
 	private LogTableRegistry tableRegistry;
 	private LogStorage storage;
+	private LogIndexer indexer;
+	private IndexTokenizerRegistry tokenizerRegistry;
 	private ConfigService conf;
 
-	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, ConfigService conf) {
+	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, LogIndexer indexer,
+			IndexTokenizerRegistry tokenizerRegistry, ConfigService conf) {
 		this.tableRegistry = tableRegistry;
 		this.storage = archive;
+		this.indexer = indexer;
+		this.tokenizerRegistry = tokenizerRegistry;
 		this.conf = conf;
 	}
 
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	// test
+	public void writeLog(String[] args) {
+		String tableName = args[0];
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("line", args[1]);
+
+		storage.write(new Log(tableName, new Date(), m));
+	}
+
+	public void indexTokenizers(String[] args) {
+		context.println("Index Tokenizers");
+		for (IndexTokenizerFactory f : tokenizerRegistry.getFactories())
+			context.println("[" + f.getName() + "] " + f);
+	}
+
+	@ScriptUsage(description = "search index", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "index name", type = "string", description = "index name"),
+			@ScriptArgument(name = "term", type = "string", description = "search term") })
+	public void searchIndex(String[] args) {
+		String tableName = args[0];
+		String indexName = args[1];
+		String term = args[2];
+		LogIndexCursor c = null;
+		try {
+			LogIndexQuery q = new LogIndexQuery();
+			q.setTableName(tableName);
+			q.setIndexName(indexName);
+			q.setTerm(term);
+
+			long count = 0;
+			int tableId = tableRegistry.getTableId(tableName);
+			c = indexer.search(q);
+			while (c.hasNext()) {
+				LogIndexItem item = c.next();
+				Log log = storage.getLog(new LogKey(tableId, item.getDay(), (int) item.getLogId()));
+				context.println(log.getId() + ": " + log.getData());
+				count++;
+			}
+
+			context.println("total " + count + " logs");
+		} catch (IOException e) {
+			context.println("search failed, " + e.getMessage());
+		} finally {
+			if (c != null)
+				c.close();
+		}
+	}
+
+	@ScriptUsage(description = "create index", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "index name", type = "string", description = "index name"),
+			@ScriptArgument(name = "min date", type = "string", description = "yyyyMMdd format", optional = true) })
+	public void createIndex(String[] args) {
+		try {
+			String tableName = args[0];
+			String indexName = args[1];
+
+			LogIndexConfig config = new LogIndexConfig();
+			config.setTableName(tableName);
+			config.setIndexName(indexName);
+			config.setBuildPastIndex(true);
+
+			if (args.length > 2) {
+				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+				config.setMinIndexDay(dateFormat.parse(args[2]));
+			}
+
+			indexer.createIndex(config);
+			context.println("index " + indexName + " created for table " + tableName);
+		} catch (Throwable t) {
+			context.println(t.getMessage());
+		}
+	}
+
+	@ScriptUsage(description = "drop index", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "index name", type = "string", description = "index name") })
+	public void dropIndex(String[] args) {
+		String tableName = args[0];
+		String indexName = args[1];
+
+		indexer.dropIndex(tableName, indexName, true);
 	}
 
 	@ScriptUsage(description = "migrate old properties to new confdb metadata")
@@ -133,7 +231,7 @@ public class LogStorageScript implements Script {
 			context.println(nf.format(total) + " bytes");
 		} else if (args.length == 2) {
 			String value = tableRegistry.getTableMetadata(tableName, args[1]);
-			context.println("unset" + value);
+			context.println("unset " + value);
 			tableRegistry.unsetTableMetadata(tableName, args[1]);
 		} else if (args.length == 3) {
 			tableRegistry.setTableMetadata(tableName, args[1], args[2]);

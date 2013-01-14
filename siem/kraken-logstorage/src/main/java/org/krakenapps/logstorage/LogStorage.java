@@ -16,6 +16,7 @@
 package org.krakenapps.logstorage;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -74,7 +75,9 @@ public interface LogStorage {
 	Log getLog(LogKey logKey);
 
 	Log getLog(String tableName, Date date, int id);
-
+	
+	LogCursor openCursor(String tableName, Date day, boolean ascending) throws IOException;
+	
 	int search(Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException;
 
 	int search(Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException;
