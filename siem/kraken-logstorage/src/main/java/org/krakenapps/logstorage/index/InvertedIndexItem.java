@@ -15,19 +15,15 @@
  */
 package org.krakenapps.logstorage.index;
 
-import java.util.Map;
-
 public class InvertedIndexItem implements Comparable<InvertedIndexItem> {
 	public long timestamp;
 	public long id;
 	public String[] tokens;
-	public Map<String, String> keyTokens;
 
-	public InvertedIndexItem(long timestamp, long id, String[] tokens, Map<String, String> keyTokens) {
+	public InvertedIndexItem(long timestamp, long id, String[] tokens) {
 		this.timestamp = timestamp;
 		this.id = id;
 		this.tokens = tokens;
-		this.keyTokens = keyTokens;
 	}
 
 	@Override

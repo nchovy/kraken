@@ -22,6 +22,8 @@ import org.apache.felix.ipojo.annotations.ServiceProperty;
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptFactory;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.logstorage.IndexTokenizerRegistry;
+import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 
@@ -41,8 +43,14 @@ public class LogStorageScriptFactory implements ScriptFactory {
 	@Requires
 	private ConfigService conf;
 
+	@Requires
+	private LogIndexer indexer;
+
+	@Requires
+	private IndexTokenizerRegistry tokenizerRegistry;
+
 	@Override
 	public Script createScript() {
-		return new LogStorageScript(tableRegistry, storage, conf);
+		return new LogStorageScript(tableRegistry, storage, indexer, tokenizerRegistry, conf);
 	}
 }

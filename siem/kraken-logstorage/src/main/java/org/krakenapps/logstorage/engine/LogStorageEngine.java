@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -43,6 +44,7 @@ import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
+import org.krakenapps.logstorage.LogCursor;
 import org.krakenapps.logstorage.LogKey;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
@@ -51,9 +53,11 @@ import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.LogWriterStatus;
 import org.krakenapps.logstorage.file.LogFileFixReport;
 import org.krakenapps.logstorage.file.LogFileReader;
+import org.krakenapps.logstorage.file.LogFileReaderV2;
 import org.krakenapps.logstorage.file.LogFileRepairer;
 import org.krakenapps.logstorage.file.LogRecord;
 import org.krakenapps.logstorage.file.LogRecordCallback;
+import org.krakenapps.logstorage.file.LogRecordCursor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -493,12 +497,29 @@ public class LogStorageEngine implements LogStorage {
 		}
 	}
 
-	private Log convert(String tableName, LogRecord logdata) {
+	private static Log convert(String tableName, LogRecord logdata) {
 		ByteBuffer bb = ByteBuffer.wrap(logdata.getData().array());
 		bb.position(logdata.getData().position());
 		bb.limit(logdata.getData().limit());
 		Map<String, Object> m = EncodingRule.decodeMap(bb);
 		return new Log(tableName, logdata.getDate(), logdata.getId(), m);
+	}
+
+	@Override
+	public LogCursor openCursor(String tableName, Date day, boolean ascending) throws IOException {
+		verify();
+
+		OnlineWriter onlineWriter = onlineWriters.get(new OnlineWriterKey(tableName, day));
+		ArrayList<LogRecord> buffer = null;
+		if (onlineWriter != null)
+			buffer = (ArrayList<LogRecord>) onlineWriter.getBuffer();
+
+		int tableId = tableRegistry.getTableId(tableName);
+		File indexPath = DatapathUtil.getIndexFile(tableId, day);
+		File dataPath = DatapathUtil.getDataFile(tableId, day);
+		LogFileReaderV2 reader = (LogFileReaderV2) LogFileReader.getLogFileReader(indexPath, dataPath);
+
+		return new LogCursorImpl(tableName, day, buffer, reader, ascending);
 	}
 
 	@Override
@@ -876,6 +897,96 @@ public class LogStorageEngine implements LogStorage {
 					onlineWriters.remove(key);
 				}
 			}
+		}
+	}
+
+	private static class LogCursorImpl implements LogCursor {
+		private String tableName;
+		private Date day;
+		private ArrayList<LogRecord> buffer;
+		private LogFileReaderV2 reader;
+		private LogRecordCursor cursor;
+		private boolean ascending;
+
+		private Log prefetch;
+		private int bufferNext;
+		private int bufferTotal;
+
+		public LogCursorImpl(String tableName, Date day, ArrayList<LogRecord> buffer, LogFileReaderV2 reader, boolean ascending) {
+			this.tableName = tableName;
+			this.day = day;
+			this.reader = reader;
+			this.cursor = reader.getCursor(ascending);
+			this.ascending = ascending;
+
+			if (buffer != null) {
+				this.buffer = buffer;
+				this.bufferTotal = buffer.size();
+				this.bufferNext = ascending ? 0 : bufferTotal - 1;
+			}
+		}
+
+		@Override
+		public boolean hasNext() {
+			if (prefetch != null)
+				return true;
+
+			if (ascending) {
+				if (cursor.hasNext()) {
+					prefetch = convert(tableName, cursor.next());
+					return true;
+				}
+
+				if (bufferNext < bufferTotal) {
+					LogRecord r = buffer.get(bufferNext++);
+					prefetch = convert(tableName, r);
+					return true;
+				}
+
+				return false;
+			} else {
+				if (bufferNext < 0) {
+					LogRecord r = buffer.get(bufferNext--);
+					prefetch = convert(tableName, r);
+					return true;
+				}
+
+				if (cursor.hasNext()) {
+					prefetch = convert(tableName, cursor.next());
+					return true;
+				}
+
+				return false;
+			}
+		}
+
+		@Override
+		public Log next() {
+			if (!hasNext())
+				throw new NoSuchElementException("end of log cursor");
+
+			Log log = prefetch;
+			prefetch = null;
+			return log;
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void close() {
+			try {
+				reader.close();
+			} catch (IOException e) {
+			}
+		}
+
+		@Override
+		public String toString() {
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+			return "log cursor for table " + tableName + ", day " + dateFormat.format(day);
 		}
 	}
 }

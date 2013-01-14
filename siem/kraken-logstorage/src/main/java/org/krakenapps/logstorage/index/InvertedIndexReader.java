@@ -33,6 +33,16 @@ public class InvertedIndexReader {
 	private BufferedRandomAccessFileReader indexReader;
 	private BufferedRandomAccessFileReader dataReader;
 
+	public static void main(String[] args) throws IOException {
+		File indexFile = new File("D:/8bug/data/kraken-logstorage/index/10/2012-12-05.pos");
+		File dataFile = new File("D:/8bug/data/kraken-logstorage/index/10/2012-12-05.seg");
+
+		InvertedIndexReader reader = new InvertedIndexReader(indexFile, dataFile);
+		InvertedIndexCursor cursor = reader.openCursor("98.84.233.191");
+		while (cursor.hasNext())
+			System.out.println(cursor.next());
+	}
+
 	public InvertedIndexReader(File indexFile, File dataFile) throws IOException {
 		this.indexFile = indexFile;
 		this.dataFile = dataFile;
@@ -83,10 +93,9 @@ public class InvertedIndexReader {
 
 			// align
 			currentSegmentIndex = (indexFile.length() >> 3) - 1;
-
 			// backward segment traverse until term matches
 			Long postingCount = null;
-			while (currentSegmentIndex > 0) {
+			while (currentSegmentIndex >= 0) {
 				postingCount = loadSegment(currentSegmentIndex);
 				if (postingCount != null) {
 					currentPostingCount = postingCount;
@@ -99,6 +108,7 @@ public class InvertedIndexReader {
 		}
 
 		private boolean loadNextSegment() throws IOException {
+			System.out.println("load next seg: " + currentSegmentIndex);
 			Long postingCount = null;
 			while (currentSegmentIndex > 0) {
 				postingCount = loadSegment(--currentSegmentIndex);
@@ -113,31 +123,33 @@ public class InvertedIndexReader {
 		}
 
 		@Override
-		public boolean hasNext() throws IOException {
+		public boolean hasNext() {
 			if (closed) {
-				String msg = "index reader is already closed, index=" + indexFile.getAbsolutePath() + ", data="
-						+ dataFile.getAbsolutePath();
-				throw new IOException(msg);
+				return false;
 			}
 
-			if (prefetch != null)
-				return true;
+			try {
+				if (prefetch != null)
+					return true;
 
-			if (remaining <= 0) {
-				if (!loadNextSegment())
-					return false;
+				if (remaining <= 0) {
+					if (!loadNextSegment())
+						return false;
+				}
+
+				if (remaining == currentPostingCount) {
+					prefetch = nextId();
+				} else {
+					prefetch = last - nextId();
+				}
+
+				last = prefetch;
+				remaining--;
+
+				return prefetch != null;
+			} catch (IOException e) {
+				return false;
 			}
-
-			if (remaining == currentPostingCount) {
-				prefetch = nextId();
-			} else {
-				prefetch = last - nextId();
-			}
-
-			last = prefetch;
-			remaining--;
-
-			return prefetch != null;
 		}
 
 		private Long loadSegment(long segmentIndex) throws IOException {

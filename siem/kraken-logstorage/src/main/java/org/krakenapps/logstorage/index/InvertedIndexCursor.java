@@ -18,7 +18,7 @@ package org.krakenapps.logstorage.index;
 import java.io.IOException;
 
 public interface InvertedIndexCursor {
-	boolean hasNext() throws IOException;
+	boolean hasNext();
 	
 	long next() throws IOException;
 }
