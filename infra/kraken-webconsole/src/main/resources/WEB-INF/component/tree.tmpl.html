@@ -1,0 +1,8 @@
+<script type="text/html" id="tmpl.default.Kuro.Tree">
+	<ul data-bind="foreach: children" class="nav nav-list">
+		<li>
+			<a href="#" data-bind="click: onSelect"><i data-bind="click: accordion" class="icon-minus"></i> <span data-bind="text: name"></span></a>
+			<ul data-bind="template: {name: $root.templateName}"></ul>
+		</li>
+	</ul>
+</script>

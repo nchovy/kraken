@@ -20,20 +20,21 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogResultSet;
-import org.krakenapps.logstorage.file.LogRecordCursor;
 import org.krakenapps.logstorage.file.LogFileReaderV2;
 import org.krakenapps.logstorage.file.LogFileWriterV2;
 import org.krakenapps.logstorage.file.LogRecord;
+import org.krakenapps.logstorage.file.LogRecordCursor;
 
 public class Result extends LogQueryCommand {
 	private static File BASE_DIR = new File(System.getProperty("kraken.data.dir"), "kraken-logdb/query/");
@@ -47,13 +48,19 @@ public class Result extends LogQueryCommand {
 	private Integer nextCallback;
 	private long nextStatusChangeCallback;
 
+	/**
+	 * index and data file is deleted by user request
+	 */
+	private volatile boolean purged;
+
 	public Result() throws IOException {
-		callbacks = new HashSet<LogQueryCallback>();
+		callbacks = new CopyOnWriteArraySet<LogQueryCallback>();
 		callbackQueue = new PriorityQueue<Result.LogQueryCallbackInfo>(11, new CallbackInfoComparator());
 
 		indexPath = File.createTempFile("result", ".idx", BASE_DIR);
 		dataPath = File.createTempFile("result", ".dat", BASE_DIR);
-		writer = new LogFileWriterV2(indexPath, dataPath, 640 * 1024, 0);
+		writer = new LogFileWriterV2(indexPath, dataPath, 1024 * 1024, 1);
+		BASE_DIR.mkdirs();
 	}
 
 	private class LogQueryCallbackInfo {
@@ -136,10 +143,8 @@ public class Result extends LogQueryCommand {
 	}
 
 	private LogRecord convert(Map<String, Object> m) {
-		int length = EncodingRule.lengthOf(m);
-		ByteBuffer bb = ByteBuffer.allocate(length);
-		EncodingRule.encode(bb, m);
-		bb.flip();
+		FastEncodingRule enc = new FastEncodingRule();
+		ByteBuffer bb = enc.encode(m);
 		LogRecord logdata = new LogRecord(new Date(), count + 1, bb);
 		return logdata;
 	}
@@ -164,8 +169,15 @@ public class Result extends LogQueryCommand {
 	}
 
 	public LogResultSet getResult() throws IOException {
+		if (purged) {
+			String msg = "query result file is already purged, index=" + indexPath.getAbsolutePath() + ", data="
+					+ dataPath.getAbsolutePath();
+			throw new IOException(msg);
+		}
+
 		synchronized (writer) {
 			writer.flush();
+			writer.sync();
 		}
 
 		LogFileReaderV2 reader = new LogFileReaderV2(indexPath, dataPath);
@@ -174,6 +186,8 @@ public class Result extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+
 		try {
 			synchronized (writer) {
 				writer.close();
@@ -187,6 +201,14 @@ public class Result extends LogQueryCommand {
 	}
 
 	public void purge() {
+		purged = true;
+
+		// clear query callbacks
+		callbacks.clear();
+		callbackQueue.clear();
+		nextCallback = null;
+
+		// delete files
 		indexPath.delete();
 		dataPath.delete();
 	}

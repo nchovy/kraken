@@ -64,6 +64,7 @@ public class RpcTo extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		if (datasession != null) {
 			try {
 				datasession.call("eof", guid);

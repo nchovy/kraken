@@ -110,8 +110,16 @@ public class LogFileWriterV2 extends LogFileWriter {
 			dataFileHeader = LogFileHeader.extractHeader(dataFile, dataPath);
 		} else {
 			dataFileHeader = new LogFileHeader((short) 2, LogFileHeader.MAGIC_STRING_DATA);
-			prepareInt(blockSize, intbuf);
-			dataFileHeader.setExtraData(intbuf);
+			byte[] ext = new byte[4];
+			prepareInt(blockSize, ext);
+			if (level > 0) {
+				ext = new byte[12];
+				prepareInt(blockSize, ext);
+				ByteBuffer bb = ByteBuffer.wrap(ext, 4, 8);
+				bb.put("deflater".getBytes());
+			}
+
+			dataFileHeader.setExtraData(ext);
 			dataFile.write(dataFileHeader.serialize());
 		}
 
@@ -230,6 +238,10 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 	@Override
 	public void flush() throws IOException {
+		// check if writer is closed
+		if (indexFile == null || dataFile == null)
+			return;
+
 		if (indexBuffer.position() == 0)
 			return;
 
@@ -277,7 +289,7 @@ public class LogFileWriterV2 extends LogFileWriter {
 
 		dataBuffer.clear();
 		compresser.reset();
-		dataFile.getFD().sync();
+		// dataFile.getFD().sync();
 
 		// write log count
 		prepareInt(blockLogCount, intbuf);
@@ -287,12 +299,20 @@ public class LogFileWriterV2 extends LogFileWriter {
 		indexBuffer.flip();
 		indexFile.write(indexBuffer.array(), 0, indexBuffer.limit());
 		indexBuffer.clear();
-		indexFile.getFD().sync();
+		// indexFile.getFD().sync();
 
 		blockStartLogTime = null;
 		blockEndLogTime = null;
 		blockLogCount = 0;
 		buffer.clear();
+	}
+
+	public void sync() throws IOException {
+		if (indexFile == null || dataFile == null)
+			return;
+
+		dataFile.getFD().sync();
+		indexFile.getFD().sync();
 	}
 
 	private void prepareInt(int l, byte[] b) {

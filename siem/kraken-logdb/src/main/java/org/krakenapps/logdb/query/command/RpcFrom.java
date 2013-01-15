@@ -84,6 +84,7 @@ public class RpcFrom extends LogQueryCommand implements Runnable {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		end = true;
 		logger.info("kraken logdb: eof for query guid [{}]", guid);
 	}

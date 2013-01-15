@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>Log Query</title>
+	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<link href="/css/spreadsheet.css" rel="stylesheet"/>
+	<link href="/css/common.css" rel="stylesheet"/>
+	<link href="logquery.css" rel="stylesheet"/>
+	<style>
+	#comp { 
+		border: 1px solid #ccc;
+		width: 800px;
+		height: 300px;
+	}
+
+	.mychart {
+		shape-rendering: crispEdges;
+	}
+
+	.chartArea rect {
+		fill: #5E83A6;
+		fill-opacity: 0.8;
+	}
+
+	.chartArea rect:hover {
+		fill: #104B72;
+		fill-opacity: 0.9;
+	}
+
+	.mychart text {
+		font-size: 8pt;
+		font-family: 'Malgun Gothic';
+		text-rendering: geometricPrecision;
+	}
+
+	text.innerLabel {
+		fill: black;
+		text-anchor: start;
+	}
+
+	text.axisLabel {
+		fill: black;
+		text-anchor: end;
+	}
+
+	line.axisLine {
+		stroke: #ccc;
+	}
+
+	</style>
+
+	<script type="text/javascript" data-main="logquery" src="/require.js"></script>
+
+	<script type="text/html" id="qb">
+		<form class="form-search" data-bind="submit: search">
+			<div class="control-group">
+				<div class="input-append">
+					<input type="search" class="search-query" style="width: 600px" data-bind="value: input" placeholder="" />
+					<button type="submit" class="btn btn-primary">Search</button>
+				</div>
+				<button type="button" class="btn btn-warning" data-bind="click: stop, visible: nowQuerying">Stop</button>
+				<div class="btn-group">
+					<button class="btn">Save</button>
+					<button class="btn">Schedule</button>
+				</div>
+			</div>
+		</form>
+	</script>
+
+	<script type="text/html" id="tmpl.default.Kuro.Chart.Column">
+		<div class="mychart">
+			<svg viewBox="0 0 1000 200">
+				<g transform="translate(40, 15)">
+					<g class="axisArea" data-bind="foreach: { data: refLineY, afterAdd: addRefLineY, beforeRemove: removeRefLineY }">
+						<line class="axisLine" data-bind="attr: { 'y1': $data.scaled, 'y2': $data.scaled }" x1="0" x2="1000"></line>
+						<text class="axisLabel" data-bind="attr: { 'y': $data.scaled }, text: ($root.refLineYMax() - $data.value())" dx="-5" dy="4" x="0"></text>			
+					</g>
+					<g class="chartArea" data-bind="foreach: { data: items, afterAdd: addItem }">
+						<rect data-bind="attr: { 'x': bar.posX, 'height': bar.height(), 'y': bar.posY() }, event: { mouseover: $root.over.bind($data), mouseout: $root.out.bind($data) }" width="40"></rect>
+						<text data-bind="attr: { 'x': bar.posX }, text: bar.label" class="innerLabel" y="162"></text>
+						<line class="axisLine" y1="140" y2="150" data-bind="attr: { 'x1': bar.posX, 'x2': bar.posX } "></line>
+					</g>
+					<text class="innerLabel" y="175" x="0">2012-06-24</text>
+				</g>
+			</svg>
+			<div class="tooltip fade top" style="top: 65px; left: 306.5px; display: block;">
+				<div class="tooltip-arrow"></div>
+				<div class="tooltip-inner"></div>
+			</div>
+		</div>
+	</script>
+
+	<!-- <text data-bind="attr: { 'transform': 'translate(' + (bar.posX) + ', 0) rotate(45, 30, 200)' }, text: bar.label" class="innerLabel" y="170"></text> -->
+
+</head>
+<body>
+<div class="navbar navbar-fixed-top">
+	<div class="navbar-inner">
+		<a class="brand" href="#">Log Query</a>
+	</div>
+</div>
+
+<div class="toolbar">
+	<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
+		<div class="btn-group">
+			<button class="btn">Visualize</button>
+			<button class="btn">Download</button>
+		</div>
+		<div class="btn-group">
+			<button class="btn">Queueing</button>
+			<button class="btn">Show Running</button>
+		</div>
+		<div class="btn-group">
+			<button class="btn">Save Result</button>
+			<button class="btn">Load Result</button>
+		</div>
+		<div class="btn-group">
+			<button class="btn">?</button>
+		</div>
+		<div class="btn-group">
+			<button id="dododo" class="btn">change index 1</button>
+			<button id="dododo2" class="btn">add item</button>
+		</div>
+	</div>
+	<div id="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: qb"></div>
+</div>
+<div id="qtimeline" data-bind="Kuro.Chart.Column: self" class="container ct"></div>
+<div class="container cq">
+	<div id="qresult"></div>
+</div>
+
+</body>
+</html>

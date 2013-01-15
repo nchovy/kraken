@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
@@ -110,6 +111,8 @@ public class ProxyResolverProviderImpl implements ProxyResolverProvider {
 
 				logger.debug("kraken dns: proxy received response, {}", response);
 				return response;
+			} catch (SocketTimeoutException e) {
+				throw e;
 			} catch (Throwable t) {
 				logger.error("kraken dns: proxy response parse error - " + DnsDump.dumpPacket(replyPacket));
 				throw new IllegalStateException("cannot parse nameserver response", t);

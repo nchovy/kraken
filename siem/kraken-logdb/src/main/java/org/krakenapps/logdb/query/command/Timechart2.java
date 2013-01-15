@@ -170,11 +170,13 @@ public class Timechart2 extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+
 		CloseableIterator it = null;
 		try {
 			// last flush
 			flush();
-			
+
 			// reclaim buffer (GC support)
 			buffer = null;
 
@@ -220,8 +222,12 @@ public class Timechart2 extends LogQueryCommand {
 			// init functions at first time
 			if (fs == null) {
 				fs = new Function[values.length];
-				for (int i = 0; i < fs.length; i++)
-					fs[i] = values[i].clone();
+				for (int i = 0; i < values.length; i++)
+					fs[i] = loadFunction(item, i);
+
+				lastTime = time;
+				lastKeyFieldValue = keyFieldValue;
+				continue;
 			}
 
 			// if key value is changed
@@ -241,9 +247,14 @@ public class Timechart2 extends LogQueryCommand {
 				write(new LogMap(output));
 				output = new HashMap<String, Object>();
 
-				// reset function values
-				for (int i = 0; i < fs.length; i++)
-					fs[i] = values[i].clone();
+				// change merge set
+				fs = new Function[values.length];
+				for (int i = 0; i < values.length; i++)
+					fs[i] = loadFunction(item, i);
+
+				lastTime = time;
+				lastKeyFieldValue = keyFieldValue;
+				continue;
 			}
 
 			// merge all
@@ -258,10 +269,12 @@ public class Timechart2 extends LogQueryCommand {
 			lastKeyFieldValue = keyFieldValue;
 		}
 
-		// write last item
-		output.put("_time", lastTime);
-		setOutputAndReset(output, fs, lastKeyFieldValue);
-		write(new LogMap(output));
+		// write last item (can be null if input count is 0)
+		if (lastTime != null) {
+			output.put("_time", lastTime);
+			setOutputAndReset(output, fs, lastKeyFieldValue);
+			write(new LogMap(output));
+		}
 	}
 
 	private void setOutputAndReset(Map<String, Object> output, Function[] fs, String keyFieldValue) {
@@ -279,10 +292,6 @@ public class Timechart2 extends LogQueryCommand {
 			for (Function f : fs)
 				output.put(f.toString(), f.getResult());
 		}
-
-		// reset function values
-		for (int i = 0; i < fs.length; i++)
-			fs[i] = values[i].clone();
 	}
 
 	private Function loadFunction(Item item, int i) {

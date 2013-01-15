@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -37,9 +37,9 @@ import org.krakenapps.logdb.DataSource;
 import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryService;
+import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogScriptFactory;
 import org.krakenapps.logdb.LogScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
@@ -168,7 +168,13 @@ public class LogDBScript implements Script {
 	public void queries(String[] args) {
 		context.println("Log Queries");
 		context.println("-------------");
-		Collection<LogQuery> queries = qs.getQueries();
+		ArrayList<LogQuery> queries = new ArrayList<LogQuery>(qs.getQueries());
+		Collections.sort(queries, new Comparator<LogQuery>() {
+			@Override
+			public int compare(LogQuery o1, LogQuery o2) {
+				return o1.getId() - o2.getId();
+			}
+		});
 
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		for (LogQuery query : queries) {

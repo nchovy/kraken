@@ -17,12 +17,36 @@ package org.krakenapps.logdb.sort;
 
 import java.nio.ByteBuffer;
 
-import org.krakenapps.codec.CustomCodec;
+import org.krakenapps.codec.BinaryForm;
 import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.FastCustomCodec;
+import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.codec.UnsupportedTypeException;
 
-public class SortCodec implements CustomCodec {
+public class SortCodec implements FastCustomCodec {
 	public final static SortCodec instance = new SortCodec();
+
+	@Override
+	public BinaryForm preencode(FastEncodingRule enc, Object value) {
+		if (value.getClass() != Item.class)
+			throw new UnsupportedTypeException(value.toString());
+
+		BinaryForm bf = new BinaryForm();
+		Item item = (Item) value;
+
+		BinaryForm keyBinary = enc.preencode(item.getKey());
+		BinaryForm valueBinary = enc.preencode(item.getValue());
+		int payloadLength = keyBinary.totalLength + valueBinary.totalLength;
+
+		bf.type = 145;
+		bf.children = new BinaryForm[2];
+		bf.children[0] = keyBinary;
+		bf.children[1] = valueBinary;
+		bf.lengthBytes = enc.encodeRawNumber(int.class, payloadLength);
+		bf.totalLength = 1 + bf.lengthBytes.length + payloadLength;
+		bf.value = value;
+		return bf;
+	}
 
 	@Override
 	public void encode(ByteBuffer bb, Object value) {
@@ -50,18 +74,10 @@ public class SortCodec implements CustomCodec {
 
 	@Override
 	public Object decode(ByteBuffer bb) {
-		int begin = bb.position();
 		bb.get(); // read type (1 byte)
-		int length = (int) EncodingRule.decodeRawNumber(bb);
-		int limit = bb.limit();
-		int endPos = begin + length;
-		bb.limit(endPos);
-
+		EncodingRule.decodeRawNumber(bb);
 		Object key = EncodingRule.decode(bb);
 		Object value = EncodingRule.decode(bb);
-
-		bb.limit(limit);
-
 		return new Item(key, value);
 	}
 

@@ -443,7 +443,7 @@ public class FileBufferList<E> implements List<E> {
 							read(fp);
 							return decode(0);
 						} catch (UnsupportedTypeException e) {
-							logger.error("kraken logstorage: unsupported decode type, {}", e.getMessage());
+							logger.error("kraken logdb: unsupported decode type, {}", e.getMessage());
 						} catch (BufferUnderflowException e) {
 							read(fp);
 							return decode(0);
@@ -478,7 +478,7 @@ public class FileBufferList<E> implements List<E> {
 				readBuffer.limit(readed);
 				readBufferIndex = fp;
 			} catch (IOException e) {
-				logger.error("kraken logstorage: invalid access file {}, fp {}", file.getName(), fp);
+				logger.error("kraken logdb: invalid access file {}, fp {}", file.getName(), fp);
 			} catch (RuntimeException e) {
 				logger.error("kraken logdb: cannot read offset [{}] from file [{}]", fp, file.getAbsolutePath());
 				throw e;

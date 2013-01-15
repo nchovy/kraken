@@ -1,0 +1,78 @@
+
+.split-left {
+	position: fixed;
+	top: 40px;
+	bottom: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	width: 25%;
+}
+
+.split-right {
+	position: fixed;
+	top: 40px;
+	bottom: 0;
+	width: 75%;
+	left: 25%;
+
+	border-left: 1px solid #999;
+}
+
+.split-detail {
+	background-color: white;
+	box-shadow: 0px 0px 30px #999;
+
+	border-left: 1px solid #999;
+	right: -60%;
+	position: fixed;
+	width: 55%;
+	height: 100%;
+}
+
+.split-left .navbar-fixed-top {
+	width: 25%;
+}
+
+.split-right .navbar-fixed-top {
+	width: 75%;
+	left: 25%;
+
+	border-left: 1px solid #999;
+}
+
+.split-detail .navbar-fixed-top {
+	right: -60%;
+	position: absolute;
+}
+
+.nav-list {
+	padding-right: 0;
+}
+
+th {
+	background-color: #05B2C2;
+	color: white;
+}
+
+.table * {
+	font-family: 'Malgun Gothic', '맑은 고딕', Gulim, 굴림, sans-serif;
+}
+
+.detail-contents {
+	position: absolute;
+	top: 40px;
+	bottom: 0;
+	width: 100%;
+	overflow-y: auto;
+}
+/*
+.ghost {
+	width: 400px;
+	height: 200px;
+	position: fixed;
+	top: 0;
+	left: 0;
+	opacity: 0.4;
+	
+}
+*/

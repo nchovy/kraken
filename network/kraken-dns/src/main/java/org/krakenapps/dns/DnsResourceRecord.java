@@ -38,6 +38,10 @@ public abstract class DnsResourceRecord {
 					return c;
 			return null;
 		}
+		
+		public int getCode() {
+			return code;
+		}
 	}
 
 	public enum Clazz {

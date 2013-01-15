@@ -116,7 +116,7 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 				} else
 					cache.put((K) key, (V) obj);
 			} catch (IOException e) {
-				logger.error("kraken logstorage: get error", e);
+				logger.error("kraken logdb: get error", e);
 			}
 		}
 
@@ -170,7 +170,7 @@ public class FileBufferMap<K, V> implements Map<K, V> {
 			raf.write(bb.array(), 0, length);
 			rafLength += length;
 		} catch (IOException e) {
-			logger.error("kraken logstorage: flush error", e);
+			logger.error("kraken logdb: flush error", e);
 		}
 	}
 

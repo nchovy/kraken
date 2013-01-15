@@ -113,12 +113,14 @@ public class Stats2 extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+
 		logger.debug("kraken logdb: stats2 sort input count [{}]", inputCount);
 		CloseableIterator it = null;
 		try {
 			// last flush
 			flush();
-			
+
 			// reclaim buffer (GC support)
 			buffer = null;
 
@@ -133,36 +135,48 @@ public class Stats2 extends LogQueryCommand {
 				item = (Item) it.next();
 				count++;
 
+				// first record or need to change merge set?
 				if (lastKeys == null || !Arrays.equals(lastKeys, (Object[]) item.getKey())) {
 					if (logger.isDebugEnabled() && lastKeys != null)
 						logger.debug("kraken logdb: stats2 key compare [{}] != [{}]", lastKeys[0], ((Object[]) item.getKey())[0]);
 
-					// finalize last record
+					// finalize last record (only if changing set)
 					if (fs != null) {
 						pass(fs, lastKeys);
 					}
 
-					// prepare new record
+					// load new record
 					fs = new Function[values.length];
-					for (int i = 0; i < fs.length; i++)
-						fs[i] = values[i].clone();
-				}
-
-				int i = 0;
-				for (Function f : fs) {
-					Object[] l = (Object[]) ((Object[]) item.getValue())[i];
-					String name = (String) l[0];
-					String target = (String) l[1];
-					String keyName = (String) l[2];
-					Function f2 = Function.getFunction(name, target, keyName, Timechart.func);
-					f2.load(l);
-					f.merge(f2);
-					i++;
+					int i = 0;
+					Object[] rawFuncs = (Object[]) item.getValue();
+					for (Object rawFunc : rawFuncs) {
+						Object[] l = (Object[]) rawFunc;
+						String name = (String) l[0];
+						String target = (String) l[1];
+						String keyName = (String) l[2];
+						Function f = Function.getFunction(name, target, keyName, Timechart.func);
+						f.load(l);
+						fs[i++] = f;
+					}
+				} else {
+					// merge
+					int i = 0;
+					for (Function f : fs) {
+						Object[] l = (Object[]) ((Object[]) item.getValue())[i];
+						String name = (String) l[0];
+						String target = (String) l[1];
+						String keyName = (String) l[2];
+						Function f2 = Function.getFunction(name, target, keyName, Timechart.func);
+						f2.load(l);
+						f.merge(f2);
+						i++;
+					}
 				}
 
 				lastKeys = (Object[]) item.getKey();
 			}
 
+			// write last merge set
 			if (item != null)
 				pass(fs, lastKeys);
 

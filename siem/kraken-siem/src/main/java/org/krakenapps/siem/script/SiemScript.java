@@ -17,9 +17,11 @@ package org.krakenapps.siem.script;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -29,6 +31,9 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.dom.api.ProgramApi;
+import org.krakenapps.dom.model.Program;
+import org.krakenapps.dom.model.ProgramPack;
+import org.krakenapps.dom.model.ProgramProfile;
 import org.krakenapps.event.api.Event;
 import org.krakenapps.event.api.EventDispatcher;
 import org.krakenapps.event.api.EventSeverity;
@@ -65,6 +70,45 @@ public class SiemScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void install(String[] args) {
+		String domain = "localhost";
+		if (args.length > 0)
+			domain = args[0];
+
+		ServiceReference ref = bc.getServiceReference(ProgramApi.class.getName());
+		ProgramApi programApi = (ProgramApi) bc.getService(ref);
+
+		if (programApi.findProgramPack(domain, "radar") == null) {
+			ProgramPack pack = new ProgramPack();
+			pack.setName("Radar");
+			pack.setDll("radar");
+			pack.setStarter("starter");
+			pack.setSeq(1);
+			programApi.createProgramPack(domain, pack);
+		}
+
+		List<Program> programs = new ArrayList<Program>();
+		programs.add(createProgram(programApi, domain, "Radar", "Log Query", "logquery", 1));
+		programs.add(createProgram(programApi, domain, "Radar", "Log Source", "logsource", 2));
+
+		ProgramProfile pp = programApi.findProgramProfile(domain, "all");
+		pp.getPrograms().addAll(programs);
+		programApi.updateProgramProfile(domain, pp);
+		context.println("installed");
+	}
+
+	private Program createProgram(ProgramApi programApi, String domain, String pack, String name, String path, int seq) {
+		Program program = new Program();
+		program.setPack(pack);
+		program.setName(name);
+		program.setPath(path);
+		program.setSeq(seq);
+		program.setVisible(true);
+
+		programApi.createProgram(domain, program);
+		return program;
 	}
 
 	public void loggers(String[] args) {

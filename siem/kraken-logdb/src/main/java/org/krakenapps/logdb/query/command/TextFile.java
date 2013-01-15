@@ -3,6 +3,7 @@ package org.krakenapps.logdb.query.command;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -31,9 +32,10 @@ public class TextFile extends LogQueryCommand {
 	public void start() {
 		status = Status.Running;
 
+		BufferedReader br = null;
 		try {
 			Charset utf8 = Charset.forName("utf-8");
-			BufferedReader br = new BufferedReader(new InputStreamReader(new BufferedInputStream(is), utf8));
+			br = new BufferedReader(new InputStreamReader(new BufferedInputStream(is), utf8));
 
 			int i = 0;
 			int count = 0;
@@ -61,7 +63,14 @@ public class TextFile extends LogQueryCommand {
 				i++;
 			}
 		} catch (Throwable t) {
-			logger.error("kraken logstorage: file error", t);
+			logger.error("kraken logdb: file error", t);
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+				}
+			}
 		}
 
 		eof();

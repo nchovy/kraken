@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-base</artifactId>
-	<version>1.3.0</version>
+	<version>1.4.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Base</name>
 	<build>
@@ -29,6 +29,7 @@
 						<Private-Package>org.krakenapps.base.impl</Private-Package>
 						<Import-Package>
 							org.krakenapps.rpc;version="1.5.0",
+							org.krakenapps.log.api;version="1.5.0",
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
 							*

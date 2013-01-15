@@ -84,6 +84,7 @@ public class Sort2 extends LogQueryCommand {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		// TODO: use LONG instead!
 		int count = limit != null ? limit : Integer.MAX_VALUE;
 

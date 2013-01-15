@@ -126,7 +126,7 @@ public abstract class Function {
 			f.extClass = extClass;
 			return f;
 		} catch (Exception e) {
-			logger.error("kraken logstorage: failed create function.", e);
+			logger.error("kraken logdb: failed create function.", e);
 		}
 
 		return null;
@@ -307,6 +307,7 @@ public abstract class Function {
 
 		@Override
 		public Function merge(Function func) {
+			// d should not be null here (do not allow null merge set)
 			Average other = (Average) func;
 			this.d += other.d;
 			this.count += other.count;

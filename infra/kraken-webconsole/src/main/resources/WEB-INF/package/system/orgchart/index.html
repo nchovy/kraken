@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>Organization Chart</title>
+	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<link href="/css/spreadsheet.css" rel="stylesheet"/>
+	<link href="/css/common.css" rel="stylesheet"/>
+	<link href="orgchart.css" rel="stylesheet"/>
+
+	<script type="text/javascript" data-main="orgchart" src="/require.js"></script>
+
+	<script type="text/html" id="tmpl.default.Kuro.Tree">
+		<ul data-bind="foreach: children" class="nav nav-list">
+			<li>
+				<a href="#" data-bind="click: onSelect"><i data-bind="click: accordion" class="icon-minus"></i> <span data-bind="text: name"></span></a>
+				<ul data-bind="template: {name: $root.templateName}"></ul>
+			</li>
+		</ul>
+	</script>
+
+	<script type="text/html" id="hello">
+		<tr>
+			<td style="width:40px" class="tddraggable">=</td>
+			<td style="width:60px"></td>
+			<td style="width:40px"><input type="checkbox" ></input></td>
+			<td>&nbsp;</td>
+		</tr>
+	</script>
+
+	<script type="text/html" id="isChecked">
+		<input type="checkbox" data-bind="checked: filteredItem()()[{{ return (irow % 20); }}].isChecked"></input>
+	</script>
+</head>
+<body>
+<aside id="modalNewUser" class="modal hidden">
+	<form class="form-horizontal">
+		<legend>Add New User</legend>
+		<div class="control-group">
+			<label class="control-label">Login Name</label>
+			<div class="controls">
+				<input type="text" id="txtlogin">
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Name</label>
+			<div class="controls">
+				<input type="text">
+			</div>
+		</div>
+		<div class="control-group">
+			<div class="controls">
+				<button class="btn" id="btnCloseAdd">Close</button>
+			</div>
+		</div>
+	</form>
+</aside>
+<aside id="modalNewArea" class="modal hidden">
+	<form class="form-horizontal" id="formArea">
+		<legend>Add new area</legend>
+		<div class="control-group">
+			<label class="control-label">Name</label>
+			<div class="controls">
+				<input type="text" data-form="name">
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Description</label>
+			<div class="controls">
+				<textarea data-form="description"></textarea>
+			</div>
+		</div>
+		<div class="control-group">
+			<div class="controls">
+				<button class="btn btn-primary" id="btnAddNewArea">Add</button>
+				<button class="btn modal-close">Close</button>
+			</div>
+		</div>
+	</form>
+</aside>
+
+<div class="row-fluid">
+	<div class="split-left ani2">
+		<div class="navbar navbar-fixed-top ani2">
+			<div class="navbar-inner">
+				<ul class="nav">
+					<li class="active">
+						<a href="#">Organization</a>
+					</li>
+					<li>
+						<a href="#">Group</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		<div class="toolbar">
+			<div class="btn-group">
+				<button class="btn">Select...</button>
+				<button class="btn" id="btnOpenModalAdd">Add</button>
+			</div>
+		</div>
+		<div id="treeview" data-bind="Kuro.Tree: self"></div>
+	</div>
+	<div class="split-right ani1">
+		<div class="navbar navbar-fixed-top ani1">
+			<div class="navbar-inner">
+				<a class="brand" href="#">&nbsp;&nbsp;Test</a>
+				<div class="btn-group">
+					<button class="btn" id="btnRefresh">Refresh</button>
+					<button class="btn">Remove</button>
+					<button class="btn" id="btnAdd">Add</button>
+					<button class="btn">Select...</button>
+				</div>
+			</div>
+		</div>
+		<div id="acc" style="height: 100%">
+			<div id="grid1" style="height: 100%"></div>
+		</div>
+	</div>
+</div>
+<div class="split-detail ani3">
+	<div class="navbar navbar-fixed-top">
+		<div class="navbar-inner">
+			<button class="btn btn-info pull-left" style="margin-left: 10px; margin-right: 20px" id="btnBack">Back</button>
+			<a class="brand" href="#">NCHOVY</a>
+			<div class="btn-group">
+				<button class="btn">Remove</button>
+				<button class="btn">Select...</button>
+			</div>
+		</div>
+	</div>
+	<div class="detail-contents">
+		<form class="form-horizontal">
+			<legend>General</legend>
+			<div class="control-group">
+				<label class="control-label">E-mail</label>
+				<div class="controls">
+					<input type="text">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Phone</label>
+				<div class="controls">
+					<input type="text">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Created At</label>
+				<div class="controls">
+					2012-05-02 20:50:23
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Modified At</label>
+				<div class="controls">
+					2012-05-02 20:50:23
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Other</label>
+				<div class="controls">
+					<textarea></textarea>
+				</div>
+			</div>
+
+			<legend>Administrator</legend>
+			<div class="control-group">
+				<label class="control-label">E-mail</label>
+				<div class="controls">
+					<input type="text">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Phone</label>
+				<div class="controls">
+					<input type="text">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Created At</label>
+				<div class="controls">
+					2012-05-02 20:50:23
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Modified At</label>
+				<div class="controls">
+					2012-05-02 20:50:23
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label">Other</label>
+				<div class="controls">
+					<textarea></textarea>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+
+</body>
+</html>

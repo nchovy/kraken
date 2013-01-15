@@ -28,8 +28,8 @@ public class InitialSchema {
 	private static final String SCHEMA_VERSION = "1";
 	private static final String DEFAULT_DOMAIN = "localhost";
 
-	public static void generate(ScriptContext context, GlobalConfigApi globalConfigApi, OrganizationApi orgApi,
-			RoleApi roleApi, ProgramApi programApi, AreaApi areaApi, UserApi userApi) {
+	public static void generate(ScriptContext context, GlobalConfigApi globalConfigApi, OrganizationApi orgApi, RoleApi roleApi,
+			ProgramApi programApi, AreaApi areaApi, UserApi userApi) {
 		// TODO: check schema version, add vendor & applications
 		Object schemaVersion = globalConfigApi.getConfig("initial_schema_version");
 		if (!SCHEMA_VERSION.equals(schemaVersion)) {
@@ -83,7 +83,7 @@ public class InitialSchema {
 		if (programApi.findProgramPack(DEFAULT_DOMAIN, "System") == null) {
 			ProgramPack pack = new ProgramPack();
 			pack.setName("System");
-			pack.setDll("Nchovy.WatchCat.Plugins.Core.dll");
+			pack.setDll("system");
 			pack.setSeq(1);
 			try {
 				programApi.createProgramPack(DEFAULT_DOMAIN, pack);
@@ -94,15 +94,11 @@ public class InitialSchema {
 		}
 
 		List<Program> programs = new ArrayList<Program>();
-		programs.add(createProgram(context, programApi, "Account Manager",
-				"Nchovy.WatchCat.Plugins.Core.AccountManager.AccountPlugin", 1));
-		programs.add(createProgram(context, programApi, "Host Manager",
-				"Nchovy.WatchCat.Plugins.Core.HostConfig.HostConfig", 2));
-		programs.add(createProgram(context, programApi, "Task Manager",
-				"Nchovy.WatchCat.Plugins.Core.TaskManager.TaskManager", 3));
-		programs.add(createProgram(context, programApi, "Run", "Nchovy.WatchCat.Plugins.Core.Run.Run", 4));
-		programs.add(createProgram(context, programApi, "Developer Console",
-				"Nchovy.WatchCat.Plugins.Core.MessagePrompt.MessagePrompt", 5));
+		programs.add(createProgram(context, programApi, "Dashboard", "dashboard", 1));
+		programs.add(createProgram(context, programApi, "Account", "orgchart", 2));
+		programs.add(createProgram(context, programApi, "Task Manager", "taskmanager", 3));
+		programs.add(createProgram(context, programApi, "Run", "run", 4));
+		programs.add(createProgram(context, programApi, "Developer Console", "devconsole", 5));
 
 		if (programApi.findProgramProfile(DEFAULT_DOMAIN, "all") == null) {
 			ProgramProfile profile = new ProgramProfile();

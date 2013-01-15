@@ -27,6 +27,7 @@ import org.krakenapps.log.api.Logger;
 import org.krakenapps.log.api.LoggerConfigOption;
 import org.krakenapps.log.api.LoggerFactory;
 import org.krakenapps.log.api.LoggerFactoryEventListener;
+import org.osgi.framework.BundleContext;
 
 public class RemoteLoggerFactory implements LoggerFactory {
 	private String namespace;
@@ -41,6 +42,14 @@ public class RemoteLoggerFactory implements LoggerFactory {
 		callbacks = Collections.newSetFromMap(new ConcurrentHashMap<LoggerFactoryEventListener, Boolean>());
 		this.proxy = proxy;
 		this.factoryInfo = factoryInfo;
+	}
+
+	@Override
+	public void onStart(BundleContext bc) {
+	}
+
+	@Override
+	public void onStop() {
 	}
 
 	@Override
@@ -72,13 +81,12 @@ public class RemoteLoggerFactory implements LoggerFactory {
 	}
 
 	@Override
-	public Logger newLogger(String namespace, String name, String description, long logCount, Date lastLogDate,
-			Properties config) {
+	public Logger newLogger(String namespace, String name, String description, long logCount, Date lastLogDate, Properties config) {
 		try {
 			return proxy.createRemoteLogger(factoryInfo.getName(), name, description, config);
 		} catch (Exception e) {
-			String msg = String.format("cannot create remote logger: proxy=%s, factory=%s, logger name=%s",
-					proxy.getGuid(), factoryInfo.getName(), name);
+			String msg = String.format("cannot create remote logger: proxy=%s, factory=%s, logger name=%s", proxy.getGuid(),
+					factoryInfo.getName(), name);
 			throw new IllegalStateException(msg, e);
 		}
 	}
@@ -93,8 +101,8 @@ public class RemoteLoggerFactory implements LoggerFactory {
 		try {
 			proxy.removeRemoteLogger(name);
 		} catch (Exception e) {
-			String msg = String.format("cannot delete remote logger: proxy=%s, factory=%s, logger name=%s",
-					proxy.getGuid(), factoryInfo.getName(), name);
+			String msg = String.format("cannot delete remote logger: proxy=%s, factory=%s, logger name=%s", proxy.getGuid(),
+					factoryInfo.getName(), name);
 			throw new IllegalStateException(msg, e);
 		}
 	}
