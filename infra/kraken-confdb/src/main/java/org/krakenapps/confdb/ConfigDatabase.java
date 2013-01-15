@@ -106,7 +106,7 @@ public interface ConfigDatabase {
 	void rollback(int changeset, String committer, String log);
 
 	int count(Class<?> cls);
-	
+
 	int count(Class<?> cls, Predicate pred);
 
 	int count(ConfigTransaction xact, Class<?> cls);
@@ -146,4 +146,8 @@ public interface ConfigDatabase {
 	void shrink(int count);
 
 	ConfigCache getCache();
+
+	void addListener(ConfigDatabaseListener listener);
+
+	void removeListener(ConfigDatabaseListener listener);
 }

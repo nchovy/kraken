@@ -22,21 +22,29 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.krakenapps.api.PrimitiveConverter;
+import org.krakenapps.confdb.ConfigServiceListener;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigIterator;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicates;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileConfigService implements ConfigService {
+	private final Logger logger = LoggerFactory.getLogger(FileConfigService.class.getName());
 	private File baseDir;
 	private ConcurrentMap<DatabaseCacheKey, ConfigDatabase> instances;
 	private ConfigDatabase metadb;
 
+	private CopyOnWriteArraySet<ConfigServiceListener> listeners;
+
 	public FileConfigService() throws IOException {
+		listeners = new CopyOnWriteArraySet<ConfigServiceListener>();
 		baseDir = new File(System.getProperty("kraken.data.dir"), "kraken-confdb");
 		baseDir.mkdirs();
 		metadb = new FileConfigDatabase(baseDir, "confdb");
@@ -105,6 +113,14 @@ public class FileConfigService implements ConfigService {
 
 			ConfigDatabase db = new FileConfigDatabase(baseDir, name);
 			instances.putIfAbsent(new DatabaseCacheKey(name, null), db);
+
+			for (ConfigServiceListener listener : listeners) {
+				try {
+					listener.onCreateDatabase(db);
+				} catch (Throwable t) {
+					logger.error("kraken confdb: create config database callback should not throw any exception", t);
+				}
+			}
 			return db;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -184,5 +200,19 @@ public class FileConfigService implements ConfigService {
 				return false;
 			return true;
 		}
+	}
+
+	@Override
+	public void addListener(ConfigServiceListener listener) {
+		if (listener == null)
+			throw new IllegalArgumentException("listener should not be null");
+		listeners.add(listener);
+	}
+
+	@Override
+	public void removeListener(ConfigServiceListener listener) {
+		if (listener == null)
+			throw new IllegalArgumentException("listener should not be null");
+		listeners.remove(listener);
 	}
 }

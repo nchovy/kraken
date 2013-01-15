@@ -24,11 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.query.FileBufferMap;
 import org.krakenapps.logdb.query.command.Function.Sum;
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.command.Function;
-import org.krakenapps.logdb.query.command.FunctionCodec;
 
 public class Timechart extends LogQueryCommand {
 	public static enum Span {
@@ -122,6 +120,8 @@ public class Timechart extends LogQueryCommand {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
+		
 		List<Date> sortedKey = new ArrayList<Date>(data.keySet());
 		Collections.sort(sortedKey);
 		for (Date key : sortedKey) {

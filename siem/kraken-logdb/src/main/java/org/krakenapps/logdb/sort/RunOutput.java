@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.codec.FastEncodingRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,9 +39,9 @@ class RunOutput {
 	private FileOutputStream dataFos;
 	private byte[] intbuf = new byte[4];
 	private byte[] longbuf = new byte[8];
-	private ByteBuffer buf;
 	private long dataOffset;
 	private boolean noIndexWrite;
+	private FastEncodingRule enc = new FastEncodingRule();
 
 	public RunOutput(int id, int length, AtomicInteger cacheCount) throws IOException {
 		this(id, length, cacheCount, false);
@@ -49,8 +49,6 @@ class RunOutput {
 
 	public RunOutput(int id, int length, AtomicInteger cacheCount, boolean noIndexWrite) throws IOException {
 		this.noIndexWrite = noIndexWrite;
-
-		buf = ByteBuffer.allocate(640 * 1024);
 
 		int remainCacheSize = cacheCount.addAndGet(-length);
 		if (remainCacheSize >= 0) {
@@ -86,8 +84,7 @@ class RunOutput {
 		if (run.cached != null)
 			run.cached.add(o);
 		else {
-			EncodingRule.encode(buf, o, SortCodec.instance);
-			buf.flip();
+			ByteBuffer buf = enc.encode(o, SortCodec.instance);
 			int len = buf.remaining();
 
 			if (!noIndexWrite) {

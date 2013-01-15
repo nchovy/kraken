@@ -52,10 +52,14 @@ public interface LogQuery extends Runnable {
 	void registerQueryCallback(LogQueryCallback callback);
 
 	void unregisterQueryCallback(LogQueryCallback callback);
+	
+	void clearQueryCallbacks();
 
 	Set<LogTimelineCallback> getTimelineCallbacks();
 
 	void registerTimelineCallback(LogTimelineCallback callback);
 
 	void unregisterTimelineCallback(LogTimelineCallback callback);
+	
+	void clearTimelineCallbacks();
 }

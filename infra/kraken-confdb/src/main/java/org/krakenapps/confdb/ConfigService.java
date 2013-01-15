@@ -29,4 +29,8 @@ public interface ConfigService {
 	void dropDatabase(String name);
 
 	List<String> getDatabaseNames();
+
+	void addListener(ConfigServiceListener listener);
+
+	void removeListener(ConfigServiceListener listener);
 }

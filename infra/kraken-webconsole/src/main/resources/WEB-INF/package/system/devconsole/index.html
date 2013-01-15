@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>sample1</title>
+	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<style>
+		.form-actions {
+			background-color: #eee;
+		}
+		pre[class*="span"] {
+			margin-left: 0;
+			background-color: white;
+		}
+	</style>
+
+	<script type="text/javascript" data-main="devconsole" src="/require.js"></script>	
+</head>
+<body>
+	<form class="form-horizontal well">
+		<legend>Request</legend>
+		<div class="control-group">
+			<label class="control-label" for="txtMsg">Message</label>
+			<div class="controls">
+				<input type="text" id="txtMsg" placeholder="org.krakenapps.msgbus.TestPlugin.test" class="span6" />
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label" for="txtOpts">Options</label>
+			<div class="controls">
+				<textarea id="txtOpts" rows="4" placeholder='{ "foo": "bar" }' class="span6"></textarea>
+			</div>
+		</div>
+		<div class="form-actions">
+			<button id="btnRun" type="button" class="btn btn-primary">Run (Ctrl + R)</button>
+		</div>
+
+		<legend>Response</legend>
+		<div class="control-group">
+			<div id="areaResult" class="controls" style="margin-bottom: 20px">
+				Not available, a request has not been sent yet.
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Result</label>
+			<div class="controls">
+				<pre id="areaResp" class="span10"></pre>
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Raw</label>
+			<div class="controls">
+				<pre id="areaRaw" class="span10"></pre>
+			</div>
+		</div>
+	</form>
+</body>
+</html>

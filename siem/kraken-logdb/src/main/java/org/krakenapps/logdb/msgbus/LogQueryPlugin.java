@@ -332,7 +332,7 @@ public class LogQueryPlugin {
 
 				Object[] trace = new Object[] { query.getId(), spanValue.getFieldName(), spanValue.getAmount(), beginTime,
 						Arrays.toString(values), query.getResultCount() };
-				logger.trace("kraken logstorage: timeline callback => "
+				logger.trace("kraken logdb: timeline callback => "
 						+ "{id={}, span_field={}, span_amount={}, begin={}, values={}, count={}}", trace);
 			} catch (IOException e) {
 				logger.error("kraken logdb: msgbus push fail", e);

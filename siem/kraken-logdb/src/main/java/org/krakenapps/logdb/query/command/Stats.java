@@ -76,6 +76,7 @@ public class Stats extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing;
 		result.flush();
 
 		for (List<Object> key : result.keySet()) {

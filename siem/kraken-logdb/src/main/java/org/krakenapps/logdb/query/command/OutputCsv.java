@@ -64,6 +64,7 @@ public class OutputCsv extends LogQueryCommand {
 
 	@Override
 	public void eof() {
+		this.status = Status.Finalizing; 
 		try {
 			os.close();
 		} catch (IOException e) {

@@ -20,6 +20,8 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 
+import org.krakenapps.confdb.Predicate;
+
 public interface CertificateAuthority {
 	/**
 	 * @return the authority name
@@ -76,6 +78,12 @@ public interface CertificateAuthority {
 	 */
 	Collection<CertificateMetadata> getCertificates();
 
+	Collection<CertificateMetadata> getCertificates(Predicate pred);
+
+	CertificateMetadataIterator getCertificateIterator();
+
+	CertificateMetadataIterator getCertificateIterator(Predicate pred);
+
 	/**
 	 * Find a certificate by given search condition
 	 * 
@@ -99,6 +107,14 @@ public interface CertificateAuthority {
 	CertificateMetadata issueCertificate(CertificateRequest req) throws Exception;
 
 	/**
+	 * import a new certificate
+	 * 
+	 * @param cm
+	 *            the certificate metadata
+	 */
+	void importCertificate(CertificateMetadata cm);
+
+	/**
 	 * @return all revoked certificate list
 	 */
 	List<RevokedCertificate> getRevokedCertificates();
@@ -110,6 +126,10 @@ public interface CertificateAuthority {
 	 * @return revoked certificate
 	 */
 	RevokedCertificate getRevokedCertificate(String serial);
+
+	RevokedCertificateIterator getRevokedCertificateIterator();
+
+	RevokedCertificateIterator getRevokedCertificateIterator(Predicate pred);
 
 	/**
 	 * Revoke a certificate
@@ -130,7 +150,7 @@ public interface CertificateAuthority {
 	 *            the revocation reason
 	 */
 	void revoke(CertificateMetadata cm, RevocationReason reason);
-	
+
 	void addListener(CertEventListener listener);
 
 	void removeListener(CertEventListener listener);

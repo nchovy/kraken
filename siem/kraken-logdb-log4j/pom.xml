@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>kraken-siem-pom</artifactId>
+		<groupId>org.krakenapps</groupId>
+		<version>1.0.0</version>
+	</parent>
+	<groupId>org.krakenapps</groupId>
+	<artifactId>kraken-logdb-log4j</artifactId>
+	<version>1.0.0</version>
+	<packaging>jar</packaging>
+	<name>Kraken LogDB Log4j Adapter</name>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-SymbolicName>org.krakenapps.logdb.log4j</Bundle-SymbolicName>
+						<Export-Package>org.krakenapps.logdb.log4j</Export-Package>
+						<Import-Package>*</Import-Package>
+					</instructions>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2-beta-2</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<Main-Class>org.krakenapps.main.Kraken</Main-Class>
+						</manifest>
+						<manifestEntries>
+							<Premain-Class>org.krakenapps.main.Kraken</Premain-Class>
+							<Kraken-Version>${project.version}</Kraken-Version>
+						</manifestEntries>
+					</archive>
+					<descriptors>
+						<descriptor>src/main/assembly/src.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.9</version>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-json</artifactId>
+		</dependency>
+	</dependencies>
+
+</project>

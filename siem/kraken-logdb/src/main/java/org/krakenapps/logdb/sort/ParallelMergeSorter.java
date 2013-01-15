@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -44,19 +46,16 @@ public class ParallelMergeSorter {
 	private Comparator<Item> comparer;
 	private int runLength = 20000;
 	private AtomicInteger runIndexer;
-	private AtomicInteger flushTasks;
-	private AtomicInteger mergeTasks;
+	private volatile int flushTaskCount;
 	private AtomicInteger cacheCount;
 	private Object flushDoneSignal = new Object();
-	private Object mergeDoneSignal = new Object();
 	private ExecutorService executor;
+	private CyclicBarrier mergeBarrier;
 
 	public ParallelMergeSorter(Comparator<Item> comparer) {
 		this.comparer = comparer;
 		this.buffer = new LinkedList<Item>();
 		this.runIndexer = new AtomicInteger();
-		this.flushTasks = new AtomicInteger();
-		this.mergeTasks = new AtomicInteger();
 		this.executor = new ThreadPoolExecutor(8, 8, 10, TimeUnit.SECONDS, new LimitedQueue<Runnable>(8));
 		this.cacheCount = new AtomicInteger(10000);
 	}
@@ -100,7 +99,9 @@ public class ParallelMergeSorter {
 			return;
 
 		buffer = new LinkedList<Item>();
-		flushTasks.incrementAndGet();
+		synchronized (flushDoneSignal) {
+			flushTaskCount++;
+		}
 		executor.submit(new FlushWorker(buffered));
 	}
 
@@ -110,13 +111,16 @@ public class ParallelMergeSorter {
 		buffer = null;
 
 		// wait flush done
-		while (flushTasks.get() != 0) {
-			try {
-				synchronized (flushDoneSignal) {
+		while (true) {
+			synchronized (flushDoneSignal) {
+				if (flushTaskCount == 0)
+					break;
+
+				try {
 					flushDoneSignal.wait();
-					logger.debug("kraken logdb: remaining runs {}, task count: {}", runs.size(), flushTasks.get());
+				} catch (InterruptedException e) {
 				}
-			} catch (InterruptedException e) {
+				logger.debug("kraken logdb: remaining runs {}, task count: {}", runs.size(), flushTaskCount);
 			}
 		}
 
@@ -177,6 +181,8 @@ public class ParallelMergeSorter {
 	private Run mergeAll(List<Partition> partitions) throws IOException {
 		// enqueue partition merge
 		int id = 0;
+
+		List<PartitionMergeTask> tasks = new ArrayList<PartitionMergeTask>();
 		for (Partition p : partitions) {
 			List<Run> runParts = new LinkedList<Run>();
 			for (SortedRunRange range : p.getRunRanges()) {
@@ -196,24 +202,22 @@ public class ParallelMergeSorter {
 
 			if (runParts.size() > 0) {
 				PartitionMergeTask task = new PartitionMergeTask(id++, runParts);
-				merges.add(task);
-				mergeTasks.incrementAndGet();
-				executor.submit(new MergeWorker(task));
+				tasks.add(task);
 			}
 		}
 
-		// wait partition merge
-		while (true) {
-			if (mergeTasks.get() == 0)
-				break;
+		mergeBarrier = new CyclicBarrier(tasks.size() + 1);
+		for (PartitionMergeTask task : tasks) {
+			merges.add(task);
+			executor.submit(new MergeWorker(task));
+		}
 
-			try {
-				synchronized (mergeDoneSignal) {
-					mergeDoneSignal.wait();
-					logger.debug("kraken logdb: remaining runs: {}, task count: {}", runs.size(), mergeTasks.get());
-				}
-			} catch (InterruptedException e) {
-			}
+		// wait partition merge
+		try {
+			mergeBarrier.await();
+		} catch (InterruptedException e) {
+		} catch (BrokenBarrierException e) {
+			logger.error("kraken logdb: barrier assumption fail", e);
 		}
 
 		// final merge
@@ -249,8 +253,8 @@ public class ParallelMergeSorter {
 			} catch (Throwable t) {
 				logger.error("kraken logdb: failed to flush", t);
 			} finally {
-				flushTasks.decrementAndGet();
 				synchronized (flushDoneSignal) {
+					flushTaskCount--;
 					flushDoneSignal.notifyAll();
 				}
 			}
@@ -288,10 +292,11 @@ public class ParallelMergeSorter {
 			} catch (Throwable t) {
 				logger.error("kraken logdb: failed to merge " + task.runs, t);
 			} finally {
-				mergeTasks.decrementAndGet();
-
-				synchronized (mergeDoneSignal) {
-					mergeDoneSignal.notifyAll();
+				try {
+					mergeBarrier.await();
+				} catch (InterruptedException e) {
+				} catch (BrokenBarrierException e) {
+					logger.error("kraken logdb: merge barrier assumption fail", e);
 				}
 			}
 		}

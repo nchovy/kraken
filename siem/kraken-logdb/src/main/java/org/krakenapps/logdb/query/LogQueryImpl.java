@@ -18,19 +18,20 @@ package org.krakenapps.logdb.query;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogQueryCommand.Status;
+import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.command.Result;
@@ -46,8 +47,8 @@ public class LogQueryImpl implements LogQuery {
 	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
 	private Date lastStarted;
 	private Result result;
-	private Set<LogQueryCallback> logQueryCallbacks = new HashSet<LogQueryCallback>();
-	private Set<LogTimelineCallback> timelineCallbacks = new HashSet<LogTimelineCallback>();
+	private Set<LogQueryCallback> logQueryCallbacks = new CopyOnWriteArraySet<LogQueryCallback>();
+	private Set<LogTimelineCallback> timelineCallbacks = new CopyOnWriteArraySet<LogTimelineCallback>();
 
 	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString) {
 		this.queryString = queryString;
@@ -122,13 +123,13 @@ public class LogQueryImpl implements LogQuery {
 				result.registerCallback(callback);
 			logQueryCallbacks.clear();
 
-			logger.trace("kraken logstorage: run query => {}", queryString);
+			logger.trace("kraken logdb: run query => {}", queryString);
 			for (LogQueryCommand command : commands)
 				command.init();
 
 			commands.get(0).start();
 		} catch (Exception e) {
-			logger.error("kraken logstorage: cannot start query", e);
+			logger.error("kraken logdb: query failed - " + this, e);
 		}
 	}
 
@@ -155,6 +156,11 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public void purge() {
+		// prevent deleted result file access caused by result check of query
+		// callback or timeline callbacks
+		clearTimelineCallbacks();
+		clearQueryCallbacks();
+
 		if (result != null)
 			result.purge();
 	}
@@ -163,11 +169,13 @@ public class LogQueryImpl implements LogQuery {
 	public void cancel() {
 		if (result == null)
 			return;
-		if (result.getStatus() != Status.End)
+
+		if (result.getStatus() != Status.End && result.getStatus() != Status.Finalizing)
 			result.eof();
+
 		for (int i = commands.size() - 1; i >= 0; i--) {
 			LogQueryCommand command = commands.get(i);
-			if (command.getStatus() != Status.End) {
+			if (command.getStatus() != Status.End && command.getStatus() != Status.Finalizing) {
 				command.eof();
 			}
 		}
@@ -240,7 +248,7 @@ public class LogQueryImpl implements LogQuery {
 
 	@Override
 	public Set<LogQueryCallback> getLogQueryCallback() {
-		return logQueryCallbacks;
+		return Collections.unmodifiableSet(logQueryCallbacks);
 	}
 
 	@Override
@@ -254,8 +262,13 @@ public class LogQueryImpl implements LogQuery {
 	}
 
 	@Override
+	public void clearQueryCallbacks() {
+		logQueryCallbacks.clear();
+	}
+
+	@Override
 	public Set<LogTimelineCallback> getTimelineCallbacks() {
-		return timelineCallbacks;
+		return Collections.unmodifiableSet(timelineCallbacks);
 	}
 
 	@Override
@@ -266,6 +279,11 @@ public class LogQueryImpl implements LogQuery {
 	@Override
 	public void unregisterTimelineCallback(LogTimelineCallback callback) {
 		timelineCallbacks.remove(callback);
+	}
+
+	@Override
+	public void clearTimelineCallbacks() {
+		timelineCallbacks.clear();
 	}
 
 	@Override
