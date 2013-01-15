@@ -34,25 +34,6 @@ public class Group implements FacebookGraphObject{
 		public String CONN_docs = "docs";
 		//TODO : object define
 	}
-	@Override
-	public int parseJson(JSONObject json) {
-		try {
-			id = json.getString("id");
-			version = json.getInt("version");
-			icon = json.getString("icon");
-			JSONObject fromObject = json.getJSONObject("from");
-			owner = new From(fromObject.getString("id"), fromObject.getString("name"));
-			name = json.getString("name");
-			description = json.getString("description");
-			link =  json.getString("link");
-			privacy = json.getString("privacy");
-			updated_time = json.getString("updated_time");
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		
-		return 0;
-	}
 	public String getId() {
 		return id;
 	}
@@ -122,6 +103,24 @@ public class Group implements FacebookGraphObject{
 		// TODO Auto-generated method stub
 		return 0;
 	}
-	
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			version = json.getInt("version");
+			icon = json.getString("icon");
+			JSONObject fromObject = json.getJSONObject("from");
+			owner = new From(fromObject.getString("id"), fromObject.getString("name"));
+			name = json.getString("name");
+			description = json.getString("description");
+			link =  json.getString("link");
+			privacy = json.getString("privacy");
+			updated_time = json.getString("updated_time");
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		
+		return 0;
+	}
 
 }
