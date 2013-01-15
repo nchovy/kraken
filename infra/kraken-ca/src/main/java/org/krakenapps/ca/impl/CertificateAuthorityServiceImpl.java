@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 @Component(name = "certificate-authority")
 @Provides
 public class CertificateAuthorityServiceImpl implements CertificateAuthorityService {
+	private static final String DBNAME_PREFIX = "kraken-ca-";
 	private final Logger logger = LoggerFactory.getLogger(CertificateAuthorityServiceImpl.class.getName());
 	private static File baseDir = new File(System.getProperty("kraken.data.dir"), "kraken-ca");
 
@@ -97,7 +98,7 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 				Map<String, Object> doc = (Map<String, Object>) c.getDocument();
 				String name = (String) doc.get("name");
 
-				ConfigDatabase db = conf.ensureDatabase("kraken-ca-" + name);
+				ConfigDatabase db = conf.ensureDatabase(DBNAME_PREFIX + name);
 				CertificateAuthority authority = new CertificateAuthorityImpl(db, name);
 				authority.addListener(certListener);
 				authorities.put(authority.getName(), authority);
@@ -126,7 +127,7 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		doc.put("name", name);
 		doc.put("created_at", new Date());
 
-		ConfigDatabase db = conf.ensureDatabase("kraken-ca-" + name);
+		ConfigDatabase db = conf.ensureDatabase(DBNAME_PREFIX + name);
 		ConfigDatabase ca = conf.ensureDatabase("kraken-ca");
 		ConfigCollection col = ca.ensureCollection("authority");
 		col.add(doc);
@@ -197,7 +198,7 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		if (authority == null)
 			return;
 
-		conf.dropDatabase("kraken-ca-" + authority.getName());
+		conf.dropDatabase(DBNAME_PREFIX + authority.getName());
 
 		ConfigDatabase ca = conf.ensureDatabase("kraken-ca");
 		ConfigCollection col = ca.ensureCollection("authority");
@@ -247,11 +248,11 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 		}
 
 		InputStream cdbIs = null;
-		ConfigDatabase db = conf.getDatabase("kraken-ca-" + name);
+		ConfigDatabase db = conf.getDatabase(DBNAME_PREFIX + name);
 		if (db != null)
 			throw new IllegalStateException("authority [" + name + "] already exists");
 
-		db = conf.createDatabase(name);
+		db = conf.createDatabase(DBNAME_PREFIX + name);
 		try {
 			cdbIs = new FileInputStream(exportFile);
 			db.importData(cdbIs);
@@ -264,7 +265,8 @@ public class CertificateAuthorityServiceImpl implements CertificateAuthorityServ
 			exportFile.delete();
 		}
 
-		CertificateAuthority authority = getAuthority(name);
+		CertificateAuthority authority = new CertificateAuthorityImpl(db, name);
+		authorities.put(name, authority);
 		authority.addListener(certListener);
 
 		for (CertificateAuthorityListener listener : listeners) {
