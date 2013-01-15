@@ -24,6 +24,7 @@
 						<Export-Package>
 							org.krakenapps.logstorage;version=${project.version},
 							org.krakenapps.logstorage.file;version=${project.version}
+							org.krakenapps.logstorage.msgbus;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.logstorage.engine,
@@ -32,7 +33,8 @@
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
-							org.krakenapps.codec;version=2.2.0,
+							org.krakenapps.msgbus;resolution:=optional,
+							org.krakenapps.msgbus.handler;resolution:=optional,
 							*
 						</Import-Package>
 					</instructions>
@@ -79,6 +81,15 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-cron</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-msgbus</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>com.jcraft</groupId>
+			<artifactId>jsch</artifactId>
 		</dependency>
 	</dependencies>
 </project>
