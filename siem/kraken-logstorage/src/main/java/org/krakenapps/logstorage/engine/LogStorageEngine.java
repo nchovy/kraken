@@ -153,7 +153,7 @@ public class LogStorageEngine implements LogStorage {
 		// checkAllLogFiles();
 		checkLatestLogFiles();
 
-		writerSweeperThread = new Thread(writerSweeper, "LogStorage Sweeper");
+		writerSweeperThread = new Thread(writerSweeper, "LogStorage LogWriter Sweeper");
 		writerSweeperThread.start();
 
 		status = LogStorageStatus.Open;
