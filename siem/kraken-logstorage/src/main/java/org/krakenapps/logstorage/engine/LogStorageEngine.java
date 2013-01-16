@@ -462,6 +462,15 @@ public class LogStorageEngine implements LogStorage {
 	public Log getLog(String tableName, Date day, int id) {
 		verify();
 
+		// check memory buffer (flush waiting)
+		OnlineWriter writer = onlineWriters.get(new OnlineWriterKey(tableName, day));
+		if (writer != null) {
+			for (LogRecord r : writer.getBuffer())
+				if (r.getId() == id)
+					return new Log(tableName, r.getDate(), id, EncodingRule.decodeMap(r.getData().duplicate()));
+		}
+
+		// load from disk
 		int tableId = tableRegistry.getTableId(tableName);
 
 		File indexPath = DatapathUtil.getIndexFile(tableId, day);
