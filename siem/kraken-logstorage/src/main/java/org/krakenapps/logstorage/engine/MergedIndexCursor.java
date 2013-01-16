@@ -26,6 +26,10 @@ import org.krakenapps.logstorage.LogIndexItem;
 import org.krakenapps.logstorage.LogIndexQuery;
 import org.krakenapps.logstorage.LogIndexer;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 class MergedIndexCursor implements LogIndexCursor {
 	private LogIndexer indexer;
 	private LogIndexQuery query;
@@ -84,9 +88,14 @@ class MergedIndexCursor implements LogIndexCursor {
 			return true;
 
 		try {
-			boolean ret = loadNext();
-			if (ret)
-				return currentCursor.hasNext();
+			while (true) {
+				boolean ret = loadNext();
+				if (!ret)
+					return false;
+
+				if (currentCursor.hasNext())
+					return true;
+			}
 		} catch (IOException e) {
 		}
 		return false;

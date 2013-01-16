@@ -40,6 +40,8 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.logstorage.BatchIndexingStatus;
+import org.krakenapps.logstorage.BatchIndexingTask;
 import org.krakenapps.logstorage.IndexTokenizerFactory;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
@@ -78,6 +80,25 @@ public class LogStorageScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void batchIndexTasks(String[] args) {
+		context.println("Batch Indexing Tasks");
+		context.println("------------------------");
+		SimpleDateFormat dayFormat = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+		for (BatchIndexingTask task : indexer.getBatchIndexingTasks()) {
+			long elapsed = (System.currentTimeMillis() - task.getSince().getTime()) / 1000;
+			String since = dateFormat.format(task.getSince());
+
+			context.println(String.format("table [%s] index [%s] since %s (elapsed %dsec)", task.getTableName(),
+					task.getIndexName(), since, elapsed));
+
+			for (BatchIndexingStatus s : task.getBuilds().values())
+				context.println(String.format("\tday=%s, logs=%s, tokens=%s, done=%s", dayFormat.format(s.getDay()),
+						s.getLogCount(), s.getTokenCount(), s.isDone()));
+		}
 	}
 
 	// test

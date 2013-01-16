@@ -17,31 +17,31 @@ package org.krakenapps.logstorage;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @since 0.9
  * @author xeraph
  */
-public class LogIndexingTask {
-	private int indexId;
-	private String indexName;
+public class BatchIndexingTask {
 	private String tableName;
+	private String indexName;
+	private int tableId;
+	private int indexId;
 	private Date minDay;
 	private Date maxDay;
+	private boolean canceled;
+	private Date since = new Date();
 
-	private FileSet diskFileSet;
-	private FileSet onlineFileSet;
-	private long diskMinId;
-	private long diskMaxId;
-	private long onlineMinId;
-	private long onlineMaxId;
+	private Map<Date, BatchIndexingStatus> builds = new HashMap<Date, BatchIndexingStatus>();
 
-	public int getIndexId() {
-		return indexId;
+	public String getTableName() {
+		return tableName;
 	}
 
-	public void setIndexId(int indexId) {
-		this.indexId = indexId;
+	public void setTableName(String tableName) {
+		this.tableName = tableName;
 	}
 
 	public String getIndexName() {
@@ -52,12 +52,20 @@ public class LogIndexingTask {
 		this.indexName = indexName;
 	}
 
-	public String getTableName() {
-		return tableName;
+	public int getTableId() {
+		return tableId;
 	}
 
-	public void setTableName(String tableName) {
-		this.tableName = tableName;
+	public void setTableId(int tableId) {
+		this.tableId = tableId;
+	}
+
+	public int getIndexId() {
+		return indexId;
+	}
+
+	public void setIndexId(int indexId) {
+		this.indexId = indexId;
 	}
 
 	public Date getMinDay() {
@@ -76,44 +84,36 @@ public class LogIndexingTask {
 		this.maxDay = maxDay;
 	}
 
-	public FileSet getOnlineFileSet() {
-		return onlineFileSet;
+	public Map<Date, BatchIndexingStatus> getBuilds() {
+		return builds;
 	}
 
-	public void setOnlineFileSet(FileSet onlineFileSet) {
-		this.onlineFileSet = onlineFileSet;
+	public void setBuilds(Map<Date, BatchIndexingStatus> builds) {
+		this.builds = builds;
 	}
 
-	public long getDiskMinId() {
-		return diskMinId;
+	public boolean isDone() {
+		if (builds == null)
+			return true;
+
+		for (BatchIndexingStatus s : builds.values()) {
+			if (!s.isDone())
+				return false;
+		}
+
+		return true;
 	}
 
-	public void setDiskMinId(long diskMinId) {
-		this.diskMinId = diskMinId;
+	public boolean isCanceled() {
+		return canceled;
 	}
 
-	public long getDiskMaxId() {
-		return diskMaxId;
+	public void setCanceled(boolean canceled) {
+		this.canceled = canceled;
 	}
 
-	public void setDiskMaxId(long diskMaxId) {
-		this.diskMaxId = diskMaxId;
-	}
-
-	public long getOnlineMinId() {
-		return onlineMinId;
-	}
-
-	public void setOnlineMinId(long onlineMinId) {
-		this.onlineMinId = onlineMinId;
-	}
-
-	public long getOnlineMaxId() {
-		return onlineMaxId;
-	}
-
-	public void setOnlineMaxId(long onlineMaxId) {
-		this.onlineMaxId = onlineMaxId;
+	public Date getSince() {
+		return since;
 	}
 
 	@Override

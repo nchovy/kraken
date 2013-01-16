@@ -27,17 +27,15 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -50,17 +48,18 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.confdb.Predicate;
 import org.krakenapps.confdb.Predicates;
+import org.krakenapps.logstorage.BatchIndexingStatus;
+import org.krakenapps.logstorage.BatchIndexingTask;
 import org.krakenapps.logstorage.IndexTokenizer;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
 import org.krakenapps.logstorage.LogCursor;
-import org.krakenapps.logstorage.LogIndexSchema;
 import org.krakenapps.logstorage.LogIndexCursor;
 import org.krakenapps.logstorage.LogIndexQuery;
+import org.krakenapps.logstorage.LogIndexSchema;
 import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogIndexerStatus;
-import org.krakenapps.logstorage.LogIndexingTask;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -98,19 +97,26 @@ public class LogIndexerEngine implements LogIndexer {
 	// memory-buffered indexes
 	private ConcurrentMap<OnlineIndexerKey, OnlineIndexer> onlineIndexers;
 
+	// background index building
 	private ExecutorService executor;
-	private LinkedBlockingQueue<Runnable> taskQueue;
 
+	// for realtime log indexing
 	private LogReceiver receiver;
+
+	// drop index when table drops, cache table name-id mappings
 	private TableEventListener tableRegistryListener;
 
+	// periodically flush and evict indexers
 	private IndexerSweeper sweeper;
 	private Thread sweeperThread;
 
+	// to assign unique index id
 	private AtomicInteger indexIdCounter;
 
 	// cache table name->id mappings for index drop
 	private ConcurrentMap<String, Integer> tableNameIdMap;
+
+	private ConcurrentMap<BatchIndexKey, BatchIndexingTask> batchJobs;
 
 	public LogIndexerEngine() {
 		indexBaseDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/index");
@@ -122,6 +128,8 @@ public class LogIndexerEngine implements LogIndexer {
 		tableIndexes = new ConcurrentHashMap<String, Set<LogIndexSchema>>();
 		onlineIndexers = new ConcurrentHashMap<OnlineIndexerKey, OnlineIndexer>();
 		tableNameIdMap = new ConcurrentHashMap<String, Integer>();
+		batchJobs = new ConcurrentHashMap<BatchIndexKey, BatchIndexingTask>();
+
 		sweeper = new IndexerSweeper();
 
 		indexIdCounter = new AtomicInteger();
@@ -135,11 +143,10 @@ public class LogIndexerEngine implements LogIndexer {
 
 		// build threads
 		int cpuCount = Runtime.getRuntime().availableProcessors();
-		taskQueue = new LinkedBlockingQueue<Runnable>();
-		executor = new ThreadPoolExecutor(1, cpuCount, 10, TimeUnit.SECONDS, taskQueue, new ThreadFactory() {
+		executor = Executors.newFixedThreadPool(cpuCount, new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
-				return new Thread(r, "Log Indexer");
+				return new Thread(r, "Batch Log Indexer");
 			}
 		});
 
@@ -194,34 +201,13 @@ public class LogIndexerEngine implements LogIndexer {
 		if (config == null)
 			throw new IllegalArgumentException("config can not be null");
 
+		if (!tableRegistry.exists(config.getTableName()))
+			throw new IllegalStateException("table does not exist: " + config.getTableName());
+
+		// assign new index id
 		config.setId(indexIdCounter.incrementAndGet());
 
-		LogIndexingTask task = new LogIndexingTask();
-		task.setIndexId(config.getId());
-		task.setIndexName(config.getIndexName());
-		task.setTableName(config.getTableName());
-		task.setMinDay(config.getMinIndexDay());
-		task.setMaxDay(config.getMaxIndexDay());
-
-		executor.submit(new IndexRunner(task));
-
-		Set<LogIndexSchema> indexes = tableIndexes.get(config.getTableName());
-		if (indexes == null) {
-			indexes = new CopyOnWriteArraySet<LogIndexSchema>();
-			tableIndexes.putIfAbsent(config.getTableName(), indexes);
-		}
-
-		// check duplicated id
-		for (LogIndexSchema c : indexes)
-			if (c.getId() == config.getId())
-				throw new IllegalStateException("duplicated index id: " + config.getId());
-
-		// ensure index directory
-		int tableId = tableRegistry.getTableId(config.getTableName());
-		File dir = new File(indexBaseDir, tableId + "/" + config.getId());
-		dir.mkdirs();
-
-		// save index metadata
+		// check duplicated index
 		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
 		Predicate cond = Predicates.or(
 				Predicates.field("id", config.getId()),
@@ -231,10 +217,60 @@ public class LogIndexerEngine implements LogIndexer {
 			throw new IllegalStateException("same index id (" + config.getId() + ") or name (" + config.getIndexName()
 					+ ") already exist in metadata");
 
+		// register index
+		Set<LogIndexSchema> indexes = tableIndexes.get(config.getTableName());
+		if (indexes == null) {
+			indexes = new CopyOnWriteArraySet<LogIndexSchema>();
+			tableIndexes.putIfAbsent(config.getTableName(), indexes);
+		}
+
+		// ensure index directory
+		int tableId = tableRegistry.getTableId(config.getTableName());
+		File dir = new File(indexBaseDir, tableId + "/" + config.getId());
+		dir.mkdirs();
+
+		// save index metadata
 		db.add(config);
 		indexes.add(config);
 
+		enqueueBatchIndexJobs(config);
 		logger.info("kraken logstorage: created index => " + config);
+	}
+
+	private void enqueueBatchIndexJobs(LogIndexSchema config) {
+		BatchIndexingTask task = new BatchIndexingTask();
+		task.setTableName(config.getTableName());
+		task.setIndexName(config.getIndexName());
+		task.setTableId(tableNameIdMap.get(config.getTableName()));
+		task.setIndexId(config.getId());
+		task.setMinDay(config.getMinIndexDay());
+		task.setMaxDay(config.getMaxIndexDay());
+
+		batchJobs.put(new BatchIndexKey(config.getTableName(), config.getIndexName()), task);
+
+		List<BatchIndexingStatus> builders = new ArrayList<BatchIndexingStatus>();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		List<Date> days = DateUtil.filt(storage.getLogDates(task.getTableName()), task.getMinDay(), task.getMaxDay());
+		for (Date day : days) {
+			try {
+				int tableId = tableRegistry.getTableId(task.getTableName());
+				String prefix = tableId + "-" + config.getId() + "-" + dateFormat.format(day) + "-";
+
+				BatchIndexingStatus s = new BatchIndexingStatus();
+				s.setTask(task);
+				s.setDay(day);
+				s.setIndexFile(File.createTempFile(prefix, ".pos", queueDir));
+				s.setDataFile(File.createTempFile(prefix, ".seg", queueDir));
+				task.getBuilds().put(day, s);
+				builders.add(s);
+			} catch (IOException e) {
+				logger.error("kraken logstorage: cannot queue batch indexing for table " + config.getTableName() + ", index "
+						+ config.getIndexName(), e);
+			}
+		}
+
+		for (BatchIndexingStatus s : builders)
+			executor.execute(new IndexRunner(s));
 	}
 
 	@Override
@@ -262,6 +298,12 @@ public class LogIndexerEngine implements LogIndexer {
 		// remove from memory and database
 		s.remove(found);
 		db.remove(c);
+
+		// cancel all batch jobs
+		BatchIndexingTask task = batchJobs.get(new BatchIndexKey(tableName, indexName));
+		if (task != null) {
+			task.setCanceled(true);
+		}
 
 		// evict online indexer for dropping index id
 		for (OnlineIndexer indexer : new ArrayList<OnlineIndexer>(onlineIndexers.values())) {
@@ -356,7 +398,11 @@ public class LogIndexerEngine implements LogIndexer {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
 		ArrayList<Date> days = new ArrayList<Date>();
-		for (File f : tableIndexDir.listFiles()) {
+		File[] files = tableIndexDir.listFiles();
+		if (files == null)
+			return days;
+
+		for (File f : files) {
 			if (!f.isFile() || !f.canRead())
 				continue;
 
@@ -415,57 +461,55 @@ public class LogIndexerEngine implements LogIndexer {
 
 	private class IndexRunner implements Runnable {
 
-		private LogIndexingTask task;
+		private BatchIndexingStatus status;
 
-		public IndexRunner(LogIndexingTask task) {
-			this.task = task;
+		public IndexRunner(BatchIndexingStatus status) {
+			this.status = status;
 		}
 
 		@Override
 		public void run() {
 			boolean fail = false;
 			try {
-				buildIndexes();
+				buildIndex();
 			} catch (Throwable t) {
-				logger.error("kraken logstorage: indexing failed, " + task, t);
+				logger.error("kraken logstorage: indexing failed, " + status, t);
 				fail = true;
 			} finally {
 				if (!fail)
-					logger.info("kraken logstorage: indexing is completed - [{}]", task);
+					logger.info("kraken logstorage: indexing is completed - [{}]", status);
 			}
 		}
 
-		private void buildIndexes() throws IOException {
-			List<Date> days = DateUtil.filt(storage.getLogDates(task.getTableName()), task.getMinDay(), task.getMaxDay());
-
-			for (Date day : days)
-				buildIndex(day);
-		}
-
-		private void buildIndex(Date day) throws IOException {
+		private void buildIndex() throws IOException {
 			long begin = System.currentTimeMillis();
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-			logger.info("kraken logstorage: building index for table [{}], day [{}]", task.getTableName(), dateFormat.format(day));
-			LogCursor cursor = storage.openCursor(task.getTableName(), day, true);
+			BatchIndexingTask task = status.getTask();
+			logger.info("kraken logstorage: building index for table [{}], day [{}]", task.getTableName(),
+					dateFormat.format(status.getDay()));
+			LogCursor cursor = storage.openCursor(task.getTableName(), status.getDay(), true);
 
 			// open index writer
-			int tableId = tableRegistry.getTableId(task.getTableName());
-			String prefix = tableId + "-" + dateFormat.format(day) + "-";
-			File indexFile = File.createTempFile(prefix, ".pos", queueDir);
-			File dataFile = File.createTempFile(prefix, ".seg", queueDir);
+
 			InvertedIndexWriter writer = null;
 
 			try {
-				writer = new InvertedIndexWriter(indexFile, dataFile);
+				writer = new InvertedIndexWriter(status.getIndexFile(), status.getDataFile());
 
 				// prepare tokenizer
 				IndexTokenizer tok = loadTokenizer();
 
 				while (cursor.hasNext()) {
+					if (task.isCanceled())
+						break;
+
 					Log log = cursor.next();
 					Set<String> tokens = tok.tokenize(log.getData());
 					if (tokens == null)
 						continue;
+
+					status.addLogCount(1);
+					status.addTokenCount(tokens.size());
 
 					long timestamp = log.getDate().getTime();
 					writer.write(new InvertedIndexItem(task.getTableName(), timestamp, log.getId(), tokens.toArray(new String[0])));
@@ -474,15 +518,28 @@ public class LogIndexerEngine implements LogIndexer {
 				if (writer != null)
 					writer.close();
 
+				if (task.isCanceled()) {
+					boolean indexDeleted = status.getIndexFile().delete();
+					boolean dataDeleted = status.getDataFile().delete();
+					logger.info(
+							"kraken logstorage: batch indexing is canceled, table [{}], index [{}], day [{}], index deleted={}, data deleted={}",
+							new Object[] { task.getTableName(), task.getIndexName(), dateFormat.format(status.getDay()),
+									indexDeleted, dataDeleted });
+					status.setDone(true);
+					return;
+				}
+
 				// move to index directory (or copy if partition is different)
 				long elapsed = System.currentTimeMillis() - begin;
 				logger.info("kraken logstorage: indexing completed for table [{}], day [{}], elapsed [{}]sec", new Object[] {
-						task.getTableName(), dateFormat.format(day), elapsed / 1000 });
+						task.getTableName(), dateFormat.format(status.getDay()), elapsed / 1000 });
 
-				File destIndexFile = getIndexFilePath(tableId, task.getIndexId(), day, ".pos");
-				File destDataFile = getIndexFilePath(tableId, task.getIndexId(), day, ".seg");
-				move(indexFile, destIndexFile);
-				move(dataFile, destDataFile);
+				File destIndexFile = getIndexFilePath(task.getTableId(), task.getIndexId(), status.getDay(), ".pos");
+				File destDataFile = getIndexFilePath(task.getTableId(), task.getIndexId(), status.getDay(), ".seg");
+				move(status.getIndexFile(), destIndexFile);
+				move(status.getDataFile(), destDataFile);
+
+				status.setDone(true);
 			}
 		}
 	}
@@ -651,6 +708,12 @@ public class LogIndexerEngine implements LogIndexer {
 		return online;
 	}
 
+	@Override
+	public List<BatchIndexingTask> getBatchIndexingTasks() {
+		// TODO: clone each items (prevent modification)
+		return new ArrayList<BatchIndexingTask>(batchJobs.values());
+	}
+
 	private class IndexerSweeper implements Runnable {
 		private volatile boolean doStop = false;
 
@@ -664,6 +727,7 @@ public class LogIndexerEngine implements LogIndexer {
 
 						Thread.sleep(1000);
 						sweep();
+						cleanBatchJobs();
 					} catch (InterruptedException e) {
 						logger.trace("kraken logstorage: indexer sweeper interrupted");
 					} catch (Exception e) {
@@ -704,6 +768,17 @@ public class LogIndexerEngine implements LogIndexer {
 				indexer.close();
 				onlineIndexers.remove(new OnlineIndexerKey(indexer.id, indexer.day, indexer.tableId, indexer.tableName,
 						indexer.indexName));
+			}
+		}
+
+		private void cleanBatchJobs() {
+			for (BatchIndexKey key : new ArrayList<BatchIndexKey>(batchJobs.keySet())) {
+				BatchIndexingTask task = batchJobs.get(key);
+				if (task.isDone()) {
+					batchJobs.remove(key);
+					logger.info("kraken logstorage: batch indexing job [table={}, index={}] is completed", key.tableName,
+							key.indexName);
+				}
 			}
 		}
 	}
@@ -844,7 +919,14 @@ public class LogIndexerEngine implements LogIndexer {
 
 		@Override
 		public void onDrop(String tableName) {
-			// TODO: cancel index build job
+			// cancel index build job
+			for (BatchIndexKey key : new ArrayList<BatchIndexKey>(batchJobs.keySet())) {
+				if (!key.tableName.equals(tableName))
+					continue;
+
+				BatchIndexingTask task = batchJobs.remove(key);
+				task.setCanceled(true);
+			}
 
 			// delete index
 			logger.info("kraken logstorage: dropping all indexes of table " + tableName);

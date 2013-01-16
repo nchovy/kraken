@@ -40,4 +40,6 @@ public interface LogIndexer {
 	List<LogIndexerStatus> getIndexerStatuses();
 
 	List<Date> getIndexedDays(String tableName, String indexName);
+
+	List<BatchIndexingTask> getBatchIndexingTasks();
 }
