@@ -15,12 +15,18 @@
  */
 package org.krakenapps.logstorage.index;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 public class InvertedIndexItem implements Comparable<InvertedIndexItem> {
+	public String tableName;
 	public long timestamp;
 	public long id;
 	public String[] tokens;
 
-	public InvertedIndexItem(long timestamp, long id, String[] tokens) {
+	public InvertedIndexItem(String tableName, long timestamp, long id, String[] tokens) {
+		this.tableName = tableName;
 		this.timestamp = timestamp;
 		this.id = id;
 		this.tokens = tokens;

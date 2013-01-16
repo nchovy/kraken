@@ -23,6 +23,10 @@ import org.krakenapps.logstorage.file.BufferedRandomAccessFileReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 public class InvertedIndexReader {
 	private final Logger logger = LoggerFactory.getLogger(InvertedIndexReader.class.getName());
 
@@ -32,16 +36,6 @@ public class InvertedIndexReader {
 
 	private BufferedRandomAccessFileReader indexReader;
 	private BufferedRandomAccessFileReader dataReader;
-
-	public static void main(String[] args) throws IOException {
-		File indexFile = new File("D:/8bug/data/kraken-logstorage/index/10/2012-12-05.pos");
-		File dataFile = new File("D:/8bug/data/kraken-logstorage/index/10/2012-12-05.seg");
-
-		InvertedIndexReader reader = new InvertedIndexReader(indexFile, dataFile);
-		InvertedIndexCursor cursor = reader.openCursor("98.84.233.191");
-		while (cursor.hasNext())
-			System.out.println(cursor.next());
-	}
 
 	public InvertedIndexReader(File indexFile, File dataFile) throws IOException {
 		this.indexFile = indexFile;
@@ -108,7 +102,6 @@ public class InvertedIndexReader {
 		}
 
 		private boolean loadNextSegment() throws IOException {
-			System.out.println("load next seg: " + currentSegmentIndex);
 			Long postingCount = null;
 			while (currentSegmentIndex > 0) {
 				postingCount = loadSegment(--currentSegmentIndex);

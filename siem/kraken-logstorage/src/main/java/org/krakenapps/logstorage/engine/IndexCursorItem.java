@@ -13,18 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage;
+package org.krakenapps.logstorage.engine;
 
-import java.util.Date;
+import java.util.List;
+
+import org.krakenapps.logstorage.index.InvertedIndexItem;
 
 /**
  * @since 0.9
  * @author xeraph
  */
-public interface LogIndexItem {
-	String getTableName();
-	
-	Date getDay();
+class IndexCursorItem {
+	public int tableId;
+	public int indexId;
+	public String tableName;
+	public String indexName;
+	public List<InvertedIndexItem> buffer;
 
-	long getLogId();
+	public IndexCursorItem(int tableId, int indexId, String tableName, String indexName, List<InvertedIndexItem> buffer) {
+		this.tableId = tableId;
+		this.indexId = indexId;
+		this.tableName = tableName;
+		this.indexName = indexName;
+		this.buffer = buffer;
+	}
 }

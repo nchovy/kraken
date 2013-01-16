@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.krakenapps.api.Script;
@@ -42,11 +43,12 @@ import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.IndexTokenizerFactory;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
-import org.krakenapps.logstorage.LogIndexConfig;
+import org.krakenapps.logstorage.LogIndexSchema;
 import org.krakenapps.logstorage.LogIndexCursor;
 import org.krakenapps.logstorage.LogIndexItem;
 import org.krakenapps.logstorage.LogIndexQuery;
 import org.krakenapps.logstorage.LogIndexer;
+import org.krakenapps.logstorage.LogIndexerStatus;
 import org.krakenapps.logstorage.LogKey;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
@@ -87,6 +89,28 @@ public class LogStorageScript implements Script {
 		storage.write(new Log(tableName, new Date(), m));
 	}
 
+	@ScriptUsage(description = "print all indexing configurations", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name") })
+	public void indexes(String[] args) {
+		String tableName = args[0];
+		if (!tableRegistry.exists(tableName)) {
+			context.println("table does not exists");
+			return;
+		}
+
+		Set<String> indexNames = indexer.getIndexNames(tableName);
+		if (indexNames.isEmpty()) {
+			context.println("no index found");
+			return;
+		}
+
+		context.println("Index for table [" + tableName + "]");
+		context.println("-------------------------------");
+		for (String indexName : indexNames) {
+			LogIndexSchema c = indexer.getIndexConfig(tableName, indexName);
+			context.println(c);
+		}
+	}
+
 	public void indexTokenizers(String[] args) {
 		context.println("Index Tokenizers");
 		for (IndexTokenizerFactory f : tokenizerRegistry.getFactories())
@@ -103,6 +127,7 @@ public class LogStorageScript implements Script {
 		String term = args[2];
 		LogIndexCursor c = null;
 		try {
+			long begin = System.currentTimeMillis();
 			LogIndexQuery q = new LogIndexQuery();
 			q.setTableName(tableName);
 			q.setIndexName(indexName);
@@ -111,14 +136,17 @@ public class LogStorageScript implements Script {
 			long count = 0;
 			int tableId = tableRegistry.getTableId(tableName);
 			c = indexer.search(q);
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			while (c.hasNext()) {
 				LogIndexItem item = c.next();
 				Log log = storage.getLog(new LogKey(tableId, item.getDay(), (int) item.getLogId()));
-				context.println(log.getId() + ": " + log.getData());
+				String dateString = dateFormat.format(log.getDate());
+				context.println(log.getTableName() + " (" + dateString + ") #" + log.getId() + " " + log.getData());
 				count++;
 			}
 
-			context.println("total " + count + " logs");
+			long elapsed = System.currentTimeMillis() - begin;
+			context.println("total " + count + " logs, elapsed " + elapsed + "ms");
 		} catch (IOException e) {
 			context.println("search failed, " + e.getMessage());
 		} finally {
@@ -136,7 +164,7 @@ public class LogStorageScript implements Script {
 			String tableName = args[0];
 			String indexName = args[1];
 
-			LogIndexConfig config = new LogIndexConfig();
+			LogIndexSchema config = new LogIndexSchema();
 			config.setTableName(tableName);
 			config.setIndexName(indexName);
 			config.setBuildPastIndex(true);
@@ -147,7 +175,7 @@ public class LogStorageScript implements Script {
 			}
 
 			indexer.createIndex(config);
-			context.println("index " + indexName + " created for table " + tableName);
+			context.println("created index " + indexName + " for table " + tableName);
 		} catch (Throwable t) {
 			context.println(t.getMessage());
 		}
@@ -160,7 +188,8 @@ public class LogStorageScript implements Script {
 		String tableName = args[0];
 		String indexName = args[1];
 
-		indexer.dropIndex(tableName, indexName, true);
+		indexer.dropIndex(tableName, indexName);
+		context.println("dropped");
 	}
 
 	@ScriptUsage(description = "migrate old properties to new confdb metadata")
@@ -554,6 +583,16 @@ public class LogStorageScript implements Script {
 		context.println("Online Writers");
 		context.println("-----------------");
 		for (LogWriterStatus s : storage.getWriterStatuses()) {
+			context.println(s);
+		}
+	}
+
+	@ScriptUsage(description = "print all online indexer statuses")
+	public void indexers(String[] args) {
+		context.println("Online Indexers");
+		context.println("------------------");
+
+		for (LogIndexerStatus s : indexer.getIndexerStatuses()) {
 			context.println(s);
 		}
 	}

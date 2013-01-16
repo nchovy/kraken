@@ -15,18 +15,19 @@
  */
 package org.krakenapps.logstorage;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
  * @since 0.9
  * @author xeraph
  */
-public class LogIndexQuery {
+public class LogIndexerStatus {
 	private String tableName;
 	private String indexName;
-	private String term;
-	private Date minDay;
-	private Date maxDay;
+	private Date day;
+	private Date lastFlush;
+	private long queueCount;
 
 	public String getTableName() {
 		return tableName;
@@ -44,27 +45,34 @@ public class LogIndexQuery {
 		this.indexName = indexName;
 	}
 
-	public String getTerm() {
-		return term;
+	public Date getDay() {
+		return day;
 	}
 
-	public void setTerm(String term) {
-		this.term = term;
+	public void setDay(Date day) {
+		this.day = day;
 	}
 
-	public Date getMinDay() {
-		return minDay;
+	public Date getLastFlush() {
+		return lastFlush;
 	}
 
-	public void setMinDay(Date minDay) {
-		this.minDay = minDay;
+	public void setLastFlush(Date lastFlush) {
+		this.lastFlush = lastFlush;
 	}
 
-	public Date getMaxDay() {
-		return maxDay;
+	public long getQueueCount() {
+		return queueCount;
 	}
 
-	public void setMaxDay(Date maxDay) {
-		this.maxDay = maxDay;
+	public void setQueueCount(long queueCount) {
+		this.queueCount = queueCount;
 	}
+
+	@Override
+	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return "table=" + tableName + ", index=" + indexName + " (" + dateFormat.format(day) + "), buffered=" + queueCount;
+	}
+
 }

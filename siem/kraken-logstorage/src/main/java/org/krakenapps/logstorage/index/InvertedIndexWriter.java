@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,10 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 public class InvertedIndexWriter {
 	private final Logger logger = LoggerFactory.getLogger(InvertedIndexWriter.class.getName());
 	private final int FLUSH_THRESHOLD = 10000;
@@ -51,6 +56,8 @@ public class InvertedIndexWriter {
 	private long dataLength;
 
 	private byte[] longbuf = new byte[8];
+
+	private Date lastFlush = new Date();
 
 	public InvertedIndexWriter(File indexFile, File dataFile) throws IOException {
 		this.postings = new HashMap<String, List<InvertedIndexItem>>();
@@ -92,6 +99,9 @@ public class InvertedIndexWriter {
 	public void flush() throws IOException {
 		if (postings.isEmpty())
 			return;
+
+		// mark last flush time
+		lastFlush = new Date();
 
 		Map<String, Term> terms = new HashMap<String, Term>();
 
@@ -198,10 +208,14 @@ public class InvertedIndexWriter {
 		return (63 - Long.numberOfLeadingZeros(value)) / 7 + 1;
 	}
 
+	public Date getLastFlush() {
+		return lastFlush;
+	}
+
 	public void close() {
 		if (closed)
 			return;
-		
+
 		closed = true;
 
 		try {
