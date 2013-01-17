@@ -47,8 +47,7 @@ public class InvertedIndexWriter {
 
 	private boolean closed;
 
-	private File indexFile;
-	private File dataFile;
+	private InvertedIndexFileSet files;
 	private OutputStream indexStream;
 	private OutputStream dataStream;
 
@@ -60,18 +59,55 @@ public class InvertedIndexWriter {
 	private Date lastFlush = new Date();
 
 	public InvertedIndexWriter(File indexFile, File dataFile) throws IOException {
+		this(new InvertedIndexFileSet(indexFile, dataFile));
+	}
+
+	public InvertedIndexWriter(InvertedIndexFileSet files) throws IOException {
 		this.postings = new HashMap<String, List<InvertedIndexItem>>();
-		this.indexFile = indexFile;
-		this.dataFile = dataFile;
-		this.indexStream = new FileOutputStream(indexFile, true);
-		this.dataStream = new BufferedOutputStream(new FileOutputStream(dataFile, true));
-		this.dataLength = dataFile.length();
+
+		if (isEmptyFile(files.getIndexFile()) && isEmptyFile(files.getDataFile())) {
+			// write file header if empty
+			Map<String, Object> indexHeaders = new HashMap<String, Object>();
+			indexHeaders.put("version", 1);
+			indexHeaders.put("type", "pos");
+			indexHeaders.put("created", new Date());
+
+			Map<String, Object> dataHeaders = new HashMap<String, Object>();
+			dataHeaders.put("version", 1);
+			dataHeaders.put("type", "seg");
+			dataHeaders.put("created", new Date());
+
+			InvertedIndexHeader indexHeader = new InvertedIndexHeader(indexHeaders);
+			InvertedIndexHeader dataHeader = new InvertedIndexHeader(dataHeaders);
+
+			InvertedIndexUtil.writeHeader(indexHeader, files.getIndexFile());
+			InvertedIndexUtil.writeHeader(dataHeader, files.getDataFile());
+		} else {
+			// check file header
+			InvertedIndexUtil.readHeader(files.getIndexFile());
+			InvertedIndexUtil.readHeader(files.getDataFile());
+		}
+
+		// open file stream
+		this.indexStream = new FileOutputStream(files.getIndexFile(), true);
+		this.dataStream = new BufferedOutputStream(new FileOutputStream(files.getDataFile(), true));
+		this.dataLength = files.getDataFile().length();
+	}
+
+	private boolean isEmptyFile(File f) {
+		if (!f.exists())
+			return true;
+
+		if (f.isFile() && f.length() == 0)
+			return true;
+
+		return false;
 	}
 
 	public void write(InvertedIndexItem item) throws IOException {
 		if (closed) {
-			String msg = "inverted index writer is closed: index=" + indexFile.getAbsolutePath() + ", data="
-					+ dataFile.getAbsolutePath();
+			String msg = "inverted index writer is closed: index=" + files.getIndexFile().getAbsolutePath() + ", data="
+					+ files.getDataFile().getAbsolutePath();
 			throw new IllegalStateException(msg);
 		}
 

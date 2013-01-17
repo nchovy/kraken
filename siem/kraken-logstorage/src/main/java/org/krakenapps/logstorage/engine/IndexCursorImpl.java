@@ -28,12 +28,15 @@ import org.krakenapps.logstorage.LogIndexItem;
 import org.krakenapps.logstorage.index.InvertedIndexCursor;
 import org.krakenapps.logstorage.index.InvertedIndexItem;
 import org.krakenapps.logstorage.index.InvertedIndexReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @since 0.9
  * @author xeraph
  */
 class IndexCursorImpl implements LogIndexCursor {
+	private final Logger logger = LoggerFactory.getLogger(IndexCursorImpl.class);
 	private int indexId;
 	private int tableId;
 	private String tableName;
@@ -67,8 +70,25 @@ class IndexCursorImpl implements LogIndexCursor {
 		this.indexBaseDir = indexBaseDir;
 		this.buffer = buffer;
 
-		if (days.size() > 0)
-			load(days.get(0));
+		if (days.size() > 0) {
+			try {
+				load(days.get(0));
+			} catch (Throwable t) {
+				logger.error("kraken logstorage: cannot load index file, skipping", t);
+				tryLoadUntilSuccess();
+			}
+		}
+	}
+
+	private void tryLoadUntilSuccess() {
+		while (true) {
+			try {
+				loadNext();
+				break;
+			} catch (Throwable t) {
+				logger.error("kraken logstorage: cannot load index file, skipping", t);
+			}
+		}
 	}
 
 	private boolean loadNext() throws IOException {
@@ -110,7 +130,7 @@ class IndexCursorImpl implements LogIndexCursor {
 				prefetch = currentCursor.next();
 				return true;
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.error("kraken logstorage: cannot fetch next index item from cursor", e);
 			}
 		}
 
@@ -120,7 +140,7 @@ class IndexCursorImpl implements LogIndexCursor {
 			if (loadNext())
 				return hasNext();
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("kraken logstorage: cannot load next indexed day from cursor", e);
 		}
 
 		return false;

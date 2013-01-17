@@ -25,12 +25,15 @@ import org.krakenapps.logstorage.LogIndexCursor;
 import org.krakenapps.logstorage.LogIndexItem;
 import org.krakenapps.logstorage.LogIndexQuery;
 import org.krakenapps.logstorage.LogIndexer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @since 0.9
  * @author xeraph
  */
 class MergedIndexCursor implements LogIndexCursor {
+	private final Logger logger = LoggerFactory.getLogger(MergedIndexCursor.class);
 	private LogIndexer indexer;
 	private LogIndexQuery query;
 	private List<IndexCursorItem> items;
@@ -87,18 +90,18 @@ class MergedIndexCursor implements LogIndexCursor {
 		if (currentCursor.hasNext())
 			return true;
 
-		try {
-			while (true) {
+		while (true) {
+			try {
 				boolean ret = loadNext();
 				if (!ret)
 					return false;
 
 				if (currentCursor.hasNext())
 					return true;
+			} catch (IOException e) {
+				logger.error("kraken logstorage: cannot fetch next index from merged cursor", e);
 			}
-		} catch (IOException e) {
 		}
-		return false;
 	}
 
 	@Override

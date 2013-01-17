@@ -18,6 +18,8 @@ package org.krakenapps.logstorage;
 import java.io.File;
 import java.util.Date;
 
+import org.krakenapps.logstorage.index.InvertedIndexFileSet;
+
 /**
  * @since 0.9
  * @author xeraph
@@ -27,11 +29,7 @@ public class BatchIndexingStatus {
 
 	private Date day;
 
-	// position offsets
-	private File indexFile;
-
-	// term and posting data blocks
-	private File dataFile;
+	private InvertedIndexFileSet files;
 
 	private long tokenCount;
 	private long logCount;
@@ -54,19 +52,19 @@ public class BatchIndexingStatus {
 	}
 
 	public File getIndexFile() {
-		return indexFile;
-	}
-
-	public void setIndexFile(File indexFile) {
-		this.indexFile = indexFile;
+		return files.getIndexFile();
 	}
 
 	public File getDataFile() {
-		return dataFile;
+		return files.getDataFile();
 	}
 
-	public void setDataFile(File dataFile) {
-		this.dataFile = dataFile;
+	public InvertedIndexFileSet getFiles() {
+		return files;
+	}
+
+	public void setFiles(InvertedIndexFileSet files) {
+		this.files = files;
 	}
 
 	public long getTokenCount() {

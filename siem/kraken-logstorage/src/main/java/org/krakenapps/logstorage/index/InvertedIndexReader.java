@@ -31,26 +31,33 @@ public class InvertedIndexReader {
 	private final Logger logger = LoggerFactory.getLogger(InvertedIndexReader.class.getName());
 
 	private boolean closed;
-	private File indexFile;
-	private File dataFile;
+	private InvertedIndexFileSet files;
 
 	private BufferedRandomAccessFileReader indexReader;
 	private BufferedRandomAccessFileReader dataReader;
 
-	public InvertedIndexReader(File indexFile, File dataFile) throws IOException {
-		this.indexFile = indexFile;
-		this.dataFile = dataFile;
+	private int posBodyOffset;
 
-		indexReader = new BufferedRandomAccessFileReader(indexFile);
-		dataReader = new BufferedRandomAccessFileReader(dataFile);
+	public InvertedIndexReader(InvertedIndexFileSet files) throws IOException {
+		this(files.getIndexFile(), files.getDataFile());
+	}
+
+	public InvertedIndexReader(File indexFile, File dataFile) throws IOException {
+		// validate index file headers
+		posBodyOffset = InvertedIndexUtil.readHeader(indexFile).getBodyOffset();
+		InvertedIndexUtil.readHeader(dataFile);
+
+		this.files = new InvertedIndexFileSet(indexFile, dataFile);
+		this.indexReader = new BufferedRandomAccessFileReader(files.getIndexFile());
+		this.dataReader = new BufferedRandomAccessFileReader(files.getDataFile());
 	}
 
 	public File getIndexFile() {
-		return indexFile;
+		return files.getIndexFile();
 	}
 
 	public File getDataFile() {
-		return dataFile;
+		return files.getDataFile();
 	}
 
 	public InvertedIndexCursor openCursor(String term) throws IOException {
@@ -86,7 +93,7 @@ public class InvertedIndexReader {
 			this.term = term;
 
 			// align
-			currentSegmentIndex = (indexFile.length() >> 3) - 1;
+			currentSegmentIndex = ((files.getIndexFile().length() - posBodyOffset) >> 3) - 1;
 			// backward segment traverse until term matches
 			Long postingCount = null;
 			while (currentSegmentIndex >= 0) {
@@ -146,7 +153,7 @@ public class InvertedIndexReader {
 		}
 
 		private Long loadSegment(long segmentIndex) throws IOException {
-			indexReader.seek(segmentIndex << 3);
+			indexReader.seek(posBodyOffset + (segmentIndex << 3));
 			dataEndOffset = indexReader.readLong();
 			dataPos = dataEndOffset;
 			logger.debug("kraken logstorage: index data end offset [{}]", dataEndOffset);
@@ -203,8 +210,8 @@ public class InvertedIndexReader {
 		@Override
 		public long next() throws IOException {
 			if (closed) {
-				String msg = "index reader is already closed, index=" + indexFile.getAbsolutePath() + ", data="
-						+ dataFile.getAbsolutePath();
+				String msg = "index reader is already closed, index=" + files.getIndexFile().getAbsolutePath() + ", data="
+						+ files.getDataFile().getAbsolutePath();
 				throw new IOException(msg);
 			}
 

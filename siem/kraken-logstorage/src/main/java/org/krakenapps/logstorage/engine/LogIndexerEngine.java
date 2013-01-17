@@ -63,6 +63,7 @@ import org.krakenapps.logstorage.LogIndexerStatus;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableRegistry;
+import org.krakenapps.logstorage.index.InvertedIndexFileSet;
 import org.krakenapps.logstorage.index.InvertedIndexItem;
 import org.krakenapps.logstorage.index.InvertedIndexWriter;
 import org.slf4j.Logger;
@@ -255,12 +256,13 @@ public class LogIndexerEngine implements LogIndexer {
 			try {
 				int tableId = tableRegistry.getTableId(task.getTableName());
 				String prefix = tableId + "-" + config.getId() + "-" + dateFormat.format(day) + "-";
+				File indexFile = File.createTempFile(prefix, ".pos", queueDir);
+				File dataFile = File.createTempFile(prefix, ".seg", queueDir);
 
 				BatchIndexingStatus s = new BatchIndexingStatus();
 				s.setTask(task);
 				s.setDay(day);
-				s.setIndexFile(File.createTempFile(prefix, ".pos", queueDir));
-				s.setDataFile(File.createTempFile(prefix, ".seg", queueDir));
+				s.setFiles(new InvertedIndexFileSet(indexFile, dataFile));
 				task.getBuilds().put(day, s);
 				builders.add(s);
 			} catch (IOException e) {
@@ -494,7 +496,7 @@ public class LogIndexerEngine implements LogIndexer {
 			InvertedIndexWriter writer = null;
 
 			try {
-				writer = new InvertedIndexWriter(status.getIndexFile(), status.getDataFile());
+				writer = new InvertedIndexWriter(status.getFiles());
 
 				// prepare tokenizer
 				IndexTokenizer tok = loadTokenizer();
