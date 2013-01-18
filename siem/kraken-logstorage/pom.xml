@@ -36,6 +36,7 @@
 							org.krakenapps.codec;version=2.2.0,
 							org.krakenapps.confdb;version=0.10.0,
 							org.krakenapps.confdb.file;version=0.10.0,
+							!org.junit,
 							*
 						</Import-Package>
 					</instructions>
