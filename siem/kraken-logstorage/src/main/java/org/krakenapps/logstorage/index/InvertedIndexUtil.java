@@ -123,11 +123,11 @@ public class InvertedIndexUtil {
 
 	public static void merge(InvertedIndexFileSet older, InvertedIndexFileSet newer, InvertedIndexFileSet merged)
 			throws IOException {
-		if (merged.getIndexFile().exists())
-			throw new IllegalStateException("merged index file should not exist: " + merged.getIndexFile().getAbsolutePath());
+		if (merged.getIndexFile().exists() && merged.getIndexFile().length() > 0)
+			throw new IllegalStateException("merged index file should be empty: " + merged.getIndexFile().getAbsolutePath());
 
-		if (merged.getDataFile().exists())
-			throw new IllegalStateException("merged index file should not exist: " + merged.getDataFile().getAbsolutePath());
+		if (merged.getDataFile().exists() && merged.getDataFile().length() > 0)
+			throw new IllegalStateException("merged index file should be empty: " + merged.getDataFile().getAbsolutePath());
 
 		// validate file headers
 		readHeader(older.getIndexFile());
@@ -191,7 +191,7 @@ public class InvertedIndexUtil {
 				int len = newerPosStream.read(posbuf);
 				if (len <= 0)
 					break;
-				
+
 				long pos = ByteBuffer.wrap(posbuf).getLong();
 				pos += adjust;
 				prepareLong(pos, posbuf);

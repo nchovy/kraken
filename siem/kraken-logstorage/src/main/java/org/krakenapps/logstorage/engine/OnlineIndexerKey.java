@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logstorage.engine;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
@@ -65,4 +66,11 @@ class OnlineIndexerKey {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return "table=" + tableName + ", index=" + indexName + ", day=" + dateFormat.format(day);
+	}
+
 }

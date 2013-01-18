@@ -65,6 +65,7 @@ import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.index.InvertedIndexFileSet;
 import org.krakenapps.logstorage.index.InvertedIndexItem;
+import org.krakenapps.logstorage.index.InvertedIndexUtil;
 import org.krakenapps.logstorage.index.InvertedIndexWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,7 +119,7 @@ public class LogIndexerEngine implements LogIndexer {
 	private ConcurrentMap<String, Integer> tableNameIdMap;
 
 	private ConcurrentMap<BatchIndexKey, BatchIndexingTask> batchJobs;
-
+	
 	public LogIndexerEngine() {
 		indexBaseDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/index");
 		queueDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/index/queue");
@@ -489,13 +490,13 @@ public class LogIndexerEngine implements LogIndexer {
 			BatchIndexingTask task = status.getTask();
 			logger.info("kraken logstorage: building index for table [{}], day [{}]", task.getTableName(),
 					dateFormat.format(status.getDay()));
-			LogCursor cursor = storage.openCursor(task.getTableName(), status.getDay(), true);
 
 			// open index writer
-
+			LogCursor cursor = null;
 			InvertedIndexWriter writer = null;
 
 			try {
+				cursor = storage.openCursor(task.getTableName(), status.getDay(), true);
 				writer = new InvertedIndexWriter(status.getFiles());
 
 				// prepare tokenizer
@@ -517,6 +518,9 @@ public class LogIndexerEngine implements LogIndexer {
 					writer.write(new InvertedIndexItem(task.getTableName(), timestamp, log.getId(), tokens.toArray(new String[0])));
 				}
 			} finally {
+				if (cursor != null)
+					cursor.close();
+
 				if (writer != null)
 					writer.close();
 
@@ -538,11 +542,86 @@ public class LogIndexerEngine implements LogIndexer {
 
 				File destIndexFile = getIndexFilePath(task.getTableId(), task.getIndexId(), status.getDay(), ".pos");
 				File destDataFile = getIndexFilePath(task.getTableId(), task.getIndexId(), status.getDay(), ".seg");
-				move(status.getIndexFile(), destIndexFile);
-				move(status.getDataFile(), destDataFile);
+
+				OnlineIndexerKey key = new OnlineIndexerKey(task.getIndexId(), status.getDay(), task.getTableId(),
+						task.getTableName(), task.getIndexName());
+				if (!destIndexFile.exists() && !destDataFile.exists()) {
+					move(status.getIndexFile(), destIndexFile);
+					move(status.getDataFile(), destDataFile);
+				} else {
+					InvertedIndexFileSet newer = new InvertedIndexFileSet(destIndexFile, destDataFile);
+					InvertedIndexFileSet older = new InvertedIndexFileSet(status.getIndexFile(), status.getDataFile());
+					merge(key, older, newer);
+				}
 
 				status.setDone(true);
 			}
+		}
+	}
+
+	private void merge(OnlineIndexerKey key, InvertedIndexFileSet older, InvertedIndexFileSet newer) throws IOException {
+		// prevent flush and evict
+		OnlineIndexer indexer = getOnlineIndexer(key);
+		indexer.prepareMerge();
+
+		// do merge
+		File mergedIndexFile = null;
+		File mergedDataFile = null;
+		try {
+			File dir = newer.getIndexFile().getParentFile();
+			mergedIndexFile = File.createTempFile("index-", ".mpos", dir);
+			mergedDataFile = File.createTempFile("index-", ".mseg", dir);
+
+			InvertedIndexFileSet merged = new InvertedIndexFileSet(mergedIndexFile, mergedDataFile);
+			InvertedIndexUtil.merge(older, newer, merged);
+
+			// TODO: wait until no index access
+			boolean success = true;
+			if (!newer.getIndexFile().delete()) {
+				success = false;
+				logger.error("kraken logstorage: cannot delete online index file, {}", newer.getIndexFile().getName());
+			}
+
+			if (!newer.getDataFile().delete()) {
+				success = false;
+				logger.error("kraken logstorage: cannot delete online index file, {}", newer.getDataFile().getName());
+			}
+
+			if (!older.getIndexFile().delete()) {
+				success = false;
+				logger.error("kraken logstorage: cannot delete batch index file, {}", older.getIndexFile().getName());
+			}
+
+			if (!older.getDataFile().delete()) {
+				success = false;
+				logger.error("kraken logstorage: cannot delete batch index file, {}", older.getDataFile().getName());
+			}
+
+			if (!merged.getIndexFile().renameTo(newer.getIndexFile())) {
+				success = false;
+				logger.error("kraken logstorage: cannot rename [{}] to [{}]", merged.getIndexFile().getName(), newer
+						.getIndexFile().getName());
+			}
+
+			if (!merged.getDataFile().renameTo(newer.getDataFile())) {
+				success = false;
+				logger.error("kraken logstorage: cannot rename [{}] to [{}]", merged.getDataFile().getName(), newer.getDataFile()
+						.getName());
+			}
+
+			if (success)
+				logger.info("kraken logstorage: merge success for {}", key);
+			else
+				logger.error("kraken logstorage: merge failed for {}", key);
+		} catch (Throwable t) {
+			logger.error("kraken logstorage: merge failed for " + key + ", deleting temp files", t);
+			// purge temporary files if failed
+			if (mergedIndexFile != null)
+				mergedIndexFile.delete();
+			if (mergedDataFile != null)
+				mergedDataFile.delete();
+		} finally {
+			indexer.finishMerge();
 		}
 	}
 
@@ -808,7 +887,7 @@ public class LogIndexerEngine implements LogIndexer {
 		 * maintain last write access time. idle indexer should be evicted
 		 */
 		private long lastAccess = System.currentTimeMillis();
-
+		
 		private boolean merging;
 
 		// waiting flush queue
@@ -817,6 +896,9 @@ public class LogIndexerEngine implements LogIndexer {
 		private InvertedIndexWriter writer;
 
 		private IndexTokenizer tokenizer;
+
+		private File indexFile;
+		private File dataFile;
 
 		public OnlineIndexer(String tableName, String indexName, int tableId, int indexId, Date day, IndexTokenizer tokenizer)
 				throws IOException {
@@ -827,10 +909,23 @@ public class LogIndexerEngine implements LogIndexer {
 			this.day = day;
 			this.tokenizer = tokenizer;
 			this.queue = new ArrayList<InvertedIndexItem>(10000);
-
-			File indexFile = getIndexFilePath(tableId, indexId, day, ".pos");
-			File dataFile = getIndexFilePath(tableId, indexId, day, ".seg");
+			this.indexFile = getIndexFilePath(tableId, indexId, day, ".pos");
+			this.dataFile = getIndexFilePath(tableId, indexId, day, ".seg");
 			this.writer = new InvertedIndexWriter(indexFile, dataFile);
+		}
+
+		public void prepareMerge() {
+			synchronized (this) {
+				this.merging = true;
+				writer.close();
+			}
+		}
+
+		public void finishMerge() throws IOException {
+			synchronized (this) {
+				writer = new InvertedIndexWriter(indexFile, dataFile);
+				this.merging = false;
+			}
 		}
 
 		public boolean isOpen() {
@@ -846,7 +941,9 @@ public class LogIndexerEngine implements LogIndexer {
 		}
 
 		public void write(Log log) throws IOException {
-			logger.info("kraken logstorage: write to index, {}", log.getData());
+			if (logger.isDebugEnabled())
+				logger.debug("kraken logstorage: write to index, {}", log.getData());
+
 			Set<String> tokens = tokenizer.tokenize(log.getData());
 			if (tokens == null) {
 				logger.info("kraken logstorage: no tokens for index, {}", log.getData());
@@ -856,7 +953,8 @@ public class LogIndexerEngine implements LogIndexer {
 			long timestamp = log.getDate().getTime();
 			synchronized (this) {
 				queue.add(new InvertedIndexItem(log.getTableName(), timestamp, log.getId(), tokens.toArray(new String[0])));
-				logger.info("kraken logstorage: queued tokens for index, {}", tokens);
+				if (logger.isDebugEnabled())
+					logger.debug("kraken logstorage: queued tokens for index, {}", tokens);
 
 				if (needFlush())
 					flush();
