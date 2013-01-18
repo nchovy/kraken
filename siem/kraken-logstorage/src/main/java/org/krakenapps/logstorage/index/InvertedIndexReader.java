@@ -215,7 +215,7 @@ public class InvertedIndexReader {
 				throw new IOException(msg);
 			}
 
-			if (prefetch == null)
+			if (!hasNext())
 				throw new NoSuchElementException();
 
 			long n = prefetch;

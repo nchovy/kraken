@@ -15,15 +15,23 @@
  */
 package org.krakenapps.logstorage.index;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.codec.FastEncodingRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class InvertedIndexUtil {
 	private static final String MAGIC_STRING = "KRAKEN_INVERTED_INDEX";
@@ -113,7 +121,115 @@ public class InvertedIndexUtil {
 		}
 	}
 
-//	public static void merge(InvertedIndexFileSet older, InvertedIndexFileSet newer) {
-//	}
+	public static void merge(InvertedIndexFileSet older, InvertedIndexFileSet newer, InvertedIndexFileSet merged)
+			throws IOException {
+		if (merged.getIndexFile().exists())
+			throw new IllegalStateException("merged index file should not exist: " + merged.getIndexFile().getAbsolutePath());
+
+		if (merged.getDataFile().exists())
+			throw new IllegalStateException("merged index file should not exist: " + merged.getDataFile().getAbsolutePath());
+
+		// validate file headers
+		readHeader(older.getIndexFile());
+		readHeader(older.getDataFile());
+		InvertedIndexHeader newerIndexHeader = readHeader(newer.getIndexFile());
+		InvertedIndexHeader newerDataHeader = readHeader(newer.getDataFile());
+
+		// copy old index and data file
+		BufferedInputStream olderPosStream = null;
+		BufferedInputStream olderSegStream = null;
+
+		BufferedInputStream newerPosStream = null;
+		BufferedInputStream newerSegStream = null;
+
+		BufferedOutputStream mergedPosStream = null;
+		BufferedOutputStream mergedSegStream = null;
+
+		try {
+			olderPosStream = new BufferedInputStream(new FileInputStream(older.getIndexFile()));
+			olderSegStream = new BufferedInputStream(new FileInputStream(older.getDataFile()));
+			newerPosStream = new BufferedInputStream(new FileInputStream(newer.getIndexFile()));
+			newerSegStream = new BufferedInputStream(new FileInputStream(newer.getDataFile()));
+			mergedPosStream = new BufferedOutputStream(new FileOutputStream(merged.getIndexFile()));
+			mergedSegStream = new BufferedOutputStream(new FileOutputStream(merged.getDataFile()));
+
+			byte[] b = new byte[8096];
+
+			// copy old files first
+			long dataLen = 0;
+			while (true) {
+				int len = olderSegStream.read(b);
+				if (len <= 0)
+					break;
+				mergedSegStream.write(b, 0, len);
+				dataLen += len;
+			}
+
+			while (true) {
+				int len = olderPosStream.read(b);
+				if (len <= 0)
+					break;
+				mergedPosStream.write(b, 0, len);
+			}
+
+			// append newer segment body part
+			newerSegStream.skip(newerDataHeader.getBodyOffset());
+			while (true) {
+				int len = newerSegStream.read(b);
+				if (len <= 0)
+					break;
+				mergedSegStream.write(b, 0, len);
+			}
+
+			// append newer position body part, need to adjust position
+			long adjust = dataLen - newerDataHeader.getBodyOffset();
+
+			newerPosStream.skip(newerIndexHeader.getBodyOffset());
+			byte[] posbuf = new byte[8];
+
+			while (true) {
+				int len = newerPosStream.read(posbuf);
+				if (len <= 0)
+					break;
+				
+				long pos = ByteBuffer.wrap(posbuf).getLong();
+				pos += adjust;
+				prepareLong(pos, posbuf);
+				mergedPosStream.write(posbuf);
+			}
+		} finally {
+			ensureClose(olderPosStream);
+			ensureClose(olderSegStream);
+			ensureClose(newerPosStream);
+			ensureClose(newerSegStream);
+			ensureClose(mergedPosStream);
+			ensureClose(mergedSegStream);
+		}
+	}
+
+	public static void prepareLong(long l, byte[] b) {
+		for (int i = 0; i < 8; i++)
+			b[i] = (byte) ((l >> ((7 - i) * 8)) & 0xff);
+	}
+
+	private static void ensureClose(InputStream is) {
+		Logger logger = LoggerFactory.getLogger(InvertedIndexUtil.class);
+		try {
+			if (is != null)
+				is.close();
+		} catch (Throwable t) {
+			logger.error("kraken logstorage: cannot close file while index merging", is);
+		}
+	}
+
+	private static void ensureClose(OutputStream os) {
+		Logger logger = LoggerFactory.getLogger(InvertedIndexUtil.class);
+		try {
+			if (os != null)
+				os.close();
+		} catch (Throwable t) {
+			logger.error("kraken logstorage: cannot close file while index merging", os);
+		}
+	}
 
 }

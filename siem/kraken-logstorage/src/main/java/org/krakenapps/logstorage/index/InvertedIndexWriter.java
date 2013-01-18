@@ -196,7 +196,7 @@ public class InvertedIndexWriter {
 		dataLength += plen + tlen + tblen + pblen + 1;
 
 		// write end offset of block to index
-		prepareLong(dataLength - 1, longbuf);
+		InvertedIndexUtil.prepareLong(dataLength - 1, longbuf);
 		logger.debug("kraken logstorage: writing index data offset [{}]", (dataLength - 1));
 		indexStream.write(longbuf);
 
@@ -270,11 +270,6 @@ public class InvertedIndexWriter {
 			dataStream = null;
 		} catch (IOException e) {
 		}
-	}
-
-	private void prepareLong(long l, byte[] b) {
-		for (int i = 0; i < 8; i++)
-			b[i] = (byte) ((l >> ((7 - i) * 8)) & 0xff);
 	}
 
 	private static class Term {
