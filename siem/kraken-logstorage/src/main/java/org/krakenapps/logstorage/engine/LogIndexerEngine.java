@@ -119,7 +119,13 @@ public class LogIndexerEngine implements LogIndexer {
 	private ConcurrentMap<String, Integer> tableNameIdMap;
 
 	private ConcurrentMap<BatchIndexKey, BatchIndexingTask> batchJobs;
-	
+
+	// index id, prevent also online indexing
+	private CopyOnWriteArraySet<Integer> deleteLocks;
+
+	// index id
+	private CopyOnWriteArraySet<Integer> mergeLocks;
+
 	public LogIndexerEngine() {
 		indexBaseDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/index");
 		queueDir = new File(System.getProperty("kraken.data.dir"), "kraken-logstorage/index/queue");
@@ -131,6 +137,8 @@ public class LogIndexerEngine implements LogIndexer {
 		onlineIndexers = new ConcurrentHashMap<OnlineIndexerKey, OnlineIndexer>();
 		tableNameIdMap = new ConcurrentHashMap<String, Integer>();
 		batchJobs = new ConcurrentHashMap<BatchIndexKey, BatchIndexingTask>();
+		deleteLocks = new CopyOnWriteArraySet<Integer>();
+		mergeLocks = new CopyOnWriteArraySet<Integer>();
 
 		sweeper = new IndexerSweeper();
 
@@ -298,45 +306,68 @@ public class LogIndexerEngine implements LogIndexer {
 		if (c == null)
 			throw new IllegalStateException("index metadata not found, table=" + tableName + ", index=" + indexName);
 
-		// remove from memory and database
-		s.remove(found);
-		db.remove(c);
+		// set delete lock
+		try {
+			deleteLocks.add(found.getId());
 
-		// cancel all batch jobs
-		BatchIndexingTask task = batchJobs.get(new BatchIndexKey(tableName, indexName));
-		if (task != null) {
-			task.setCanceled(true);
-		}
+			// remove from memory and database
+			s.remove(found);
+			db.remove(c);
 
-		// evict online indexer for dropping index id
-		for (OnlineIndexer indexer : new ArrayList<OnlineIndexer>(onlineIndexers.values())) {
-			if (indexer.id != found.getId())
-				continue;
+			// cancel all batch jobs
+			BatchIndexingTask task = batchJobs.get(new BatchIndexKey(tableName, indexName));
+			if (task != null) {
+				task.setCanceled(true);
+			}
 
-			onlineIndexers.remove(new OnlineIndexerKey(indexer.id, indexer.day, indexer.tableId, indexer.tableName,
-					indexer.indexName));
-			logger.info("kraken logstorage: closing online indexer [{}, {}] due to [{}] table drop", new Object[] {
-					found.getId(), found.getIndexName(), found.getTableName() });
-			indexer.close();
-		}
+			// evict online indexer for dropping index id
+			for (OnlineIndexer indexer : new ArrayList<OnlineIndexer>(onlineIndexers.values())) {
+				if (indexer.id != found.getId())
+					continue;
 
-		// purge index files
-		int tableId = tableNameIdMap.get(tableName);
-		File dir = new File(indexBaseDir, tableId + "/" + found.getId());
-		File[] files = dir.listFiles();
-		if (files != null) {
-			for (File f : files) {
-				String fileName = f.getName();
-				if (f.isFile() && (fileName.endsWith(".pos") || fileName.endsWith(".seg"))) {
-					boolean ret = f.delete();
-					if (!ret)
-						logger.warn("kraken logstorage: cannot delete index file [{}]", f.getAbsolutePath());
+				onlineIndexers.remove(new OnlineIndexerKey(indexer.id, indexer.day, indexer.tableId, indexer.tableName,
+						indexer.indexName));
+				logger.info("kraken logstorage: closing online indexer [{}, {}] due to [{}] table drop",
+						new Object[] { found.getId(), found.getIndexName(), found.getTableName() });
+				indexer.close();
+			}
+
+			// purge index files
+			int tableId = tableNameIdMap.get(tableName);
+			File dir = new File(indexBaseDir, tableId + "/" + found.getId());
+			File[] files = dir.listFiles();
+			if (files != null) {
+				for (File f : files) {
+					String fileName = f.getName();
+					if (f.isFile() && (fileName.endsWith(".pos") || fileName.endsWith(".seg"))) {
+						ensureDelete(f);
+					}
 				}
 			}
-		}
 
-		// try to delete empty directory
-		dir.delete();
+			// try to delete empty directory
+			dir.delete();
+		} finally {
+			deleteLocks.remove(found.getId());
+		}
+	}
+
+	private boolean ensureDelete(File f) {
+		final int MAX_TIMEOUT = 30000;
+
+		long begin = System.currentTimeMillis();
+
+		while (true) {
+			if (f.delete()) {
+				logger.info("kraken logstorage: deleted index file [{}]", f.getAbsolutePath());
+				return true;
+			}
+
+			if (System.currentTimeMillis() - begin > MAX_TIMEOUT) {
+				logger.error("kraken logstorage: delete timeout, cannot delete index file [{}]", f.getAbsolutePath());
+				return false;
+			}
+		}
 	}
 
 	@Override
@@ -436,6 +467,20 @@ public class LogIndexerEngine implements LogIndexer {
 				continue;
 
 			for (LogIndexSchema c : pair.getValue()) {
+				// skip delete locked index (no more access)
+				if (deleteLocks.contains(c.getId())) {
+					logger.trace("kraken logstorage: skipping deleted locked index, table={}, index={}", c.getTableName(),
+							c.getIndexName());
+					continue;
+				}
+
+				// skip merging index
+				if (mergeLocks.contains(c.getId())) {
+					logger.trace("kraken logstorage: skipping merging index, table={}, index={}", c.getTableName(),
+							c.getIndexName());
+					continue;
+				}
+
 				if (q.getIndexName() != null && !q.getIndexName().equals(c.getIndexName()))
 					continue;
 
@@ -480,7 +525,7 @@ public class LogIndexerEngine implements LogIndexer {
 				fail = true;
 			} finally {
 				if (!fail)
-					logger.info("kraken logstorage: indexing is completed - [{}]", status);
+					logger.info("kraken logstorage: batch indexing is completed - [{}]", status);
 			}
 		}
 
@@ -568,6 +613,9 @@ public class LogIndexerEngine implements LogIndexer {
 		File mergedIndexFile = null;
 		File mergedDataFile = null;
 		try {
+			// prevent read/write file access
+			mergeLocks.add(key.indexId);
+
 			File dir = newer.getIndexFile().getParentFile();
 			mergedIndexFile = File.createTempFile("index-", ".mpos", dir);
 			mergedDataFile = File.createTempFile("index-", ".mseg", dir);
@@ -575,24 +623,23 @@ public class LogIndexerEngine implements LogIndexer {
 			InvertedIndexFileSet merged = new InvertedIndexFileSet(mergedIndexFile, mergedDataFile);
 			InvertedIndexUtil.merge(older, newer, merged);
 
-			// TODO: wait until no index access
 			boolean success = true;
-			if (!newer.getIndexFile().delete()) {
+			if (!ensureDelete(newer.getIndexFile())) {
 				success = false;
 				logger.error("kraken logstorage: cannot delete online index file, {}", newer.getIndexFile().getName());
 			}
 
-			if (!newer.getDataFile().delete()) {
+			if (!ensureDelete(newer.getDataFile())) {
 				success = false;
 				logger.error("kraken logstorage: cannot delete online index file, {}", newer.getDataFile().getName());
 			}
 
-			if (!older.getIndexFile().delete()) {
+			if (!ensureDelete(older.getIndexFile())) {
 				success = false;
 				logger.error("kraken logstorage: cannot delete batch index file, {}", older.getIndexFile().getName());
 			}
 
-			if (!older.getDataFile().delete()) {
+			if (!ensureDelete(older.getDataFile())) {
 				success = false;
 				logger.error("kraken logstorage: cannot delete batch index file, {}", older.getDataFile().getName());
 			}
@@ -621,6 +668,8 @@ public class LogIndexerEngine implements LogIndexer {
 			if (mergedDataFile != null)
 				mergedDataFile.delete();
 		} finally {
+			// allow index access
+			mergeLocks.remove(key.indexId);
 			indexer.finishMerge();
 		}
 	}
@@ -697,6 +746,10 @@ public class LogIndexerEngine implements LogIndexer {
 			int tableId = tableRegistry.getTableId(log.getTableName());
 			for (LogIndexSchema index : indexes) {
 				try {
+					// skip if delete locked
+					if (deleteLocks.contains(index.getId()))
+						continue;
+
 					OnlineIndexer indexer = getOnlineIndexer(new OnlineIndexerKey(index.getId(), log.getDay(), tableId,
 							index.getTableName(), index.getIndexName()));
 					indexer.write(log);
@@ -827,6 +880,10 @@ public class LogIndexerEngine implements LogIndexer {
 
 			long now = System.currentTimeMillis();
 			for (OnlineIndexer indexer : onlineIndexers.values()) {
+				// skip delete locked index
+				if (deleteLocks.contains(indexer.id))
+					continue;
+
 				boolean doFlush = (now - indexer.getLastFlush().getTime()) > 10000 || indexer.needFlush();
 				if (doFlush) {
 					try {
@@ -887,7 +944,7 @@ public class LogIndexerEngine implements LogIndexer {
 		 * maintain last write access time. idle indexer should be evicted
 		 */
 		private long lastAccess = System.currentTimeMillis();
-		
+
 		private boolean merging;
 
 		// waiting flush queue

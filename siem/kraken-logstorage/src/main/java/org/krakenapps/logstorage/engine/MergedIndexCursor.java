@@ -72,6 +72,11 @@ class MergedIndexCursor implements LogIndexCursor {
 	private void load(int index) throws IOException {
 		IndexCursorItem item = items.get(index);
 		List<Date> totalDays = indexer.getIndexedDays(item.tableName, item.indexName);
+
+		// index can be dropped while iterating
+		if (totalDays == null)
+			throw new IOException("table [" + item.tableName + "] index [" + item.indexName + "] is dropped");
+
 		List<Date> filtered = DateUtil.filt(totalDays, query.getMinDay(), query.getMaxDay());
 		DateUtil.sortByDesc(filtered);
 
@@ -99,7 +104,7 @@ class MergedIndexCursor implements LogIndexCursor {
 				if (currentCursor.hasNext())
 					return true;
 			} catch (IOException e) {
-				logger.error("kraken logstorage: cannot fetch next index from merged cursor", e);
+				logger.warn("kraken logstorage: cannot fetch next index from merged cursor, skipping", e);
 			}
 		}
 	}

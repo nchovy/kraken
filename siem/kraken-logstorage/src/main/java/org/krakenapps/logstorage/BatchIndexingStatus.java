@@ -16,6 +16,7 @@
 package org.krakenapps.logstorage;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.krakenapps.logstorage.index.InvertedIndexFileSet;
@@ -97,5 +98,11 @@ public class BatchIndexingStatus {
 
 	public void setDone(boolean done) {
 		this.done = done;
+	}
+
+	@Override
+	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return String.format("table=%s, index=%s, day=%s", task.getTableName(), task.getIndexName(), dateFormat.format(day));
 	}
 }
