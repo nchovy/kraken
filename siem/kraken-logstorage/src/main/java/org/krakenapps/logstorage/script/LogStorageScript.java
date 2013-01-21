@@ -82,31 +82,6 @@ public class LogStorageScript implements Script {
 		this.context = context;
 	}
 
-	public void testIndexMerge(String[] args) {
-		for (int i = 0; i < 1000000; i++) {
-			storage.write(log("log" + i));
-
-			if (i == 300000) {
-				LogIndexSchema schema = new LogIndexSchema();
-				schema.setTableName("test");
-				schema.setBuildPastIndex(true);
-				schema.setIndexName("fulltext");
-				indexer.createIndex(schema);
-				context.println("created index at " + i);
-			}
-
-			if (i % 1000 == 0)
-				context.println("pass " + i);
-		}
-
-	}
-
-	private Log log(String line) {
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("line", line);
-		return new Log("test", new Date(), m);
-	}
-
 	public void batchIndexTasks(String[] args) {
 		context.println("Batch Indexing Tasks");
 		context.println("------------------------");
@@ -124,15 +99,6 @@ public class LogStorageScript implements Script {
 				context.println(String.format("\tday=%s, logs=%s, tokens=%s, done=%s", dayFormat.format(s.getDay()),
 						s.getLogCount(), s.getTokenCount(), s.isDone()));
 		}
-	}
-
-	// test
-	public void writeLog(String[] args) {
-		String tableName = args[0];
-		Map<String, Object> m = new HashMap<String, Object>();
-		m.put("line", args[1]);
-
-		storage.write(new Log(tableName, new Date(), m));
 	}
 
 	@ScriptUsage(description = "print all indexing configurations", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name") })
