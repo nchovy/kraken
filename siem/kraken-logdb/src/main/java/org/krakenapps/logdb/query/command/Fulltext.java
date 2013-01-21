@@ -18,6 +18,7 @@ package org.krakenapps.logdb.query.command;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logstorage.CachedRandomSeeker;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogIndexCursor;
 import org.krakenapps.logstorage.LogIndexItem;
@@ -55,16 +56,19 @@ public class Fulltext extends LogQueryCommand {
 
 	@Override
 	public void start() {
+		LogIndexCursor cursor = null;
+		CachedRandomSeeker seeker = null;
 		try {
 			status = Status.Running;
-			LogIndexCursor cursor = indexer.search(query);
+			cursor = indexer.search(query);
+			seeker = storage.openCachedRandomSeeker();
 
 			while (cursor.hasNext()) {
 				if (status.equals(Status.End))
 					break;
 
 				LogIndexItem item = cursor.next();
-				Log log = storage.getLog(item.getTableName(), item.getDay(), (int) item.getLogId());
+				Log log = seeker.getLog(item.getTableName(), item.getDay(), (int) item.getLogId());
 				if (log == null) {
 					logger.error("kraken logdb: cannot find indexed log for table [{}], day [{}], id [{}]",
 							new Object[] { item.getTableName(), item.getDay(), item.getLogId() });
@@ -82,6 +86,11 @@ public class Fulltext extends LogQueryCommand {
 			logger.error("kraken logdb: fulltext exception", e);
 		} catch (Error e) {
 			logger.error("kraken logdb: fulltext error", e);
+		} finally {
+			if (cursor != null)
+				cursor.close();
+			if (seeker != null)
+				seeker.close();
 		}
 		eof();
 	}
