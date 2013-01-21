@@ -17,6 +17,10 @@ package org.krakenapps.logstorage.index;
 
 import java.io.File;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 public class InvertedIndexFileSet {
 	private File indexFile;
 	private File dataFile;

@@ -33,6 +33,11 @@ import org.krakenapps.codec.FastEncodingRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ * 
+ */
 public class InvertedIndexUtil {
 	private static final String MAGIC_STRING = "KRAKEN_INVERTED_INDEX";
 	private static final int MAGIC_LEN = MAGIC_STRING.getBytes().length;

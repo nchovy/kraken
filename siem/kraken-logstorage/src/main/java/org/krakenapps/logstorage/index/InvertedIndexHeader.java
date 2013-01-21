@@ -22,6 +22,7 @@ import java.util.Map;
 /**
  * file header
  * 
+ * @since 0.9
  * @author xeraph
  */
 public class InvertedIndexHeader {
