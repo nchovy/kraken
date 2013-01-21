@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -42,6 +43,7 @@ import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.BatchIndexingStatus;
 import org.krakenapps.logstorage.BatchIndexingTask;
+import org.krakenapps.logstorage.IndexConfigSpec;
 import org.krakenapps.logstorage.IndexTokenizerFactory;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
@@ -59,8 +61,11 @@ import org.krakenapps.logstorage.LogWriterStatus;
 import org.krakenapps.logstorage.engine.ConfigUtil;
 import org.krakenapps.logstorage.engine.Constants;
 import org.krakenapps.logstorage.engine.LogTableSchema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LogStorageScript implements Script {
+	private final Logger logger = LoggerFactory.getLogger(LogStorageScript.class);
 	private ScriptContext context;
 	private LogTableRegistry tableRegistry;
 	private LogStorage storage;
@@ -123,6 +128,45 @@ public class LogStorageScript implements Script {
 		}
 	}
 
+	@ScriptUsage(description = "print specific index configuration", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "index name", type = "string", description = "index name"), })
+	public void index(String[] args) {
+		String tableName = args[0];
+		String indexName = args[1];
+
+		if (!tableRegistry.exists(tableName)) {
+			context.println("table does not exists");
+			return;
+		}
+
+		LogIndexSchema schema = indexer.getIndexConfig(tableName, indexName);
+		if (schema == null) {
+			context.println("index [" + indexName + "] not found");
+			return;
+		}
+
+		context.println("Tokenizer Config");
+		context.println("------------------");
+
+		for (Entry<String, String> pair : schema.getTokenizerConfigs().entrySet()) {
+			context.println(pair.getKey() + ": " + pair.getValue());
+		}
+
+		long total = 0;
+		File dir = indexer.getIndexDirectory(tableName, indexName);
+		if (dir.exists()) {
+			for (File f : dir.listFiles())
+				total += f.length();
+		}
+
+		context.println();
+		context.println("Storage Consumption");
+		context.println("---------------------");
+		NumberFormat nf = NumberFormat.getNumberInstance();
+		context.println(nf.format(total) + " bytes");
+	}
+
 	public void indexTokenizers(String[] args) {
 		context.println("Index Tokenizers");
 		for (IndexTokenizerFactory f : tokenizerRegistry.getFactories())
@@ -169,28 +213,71 @@ public class LogStorageScript implements Script {
 
 	@ScriptUsage(description = "create index", arguments = {
 			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name"),
-			@ScriptArgument(name = "min date", type = "string", description = "yyyyMMdd format", optional = true) })
+			@ScriptArgument(name = "index name", type = "string", description = "index name") })
 	public void createIndex(String[] args) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+		String tableName = args[0];
+		String indexName = args[1];
 		try {
-			String tableName = args[0];
-			String indexName = args[1];
+			String tokenizerName = readLine("tokenizer? ");
+
+			IndexTokenizerFactory factory = tokenizerRegistry.getFactory(tokenizerName);
+			if (factory == null) {
+				context.println("tokenizer [" + tokenizerName + "] not found");
+				return;
+			}
+
+			context.println("index tokenizer configurations..");
+			Map<String, String> tokenizerConfigs = new HashMap<String, String>();
+			for (IndexConfigSpec spec : factory.getConfigSpecs()) {
+				while (true) {
+					String optional = spec.isRequired() ? "" : " (optional, enter to skip)";
+					String line = readLine(spec.getName() + optional + "? ");
+					if (line != null) {
+						tokenizerConfigs.put(spec.getKey(), line);
+						break;
+					} else if (!spec.isRequired())
+						break;
+				}
+			}
+
+			String minDayStr = readLine("min day (yyyymmdd or enter to skip)? ");
+			Date minDay = null;
+			if (minDayStr != null)
+				minDay = dateFormat.parse(minDayStr);
+
+			String maxDayStr = readLine("min day (yyyymmdd or enter to skip)? ");
+			Date maxDay = null;
+			if (maxDayStr != null)
+				maxDay = dateFormat.parse(maxDayStr);
+
+			String buildPast = readLine("build index for past log (y/n)? ");
+			boolean buildPastIndex = buildPast != null && buildPast.equalsIgnoreCase("y");
 
 			LogIndexSchema config = new LogIndexSchema();
 			config.setTableName(tableName);
 			config.setIndexName(indexName);
-			config.setBuildPastIndex(true);
-
-			if (args.length > 2) {
-				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-				config.setMinIndexDay(dateFormat.parse(args[2]));
-			}
+			config.setBuildPastIndex(buildPastIndex);
+			config.setMinIndexDay(minDay);
+			config.setMaxIndexDay(maxDay);
+			config.setTokenizerName(tokenizerName);
+			config.setTokenizerConfigs(tokenizerConfigs);
 
 			indexer.createIndex(config);
 			context.println("created index " + indexName + " for table " + tableName);
 		} catch (Throwable t) {
 			context.println(t.getMessage());
+			logger.error("kraken logstorage: cannot create index for table " + tableName, t);
 		}
+	}
+
+	private String readLine(String question) throws InterruptedException {
+		context.print(question);
+		String line = context.readLine();
+		if (line.trim().isEmpty())
+			return null;
+
+		return line;
 	}
 
 	@ScriptUsage(description = "drop index", arguments = {

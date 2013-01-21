@@ -15,7 +15,9 @@
  */
 package org.krakenapps.logstorage.engine;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -25,6 +27,7 @@ import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.logstorage.IndexConfigSpec;
 import org.krakenapps.logstorage.IndexTokenizer;
 import org.krakenapps.logstorage.IndexTokenizerFactory;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
@@ -59,6 +62,14 @@ public class DelimiterIndexTokenizerFactory implements IndexTokenizerFactory {
 	}
 
 	@Override
+	public List<IndexConfigSpec> getConfigSpecs() {
+		IndexConfigSpec delims = new IndexConfigSpecImpl("delimiters", true, "delimiters", "delimiter characters");
+		IndexConfigSpec targets = new IndexConfigSpecImpl("target_columns", false, "target columns",
+				"index target columns which are separated by comma");
+		return Arrays.asList(delims, targets);
+	}
+
+	@Override
 	public IndexTokenizer newIndexTokenizer(Map<String, String> config) {
 		return new DelimiterIndexTokenizer(config);
 	}
@@ -71,7 +82,7 @@ public class DelimiterIndexTokenizerFactory implements IndexTokenizerFactory {
 			delimiters = config.get("delimiters");
 			String s = config.get("target_columns");
 			if (s != null) {
-				targetColumns = s.split(" ");
+				targetColumns = s.split(",");
 			}
 		}
 

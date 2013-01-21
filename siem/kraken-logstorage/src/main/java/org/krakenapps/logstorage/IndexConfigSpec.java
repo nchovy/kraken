@@ -15,17 +15,17 @@
  */
 package org.krakenapps.logstorage;
 
-import java.util.List;
-import java.util.Map;
-
 /**
- * @since 0.9
+ * 
  * @author xeraph
+ * @since 0.9
  */
-public interface IndexTokenizerFactory {
+public interface IndexConfigSpec {
+	String getKey();
+
+	boolean isRequired();
+
 	String getName();
 
-	List<IndexConfigSpec> getConfigSpecs();
-
-	IndexTokenizer newIndexTokenizer(Map<String, String> config);
+	String getDescription();
 }

@@ -17,6 +17,7 @@ package org.krakenapps.logstorage;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 
 import org.krakenapps.confdb.CollectionName;
 
@@ -46,8 +47,10 @@ public class LogIndexSchema {
 	// max indexing date, inclusive (yyyy-MM-dd only)
 	private Date maxIndexDay;
 
-	// index tokenizer profile (profile has tokenizer configuration)
-	private String tokenizerProfile;
+	// index tokenizer name (profile has tokenizer configuration)
+	private String tokenizerName;
+
+	private Map<String, String> tokenizerConfigs;
 
 	@Override
 	public int hashCode() {
@@ -127,12 +130,20 @@ public class LogIndexSchema {
 		this.buildPastIndex = buildPastIndex;
 	}
 
-	public String getTokenizerProfile() {
-		return tokenizerProfile;
+	public String getTokenizerName() {
+		return tokenizerName;
 	}
 
-	public void setTokenizerProfile(String tokenizerProfile) {
-		this.tokenizerProfile = tokenizerProfile;
+	public void setTokenizerName(String tokenizerName) {
+		this.tokenizerName = tokenizerName;
+	}
+
+	public Map<String, String> getTokenizerConfigs() {
+		return tokenizerConfigs;
+	}
+
+	public void setTokenizerConfigs(Map<String, String> tokenizerConfigs) {
+		this.tokenizerConfigs = tokenizerConfigs;
 	}
 
 	@Override
@@ -148,7 +159,7 @@ public class LogIndexSchema {
 			max = dateFormat.format(maxIndexDay);
 
 		return "id=" + id + ", table=" + tableName + ", index=" + indexName + ", period (" + min + "~" + max + "), tokenizer="
-				+ tokenizerProfile;
+				+ tokenizerName;
 	}
 
 }

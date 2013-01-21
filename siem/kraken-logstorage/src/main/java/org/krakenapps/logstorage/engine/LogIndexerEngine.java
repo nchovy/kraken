@@ -23,7 +23,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -287,18 +286,7 @@ public class LogIndexerEngine implements LogIndexer {
 	@Override
 	public void dropIndex(String tableName, String indexName) {
 		// check metadata
-		Set<LogIndexSchema> s = tableIndexes.get(tableName);
-		if (s == null)
-			throw new IllegalStateException("index not found, table=" + tableName + ", index=" + indexName);
-
-		LogIndexSchema found = null;
-		for (LogIndexSchema c : s) {
-			if (c.getIndexName().equals(indexName))
-				found = c;
-		}
-
-		if (found == null)
-			throw new IllegalStateException("index not found, table=" + tableName + ", index=" + indexName);
+		LogIndexSchema found = getIndexConfig(tableName, indexName);
 
 		// check database metadata
 		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
@@ -311,6 +299,7 @@ public class LogIndexerEngine implements LogIndexer {
 			deleteLocks.add(found.getId());
 
 			// remove from memory and database
+			Set<LogIndexSchema> s = tableIndexes.get(tableName);
 			s.remove(found);
 			db.remove(c);
 
@@ -350,6 +339,23 @@ public class LogIndexerEngine implements LogIndexer {
 		} finally {
 			deleteLocks.remove(found.getId());
 		}
+	}
+
+	private LogIndexSchema getIndexSchema(String tableName, String indexName) {
+		Set<LogIndexSchema> s = tableIndexes.get(tableName);
+		if (s == null)
+			throw new IllegalStateException("index not found, table=" + tableName + ", index=" + indexName);
+
+		LogIndexSchema found = null;
+		for (LogIndexSchema c : s) {
+			if (c.getIndexName().equals(indexName))
+				found = c;
+		}
+
+		if (found == null)
+			throw new IllegalStateException("index not found, table=" + tableName + ", index=" + indexName);
+
+		return found;
 	}
 
 	private boolean ensureDelete(File f) {
@@ -545,7 +551,8 @@ public class LogIndexerEngine implements LogIndexer {
 				writer = new InvertedIndexWriter(status.getFiles());
 
 				// prepare tokenizer
-				IndexTokenizer tok = loadTokenizer();
+				LogIndexSchema schema = getIndexSchema(task.getTableName(), task.getIndexName());
+				IndexTokenizer tok = tokenizerRegistry.newTokenizer(schema.getTokenizerName(), schema.getTokenizerConfigs());
 
 				while (cursor.hasNext()) {
 					if (task.isCanceled())
@@ -729,6 +736,13 @@ public class LogIndexerEngine implements LogIndexer {
 		}
 	}
 
+	@Override
+	public File getIndexDirectory(String tableName, String indexName) {
+		LogIndexSchema schema = getIndexSchema(tableName, indexName);
+		int tableId = tableRegistry.getTableId(tableName);
+		return new File(indexBaseDir, tableId + "/" + schema.getId());
+	}
+
 	private File getIndexFilePath(int tableId, int indexId, Date day, String suffix) {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		String relativePath = tableId + "/" + indexId + "/" + dateFormat.format(day) + suffix;
@@ -760,12 +774,6 @@ public class LogIndexerEngine implements LogIndexer {
 				}
 			}
 		}
-	}
-
-	private IndexTokenizer loadTokenizer() {
-		Map<String, String> config = new HashMap<String, String>();
-		config.put("delimiters", " []/_+=|&,@():;");
-		return tokenizerRegistry.newTokenizer("delimiter", config);
 	}
 
 	@Override
@@ -829,7 +837,8 @@ public class LogIndexerEngine implements LogIndexer {
 
 	private OnlineIndexer loadNewIndexer(OnlineIndexerKey key) throws IOException {
 		OnlineIndexer online = null;
-		IndexTokenizer tok = loadTokenizer();
+		LogIndexSchema schema = getIndexSchema(key.tableName, key.indexName);
+		IndexTokenizer tok = tokenizerRegistry.newTokenizer(schema.getTokenizerName(), schema.getTokenizerConfigs());
 		OnlineIndexer newWriter = new OnlineIndexer(key.tableName, key.indexName, key.tableId, key.indexId, key.day, tok);
 		OnlineIndexer consensus = onlineIndexers.putIfAbsent(key, newWriter);
 		if (consensus == null)

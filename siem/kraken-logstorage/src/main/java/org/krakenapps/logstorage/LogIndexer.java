@@ -15,6 +15,7 @@
  */
 package org.krakenapps.logstorage;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
@@ -42,4 +43,6 @@ public interface LogIndexer {
 	List<Date> getIndexedDays(String tableName, String indexName);
 
 	List<BatchIndexingTask> getBatchIndexingTasks();
+
+	File getIndexDirectory(String tableName, String indexName);
 }
