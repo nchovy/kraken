@@ -42,6 +42,7 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.codec.FastEncodingRule;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.logstorage.CachedRandomSeeker;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
 import org.krakenapps.logstorage.LogCursor;
@@ -87,6 +88,8 @@ public class LogStorageEngine implements LogStorage {
 	// sweeping and flushing data
 	private WriterSweeper writerSweeper;
 	private Thread writerSweeperThread;
+
+	private LogFileFetcher fetcher;
 
 	private File logDir;
 
@@ -149,6 +152,7 @@ public class LogStorageEngine implements LogStorage {
 			throw new IllegalStateException("log archive already started");
 
 		status = LogStorageStatus.Starting;
+		fetcher = new LogFileFetcher(tableRegistry);
 
 		// checkAllLogFiles();
 		checkLatestLogFiles();
@@ -453,6 +457,13 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
+	public CachedRandomSeeker openCachedRandomSeeker() {
+		verify();
+
+		return new CachedRandomSeekerImpl(tableRegistry, fetcher, onlineWriters);
+	}
+
+	@Override
 	public Log getLog(LogKey logKey) {
 		String tableName = tableRegistry.getTableName(logKey.getTableId());
 		return getLog(tableName, logKey.getDay(), logKey.getLogId());
@@ -471,19 +482,9 @@ public class LogStorageEngine implements LogStorage {
 		}
 
 		// load from disk
-		int tableId = tableRegistry.getTableId(tableName);
-
-		File indexPath = DatapathUtil.getIndexFile(tableId, day);
-		if (!indexPath.exists())
-			throw new IllegalStateException("log table not found: " + tableName + ", " + day);
-
-		File dataPath = DatapathUtil.getDataFile(tableId, day);
-		if (!dataPath.exists())
-			throw new IllegalStateException("log table not found: " + tableName + ", " + day);
-
 		LogFileReader reader = null;
 		try {
-			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
+			reader = fetcher.fetch(tableName, day);
 			LogRecord logdata = reader.find(id);
 			if (logdata == null) {
 				if (logger.isTraceEnabled()) {
@@ -493,7 +494,7 @@ public class LogStorageEngine implements LogStorage {
 				}
 				return null;
 			}
-			return convert(tableName, logdata);
+			return LogMarshaler.convert(tableName, logdata);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot read log: " + tableName + ", " + day + ", " + id);
 		} finally {
@@ -504,14 +505,6 @@ public class LogStorageEngine implements LogStorage {
 					logger.error("kraken logstorage: cannot close logfile reader", e);
 				}
 		}
-	}
-
-	private static Log convert(String tableName, LogRecord logdata) {
-		ByteBuffer bb = ByteBuffer.wrap(logdata.getData().array());
-		bb.position(logdata.getData().position());
-		bb.limit(logdata.getData().limit());
-		Map<String, Object> m = EncodingRule.decodeMap(bb);
-		return new Log(tableName, logdata.getDate(), logdata.getId(), m);
 	}
 
 	@Override
@@ -685,7 +678,7 @@ public class LogStorageEngine implements LogStorage {
 			try {
 				matched++;
 
-				Log log = convert(tableName, logData);
+				Log log = LogMarshaler.convert(tableName, logData);
 				logger.debug("kraken logdb: traverse log [{}]", log);
 				callback.onLog(log);
 
@@ -942,13 +935,13 @@ public class LogStorageEngine implements LogStorage {
 
 			if (ascending) {
 				if (cursor.hasNext()) {
-					prefetch = convert(tableName, cursor.next());
+					prefetch = LogMarshaler.convert(tableName, cursor.next());
 					return true;
 				}
 
 				if (bufferNext < bufferTotal) {
 					LogRecord r = buffer.get(bufferNext++);
-					prefetch = convert(tableName, r);
+					prefetch = LogMarshaler.convert(tableName, r);
 					return true;
 				}
 
@@ -956,12 +949,12 @@ public class LogStorageEngine implements LogStorage {
 			} else {
 				if (bufferNext < 0) {
 					LogRecord r = buffer.get(bufferNext--);
-					prefetch = convert(tableName, r);
+					prefetch = LogMarshaler.convert(tableName, r);
 					return true;
 				}
 
 				if (cursor.hasNext()) {
-					prefetch = convert(tableName, cursor.next());
+					prefetch = LogMarshaler.convert(tableName, cursor.next());
 					return true;
 				}
 

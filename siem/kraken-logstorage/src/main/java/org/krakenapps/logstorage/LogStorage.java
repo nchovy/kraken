@@ -72,12 +72,14 @@ public interface LogStorage {
 
 	Collection<Log> getLogs(String tableName, Date from, Date to, int offset, int limit);
 
+	CachedRandomSeeker openCachedRandomSeeker();
+
 	Log getLog(LogKey logKey);
 
 	Log getLog(String tableName, Date date, int id);
-	
+
 	LogCursor openCursor(String tableName, Date day, boolean ascending) throws IOException;
-	
+
 	int search(Date from, Date to, int limit, LogSearchCallback callback) throws InterruptedException;
 
 	int search(Date from, Date to, int offset, int limit, LogSearchCallback callback) throws InterruptedException;
@@ -90,6 +92,6 @@ public interface LogStorage {
 	void addLogListener(LogCallback callback);
 
 	void removeLogListener(LogCallback callback);
-	
+
 	List<LogWriterStatus> getWriterStatuses();
 }
