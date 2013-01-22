@@ -181,11 +181,13 @@ public class InvertedIndexReader {
 				long termCount = nextLong();
 				long offset = nextLong();
 
-				if (t.equalsIgnoreCase(term)) {
+				int diff = t.compareTo(term);
+				if (diff == 0) {
 					postingOffset = offset;
 					postingCount = termCount;
 					break;
-				}
+				} else if (diff < 0)
+					break;
 
 				if (logger.isDebugEnabled())
 					logger.debug("kraken logstorage: term {}, count {}, offset {}", new Object[] { t, termCount, offset });

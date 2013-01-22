@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,7 +140,7 @@ public class InvertedIndexWriter {
 		// mark last flush time
 		lastFlush = new Date();
 
-		Map<String, Term> terms = new HashMap<String, Term>();
+		Map<String, Term> terms = new TreeMap<String, Term>();
 
 		// posting block length
 		long pblen = 0;
