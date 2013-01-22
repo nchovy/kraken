@@ -25,6 +25,7 @@ import org.krakenapps.confdb.ConfigService;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogStorageMonitor;
 import org.krakenapps.logstorage.LogTableRegistry;
 
 @Component(name = "logstorage-script-factory")
@@ -47,10 +48,13 @@ public class LogStorageScriptFactory implements ScriptFactory {
 	private LogIndexer indexer;
 
 	@Requires
+	private LogStorageMonitor monitor;
+
+	@Requires
 	private IndexTokenizerRegistry tokenizerRegistry;
 
 	@Override
 	public Script createScript() {
-		return new LogStorageScript(tableRegistry, storage, indexer, tokenizerRegistry, conf);
+		return new LogStorageScript(tableRegistry, storage, indexer, monitor, tokenizerRegistry, conf);
 	}
 }
