@@ -130,7 +130,7 @@ public class LogStorageScript implements Script {
 
 	@ScriptUsage(description = "print specific index configuration", arguments = {
 			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name"), })
+			@ScriptArgument(name = "index name", type = "string", description = "index name") })
 	public void index(String[] args) {
 		String tableName = args[0];
 		String indexName = args[1];
