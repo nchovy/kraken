@@ -306,6 +306,12 @@ public class LogStorageEngine implements LogStorage {
 		int tableId = tableRegistry.getTableId(tableName);
 		Collection<Date> dates = getLogDates(tableName);
 
+		// drop retention policy
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogRetentionPolicy.class, Predicates.field("table_name", tableName));
+		if (c != null)
+			c.remove();
+
 		// drop table metadata
 		tableRegistry.dropTable(tableName);
 
