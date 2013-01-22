@@ -45,4 +45,8 @@ public interface LogIndexer {
 	List<BatchIndexingTask> getBatchIndexingTasks();
 
 	File getIndexDirectory(String tableName, String indexName);
+
+	Date getPurgeBaseline(String tableName, String indexName);
+
+	void purge(String tableName, String indexName, Date fromDay, Date toDay);
 }

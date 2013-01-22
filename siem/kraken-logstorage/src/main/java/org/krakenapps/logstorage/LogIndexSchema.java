@@ -36,22 +36,17 @@ public class LogIndexSchema {
 	// unique per each log table (not global unique)
 	private String indexName;
 
-	private String type;
-
 	// need to build old index when create this index?
 	private boolean buildPastIndex;
 
 	// min indexing date, inclusive (yyyy-MM-dd only)
 	private Date minIndexDay;
 
-	// max indexing date, inclusive (yyyy-MM-dd only)
-	private Date maxIndexDay;
-
 	// index tokenizer name (profile has tokenizer configuration)
 	private String tokenizerName;
 
 	private Map<String, String> tokenizerConfigs;
-
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -98,28 +93,12 @@ public class LogIndexSchema {
 		this.indexName = indexName;
 	}
 
-	public String getType() {
-		return type;
-	}
-
-	public void setType(String type) {
-		this.type = type;
-	}
-
 	public Date getMinIndexDay() {
 		return minIndexDay;
 	}
 
 	public void setMinIndexDay(Date minIndexDay) {
 		this.minIndexDay = minIndexDay;
-	}
-
-	public Date getMaxIndexDay() {
-		return maxIndexDay;
-	}
-
-	public void setMaxIndexDay(Date maxIndexDay) {
-		this.maxIndexDay = maxIndexDay;
 	}
 
 	public boolean isBuildPastIndex() {
@@ -152,13 +131,9 @@ public class LogIndexSchema {
 
 		String min = "unbound";
 		if (minIndexDay != null)
-			min = dateFormat.format(minIndexDay);
+			min = "from " + dateFormat.format(minIndexDay);
 
-		String max = "unbound";
-		if (maxIndexDay != null)
-			max = dateFormat.format(maxIndexDay);
-
-		return "id=" + id + ", table=" + tableName + ", index=" + indexName + ", period (" + min + "~" + max + "), tokenizer="
+		return "id=" + id + ", table=" + tableName + ", index=" + indexName + ", period (" + min + "), tokenizer="
 				+ tokenizerName;
 	}
 

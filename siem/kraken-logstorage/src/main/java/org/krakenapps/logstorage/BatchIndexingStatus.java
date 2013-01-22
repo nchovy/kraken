@@ -25,7 +25,7 @@ import org.krakenapps.logstorage.index.InvertedIndexFileSet;
  * @since 0.9
  * @author xeraph
  */
-public class BatchIndexingStatus {
+public class BatchIndexingStatus implements Comparable<BatchIndexingStatus> {
 	private BatchIndexingTask task;
 
 	private Date day;
@@ -98,6 +98,14 @@ public class BatchIndexingStatus {
 
 	public void setDone(boolean done) {
 		this.done = done;
+	}
+
+	@Override
+	public int compareTo(BatchIndexingStatus o) {
+		if (o == null)
+			return 1;
+
+		return (int) (day.getTime() - o.day.getTime());
 	}
 
 	@Override

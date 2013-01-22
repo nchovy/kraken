@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -54,8 +55,10 @@ import org.krakenapps.logstorage.LogIndexQuery;
 import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogIndexerStatus;
 import org.krakenapps.logstorage.LogKey;
+import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
+import org.krakenapps.logstorage.LogStorageMonitor;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.LogWriterStatus;
 import org.krakenapps.logstorage.engine.ConfigUtil;
@@ -70,14 +73,16 @@ public class LogStorageScript implements Script {
 	private LogTableRegistry tableRegistry;
 	private LogStorage storage;
 	private LogIndexer indexer;
+	private LogStorageMonitor monitor;
 	private IndexTokenizerRegistry tokenizerRegistry;
 	private ConfigService conf;
 
-	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, LogIndexer indexer,
+	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, LogIndexer indexer, LogStorageMonitor monitor,
 			IndexTokenizerRegistry tokenizerRegistry, ConfigService conf) {
 		this.tableRegistry = tableRegistry;
 		this.storage = archive;
 		this.indexer = indexer;
+		this.monitor = monitor;
 		this.tokenizerRegistry = tokenizerRegistry;
 		this.conf = conf;
 	}
@@ -85,6 +90,51 @@ public class LogStorageScript implements Script {
 	@Override
 	public void setScriptContext(ScriptContext context) {
 		this.context = context;
+	}
+
+	public void forceRetentionCheck(String[] args) {
+		monitor.forceRetentionCheck();
+		context.println("triggered");
+	}
+
+	@ScriptUsage(description = "set retention policy", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name") })
+	public void retention(String[] args) {
+		String tableName = args[0];
+		LogRetentionPolicy p = storage.getRetentionPolicy(tableName);
+		context.println(p.getRetentionDays() + "days");
+	}
+
+	@ScriptUsage(description = "set retention policy", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "retention days", type = "int", description = "retention days (0 for infinite)") })
+	public void setRetention(String[] args) {
+		LogRetentionPolicy p = new LogRetentionPolicy();
+		p.setTableName(args[0]);
+		p.setRetentionDays(Integer.valueOf(args[1]));
+
+		storage.setRetentionPolicy(p);
+		context.println("set");
+	}
+
+	@ScriptUsage(description = "purge index files in specified date range", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "index name", type = "string", description = "index name"),
+			@ScriptArgument(name = "from day", type = "string", description = "yyyyMMdd format"),
+			@ScriptArgument(name = "to day", type = "string", description = "yyyyMMdd format") })
+	public void purgeIndexRange(String[] args) {
+		String tableName = args[0];
+		String indexName = args[1];
+
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+		try {
+			Date fromDay = dateFormat.parse(args[2]);
+			Date toDay = dateFormat.parse(args[3]);
+			indexer.purge(tableName, indexName, fromDay, toDay);
+			context.println("purge completed");
+		} catch (Throwable t) {
+			context.println("cannot purge index range, " + t.getMessage());
+			logger.error("kraken logstorage: cannot purge index range, table=" + tableName + ", index=" + indexName, t);
+		}
 	}
 
 	public void batchIndexTasks(String[] args) {
@@ -100,7 +150,9 @@ public class LogStorageScript implements Script {
 			context.println(String.format("table [%s] index [%s] since %s (elapsed %dsec)", task.getTableName(),
 					task.getIndexName(), since, elapsed));
 
-			for (BatchIndexingStatus s : task.getBuilds().values())
+			ArrayList<BatchIndexingStatus> builds = new ArrayList<BatchIndexingStatus>(task.getBuilds().values());
+			Collections.sort(builds);
+			for (BatchIndexingStatus s : builds)
 				context.println(String.format("\tday=%s, logs=%s, tokens=%s, done=%s", dayFormat.format(s.getDay()),
 						s.getLogCount(), s.getTokenCount(), s.isDone()));
 		}
@@ -145,6 +197,34 @@ public class LogStorageScript implements Script {
 			context.println("index [" + indexName + "] not found");
 			return;
 		}
+
+		context.println("Index Detail");
+		context.println("------------------");
+		List<Date> days = indexer.getIndexedDays(tableName, indexName);
+		Date min = null;
+		Date max = null;
+		for (Date day : days) {
+			if (min == null)
+				min = day;
+			else if (day.before(min))
+				min = day;
+
+			if (max == null)
+				max = day;
+			else if (day.after(max))
+				max = day;
+		}
+
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		String dateRange = "N/A";
+		if (min != null && max != null)
+			dateRange = dateFormat.format(min) + " ~ " + dateFormat.format(max);
+
+		context.println("Table Name: " + schema.getTableName());
+		context.println("Index Name (ID): " + schema.getIndexName() + " (" + schema.getId() + ")");
+		context.println("Indexed Days: " + dateRange);
+		context.println("Tokenizer: " + schema.getTokenizerName());
+		context.println("");
 
 		context.println("Tokenizer Config");
 		context.println("------------------");
@@ -246,11 +326,6 @@ public class LogStorageScript implements Script {
 			if (minDayStr != null)
 				minDay = dateFormat.parse(minDayStr);
 
-			String maxDayStr = readLine("min day (yyyymmdd or enter to skip)? ");
-			Date maxDay = null;
-			if (maxDayStr != null)
-				maxDay = dateFormat.parse(maxDayStr);
-
 			String buildPast = readLine("build index for past log (y/n)? ");
 			boolean buildPastIndex = buildPast != null && buildPast.equalsIgnoreCase("y");
 
@@ -259,7 +334,6 @@ public class LogStorageScript implements Script {
 			config.setIndexName(indexName);
 			config.setBuildPastIndex(buildPastIndex);
 			config.setMinIndexDay(minDay);
-			config.setMaxIndexDay(maxDay);
 			config.setTokenizerName(tokenizerName);
 			config.setTokenizerConfigs(tokenizerConfigs);
 

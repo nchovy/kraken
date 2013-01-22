@@ -22,10 +22,12 @@ import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -39,14 +41,19 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.codec.FastEncodingRule;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
 import org.krakenapps.logstorage.CachedRandomSeeker;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
 import org.krakenapps.logstorage.LogCursor;
 import org.krakenapps.logstorage.LogKey;
+import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
@@ -322,7 +329,7 @@ public class LogStorageEngine implements LogStorage {
 		for (File f : tableDir.listFiles()) {
 			if (f.isFile() && (f.getName().endsWith(".idx") || f.getName().endsWith(".dat"))) {
 				if (!f.delete())
-					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
+					logger.error("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
 			}
 		}
 
@@ -330,6 +337,30 @@ public class LogStorageEngine implements LogStorage {
 		if (tableDir.listFiles().length == 0) {
 			logger.info("kraken logstorage: deleted table {} directory", tableName);
 			tableDir.delete();
+		}
+	}
+
+	@Override
+	public LogRetentionPolicy getRetentionPolicy(String tableName) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogRetentionPolicy.class, Predicates.field("table_name", tableName));
+		if (c == null)
+			return null;
+		return c.getDocument(LogRetentionPolicy.class);
+	}
+
+	@Override
+	public void setRetentionPolicy(LogRetentionPolicy policy) {
+		if (policy == null)
+			throw new IllegalArgumentException("policy should not be null");
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogRetentionPolicy.class, Predicates.field("table_name", policy.getTableName()));
+		if (c == null) {
+			db.add(policy);
+		} else {
+			c.setDocument(PrimitiveConverter.serialize(policy));
+			c.update();
 		}
 	}
 
@@ -454,6 +485,105 @@ public class LogStorageEngine implements LogStorage {
 			throw new RuntimeException("interrupted");
 		}
 		return logs;
+	}
+
+	@Override
+	public Date getPurgeBaseline(String tableName) {
+		LogRetentionPolicy p = getRetentionPolicy(tableName);
+		if (p == null || p.getRetentionDays() == 0)
+			return null;
+
+		Collection<Date> logDays = getLogDates(tableName);
+		Date lastLogDay = getMaxDay(logDays.iterator());
+		if (lastLogDay == null)
+			return null;
+
+		return getBaseline(lastLogDay, p.getRetentionDays());
+	}
+
+	private Date getBaseline(Date lastDay, int days) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(lastDay);
+		c.add(Calendar.DAY_OF_MONTH, -days);
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		return c.getTime();
+	}
+
+	private Date getMaxDay(Iterator<Date> days) {
+		Date max = null;
+		while (days.hasNext()) {
+			Date day = days.next();
+			if (max == null)
+				max = day;
+			else if (max != null && day.after(max))
+				max = day;
+		}
+		return max;
+	}
+
+	@Override
+	public void purge(String tableName, Date fromDay, Date toDay) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		File dir = getTableDirectory(tableName);
+
+		String from = "unbound";
+		if (fromDay != null)
+			from = dateFormat.format(fromDay);
+		String to = "unbound";
+		if (toDay != null)
+			to = dateFormat.format(toDay);
+
+		logger.debug("kraken logstorage: try to purge log data of table [{}], range [{}~{}]",
+				new Object[] { tableName, from, to });
+
+		for (File f : dir.listFiles()) {
+			if (!f.isFile())
+				continue;
+
+			String fileName = f.getName();
+			if (!fileName.endsWith(".idx") && !fileName.endsWith(".dat"))
+				continue;
+
+			String dayStr = fileName.substring(0, fileName.indexOf('.'));
+			Date day = null;
+			try {
+				day = dateFormat.parse(dayStr);
+			} catch (ParseException e) {
+				continue;
+			}
+
+			// check range
+			if (fromDay != null && day.before(fromDay))
+				continue;
+
+			if (toDay != null && day.after(toDay))
+				continue;
+
+			// TODO: lock and ensure delete
+			logger.debug("kraken logstorage: try to purge log data of table [{}], day [{}]", tableName, dayStr);
+			ensureDelete(f);
+		}
+	}
+
+	private boolean ensureDelete(File f) {
+		final int MAX_TIMEOUT = 30000;
+
+		long begin = System.currentTimeMillis();
+
+		while (true) {
+			if (f.delete()) {
+				logger.trace("kraken logstorage: deleted log file [{}]", f.getAbsolutePath());
+				return true;
+			}
+
+			if (System.currentTimeMillis() - begin > MAX_TIMEOUT) {
+				logger.error("kraken logstorage: delete timeout, cannot delete log file [{}]", f.getAbsolutePath());
+				return false;
+			}
+		}
 	}
 
 	@Override

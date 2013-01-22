@@ -19,10 +19,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +62,7 @@ import org.krakenapps.logstorage.LogIndexQuery;
 import org.krakenapps.logstorage.LogIndexSchema;
 import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogIndexerStatus;
+import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableEventListener;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -253,7 +257,6 @@ public class LogIndexerEngine implements LogIndexer {
 		task.setTableId(tableNameIdMap.get(config.getTableName()));
 		task.setIndexId(config.getId());
 		task.setMinDay(config.getMinIndexDay());
-		task.setMaxDay(config.getMaxIndexDay());
 
 		batchJobs.put(new BatchIndexKey(config.getTableName(), config.getIndexName()), task);
 
@@ -316,7 +319,7 @@ public class LogIndexerEngine implements LogIndexer {
 
 				onlineIndexers.remove(new OnlineIndexerKey(indexer.id, indexer.day, indexer.tableId, indexer.tableName,
 						indexer.indexName));
-				logger.info("kraken logstorage: closing online indexer [{}, {}] due to [{}] table drop",
+				logger.trace("kraken logstorage: closing online indexer [{}, {}] due to [{}] table drop",
 						new Object[] { found.getId(), found.getIndexName(), found.getTableName() });
 				indexer.close();
 			}
@@ -365,7 +368,7 @@ public class LogIndexerEngine implements LogIndexer {
 
 		while (true) {
 			if (f.delete()) {
-				logger.info("kraken logstorage: deleted index file [{}]", f.getAbsolutePath());
+				logger.trace("kraken logstorage: deleted index file [{}]", f.getAbsolutePath());
 				return true;
 			}
 
@@ -531,7 +534,7 @@ public class LogIndexerEngine implements LogIndexer {
 				fail = true;
 			} finally {
 				if (!fail)
-					logger.info("kraken logstorage: batch indexing is completed - [{}]", status);
+					logger.trace("kraken logstorage: batch indexing is completed - [{}]", status);
 			}
 		}
 
@@ -539,7 +542,7 @@ public class LogIndexerEngine implements LogIndexer {
 			long begin = System.currentTimeMillis();
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 			BatchIndexingTask task = status.getTask();
-			logger.info("kraken logstorage: building index for table [{}], day [{}]", task.getTableName(),
+			logger.trace("kraken logstorage: building index for table [{}], day [{}]", task.getTableName(),
 					dateFormat.format(status.getDay()));
 
 			// open index writer
@@ -579,7 +582,7 @@ public class LogIndexerEngine implements LogIndexer {
 				if (task.isCanceled()) {
 					boolean indexDeleted = status.getIndexFile().delete();
 					boolean dataDeleted = status.getDataFile().delete();
-					logger.info(
+					logger.trace(
 							"kraken logstorage: batch indexing is canceled, table [{}], index [{}], day [{}], index deleted={}, data deleted={}",
 							new Object[] { task.getTableName(), task.getIndexName(), dateFormat.format(status.getDay()),
 									indexDeleted, dataDeleted });
@@ -589,7 +592,7 @@ public class LogIndexerEngine implements LogIndexer {
 
 				// move to index directory (or copy if partition is different)
 				long elapsed = System.currentTimeMillis() - begin;
-				logger.info("kraken logstorage: indexing completed for table [{}], day [{}], elapsed [{}]sec", new Object[] {
+				logger.trace("kraken logstorage: indexing completed for table [{}], day [{}], elapsed [{}]sec", new Object[] {
 						task.getTableName(), dateFormat.format(status.getDay()), elapsed / 1000 });
 
 				File destIndexFile = getIndexFilePath(task.getTableId(), task.getIndexId(), status.getDay(), ".pos");
@@ -664,7 +667,7 @@ public class LogIndexerEngine implements LogIndexer {
 			}
 
 			if (success)
-				logger.info("kraken logstorage: merge success for {}", key);
+				logger.trace("kraken logstorage: merge success for {}", key);
 			else
 				logger.error("kraken logstorage: merge failed for {}", key);
 		} catch (Throwable t) {
@@ -689,7 +692,7 @@ public class LogIndexerEngine implements LogIndexer {
 		// try rename
 		String dstPath = dst.getAbsolutePath();
 		if (src.renameTo(dst)) {
-			logger.info("kraken logstorage: moved index file [{}] to [{}]", srcPath, dstPath);
+			logger.trace("kraken logstorage: moved index file [{}] to [{}]", srcPath, dstPath);
 			return;
 		}
 		// if rename fails, copy and delete old file
@@ -712,7 +715,8 @@ public class LogIndexerEngine implements LogIndexer {
 				os.write(b, 0, len);
 			}
 
-			logger.info("kraken logstorage: rename failed, copied index file [{}] to [{}], and deleted old one", srcPath, dstPath);
+			logger.trace("kraken logstorage: rename failed, copied index file [{}] to [{}], and deleted old one", srcPath,
+					dstPath);
 		} catch (IOException e) {
 			logger.error("kraken logstorage: cannot copy file [" + srcPath + "] to [" + dstPath + "]", e);
 		} finally {
@@ -747,6 +751,87 @@ public class LogIndexerEngine implements LogIndexer {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		String relativePath = tableId + "/" + indexId + "/" + dateFormat.format(day) + suffix;
 		return new File(indexBaseDir, relativePath);
+	}
+
+	@Override
+	public Date getPurgeBaseline(String tableName, String indexName) {
+		LogRetentionPolicy p = storage.getRetentionPolicy(tableName);
+		if (p == null || p.getRetentionDays() == 0)
+			return null;
+
+		List<Date> days = getIndexedDays(tableName, indexName);
+		Date lastDay = getMaxDay(days.iterator());
+		if (lastDay == null)
+			return null;
+
+		return getBaseline(lastDay, p.getRetentionDays());
+	}
+
+	private Date getMaxDay(Iterator<Date> days) {
+		Date max = null;
+		while (days.hasNext()) {
+			Date day = days.next();
+			if (max == null)
+				max = day;
+			else if (max != null && day.after(max))
+				max = day;
+		}
+		return max;
+	}
+
+	private Date getBaseline(Date lastDay, int days) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(lastDay);
+		c.add(Calendar.DAY_OF_MONTH, -days);
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		return c.getTime();
+	}
+
+	@Override
+	public void purge(String tableName, String indexName, Date fromDay, Date toDay) {
+		LogIndexSchema schema = getIndexConfig(tableName, indexName);
+		if (schema == null)
+			throw new IllegalStateException("index not found for table=" + tableName + ", index=" + indexName);
+
+		File dir = getIndexDirectory(tableName, indexName);
+		if (dir == null)
+			return;
+
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		for (File f : dir.listFiles()) {
+			if (!f.isFile())
+				continue;
+
+			if (!f.getName().endsWith(".pos") && !f.getName().endsWith(".seg"))
+				continue;
+
+			String dayStr = null;
+			Date day = null;
+			try {
+				dayStr = f.getName().substring(0, f.getName().indexOf('.'));
+				day = dateFormat.parse(dayStr);
+			} catch (ParseException e) {
+				continue;
+			}
+
+			if (fromDay != null && day.before(fromDay))
+				continue;
+
+			if (toDay != null && day.after(toDay))
+				continue;
+
+			try {
+				deleteLocks.add(schema.getId());
+				logger.trace("kraken logstorage: try to purge index [{}] of table [{}], day [{}]",
+						new Object[] { schema.getIndexName(), schema.getTableName(), dayStr });
+				ensureDelete(f);
+			} finally {
+				deleteLocks.remove(schema.getId());
+			}
+		}
 	}
 
 	private class LogReceiver implements LogCallback {
@@ -911,7 +996,7 @@ public class LogIndexerEngine implements LogIndexer {
 
 			// evict
 			for (OnlineIndexer indexer : evicts) {
-				logger.info("kraken logstorage: closing index writer [{}]", indexer);
+				logger.trace("kraken logstorage: closing index writer [{}]", indexer);
 				indexer.close();
 				onlineIndexers.remove(new OnlineIndexerKey(indexer.id, indexer.day, indexer.tableId, indexer.tableName,
 						indexer.indexName));
@@ -1011,10 +1096,8 @@ public class LogIndexerEngine implements LogIndexer {
 				logger.debug("kraken logstorage: write to index, {}", log.getData());
 
 			Set<String> tokens = tokenizer.tokenize(log.getData());
-			if (tokens == null) {
-				logger.info("kraken logstorage: no tokens for index, {}", log.getData());
+			if (tokens == null)
 				return;
-			}
 
 			long timestamp = log.getDate().getTime();
 			synchronized (this) {

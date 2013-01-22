@@ -55,12 +55,20 @@ public interface LogStorage {
 
 	void dropTable(String tableName);
 
+	LogRetentionPolicy getRetentionPolicy(String tableName);
+
+	void setRetentionPolicy(LogRetentionPolicy policy);
+
 	/**
 	 * reload parameters
 	 */
 	void reload();
 
 	void flush();
+
+	Date getPurgeBaseline(String tableName);
+
+	void purge(String tableName, Date fromDay, Date toDay);
 
 	Collection<Date> getLogDates(String tableName);
 
