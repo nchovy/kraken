@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,17 @@
  */
 package org.krakenapps.logstorage;
 
-public interface LogStorageMonitor extends Runnable {
-	int getMinFreeSpaceValue();
+import java.io.IOException;
+import java.util.Date;
 
-	DiskSpaceType getMinFreeSpaceType();
+/**
+ * cache opened reader while index seek (to prevent repetitive file open)
+ * 
+ * @author xeraph
+ * @since 0.9
+ */
+public interface CachedRandomSeeker {
+	Log getLog(String tableName, Date day, int id) throws IOException;
 
-	DiskLackAction getDiskLackAction();
-
-	void setMinFreeSpace(int value, DiskSpaceType type);
-
-	void setDiskLackAction(DiskLackAction action);
-
-	void forceRetentionCheck();
-
-	void registerDiskLackCallback(DiskLackCallback callback);
-
-	void unregisterDiskLackCallback(DiskLackCallback callback);
+	void close();
 }

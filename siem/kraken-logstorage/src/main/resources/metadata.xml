@@ -5,4 +5,8 @@
 	<instance component="logstorage-monitor" />
 	<instance component="logstorage-script-factory" />
 	<instance component="logstorage-table-registry" />
+	<instance component="logstorage-indexer" />
+	<instance component="logstorage-index-tokenizer-registry" />
+	<instance component="logstorage-delimiter-index-tokenizer-factory" />
+	<instance component="logstorage-regex-index-tokenizer-factory" />
 </ipojo>

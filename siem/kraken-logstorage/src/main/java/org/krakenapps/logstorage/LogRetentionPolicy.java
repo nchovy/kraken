@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,34 @@
  */
 package org.krakenapps.logstorage;
 
-public interface LogStorageMonitor extends Runnable {
-	int getMinFreeSpaceValue();
+import org.krakenapps.confdb.CollectionName;
 
-	DiskSpaceType getMinFreeSpaceType();
+/**
+ * purge log and index data files periodically
+ * 
+ * @author xeraph
+ * 
+ */
+@CollectionName("retention")
+public class LogRetentionPolicy {
+	private String tableName;
 
-	DiskLackAction getDiskLackAction();
+	// 0 for disabled
+	private int retentionDays;
 
-	void setMinFreeSpace(int value, DiskSpaceType type);
+	public String getTableName() {
+		return tableName;
+	}
 
-	void setDiskLackAction(DiskLackAction action);
+	public void setTableName(String tableName) {
+		this.tableName = tableName;
+	}
 
-	void forceRetentionCheck();
+	public int getRetentionDays() {
+		return retentionDays;
+	}
 
-	void registerDiskLackCallback(DiskLackCallback callback);
-
-	void unregisterDiskLackCallback(DiskLackCallback callback);
+	public void setRetentionDays(int retentionDays) {
+		this.retentionDays = retentionDays;
+	}
 }

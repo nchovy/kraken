@@ -22,13 +22,16 @@ import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -38,12 +41,19 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.krakenapps.api.PrimitiveConverter;
 import org.krakenapps.codec.EncodingRule;
 import org.krakenapps.codec.FastEncodingRule;
+import org.krakenapps.confdb.Config;
+import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
+import org.krakenapps.confdb.Predicates;
+import org.krakenapps.logstorage.CachedRandomSeeker;
 import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
+import org.krakenapps.logstorage.LogCursor;
 import org.krakenapps.logstorage.LogKey;
+import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageStatus;
@@ -51,9 +61,11 @@ import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.logstorage.LogWriterStatus;
 import org.krakenapps.logstorage.file.LogFileFixReport;
 import org.krakenapps.logstorage.file.LogFileReader;
+import org.krakenapps.logstorage.file.LogFileReaderV2;
 import org.krakenapps.logstorage.file.LogFileRepairer;
 import org.krakenapps.logstorage.file.LogRecord;
 import org.krakenapps.logstorage.file.LogRecordCallback;
+import org.krakenapps.logstorage.file.LogRecordCursor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,6 +95,8 @@ public class LogStorageEngine implements LogStorage {
 	// sweeping and flushing data
 	private WriterSweeper writerSweeper;
 	private Thread writerSweeperThread;
+
+	private LogFileFetcher fetcher;
 
 	private File logDir;
 
@@ -145,11 +159,12 @@ public class LogStorageEngine implements LogStorage {
 			throw new IllegalStateException("log archive already started");
 
 		status = LogStorageStatus.Starting;
+		fetcher = new LogFileFetcher(tableRegistry);
 
 		// checkAllLogFiles();
 		checkLatestLogFiles();
 
-		writerSweeperThread = new Thread(writerSweeper, "LogStorage Sweeper");
+		writerSweeperThread = new Thread(writerSweeper, "LogStorage LogWriter Sweeper");
 		writerSweeperThread.start();
 
 		status = LogStorageStatus.Open;
@@ -291,6 +306,12 @@ public class LogStorageEngine implements LogStorage {
 		int tableId = tableRegistry.getTableId(tableName);
 		Collection<Date> dates = getLogDates(tableName);
 
+		// drop retention policy
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogRetentionPolicy.class, Predicates.field("table_name", tableName));
+		if (c != null)
+			c.remove();
+
 		// drop table metadata
 		tableRegistry.dropTable(tableName);
 
@@ -314,7 +335,7 @@ public class LogStorageEngine implements LogStorage {
 		for (File f : tableDir.listFiles()) {
 			if (f.isFile() && (f.getName().endsWith(".idx") || f.getName().endsWith(".dat"))) {
 				if (!f.delete())
-					logger.info("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
+					logger.error("kraken logstorage: cannot delete log data {} of table {}", f.getAbsolutePath(), tableName);
 			}
 		}
 
@@ -322,6 +343,30 @@ public class LogStorageEngine implements LogStorage {
 		if (tableDir.listFiles().length == 0) {
 			logger.info("kraken logstorage: deleted table {} directory", tableName);
 			tableDir.delete();
+		}
+	}
+
+	@Override
+	public LogRetentionPolicy getRetentionPolicy(String tableName) {
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogRetentionPolicy.class, Predicates.field("table_name", tableName));
+		if (c == null)
+			return null;
+		return c.getDocument(LogRetentionPolicy.class);
+	}
+
+	@Override
+	public void setRetentionPolicy(LogRetentionPolicy policy) {
+		if (policy == null)
+			throw new IllegalArgumentException("policy should not be null");
+
+		ConfigDatabase db = conf.ensureDatabase("kraken-logstorage");
+		Config c = db.findOne(LogRetentionPolicy.class, Predicates.field("table_name", policy.getTableName()));
+		if (c == null) {
+			db.add(policy);
+		} else {
+			c.setDocument(PrimitiveConverter.serialize(policy));
+			c.update();
 		}
 	}
 
@@ -449,6 +494,112 @@ public class LogStorageEngine implements LogStorage {
 	}
 
 	@Override
+	public Date getPurgeBaseline(String tableName) {
+		LogRetentionPolicy p = getRetentionPolicy(tableName);
+		if (p == null || p.getRetentionDays() == 0)
+			return null;
+
+		Collection<Date> logDays = getLogDates(tableName);
+		Date lastLogDay = getMaxDay(logDays.iterator());
+		if (lastLogDay == null)
+			return null;
+
+		return getBaseline(lastLogDay, p.getRetentionDays());
+	}
+
+	private Date getBaseline(Date lastDay, int days) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(lastDay);
+		c.add(Calendar.DAY_OF_MONTH, -days);
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		return c.getTime();
+	}
+
+	private Date getMaxDay(Iterator<Date> days) {
+		Date max = null;
+		while (days.hasNext()) {
+			Date day = days.next();
+			if (max == null)
+				max = day;
+			else if (max != null && day.after(max))
+				max = day;
+		}
+		return max;
+	}
+
+	@Override
+	public void purge(String tableName, Date fromDay, Date toDay) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		File dir = getTableDirectory(tableName);
+
+		String from = "unbound";
+		if (fromDay != null)
+			from = dateFormat.format(fromDay);
+		String to = "unbound";
+		if (toDay != null)
+			to = dateFormat.format(toDay);
+
+		logger.debug("kraken logstorage: try to purge log data of table [{}], range [{}~{}]",
+				new Object[] { tableName, from, to });
+
+		for (File f : dir.listFiles()) {
+			if (!f.isFile())
+				continue;
+
+			String fileName = f.getName();
+			if (!fileName.endsWith(".idx") && !fileName.endsWith(".dat"))
+				continue;
+
+			String dayStr = fileName.substring(0, fileName.indexOf('.'));
+			Date day = null;
+			try {
+				day = dateFormat.parse(dayStr);
+			} catch (ParseException e) {
+				continue;
+			}
+
+			// check range
+			if (fromDay != null && day.before(fromDay))
+				continue;
+
+			if (toDay != null && day.after(toDay))
+				continue;
+
+			// TODO: lock and ensure delete
+			logger.debug("kraken logstorage: try to purge log data of table [{}], day [{}]", tableName, dayStr);
+			ensureDelete(f);
+		}
+	}
+
+	private boolean ensureDelete(File f) {
+		final int MAX_TIMEOUT = 30000;
+
+		long begin = System.currentTimeMillis();
+
+		while (true) {
+			if (f.delete()) {
+				logger.trace("kraken logstorage: deleted log file [{}]", f.getAbsolutePath());
+				return true;
+			}
+
+			if (System.currentTimeMillis() - begin > MAX_TIMEOUT) {
+				logger.error("kraken logstorage: delete timeout, cannot delete log file [{}]", f.getAbsolutePath());
+				return false;
+			}
+		}
+	}
+
+	@Override
+	public CachedRandomSeeker openCachedRandomSeeker() {
+		verify();
+
+		return new CachedRandomSeekerImpl(tableRegistry, fetcher, onlineWriters);
+	}
+
+	@Override
 	public Log getLog(LogKey logKey) {
 		String tableName = tableRegistry.getTableName(logKey.getTableId());
 		return getLog(tableName, logKey.getDay(), logKey.getLogId());
@@ -458,19 +609,18 @@ public class LogStorageEngine implements LogStorage {
 	public Log getLog(String tableName, Date day, int id) {
 		verify();
 
-		int tableId = tableRegistry.getTableId(tableName);
+		// check memory buffer (flush waiting)
+		OnlineWriter writer = onlineWriters.get(new OnlineWriterKey(tableName, day));
+		if (writer != null) {
+			for (LogRecord r : writer.getBuffer())
+				if (r.getId() == id)
+					return new Log(tableName, r.getDate(), id, EncodingRule.decodeMap(r.getData().duplicate()));
+		}
 
-		File indexPath = DatapathUtil.getIndexFile(tableId, day);
-		if (!indexPath.exists())
-			throw new IllegalStateException("log table not found: " + tableName + ", " + day);
-
-		File dataPath = DatapathUtil.getDataFile(tableId, day);
-		if (!dataPath.exists())
-			throw new IllegalStateException("log table not found: " + tableName + ", " + day);
-
+		// load from disk
 		LogFileReader reader = null;
 		try {
-			reader = LogFileReader.getLogFileReader(indexPath, dataPath);
+			reader = fetcher.fetch(tableName, day);
 			LogRecord logdata = reader.find(id);
 			if (logdata == null) {
 				if (logger.isTraceEnabled()) {
@@ -480,7 +630,7 @@ public class LogStorageEngine implements LogStorage {
 				}
 				return null;
 			}
-			return convert(tableName, logdata);
+			return LogMarshaler.convert(tableName, logdata);
 		} catch (IOException e) {
 			throw new IllegalStateException("cannot read log: " + tableName + ", " + day + ", " + id);
 		} finally {
@@ -493,12 +643,21 @@ public class LogStorageEngine implements LogStorage {
 		}
 	}
 
-	private Log convert(String tableName, LogRecord logdata) {
-		ByteBuffer bb = ByteBuffer.wrap(logdata.getData().array());
-		bb.position(logdata.getData().position());
-		bb.limit(logdata.getData().limit());
-		Map<String, Object> m = EncodingRule.decodeMap(bb);
-		return new Log(tableName, logdata.getDate(), logdata.getId(), m);
+	@Override
+	public LogCursor openCursor(String tableName, Date day, boolean ascending) throws IOException {
+		verify();
+
+		OnlineWriter onlineWriter = onlineWriters.get(new OnlineWriterKey(tableName, day));
+		ArrayList<LogRecord> buffer = null;
+		if (onlineWriter != null)
+			buffer = (ArrayList<LogRecord>) onlineWriter.getBuffer();
+
+		int tableId = tableRegistry.getTableId(tableName);
+		File indexPath = DatapathUtil.getIndexFile(tableId, day);
+		File dataPath = DatapathUtil.getDataFile(tableId, day);
+		LogFileReaderV2 reader = (LogFileReaderV2) LogFileReader.getLogFileReader(indexPath, dataPath);
+
+		return new LogCursorImpl(tableName, day, buffer, reader, ascending);
 	}
 
 	@Override
@@ -655,7 +814,7 @@ public class LogStorageEngine implements LogStorage {
 			try {
 				matched++;
 
-				Log log = convert(tableName, logData);
+				Log log = LogMarshaler.convert(tableName, logData);
 				logger.debug("kraken logdb: traverse log [{}]", log);
 				callback.onLog(log);
 
@@ -876,6 +1035,96 @@ public class LogStorageEngine implements LogStorage {
 					onlineWriters.remove(key);
 				}
 			}
+		}
+	}
+
+	private static class LogCursorImpl implements LogCursor {
+		private String tableName;
+		private Date day;
+		private ArrayList<LogRecord> buffer;
+		private LogFileReaderV2 reader;
+		private LogRecordCursor cursor;
+		private boolean ascending;
+
+		private Log prefetch;
+		private int bufferNext;
+		private int bufferTotal;
+
+		public LogCursorImpl(String tableName, Date day, ArrayList<LogRecord> buffer, LogFileReaderV2 reader, boolean ascending) {
+			this.tableName = tableName;
+			this.day = day;
+			this.reader = reader;
+			this.cursor = reader.getCursor(ascending);
+			this.ascending = ascending;
+
+			if (buffer != null) {
+				this.buffer = buffer;
+				this.bufferTotal = buffer.size();
+				this.bufferNext = ascending ? 0 : bufferTotal - 1;
+			}
+		}
+
+		@Override
+		public boolean hasNext() {
+			if (prefetch != null)
+				return true;
+
+			if (ascending) {
+				if (cursor.hasNext()) {
+					prefetch = LogMarshaler.convert(tableName, cursor.next());
+					return true;
+				}
+
+				if (bufferNext < bufferTotal) {
+					LogRecord r = buffer.get(bufferNext++);
+					prefetch = LogMarshaler.convert(tableName, r);
+					return true;
+				}
+
+				return false;
+			} else {
+				if (bufferNext < 0) {
+					LogRecord r = buffer.get(bufferNext--);
+					prefetch = LogMarshaler.convert(tableName, r);
+					return true;
+				}
+
+				if (cursor.hasNext()) {
+					prefetch = LogMarshaler.convert(tableName, cursor.next());
+					return true;
+				}
+
+				return false;
+			}
+		}
+
+		@Override
+		public Log next() {
+			if (!hasNext())
+				throw new NoSuchElementException("end of log cursor");
+
+			Log log = prefetch;
+			prefetch = null;
+			return log;
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void close() {
+			try {
+				reader.close();
+			} catch (IOException e) {
+			}
+		}
+
+		@Override
+		public String toString() {
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+			return "log cursor for table " + tableName + ", day " + dateFormat.format(day);
 		}
 	}
 }
