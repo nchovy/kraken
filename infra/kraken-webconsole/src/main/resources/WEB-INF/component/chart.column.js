@@ -176,7 +176,7 @@ define(["/lib/jquery.js", "/lib/knockout-2.1.0.debug.js", "/lib/d3.v2.amd.js", "
 		})
 
 		// scale
-		this.scaleY = ko.observable( (self.viewHeight() - 60) / d3.max(vals) );
+		this.scaleY = ko.observable( (self.viewHeight() - 60) / (d3.max(vals) || 1) );
 
 		$.each(data, function(i, obj) {
 			// extended props

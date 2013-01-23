@@ -32,7 +32,7 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js"], function(ko, logdbMan
 
 			this.Logdb = logdbManager.create();
 
-			var inputStr = "table limit=100 local\\interpark-syslog";
+			var inputStr = "table limit=10000 local\\interpark-syslog";
 
 			this.input = ko.observable(inputStr);
 

@@ -1,8 +1,8 @@
-define(["/core/Connection.js", "/component/util.js", "/core/logdb.viewmodel.js"], function(socket, Util, ViewModel) {
+define(["/core/Connection.js", "/component/util.js", "/lib/knockout-2.1.0.debug.js", "/core/logdb.viewmodel.js"], function(socket, Util, ko, ViewModel) {
 
 // class
-var Logdb = function() {
-	var isDebug = false;
+var Query = function(id, query_str, is_end) {
+	var isDebug = true;
 
 	if(!console.group) {
 		console.group = function() {}
@@ -11,8 +11,11 @@ var Logdb = function() {
 		console.groupEnd = function() {}
 	}
 
-	var activeQuery, activePage = 1, pagesize = 15;
-	var activeId;
+	this.activeQuery = ko.observable(query_str);
+	this.activeId = ko.observable(id || -1);
+	this.isEnd = ko.observable(is_end || false);
+
+	var activePage = 1, pagesize = 15;
 	var that = this;
 
 	var eventObj = {};
@@ -21,6 +24,8 @@ var Logdb = function() {
 			if(isDebug) {
 				console.group("created");
 			}
+
+			that.isEnd = false;
 
 			if(!!eventObj.created) {
 				$.each(eventObj.created, function(i, fn) { 
@@ -64,6 +69,8 @@ var Logdb = function() {
 				console.group("loaded");
 				console.log(m);
 			}
+
+			that.isEnd = true;
 
 			if(!!eventObj.loaded) {
 				$.each(eventObj.loaded, function(i, fn) { 
@@ -124,7 +131,7 @@ var Logdb = function() {
 		clearQuery({
 			except: [queryId],
 			callback: function() {
-				activeQuery = query;
+				that.activeQuery(query);
 				startQuery(queryId);
 			}
 		});
@@ -141,15 +148,14 @@ var Logdb = function() {
 			},
 			function(m) {
 				if(m.isError) {
-					console.log("cannot start query " + activeQuery);
+					console.log("cannot start query " + that.activeQuery());
 					clearQuery();
 					return;
 				}
 
 				callback.starting(queryId);
 				
-				activeId = queryId;
-				//console.log(activeId);
+				that.activeId(queryId);
 
 			}
 		);
@@ -206,7 +212,7 @@ var Logdb = function() {
 		}
 
 		var id = m.body.id;
-		if(id != activeId) {
+		if(id != that.activeId()) {
 			console.log("not same: " + id);
 			return;	
 		}
@@ -274,7 +280,7 @@ var Logdb = function() {
 
 	this.goPage = function(page) {
 		activePage = page + 1;
-		getResult(activeId, page * pagesize);
+		getResult(that.activeId(), page * pagesize);
 	}
 
 	this.stop = function(callback) {
@@ -282,7 +288,7 @@ var Logdb = function() {
 			console.log("stop");
 		}
 
-		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.stopQuery", { "id": activeId }, function(m) {
+		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.stopQuery", { "id": that.activeId() }, function(m) {
 			console.log(m)
 			if(!!callback) {
 				callback();
@@ -297,7 +303,7 @@ var Logdb = function() {
 				console.log("dispose")
 			}
 
-			socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.removeQuery", { "id": activeId }, function(m) {
+			socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.removeQuery", { "id": that.activeId() }, function(m) {
 				if(!!callback) {
 					callback();
 				}
@@ -309,14 +315,6 @@ var Logdb = function() {
 
 	this.getFieldInfo = function() {
 
-	}
-
-	this.getId = function() {
-		return activeId;
-	}
-
-	this.getActiveQuery = function() {
-		return activeQuery;
 	}
 
 	this.debug = {
@@ -338,14 +336,36 @@ var Logdb = function() {
 }
 
 var logdbManager = (function() {
-	var queries = [];
+	var queries = ko.observableArray([]);
 
-	function getQueries() {
-		return queries;
+	function getQueries(callback) {
+		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.queries", {}, function(m) {
+			if(m.isError) {
+				console.log("cannot load queries")
+				clearQuery();
+				return;
+			}
+
+			$.each(m.body.queries, function(i, jobj) {
+				var isExist = false;
+				$.each(queries(), function(j, qobj) {
+					if(qobj.activeId() == jobj.id) isExist = true;
+				});
+
+				if(!isExist) {
+					var query = new Query(jobj.id, jobj.query_string, jobj.is_end);
+					queries.push(query);
+				}
+			});
+
+			if(callback) {
+				callback(queries);
+			}
+		});
 	}
 
 	function create() {
-		var instance = new Logdb();
+		var instance = new Query();
 		queries.push(instance);
 		return instance;
 	}

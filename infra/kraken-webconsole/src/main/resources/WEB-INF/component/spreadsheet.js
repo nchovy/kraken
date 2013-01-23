@@ -8,6 +8,8 @@ function Spret(el, data, options) {
 	defaultoptions = {
 		"debug": false,
 		"showIndex": true,
+		"showColumnGuide": true,
+		"showHorizontalScrollbar": true,
 		"colDataBind": function() {},
 
 		"onRenderRow": function() {},
@@ -20,7 +22,7 @@ function Spret(el, data, options) {
 
 	options = $.extend(defaultoptions, options);
 
-	var $container, $viewport, $canvas, $inputproxy, $defbody;
+	var $container, $viewport, $canvas, $colheader, $inputproxy, $defbody;
 	var columns, originalColumns;
 	var rowHeight, viewportH, pageSize;
 	var currOffset = 0;
@@ -37,7 +39,8 @@ function Spret(el, data, options) {
 	function init() {
 
 		// drawing ui
-		$container = $('<div>').css("overflow-x", "scroll").css("overflow-y", "hidden").css("height", "100%").appendTo(el);
+		$(el).addClass("spret");
+		$container = $('<div>').css("overflow-x", (options.showHorizontalScrollbar ? "scroll" : "hidden")).css("overflow-y", "hidden").css("height", "100%").appendTo(el);
 		$viewport = $('<div class="spret-viewport" style="overflow: hidden; width: 100%; position: relative; min-width: 100%">').appendTo($container);
 		
 		$canvas = $('<table class="table table-bordered table-condensed spret-canvas" cellspacing="0" style="position: relative">').appendTo($viewport);
@@ -63,6 +66,7 @@ function Spret(el, data, options) {
 			ko.applyBindings(data, $colheader[0]);
 
 			data.columns.subscribe(function(val) {
+				//console.log("columns changed")
 				columns = $.map(val, function(obj) {
 					return obj.rowText;
 				});
@@ -75,9 +79,11 @@ function Spret(el, data, options) {
 							"headerText": "#"
 						});
 
-						$("th:first-child").addClass("spret-idx").width(40);
+						$container.find("th:first-child").addClass("spret-idx").width(40);
 					}
 				}
+
+				virtualization.render();
 			})
 		}
 		else {
@@ -124,12 +130,19 @@ function Spret(el, data, options) {
 			
 			var currIndex = getCurrentIndex();
 			var delta = -e.originalEvent.wheelDelta / 120 * (pageSize / 6);
-			scrollToIndex(currIndex + delta + ((scroll.direction == -1) ? 1 : -1));
+
+			if(pageSize > 10) {
+				scrollToIndex(currIndex + delta - scroll.direction);
+			}
+			else {
+				var span = (scroll.direction == -1) ? Math.floor(delta - scroll.direction) : Math.ceil(delta - scroll.direction);
+				scrollToIndex(currIndex + span);
+			}
 		});
 	}
 
 	function onResize() {
-		viewportH = $container.height() - 17;
+		viewportH = $container.height() - (options.showHorizontalScrollbar ? 17 : 0);
 		$viewport.height(viewportH);
 		pageSize = Math.ceil(viewportH / rowHeight) - 1;
 
@@ -144,7 +157,8 @@ function Spret(el, data, options) {
 		"current": null,
 		"tdPaddingH": 0,
 		init: function() {
-			this.tdPaddingH = $("td:first-child").css("padding-left").split('px')[0];
+			if($container.find("td").length === 0) return;
+			this.tdPaddingH = $container.find("td:first-child").css("padding-left").split('px')[0];
 
 			this.current = new selection.Range([0,0],[0,0]);
 			this.$selection = $('<div class="spret-selection" style="position: absolute; border: 1px solid rgba(82,168,236,0.8); background-color: #E1E6F6">').prependTo($viewport);
@@ -166,16 +180,22 @@ function Spret(el, data, options) {
 		highlight: function() {
 			var h = rowHeight;
 			var currIndex = getCurrentIndex();
-			if($("td").length === 0) return;
+			if($container.find("td").length === 0) return;
 			
-			var toffset = $("td:first-child").offset();
+			var indexWidth = options.showIndex ? $container.find("th:first-child").width() + (this.tdPaddingH * 2) + 2 : 0;
+			var toffset = $container.find("td:first-child").offset();
 			var top = toffset.top - (currIndex * h) + 1;
-			var left = toffset.left + $("th:first-child").width() + (this.tdPaddingH * 2) + 2 + 3;
+			var left = toffset.left + indexWidth + 3;
 			var range = this.current;
 
 			// row
 			var ycurr = h * (range.from[0]);
 			var ysel = h * ((range.to[0] > range.from[0]) ? range.from[0] : range.to[0]);
+
+			if(currOffset == 1) {
+				var btmspan = h - $container.find("tbody tr:first-child").height();
+				top = top - btmspan;
+			}
 
 			this.$selection
 					.offset( { "top": top + ysel })
@@ -189,11 +209,12 @@ function Spret(el, data, options) {
 					.offset( { "left": left + this.sumWidth(0, xidxfrom) } )
 					.width(this.sumWidth(xidxfrom, xidxto + 1));
 
-
-			$colheader.find("th").css("padding-bottom", "").css("border-bottom", "");
-			for(var i = xidxfrom; i <= xidxto; i++) {
-				var $header = $($colheader.find("th")[i + ((options.showIndex) ? 1 : 0)]);
-				$header.css("padding-bottom", "0").css("border-bottom", "4px solid #fc0")
+			if(options.showColumnGuide) {
+				$colheader.find("th").css("padding-bottom", "").css("border-bottom", "");
+				for(var i = xidxfrom; i <= xidxto; i++) {
+					var $header = $($colheader.find("th")[i + ((options.showIndex) ? 1 : 0)]);
+					$header.css("padding-bottom", "0").css("border-bottom", "4px solid #fc0")
+				}
 			}
 		},
 		sumWidth: function(from, to) {
@@ -292,6 +313,7 @@ function Spret(el, data, options) {
 		if(from[1] < 0) from[1] = 0;
 		if(to[0] < 0) to[0] = 0;
 		if(to[1] < 0) to[1] = 0;
+		if(to[0] >= data.totalCount()) to[0] = data.totalCount() - 1;
 		
 		this.from = from;
 		this.to = to;
@@ -336,6 +358,12 @@ function Spret(el, data, options) {
 			var ic = this.current[1];
 			//console.log(ir, ic);
 
+			var rh = rowHeight;
+
+			if(Math.round(data.totalCount() - pageSize) == ir) {
+				rh = $container.find("tbody tr:first-child").height();
+			}
+
 			var td = $canvas.find("tr[data-row=" + ir + "] td[data-col=" + ic + "]");
 			if(td.length == 0) {
 				this.$cursor.hide();
@@ -347,7 +375,7 @@ function Spret(el, data, options) {
 				
 				this.$cursor.offset({ "top": tdOffset.top + 2, "left": tdOffset.left + 2 })
 					.width(td.width() + tdPaddingH * 2 - 3)
-					.height(rowHeight - 5);
+					.height(rh - 5);
 			}
 		},
 		onResize: function() {
@@ -728,31 +756,51 @@ function Spret(el, data, options) {
 			var rows = [];
 
 			for (var i = top; i < bottom; i++) {
-				if(self.rowsCache[i]) continue;
+				if(self.rowsCache[i]) {
+					//console.log("==> cached", self.rowsCache[i]);
+					//continue;
+				}
 				rows.push(i);
 			}
+			//console.log(self.rowsCache)
 
 			if(scroll.direction == 1) {
 				for (var i = 0, ii = rows.length; i < ii; i++) {
 					var idx = bottom - ii + i;
-					if(self.rowsCache[idx]) continue;
-					var r = drawRow(null, idx);
-					if(r != null) {
-						r.appendTo($canvas);
-						if(options.debug) { console.log("renderRow", idx); }
-						trigger("onRenderRow", idx, r);
+					if(self.rowsCache[idx]) {
+						if(self.rowsCache[idx].children("td:not(.spret-idx)").length + 1 === columns.length) {
+							var r = self.rowsCache[idx];
+							var c = drawCol(idx, columns[columns.length - 1]);
+							c.appendTo(r)
+						}
+					} else {
+						var r = drawRow(null, idx);
+						if(r != null) {
+							r.appendTo($canvas);
+							if(options.debug) { console.log("renderRow", idx); }
+							trigger("onRenderRow", idx, r);
+						}	
 					}
+					
 				}
 			}
 			else if(scroll.direction == -1) {
 				for (var i = rows.length - 1, ii = 0; ii <= i; i--) {
 					var idx = top - ii + i;
-					if(self.rowsCache[idx]) continue;
-					var r = drawRow(null, idx);
-					if(r != null) {
-						r.prependTo($canvas);
-						if(options.debug) { console.log("renderRow", idx); }
-						trigger("onRenderRow", idx, r);
+					if(self.rowsCache[idx]) {
+						if(self.rowsCache[idx].children("td:not(.spret-idx)").length + 1 === columns.length) {
+							var r = self.rowsCache[idx];
+							var c = drawCol(idx, columns[columns.length - 1]);
+							c.appendTo(r)
+						}
+					}
+					else {
+						var r = drawRow(null, idx);
+						if(r != null) {
+							r.prependTo($canvas);
+							if(options.debug) { console.log("renderRow", idx); }
+							trigger("onRenderRow", idx, r);
+						}
 					}
 				}
 			}
@@ -876,65 +924,74 @@ function Spret(el, data, options) {
 		return rowHeight;
 	}
 
-	function drawRow(row, idx) {
+	function drawCol(rowidx, column, row) {
+		var colidx = columns.indexOf(column);
+		var coldiv = $('<td class="spret-col">').attr("data-col", colidx);
+		if(!!originalColumns[colidx].formatter) {
+			///////////////////////////////formatter///////////////////////
+			var html = originalColumns[colidx].formatter.html().toString().trim();
+			var fnbody = html.split("{{")[1].split("}}")[0];
+			var fn = new Function("irow", "prop", fnbody);
+			//console.log(fn(rowidx, prop));
+
+			html = html.split("{{")[0] + fn(rowidx, column) + html.split("}}")[1];
+
+			coldiv.html(html);
+			////////////////////////////////////////////////////////////////
+		}
+		else {
+
+			if(!!options.colDataBind) {
+				coldiv.attr("data-bind", options.colDataBind(rowidx, colidx, column))
+			}
+			
+			if(row == undefined) {
+				var val = '<span class="muted">...</span>';
+				coldiv.html(val);
+			}
+			else {
+				//if(options.debug) { console.log("has row"); }
+				var val;
+				if(typeof row[column] === "function") {
+					val = row[column]();
+				}
+				else {
+					val = row[column];
+				}
+				coldiv.text(val);
+			}
+		}
+		coldiv.on("mousedown", cursor.cellclick).on("mousedown", selection.initdrag);
+		return coldiv;
+	}
+
+	function drawRow(row, rowidx) {
+		
 		var rowdiv = $('<tr class="spret-row">');
-		if(idx > data.totalCount()) {
+		if(rowidx > data.totalCount()) {
 			rowdiv = null;
 			//console.log("limit");
 		}
 		
 		if(options.showIndex) {
-			$('<td class="spret-col spret-idx">').text(idx).appendTo(rowdiv);
+			$('<td class="spret-col spret-idx">').text(rowidx).appendTo(rowdiv);
 		}
 
 		if(row == undefined) {
 			if(data.data != null) {
-				row = data.data()[idx];
+				row = data.data()[rowidx];
 			}
 		}
 
-		$.each(columns, function(i, prop) {
-			var coldiv = $('<td class="spret-col">').attr("data-col", i);
-			if(!!originalColumns[i].formatter) {
-				///////////////////////////////formatter///////////////////////
-				var html = originalColumns[i].formatter.html().toString().trim();
-				var fnbody = html.split("{{")[1].split("}}")[0];
-				var fn = new Function("irow", "prop", fnbody);
-				//console.log(fn(idx, prop));
-
-				html = html.split("{{")[0] + fn(idx, prop) + html.split("}}")[1];
-
-				coldiv.html(html).appendTo(rowdiv);
-				////////////////////////////////////////////////////////////////
-			}
-			else {
-
-				if(!!options.colDataBind) {
-					coldiv.attr("data-bind", options.colDataBind(idx, i, prop))
-				}
-				
-				if(row == undefined) {
-					var val = '<span class="muted">...</span>';
-					coldiv.html(val).appendTo(rowdiv);
-				}
-				else {
-					//if(options.debug) { console.log("has row"); }
-					var val;
-					if(typeof row[prop] === "function") {
-						val = row[prop]();
-					}
-					else {
-						val = row[prop];
-					}
-					coldiv.text(val).appendTo(rowdiv);
-				}
-			}
-			coldiv.on("mousedown", cursor.cellclick).on("mousedown", selection.initdrag);
+		//console.log("drawRow", columns)
+		$.each(columns, function(colidx, prop) {
+			var coldiv = drawCol(rowidx, prop, row)
+			coldiv.on("mousedown", cursor.cellclick).on("mousedown", selection.initdrag).appendTo(rowdiv);
 		});
 
 		if(rowdiv != null) {
-			rowdiv.attr("data-row", idx);
-			virtualization.rowsCache[idx] = rowdiv;
+			rowdiv.attr("data-row", rowidx);
+			virtualization.rowsCache[rowidx] = rowdiv;
 		}
 
 		return rowdiv;
