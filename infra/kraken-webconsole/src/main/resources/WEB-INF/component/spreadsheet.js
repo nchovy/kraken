@@ -974,7 +974,7 @@ function Spret(el, data, options) {
 		}
 		
 		if(options.showIndex) {
-			$('<td class="spret-col spret-idx">').text(rowidx).appendTo(rowdiv);
+			$('<td class="spret-col spret-idx">').text(rowidx + 1).appendTo(rowdiv);
 		}
 
 		if(row == undefined) {
