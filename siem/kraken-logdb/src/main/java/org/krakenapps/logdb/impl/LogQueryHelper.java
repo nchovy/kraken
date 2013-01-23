@@ -17,6 +17,7 @@ package org.krakenapps.logdb.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,10 +36,30 @@ public class LogQueryHelper {
 	public static List<Object> getQueries(LogQueryService service) {
 		List<Object> result = new ArrayList<Object>();
 		for (LogQuery lq : service.getQueries()) {
+			Long sec = null;
+			if (lq.getLastStarted() != null)
+				sec = new Date().getTime() - lq.getLastStarted().getTime();
+
+			List<Object> commands = new ArrayList<Object>();
+
+			if (lq.getCommands() != null) {
+				for (LogQueryCommand cmd : lq.getCommands()) {
+					Map<String, Object> c = new HashMap<String, Object>();
+					c.put("command", cmd.getQueryString());
+					c.put("status", cmd.getStatus());
+					c.put("push_count", cmd.getPushCount());
+					commands.add(c);
+				}
+			}
+
 			Map<String, Object> m = new HashMap<String, Object>();
 			m.put("id", lq.getId());
 			m.put("query_string", lq.getQueryString());
 			m.put("is_end", lq.isEnd());
+			m.put("last_started", lq.getLastStarted());
+			m.put("elapsed", sec);
+			m.put("commands", commands);
+
 			result.add(m);
 		}
 		return result;

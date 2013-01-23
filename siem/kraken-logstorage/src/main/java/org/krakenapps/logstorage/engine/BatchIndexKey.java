@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.index;
+package org.krakenapps.logstorage.engine;
 
 /**
  * @since 0.9
  * @author xeraph
  */
-class InvertedIndexKey {
-	public String term;
-	public String key;
+class BatchIndexKey {
+	public String tableName;
+	public String indexName;
 
-	public InvertedIndexKey(String term, String key) {
-		this.term = term;
-		this.key = key;
+	public BatchIndexKey(String tableName, String indexName) {
+		this.tableName = tableName;
+		this.indexName = indexName;
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((key == null) ? 0 : key.hashCode());
-		result = prime * result + ((term == null) ? 0 : term.hashCode());
+		result = prime * result + ((indexName == null) ? 0 : indexName.hashCode());
+		result = prime * result + ((tableName == null) ? 0 : tableName.hashCode());
 		return result;
 	}
 
@@ -45,18 +45,17 @@ class InvertedIndexKey {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		InvertedIndexKey other = (InvertedIndexKey) obj;
-		if (key == null) {
-			if (other.key != null)
+		BatchIndexKey other = (BatchIndexKey) obj;
+		if (indexName == null) {
+			if (other.indexName != null)
 				return false;
-		} else if (!key.equals(other.key))
+		} else if (!indexName.equals(other.indexName))
 			return false;
-		if (term == null) {
-			if (other.term != null)
+		if (tableName == null) {
+			if (other.tableName != null)
 				return false;
-		} else if (!term.equals(other.term))
+		} else if (!tableName.equals(other.tableName))
 			return false;
 		return true;
 	}
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,17 @@
  */
 package org.krakenapps.logstorage;
 
-public interface LogStorageMonitor extends Runnable {
-	int getMinFreeSpaceValue();
+import java.util.List;
+import java.util.Map;
 
-	DiskSpaceType getMinFreeSpaceType();
+/**
+ * @since 0.9
+ * @author xeraph
+ */
+public interface IndexTokenizerFactory {
+	String getName();
 
-	DiskLackAction getDiskLackAction();
+	List<IndexConfigSpec> getConfigSpecs();
 
-	void setMinFreeSpace(int value, DiskSpaceType type);
-
-	void setDiskLackAction(DiskLackAction action);
-
-	void forceRetentionCheck();
-
-	void registerDiskLackCallback(DiskLackCallback callback);
-
-	void unregisterDiskLackCallback(DiskLackCallback callback);
+	IndexTokenizer newIndexTokenizer(Map<String, String> config);
 }

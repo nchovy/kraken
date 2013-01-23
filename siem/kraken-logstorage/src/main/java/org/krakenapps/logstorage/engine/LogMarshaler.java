@@ -13,16 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.index;
+package org.krakenapps.logstorage.engine;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+
+import org.krakenapps.codec.EncodingRule;
+import org.krakenapps.logstorage.Log;
+import org.krakenapps.logstorage.file.LogRecord;
 
 /**
  * @since 0.9
  * @author xeraph
  */
-public interface InvertedIndexCursor {
-	boolean hasNext();
+class LogMarshaler {
+	private LogMarshaler() {
+	}
 
-	long next() throws IOException;
+	public static Log convert(String tableName, LogRecord logdata) {
+		ByteBuffer bb = ByteBuffer.wrap(logdata.getData().array());
+		bb.position(logdata.getData().position());
+		bb.limit(logdata.getData().limit());
+		Map<String, Object> m = EncodingRule.decodeMap(bb);
+		return new Log(tableName, logdata.getDate(), logdata.getId(), m);
+	}
 }

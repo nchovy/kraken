@@ -23,30 +23,41 @@ import org.krakenapps.logstorage.file.BufferedRandomAccessFileReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 public class InvertedIndexReader {
 	private final Logger logger = LoggerFactory.getLogger(InvertedIndexReader.class.getName());
 
 	private boolean closed;
-	private File indexFile;
-	private File dataFile;
+	private InvertedIndexFileSet files;
 
 	private BufferedRandomAccessFileReader indexReader;
 	private BufferedRandomAccessFileReader dataReader;
 
-	public InvertedIndexReader(File indexFile, File dataFile) throws IOException {
-		this.indexFile = indexFile;
-		this.dataFile = dataFile;
+	private int posBodyOffset;
 
-		indexReader = new BufferedRandomAccessFileReader(indexFile);
-		dataReader = new BufferedRandomAccessFileReader(dataFile);
+	public InvertedIndexReader(InvertedIndexFileSet files) throws IOException {
+		this(files.getIndexFile(), files.getDataFile());
+	}
+
+	public InvertedIndexReader(File indexFile, File dataFile) throws IOException {
+		// validate index file headers
+		posBodyOffset = InvertedIndexUtil.readHeader(indexFile).getBodyOffset();
+		InvertedIndexUtil.readHeader(dataFile);
+
+		this.files = new InvertedIndexFileSet(indexFile, dataFile);
+		this.indexReader = new BufferedRandomAccessFileReader(files.getIndexFile());
+		this.dataReader = new BufferedRandomAccessFileReader(files.getDataFile());
 	}
 
 	public File getIndexFile() {
-		return indexFile;
+		return files.getIndexFile();
 	}
 
 	public File getDataFile() {
-		return dataFile;
+		return files.getDataFile();
 	}
 
 	public InvertedIndexCursor openCursor(String term) throws IOException {
@@ -82,11 +93,10 @@ public class InvertedIndexReader {
 			this.term = term;
 
 			// align
-			currentSegmentIndex = (indexFile.length() >> 3) - 1;
-
+			currentSegmentIndex = ((files.getIndexFile().length() - posBodyOffset) >> 3) - 1;
 			// backward segment traverse until term matches
 			Long postingCount = null;
-			while (currentSegmentIndex > 0) {
+			while (currentSegmentIndex >= 0) {
 				postingCount = loadSegment(currentSegmentIndex);
 				if (postingCount != null) {
 					currentPostingCount = postingCount;
@@ -113,35 +123,37 @@ public class InvertedIndexReader {
 		}
 
 		@Override
-		public boolean hasNext() throws IOException {
+		public boolean hasNext() {
 			if (closed) {
-				String msg = "index reader is already closed, index=" + indexFile.getAbsolutePath() + ", data="
-						+ dataFile.getAbsolutePath();
-				throw new IOException(msg);
+				return false;
 			}
 
-			if (prefetch != null)
-				return true;
+			try {
+				if (prefetch != null)
+					return true;
 
-			if (remaining <= 0) {
-				if (!loadNextSegment())
-					return false;
+				if (remaining <= 0) {
+					if (!loadNextSegment())
+						return false;
+				}
+
+				if (remaining == currentPostingCount) {
+					prefetch = nextId();
+				} else {
+					prefetch = last - nextId();
+				}
+
+				last = prefetch;
+				remaining--;
+
+				return prefetch != null;
+			} catch (IOException e) {
+				return false;
 			}
-
-			if (remaining == currentPostingCount) {
-				prefetch = nextId();
-			} else {
-				prefetch = last - nextId();
-			}
-
-			last = prefetch;
-			remaining--;
-
-			return prefetch != null;
 		}
 
 		private Long loadSegment(long segmentIndex) throws IOException {
-			indexReader.seek(segmentIndex << 3);
+			indexReader.seek(posBodyOffset + (segmentIndex << 3));
 			dataEndOffset = indexReader.readLong();
 			dataPos = dataEndOffset;
 			logger.debug("kraken logstorage: index data end offset [{}]", dataEndOffset);
@@ -169,11 +181,13 @@ public class InvertedIndexReader {
 				long termCount = nextLong();
 				long offset = nextLong();
 
-				if (t.equalsIgnoreCase(term)) {
+				int diff = t.compareTo(term);
+				if (diff == 0) {
 					postingOffset = offset;
 					postingCount = termCount;
 					break;
-				}
+				} else if (diff < 0)
+					break;
 
 				if (logger.isDebugEnabled())
 					logger.debug("kraken logstorage: term {}, count {}, offset {}", new Object[] { t, termCount, offset });
@@ -198,12 +212,12 @@ public class InvertedIndexReader {
 		@Override
 		public long next() throws IOException {
 			if (closed) {
-				String msg = "index reader is already closed, index=" + indexFile.getAbsolutePath() + ", data="
-						+ dataFile.getAbsolutePath();
+				String msg = "index reader is already closed, index=" + files.getIndexFile().getAbsolutePath() + ", data="
+						+ files.getDataFile().getAbsolutePath();
 				throw new IOException(msg);
 			}
 
-			if (prefetch == null)
+			if (!hasNext())
 				throw new NoSuchElementException();
 
 			long n = prefetch;

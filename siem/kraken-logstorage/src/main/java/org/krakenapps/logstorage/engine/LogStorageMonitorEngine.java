@@ -1,3 +1,18 @@
+/*
+ * Copyright 2011 Future Systems
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.krakenapps.logstorage.engine;
 
 import java.io.File;
@@ -18,6 +33,8 @@ import org.krakenapps.cron.PeriodicJob;
 import org.krakenapps.logstorage.DiskLackAction;
 import org.krakenapps.logstorage.DiskLackCallback;
 import org.krakenapps.logstorage.DiskSpaceType;
+import org.krakenapps.logstorage.LogIndexer;
+import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageMonitor;
 import org.krakenapps.logstorage.LogTableRegistry;
@@ -41,7 +58,13 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 	private LogStorage storage;
 
 	@Requires
+	private LogIndexer indexer;
+
+	@Requires
 	private ConfigService conf;
+
+	// last check time, check retention policy and purge files for every hour
+	private long lastPurgeCheck;
 
 	private DiskSpaceType minFreeSpaceType;
 	private int minFreeSpaceValue;
@@ -107,12 +130,17 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 		diskLackCallbacks.remove(callback);
 	}
 
+	@Override
+	public void forceRetentionCheck() {
+		checkRetentions(true);
+	}
+
 	private boolean isDiskLack() {
 		File dir = storage.getDirectory();
 		long usable = dir.getUsableSpace();
 		long total = dir.getTotalSpace();
 
-		logger.trace("kraken logstorage: check disk lack, {} {}", minFreeSpaceValue, minFreeSpaceType);
+		logger.trace("kraken logstorage: check {} {} free space", minFreeSpaceValue, minFreeSpaceType.toString().toLowerCase());
 		if (minFreeSpaceType == DiskSpaceType.Percentage) {
 			int percent = (int) (usable * 100 / total);
 			if (percent < minFreeSpaceValue) {
@@ -138,6 +166,53 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 	}
 
 	private void runOnce() {
+		checkRetentions(false);
+		checkDiskLack();
+	}
+
+	private void checkRetentions(boolean force) {
+		long now = System.currentTimeMillis();
+		if (!force && now - lastPurgeCheck < 3600 * 1000)
+			return;
+
+		for (String tableName : tableRegistry.getTableNames()) {
+			checkAndPurgeFiles(tableName);
+		}
+
+		lastPurgeCheck = now;
+	}
+
+	private void checkAndPurgeFiles(String tableName) {
+		LogRetentionPolicy p = storage.getRetentionPolicy(tableName);
+		if (p == null || p.getRetentionDays() == 0) {
+			logger.debug("kraken logstorage: no retention policy for table [{}]", tableName);
+			return;
+		}
+
+		int retentionDays = p.getRetentionDays();
+
+		// purge tables
+		Date logBaseline = storage.getPurgeBaseline(tableName);
+		if (logBaseline != null)
+			storage.purge(tableName, null, logBaseline);
+
+		// purge index files
+		for (String indexName : indexer.getIndexNames(tableName)) {
+			Date indexBaseline = indexer.getPurgeBaseline(tableName, indexName);
+			if (indexBaseline == null)
+				continue;
+
+			if (logger.isTraceEnabled()) {
+				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				logger.trace("kraken logstorage: table [{}] retention days [{}] purging index [{}] baseline [{}]", new Object[] {
+						tableName, retentionDays, indexName, dateFormat.format(indexBaseline) });
+			}
+
+			indexer.purge(tableName, indexName, null, indexBaseline);
+		}
+	}
+
+	private void checkDiskLack() {
 		if (isDiskLack()) {
 			logger.warn("kraken logstorage: not enough disk space, current minimum free space config [{}] {}", minFreeSpaceValue,
 					(minFreeSpaceType == DiskSpaceType.Percentage ? "%" : "MB"));

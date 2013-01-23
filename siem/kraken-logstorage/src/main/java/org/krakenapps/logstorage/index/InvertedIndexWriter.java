@@ -23,14 +23,20 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 public class InvertedIndexWriter {
 	private final Logger logger = LoggerFactory.getLogger(InvertedIndexWriter.class.getName());
 	private final int FLUSH_THRESHOLD = 10000;
@@ -42,8 +48,7 @@ public class InvertedIndexWriter {
 
 	private boolean closed;
 
-	private File indexFile;
-	private File dataFile;
+	private InvertedIndexFileSet files;
 	private OutputStream indexStream;
 	private OutputStream dataStream;
 
@@ -52,19 +57,58 @@ public class InvertedIndexWriter {
 
 	private byte[] longbuf = new byte[8];
 
+	private Date lastFlush = new Date();
+
 	public InvertedIndexWriter(File indexFile, File dataFile) throws IOException {
+		this(new InvertedIndexFileSet(indexFile, dataFile));
+	}
+
+	public InvertedIndexWriter(InvertedIndexFileSet files) throws IOException {
 		this.postings = new HashMap<String, List<InvertedIndexItem>>();
-		this.indexFile = indexFile;
-		this.dataFile = dataFile;
-		this.indexStream = new FileOutputStream(indexFile, true);
-		this.dataStream = new BufferedOutputStream(new FileOutputStream(dataFile, true));
-		this.dataLength = dataFile.length();
+
+		if (isEmptyFile(files.getIndexFile()) && isEmptyFile(files.getDataFile())) {
+			// write file header if empty
+			Map<String, Object> indexHeaders = new HashMap<String, Object>();
+			indexHeaders.put("version", 1);
+			indexHeaders.put("type", "pos");
+			indexHeaders.put("created", new Date());
+
+			Map<String, Object> dataHeaders = new HashMap<String, Object>();
+			dataHeaders.put("version", 1);
+			dataHeaders.put("type", "seg");
+			dataHeaders.put("created", new Date());
+
+			InvertedIndexHeader indexHeader = new InvertedIndexHeader(indexHeaders);
+			InvertedIndexHeader dataHeader = new InvertedIndexHeader(dataHeaders);
+
+			InvertedIndexUtil.writeHeader(indexHeader, files.getIndexFile());
+			InvertedIndexUtil.writeHeader(dataHeader, files.getDataFile());
+		} else {
+			// check file header
+			InvertedIndexUtil.readHeader(files.getIndexFile());
+			InvertedIndexUtil.readHeader(files.getDataFile());
+		}
+
+		// open file stream
+		this.indexStream = new FileOutputStream(files.getIndexFile(), true);
+		this.dataStream = new BufferedOutputStream(new FileOutputStream(files.getDataFile(), true));
+		this.dataLength = files.getDataFile().length();
+	}
+
+	private boolean isEmptyFile(File f) {
+		if (!f.exists())
+			return true;
+
+		if (f.isFile() && f.length() == 0)
+			return true;
+
+		return false;
 	}
 
 	public void write(InvertedIndexItem item) throws IOException {
 		if (closed) {
-			String msg = "inverted index writer is closed: index=" + indexFile.getAbsolutePath() + ", data="
-					+ dataFile.getAbsolutePath();
+			String msg = "inverted index writer is closed: index=" + files.getIndexFile().getAbsolutePath() + ", data="
+					+ files.getDataFile().getAbsolutePath();
 			throw new IllegalStateException(msg);
 		}
 
@@ -93,7 +137,10 @@ public class InvertedIndexWriter {
 		if (postings.isEmpty())
 			return;
 
-		Map<String, Term> terms = new HashMap<String, Term>();
+		// mark last flush time
+		lastFlush = new Date();
+
+		Map<String, Term> terms = new TreeMap<String, Term>();
 
 		// posting block length
 		long pblen = 0;
@@ -150,7 +197,7 @@ public class InvertedIndexWriter {
 		dataLength += plen + tlen + tblen + pblen + 1;
 
 		// write end offset of block to index
-		prepareLong(dataLength - 1, longbuf);
+		InvertedIndexUtil.prepareLong(dataLength - 1, longbuf);
 		logger.debug("kraken logstorage: writing index data offset [{}]", (dataLength - 1));
 		indexStream.write(longbuf);
 
@@ -198,10 +245,14 @@ public class InvertedIndexWriter {
 		return (63 - Long.numberOfLeadingZeros(value)) / 7 + 1;
 	}
 
+	public Date getLastFlush() {
+		return lastFlush;
+	}
+
 	public void close() {
 		if (closed)
 			return;
-		
+
 		closed = true;
 
 		try {
@@ -220,11 +271,6 @@ public class InvertedIndexWriter {
 			dataStream = null;
 		} catch (IOException e) {
 		}
-	}
-
-	private void prepareLong(long l, byte[] b) {
-		for (int i = 0; i < 8; i++)
-			b[i] = (byte) ((l >> ((7 - i) * 8)) & 0xff);
 	}
 
 	private static class Term {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage;
+package org.krakenapps.logstorage.index;
 
-public interface LogStorageMonitor extends Runnable {
-	int getMinFreeSpaceValue();
+import java.io.File;
 
-	DiskSpaceType getMinFreeSpaceType();
+/**
+ * @since 0.9
+ * @author xeraph
+ */
+public class InvertedIndexFileSet {
+	private File indexFile;
+	private File dataFile;
 
-	DiskLackAction getDiskLackAction();
+	public InvertedIndexFileSet(File indexFile, File dataFile) {
+		this.indexFile = indexFile;
+		this.dataFile = dataFile;
+	}
 
-	void setMinFreeSpace(int value, DiskSpaceType type);
+	public File getIndexFile() {
+		return indexFile;
+	}
 
-	void setDiskLackAction(DiskLackAction action);
-
-	void forceRetentionCheck();
-
-	void registerDiskLackCallback(DiskLackCallback callback);
-
-	void unregisterDiskLackCallback(DiskLackCallback callback);
+	public File getDataFile() {
+		return dataFile;
+	}
 }

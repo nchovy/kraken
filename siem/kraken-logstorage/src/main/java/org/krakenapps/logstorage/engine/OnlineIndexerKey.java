@@ -13,27 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.krakenapps.logstorage.index;
+package org.krakenapps.logstorage.engine;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * @since 0.9
  * @author xeraph
  */
-class InvertedIndexKey {
-	public String term;
-	public String key;
+class OnlineIndexerKey {
+	public int indexId;
+	public Date day;
 
-	public InvertedIndexKey(String term, String key) {
-		this.term = term;
-		this.key = key;
+	public int tableId;
+	public String tableName;
+	public String indexName;
+
+	public OnlineIndexerKey(int indexId, Date day, int tableId, String tableName, String indexName) {
+		this.indexId = indexId;
+		this.day = day;
+
+		this.tableId = tableId;
+		this.tableName = tableName;
+		this.indexName = indexName;
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((key == null) ? 0 : key.hashCode());
-		result = prime * result + ((term == null) ? 0 : term.hashCode());
+		result = prime * result + ((day == null) ? 0 : day.hashCode());
+		result = prime * result + indexId;
 		return result;
 	}
 
@@ -45,18 +56,21 @@ class InvertedIndexKey {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		InvertedIndexKey other = (InvertedIndexKey) obj;
-		if (key == null) {
-			if (other.key != null)
+		OnlineIndexerKey other = (OnlineIndexerKey) obj;
+		if (day == null) {
+			if (other.day != null)
 				return false;
-		} else if (!key.equals(other.key))
+		} else if (!day.equals(other.day))
 			return false;
-		if (term == null) {
-			if (other.term != null)
-				return false;
-		} else if (!term.equals(other.term))
+		if (indexId != other.indexId)
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return "table=" + tableName + ", index=" + indexName + ", day=" + dateFormat.format(day);
 	}
 
 }
