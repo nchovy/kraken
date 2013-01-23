@@ -8,49 +8,6 @@
 	<link href="/css/spreadsheet.css" rel="stylesheet"/>
 	<link href="/css/common.css" rel="stylesheet"/>
 	<link href="logquery.css" rel="stylesheet"/>
-	<style>
-	#comp { 
-		border: 1px solid #ccc;
-		width: 800px;
-		height: 300px;
-	}
-
-	.mychart {
-		shape-rendering: crispEdges;
-	}
-
-	.chartArea rect {
-		fill: #5E83A6;
-		fill-opacity: 0.8;
-	}
-
-	.chartArea rect:hover {
-		fill: #104B72;
-		fill-opacity: 0.9;
-	}
-
-	.mychart text {
-		font-size: 8pt;
-		font-family: 'Malgun Gothic';
-		text-rendering: geometricPrecision;
-	}
-
-	text.innerLabel {
-		fill: black;
-		text-anchor: start;
-	}
-
-	text.axisLabel {
-		fill: black;
-		text-anchor: end;
-	}
-
-	line.axisLine {
-		stroke: #ccc;
-	}
-
-	</style>
-
 	<script type="text/javascript" data-main="logquery" src="/require.js"></script>
 
 	<script type="text/html" id="qb">
@@ -58,77 +15,263 @@
 			<div class="control-group">
 				<div class="input-append">
 					<input type="search" class="search-query" style="width: 600px" data-bind="value: input" placeholder="" />
-					<button type="submit" class="btn btn-primary">Search</button>
+					<button type="submit" class="btn btn-primary"><i class="icon-search icon-white"></i> Search</button>
 				</div>
 				<button type="button" class="btn btn-warning" data-bind="click: stop, visible: nowQuerying">Stop</button>
 				<div class="btn-group">
-					<button class="btn">Save</button>
-					<button class="btn">Schedule</button>
+					<button class="btn" id="btnOpenModalSaveQuery"><i class="icon-star"></i> Bookmark</button>
+					<button class="btn" id="btnOpenScheduleQuery"><i class="icon-ok-circle"></i> Schedule</button>
 				</div>
 			</div>
 		</form>
 	</script>
 
-	<script type="text/html" id="tmpl.default.Kuro.Chart.Column">
-		<div class="mychart">
-			<svg viewBox="0 0 1000 200">
-				<g transform="translate(40, 15)">
-					<g class="axisArea" data-bind="foreach: { data: refLineY, afterAdd: addRefLineY, beforeRemove: removeRefLineY }">
-						<line class="axisLine" data-bind="attr: { 'y1': $data.scaled, 'y2': $data.scaled }" x1="0" x2="1000"></line>
-						<text class="axisLabel" data-bind="attr: { 'y': $data.scaled }, text: ($root.refLineYMax() - $data.value())" dx="-5" dy="4" x="0"></text>			
-					</g>
-					<g class="chartArea" data-bind="foreach: { data: items, afterAdd: addItem }">
-						<rect data-bind="attr: { 'x': bar.posX, 'height': bar.height(), 'y': bar.posY() }, event: { mouseover: $root.over.bind($data), mouseout: $root.out.bind($data) }" width="40"></rect>
-						<text data-bind="attr: { 'x': bar.posX }, text: bar.label" class="innerLabel" y="162"></text>
-						<line class="axisLine" y1="140" y2="150" data-bind="attr: { 'x1': bar.posX, 'x2': bar.posX } "></line>
-					</g>
-					<text class="innerLabel" y="175" x="0">2012-06-24</text>
-				</g>
-			</svg>
-			<div class="tooltip fade top" style="top: 65px; left: 306.5px; display: block;">
-				<div class="tooltip-arrow"></div>
-				<div class="tooltip-inner"></div>
+	<script type="text/html" id="tmpl.default.Kuro.List">
+		<div class="popover top" style="position: fixed; height: 140px; width: 350px">
+			<div class="arrow"></div>
+			<i class="icon-remove pull-right"></i>
+			<h3 class="popover-title" data-bind="text: $root.singleSelected().activeQuery"></h3>
+			<div class="popover-content" style="position: relative; height: 75px">
+				<p data-bind="text: $root.singleSelected().activeQuery"></p>
+				<button class="btn btn-primary">View Result</button>
+				<button class="btn">Status</button>
 			</div>
 		</div>
+		<ul data-bind="foreach: items" class="nav nav-pills nav-stacked">
+			<li data-bind="css: { 'active': $data.isSelected }">
+				<a href="#" data-bind="click: function() { $parent.select.callFn($parent, $data, event)(); }">
+					<input type="checkbox" data-bind="visible: $parent.isEditMode, checked: $data.isSelected"/>
+					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px 5px; border: 1px solid #ccc"></span>
+					<span style="width: 30px" data-bind="text: $data.activeId"></span>
+					<span data-bind="text: $data.activeQuery"></span>
+					<small>3 hours ago</small>
+					<button data-bind="visible: !$parent.isEditMode()" class="btn btn-mini btn-info pull-right" style="margin-top: -5px"><i class="icon-chevron-right icon-white"></i></button>
+					<span class="pull-right" style="width: 50px; color: red" data-bind="text: $data.isSelected"></span>
+					<span class="pull-right" style="width: 50px; color: blue" data-bind="text: $data.isEnd"></span>
+					<span class="pull-right" style="width: 100px">Scheduled</span>
+				</a>
+			</li>
+		</ul>
 	</script>
-
-	<!-- <text data-bind="attr: { 'transform': 'translate(' + (bar.posX) + ', 0) rotate(45, 30, 200)' }, text: bar.label" class="innerLabel" y="170"></text> -->
-
 </head>
 <body>
+
+
+<aside id="modalSaveQuery" class="modal hidden">
+	<form class="form-horizontal">
+		<legend>Save Query</legend>
+		<div class="control-group">
+			<label class="control-label">Name</label>
+			<div class="controls">
+				<input type="text">
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Description</label>
+			<div class="controls">
+				<textarea></textarea>
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Query</label>
+			<div class="controls">
+				<textarea></textarea>
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Share</label>
+			<div class="controls">
+				<input type="checkbox">
+				<input type="text">
+			</div>
+		</div>
+		<div class="control-group">
+			<div class="controls">
+				<button class="btn btn-primary" id="btnSaveQuery">Save Query</button>
+				<button class="btn modal-close">Close</button>
+			</div>
+		</div>
+	</form>
+</aside>
+
+<aside id="modalDownload" class="modal hidden">
+	<form class="form-horizontal">
+		<legend>Download Result</legend>
+		<div class="control-group">
+			<label class="control-label">File Format</label>
+			<div class="controls">
+				<label class="radio inline span1">
+					<input type="radio" name="optFormat" id="optFormatCsv" value="csv" checked> CSV
+				</label>
+				<label class="radio inline span2">
+					<input type="radio" name="optFormat" id="optFormatExcel" value="excel"> Excel XML
+				</label>
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Encoding</label>
+			<div class="controls">
+				<label class="radio inline span1">
+					<input type="radio" name="optEncoding" id="optEncodingUtf8" value="utf8" checked> UTF-8
+				</label>
+				<label class="radio inline span1">
+					<input type="radio" name="optEncoding" id="optEncodingCp949" value="cp949"> CP949
+				</label>
+			</div>
+		</div>
+		<div class="control-group">
+			<label class="control-label">Range</label>
+			<div class="controls">
+				<input type="number" class="span2"> ~ <input type="number" class="span2">
+			</div>
+		</div>
+		<div class="control-group">
+			<div class="controls">
+				<button class="btn btn-primary" id="btnDownloadResult">Download</button>
+				<button class="btn modal-close">Close</button>
+			</div>
+		</div>
+	</form>
+</aside>
+
+
 <div class="navbar navbar-fixed-top">
 	<div class="navbar-inner">
-		<a class="brand" href="#">Log Query</a>
+		<a class="brand" href="#" style="margin-left: -10px">Log Query</a>
+		<ul class="nav">
+			<li class="active">
+				<a href="#">
+					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
+					<span>local\interpark-syslog</span>
+					<span>
+						<i class="icon-remove"></i>
+					</span>
+				</a>
+			</li>
+			<li>
+				<a href="#">
+					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
+					<span>local\interpark-syslog</span>
+					<span>
+						<i class="icon-remove"></i>
+					</span>
+				</a>
+			</li>
+		</ul>
 	</div>
 </div>
 
-<div class="toolbar">
-	<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
-		<div class="btn-group">
-			<button class="btn">Visualize</button>
-			<button class="btn">Download</button>
+<div id="box-main">
+	<div id="box-query">
+		<div id="box-query-and-result">
+			<div id="box-toolbar">
+				<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
+					<div class="btn-group">
+						<button class="btn btn-small">Visualize</button>
+						<button class="btn btn-small" id="btnOpenModalDownload">Download</button>
+					</div>
+					<div class="btn-group">
+						<button class="btn btn-small">Queueing</button>
+						<button class="btn btn-small">Show Running</button>
+					</div>
+					<div class="btn-group">
+						<button class="btn btn-small">Save Result</button>
+						<button class="btn btn-small">Load Result</button>
+					</div>
+					<div class="btn-group">
+						<button class="btn btn-small">?</button>
+					</div>
+					<div class="btn-group pull-right" style="margin-right: 10px">
+						<button id="dododo3" class="btn btn-mini"><i class="icon-minus"></i></button>
+						<button class="btn btn-mini"><i class="icon-remove"></i></button>
+					</div>
+				</div>
+				<div id="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: qb"></div>
+			</div>
+			<div id="box-result-cont">
+				<div id="box-result"></div>
+			</div>
 		</div>
-		<div class="btn-group">
-			<button class="btn">Queueing</button>
-			<button class="btn">Show Running</button>
-		</div>
-		<div class="btn-group">
-			<button class="btn">Save Result</button>
-			<button class="btn">Load Result</button>
-		</div>
-		<div class="btn-group">
-			<button class="btn">?</button>
-		</div>
-		<div class="btn-group">
-			<button id="dododo" class="btn">change index 1</button>
-			<button id="dododo2" class="btn">add item</button>
+		<div id="box-timeline" class="white">
+			<!--
+			<svg width="200" height="600" style="position:absolute; top:80px">
+				<path id="scalepath" d="M 0,60L 160,10L 160,515L 0,520L 0,60 Z" width="200" height="400"/>
+			</svg>
+			-->
+			<div id="timeline-toolbar">
+				<div class="btn-group pull-left" style="margin: 8px 0 0 10px">
+					<!--
+					<div class="btn btn-inverse btn-small"><i class="icon-zoom-in icon-white"></i></div>
+					<div class="btn btn-inverse btn-small"><i class="icon-zoom-out icon-white"></i></div>
+					-->
+					<div id="btnTimelineZoomIn" class="btn btn-mini"><i class="icon-zoom-in"></i></div>
+					<div id="btnTimelineZoomOut" class="btn btn-mini"><i class="icon-zoom-out"></i></div>
+					<div id="btnTimelineZoom" class="btn btn-mini">c</div>
+				</div>
+				<div class="pull-right" style="margin: 10px; font-weight: bold; font-size: 9pt" id="divTotalCount">0 log</div>
+			</div>
+			<div id="timeline-chart">
+			</div>
+			<div id="timeline-popup" style="display: none">
+				<ul>
+					<li><a tabindex="-1" href="#">Action</a></li>
+					<li><a tabindex="-1" href="#">Another action</a></li>
+					<li><a tabindex="-1" href="#">Something else</a></li>
+					<li><a tabindex="-1" href="#">Separated link</a></li>
+				</ul>
+			</div>
 		</div>
 	</div>
-	<div id="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: qb"></div>
-</div>
-<div id="qtimeline" data-bind="Kuro.Chart.Column: self" class="container ct"></div>
-<div class="container cq">
-	<div id="qresult"></div>
+
+	<div id="box-query-status">
+		<div style="height: 28px; padding-top:1px">
+			<div class="pull-left" style="padding-left: 10px">
+				<div class="btn-group">
+					<button class="btn btn-small dropdown-toggle" data-toggle="dropdown">
+						<span class="ltext">실행중인 쿼리 목록</span>
+						<span class="caret"></span>
+					</button>
+					<ul id="pane-change" class="dropdown-menu">
+						<li><a data-target="listQueries" tabindex="-1" href="#">실행중인 쿼리 목록</a></li>
+						<li><a data-target="listQueryStatus" tabindex="-1" href="#">처리 상태</a></li>
+					</ul>
+				</div>
+			</div>
+			<div class="pull-right btn-group">
+				<button class="btn btn-mini"><i class="icon-fullscreen"></i></button>
+				<button class="btn btn-mini"><i class="icon-remove"></i></button>
+			</div>
+			<div style="clear: both"></div>
+		</div>
+		<div class="pane" id="listQueries">
+			<div class="status-header">
+				<span>Query</span>
+				<small>Time</small>
+				<div class="pane-toolbar pull-right">
+					<div class="mode-bar mode-default">
+						<button class="toggle-edit pull-right btn btn-small" style="width: 50px">Edit</button>
+					</div>
+					<div class="mode-bar mode-edit" style="display:none">
+						<button id="btnRemoveQueries" class="btn btn-danger btn-small">Remove</button>
+						<button class="toggle-default pull-right btn btn-info btn-small" style="width: 50px">Done</button>
+					</div>
+				</div>
+			</div>
+			<div class="status-body">
+				<div id="listQueriesBody" data-bind="Kuro.List: self"></div>
+			</div>
+		</div>
+		<div class="pane" id="listQueryStatus" style="display:none">
+			<div class="status-header">
+				<span>Console</span>
+			</div>
+			<div class="status-body">
+				<pre style="background-color: #333; color: #fff; height: 100%; margin: 0; border-radius: 0">table xtm (112321건 전달)
+search type == fw (92821건 전달)
+stats count by ip (0건 전달)</pre>
+			</div>
+		</div>
+	</div>
 </div>
 
 </body>

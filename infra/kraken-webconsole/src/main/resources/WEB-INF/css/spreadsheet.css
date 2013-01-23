@@ -1,4 +1,8 @@
-	::-webkit-scrollbar, .spret-scrollbar {
+	.spret-scrollbar {
+		background-color: #dfdfdf;
+	}
+
+	.spret ::-webkit-scrollbar {
 		background-color: #dfdfdf;
 	}
 
@@ -9,7 +13,13 @@
 		box-sizing: border-box;
 	}
 
-	::-webkit-scrollbar-thumb, .spret-thumb {
+	.spret-thumb {
+		box-sizing: border-box;
+		border: 1px solid #aaa;
+		background-color: #fff;
+	}
+
+	.spret ::-webkit-scrollbar-thumb {
 		box-sizing: border-box;
 		border: 1px solid #aaa;
 		background-color: #fff;
@@ -20,7 +30,11 @@
 		max-height: 100%;
 	}
 
-	::-webkit-scrollbar-thumb:hover, .spret-thumb:active, .spret-thumb:hover {
+	.spret-thumb:active, .spret-thumb:hover {
+		background-color: #999;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
 		background-color: #999;
 	}
 

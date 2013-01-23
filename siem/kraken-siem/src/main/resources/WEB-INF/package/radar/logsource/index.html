@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>Log Query</title>
+	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<link href="/package/system/orgchart/orgchart.css" rel="stylesheet"/>
+	
+	<script type="text/javascript" data-main="logsource" src="/require.js"></script>
+</head>
+
+<body>
+
+<div class="row-fluid">
+	<div class="split-left ani2">
+		<div class="navbar navbar-fixed-top ani2">
+			<div class="navbar-inner">
+				<ul class="nav">
+					<li class="active">
+						<a href="#">Group</a>
+					</li>
+					<li>
+						<a href="#">Type</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		<div class="toolbar">
+			<div class="btn-group">
+				<button class="btn">Select...</button>
+				<button class="btn" id="btnOpenModalAdd">Add</button>
+			</div>
+		</div>
+		<div id="treeview" data-bind="Kuro.Tree: self"></div>
+	</div>
+	<div class="split-right ani1">
+		<div class="navbar navbar-fixed-top ani1">
+			<div class="navbar-inner">
+				<a class="brand" href="#">&nbsp;&nbsp;NCHOVY</a>
+			</div>
+		</div>
+		<div id="acc" style="height: 100%">
+			<div id="grid1" style="height: 100%"></div>
+		</div>
+	</div>
+</div>
+
+</body>
+</html>

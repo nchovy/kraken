@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>로그 검색</title>
+	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+	<link href="/css/spreadsheet.css" rel="stylesheet"/>
+	<link href="/css/common.css" rel="stylesheet"/>
+	<link href="logquery.css" rel="stylesheet"/>
+
+	<script type="text/javascript" data-main="logquery" src="/require.js"></script>
+
+	<script type="text/html" id="qb">
+		<form class="form-search" data-bind="submit: search">
+			<div class="control-group">
+				<div class="input-append" style="display:block; width: 90%">
+					<input type="search" class="search-query" style="width: 90%" data-bind="value: input" placeholder="" />
+					<button type="submit" class="btn btn-primary">검색</button>
+				</div>
+			</div>
+		</form>
+	</script>
+
+
+</head>
+<body>
+<div class="navbar navbar-fixed-top">
+	<div class="navbar-inner">
+		<a class="brand" href="#">로그 검색</a>
+	</div>
+</div>
+
+<div class="toolbar">
+	<div id="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: qb"></div>
+</div>
+<div class="container">
+	<div id="qresult"></div>
+</div>
+
+</body>
+</html>

@@ -14,8 +14,7 @@ define(["/lib/jquery.js", "/lib/knockout-2.1.0.debug.js", "/component/kuro.js", 
 		},
 		update: function(el, viewModelAccr, allBindingAccr, viewModel, bindingCtx) {
 			var viewModel = viewModelAccr(), allBindings = allBindingAccr();
-			//console.log(viewModel);
-			//console.log(allBindings);
+			viewModel.el = el;
 			
 			var gridTemplateName = (!!allBindings.tmpl) ? allBindings.tmpl.id : "tmpl.default." + className;
 			var templateEngine = new ko.nativeTemplateEngine();
