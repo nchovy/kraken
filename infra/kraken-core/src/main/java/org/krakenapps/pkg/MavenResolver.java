@@ -194,6 +194,9 @@ public class MavenResolver {
 				}
 			}
 
+			if (localJar.getAbsolutePath().replace("\\", "/").equals(jarUrl.getPath().substring(1)))
+				return localJar;
+
 			// download jar
 			is = null;
 			try {

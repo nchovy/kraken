@@ -36,8 +36,7 @@
 							org.krakenapps.codec;version=2.2.0,
 							org.krakenapps.confdb;version=0.10.0,
 							org.krakenapps.confdb.file;version=0.10.0,
-							!org.junit,
-							*
+							!org.junit,*
 						</Import-Package>
 					</instructions>
 				</configuration>
@@ -83,6 +82,10 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-cron</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.jcraft</groupId>
+			<artifactId>jsch</artifactId>
 		</dependency>
 	</dependencies>
 </project>
