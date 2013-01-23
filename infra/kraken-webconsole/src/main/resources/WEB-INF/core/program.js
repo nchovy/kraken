@@ -62,9 +62,22 @@ define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/
 			$("title").text("^_^ " + program.name);
 		}
 
+		function findPackDllbyName(name) {
+			var dll;
+			$.each(packs, function(i, obj) {
+				if(obj.name === name) {
+					dll = obj.dll;
+					return false;
+				}
+			});
+
+			return dll;
+		}
+
 		this.launch = function(program) {
-			var localedUrl = "package/" + program.pack + "/" + program.path + "/index." + Locale.getCurrentLocale() + ".html";
-			var defUrl = "package/" + program.pack + "/" + program.path + "/index.html";
+			var packdll = findPackDllbyName(program.pack);
+			var localedUrl = "package/" + packdll + "/" + program.path + "/index." + Locale.getCurrentLocale() + ".html";
+			var defUrl = "package/" + packdll + "/" + program.path + "/index.html";
 			if(Locale.getCurrentLocale() == "en") {
 				localedUrl = defUrl;
 			}
