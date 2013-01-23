@@ -645,6 +645,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config add(Object doc) {
+		if (doc == null)
+			throw new IllegalArgumentException("doc cannot be null");
+
 		ConfigTransaction xact = beginTransaction();
 		try {
 			ConfigCollection collection = ensureCollection(xact, doc.getClass());
@@ -659,6 +662,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config add(Object doc, String committer, String log) {
+		if (doc == null)
+			throw new IllegalArgumentException("doc cannot be null");
+
 		ConfigTransaction xact = beginTransaction();
 		try {
 			ConfigCollection collection = ensureCollection(xact, doc.getClass());
@@ -673,6 +679,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config add(ConfigTransaction xact, Object doc) {
+		if (doc == null)
+			throw new IllegalArgumentException("doc cannot be null");
+
 		ConfigCollection collection = ensureCollection(xact, doc.getClass());
 		return collection.add(xact, PrimitiveConverter.serialize(doc, new CascadeUpdate(xact.getCache())));
 	}
@@ -710,6 +719,9 @@ public class FileConfigDatabase implements ConfigDatabase {
 	}
 
 	private boolean setUpdate(Config c, Object doc, ConfigTransaction xact) {
+		if (doc == null)
+			throw new IllegalArgumentException("doc cannot be null");
+
 		ConfigTransactionCache cache = null;
 		if (xact != null)
 			xact.getCache();
@@ -761,21 +773,29 @@ public class FileConfigDatabase implements ConfigDatabase {
 
 	@Override
 	public Config remove(Config c) {
+		if (c == null)
+			throw new IllegalArgumentException("config cannot be null");
 		return c.getCollection().remove(c);
 	}
 
 	@Override
 	public Config remove(Config c, boolean checkConflict) {
+		if (c == null)
+			throw new IllegalArgumentException("config cannot be null");
 		return c.getCollection().remove(c, checkConflict);
 	}
 
 	@Override
 	public Config remove(Config c, boolean checkConflict, String committer, String log) {
+		if (c == null)
+			throw new IllegalArgumentException("config cannot be null");
 		return c.getCollection().remove(c, checkConflict, committer, log);
 	}
 
 	@Override
 	public Config remove(ConfigTransaction xact, Config c, boolean checkConflict) {
+		if (c == null)
+			throw new IllegalArgumentException("config cannot be null");
 		return c.getCollection().remove(xact, c, checkConflict);
 	}
 
