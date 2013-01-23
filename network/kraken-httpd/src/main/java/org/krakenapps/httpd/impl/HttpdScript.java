@@ -202,11 +202,13 @@ public class HttpdScript implements Script {
 
 	@ScriptUsage(description = "attach filesystem path", arguments = {
 			@ScriptArgument(name = "context", type = "string", description = "http context name"),
+			@ScriptArgument(name = "servlet name", type = "string", description = "servlet name"),
 			@ScriptArgument(name = "prefix", type = "string", description = "path prefix without asterisk"),
 			@ScriptArgument(name = "filesystem path", type = "string", description = "filesystem path") })
 	public void attachDirectory(String[] args) {
-		String prefix = args[1];
-		String basePath = args[2];
+		String servletName = args[1];
+		String prefix = args[2];
+		String basePath = args[3];
 
 		if (prefix.contains("*")) {
 			context.println("prefix should not contain any asterisk");
@@ -228,8 +230,8 @@ public class HttpdScript implements Script {
 			}
 
 			ServletContext servletContext = ctx.getServletContext();
-			servletContext.addServlet("file", new FileResourceServlet(target));
-			ServletRegistration r = servletContext.getServletRegistration("file");
+			servletContext.addServlet(servletName, new FileResourceServlet(target));
+			ServletRegistration r = servletContext.getServletRegistration(servletName);
 			Set<String> failed = r.addMapping(buildUrlPattern(prefix));
 			if (failed != null && !failed.isEmpty()) {
 				context.println("cannot add following url patterns");
