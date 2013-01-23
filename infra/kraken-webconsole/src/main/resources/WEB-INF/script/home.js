@@ -48,18 +48,22 @@ var vmTasks;
 					$("#start").removeClass("active");
 
 					var found = false;
+					var foundprogram;
 					$.each(vmTasks.items(), function(i, obj){
 						if(obj.path === program.path) {
 							found = true;
+							foundprogram = obj;
 							return false;
 						}
 					})
 					
 					if(!found) {
 						vmTasks.add(program);
+						vmTasks.select(program);
 					}
-
-					vmTasks.select(program);
+					else {
+						vmTasks.select(foundprogram);
+					}
 				}
 
 				if(pack.name === "System") {
