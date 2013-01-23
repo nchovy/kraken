@@ -85,7 +85,10 @@ public class ServletDispatcher {
 	}
 
 	public ServletRegistration addServlet(String servletName, Servlet servlet) {
-		servlets.putIfAbsent(servletName, servlet);
+		Servlet old = servlets.putIfAbsent(servletName, servlet);
+		if (old != null)
+			throw new IllegalStateException("duplicated servlet name: " + servletName);
+
 		ServletRegistrationImpl reg = new ServletRegistrationImpl(servletName, this);
 		regs.putIfAbsent(servletName, reg);
 		return reg;
