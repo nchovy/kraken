@@ -12,7 +12,6 @@ require(["/lib/jquery.js", "/lib/knockout-2.1.0.debug.js", "/core/program.js", "
 
 		var vm = new Carousel.viewModel(starters);
 		
-		console.log(vm);
 		vm.onScrollEnd = function() {
 			
 			document.querySelector('#indicator > li.active').className = '';

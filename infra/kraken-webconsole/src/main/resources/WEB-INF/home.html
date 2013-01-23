@@ -81,13 +81,13 @@ legend {
 
 	<script type="text/javascript" data-main="/script/home" src="/require.js"></script>
 
-	<script type="text/html" id="header">
+	<script type="text/html" id="tasks">
 		<ul data-bind="foreach: items" class="nav">
-			<li>
-				<a data-bind="attr: { href: 'home.html?program=' + path }, click: onSelect">
+			<li data-bind="css: { 'active': $data.isSelected }">
+				<a data-bind="attr: { href: 'home.html?program=' + path }, click: $parent.select.callFn($parent, $data)">
 					<span data-bind="text: name"></span>
-					<span data-bind="if: isActive">
-						<i class="icon-remove" data-bind="click: closeProgram"></i>
+					<span data-bind="if: $data.isSelected">
+						<i class="icon-remove" data-bind="click: $parent.remove.callFn($parent, $data)"></i>
 					</span>
 				</a>
 			</li>
@@ -98,15 +98,10 @@ legend {
 		<legend data-bind="text: pack"></legend>
 		<ul data-bind="foreach: items">
 			<li>
-				<a data-bind="attr: { href: 'home.html?program=' + path }, click: onSelect"><img></img><span data-bind="text: name"></span></a>
-			</li>
-		</ul>
-	</script>
-
-	<script type="text/html" id="launcherSystem">
-		<ul data-bind="foreach: items">
-			<li>
-				<a data-bind="attr: { href: 'home.html?program=' + path }, click: onSelect"><img></img><span data-bind="text: name"></span></a>
+				<a data-bind="attr: { href: 'home.html?program=' + path }, click: $parent.run.callFn($parent, $data)">
+					<img></img>
+					<span data-bind="text: name"></span>
+				</a>
 			</li>
 		</ul>
 	</script>
@@ -131,7 +126,7 @@ legend {
 <div class="navbar navbar-inverse navbar-fixed-bottom">
 	<div class="navbar-inner">
 		<button id="start" class="btn btn-inverse pull-left active" href="#" style="margin-left: 30px">Start</button>
-		<div class="container" data-bind="Kuro.List: self, tmpl: header"></div>
+		<div class="container" data-bind="Kuro.List: self, tmpl: tasks"></div>
 	</div>
 </div>
 </body>

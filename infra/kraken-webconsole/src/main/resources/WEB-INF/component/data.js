@@ -2,24 +2,23 @@ define(["/lib/knockout-2.1.0.debug.js", '/component/kuro.js'], function(ko, $K) 
 
 var Data = $K.namespace("Data");
 
+function bindEvent(collection) {
+	$.each(collection, function(i, obj) {
+		obj.isSelected = ko.observable(false);
+	});
+}
+
 Data.ViewModel = function (data, option) {
 	var self = this;
 	this.self = this;
 
 	this.items = ko.observableArray(data);
+	this.length = ko.computed(function() {
+		return self.items().length;
+	});
 
 	this.canSelectMulti = ko.observable(false);
 	this.selected = ko.observableArray([]);
-
-	function bindEvent(collection) {
-		$.each(collection, function(i, obj) {
-			obj.onSelect = function(that, e) {
-				self.select(that, e);
-			}
-
-			obj.isSelected = ko.observable(false);
-		})
-	}
 
 	function observeValue(collection) {
 		if(!!option) {
@@ -44,6 +43,7 @@ Data.ViewModel = function (data, option) {
 function setPublicMethod(self) {
 
 	self.add = function(item) {
+		bindEvent([item]);
 		this.items.push(item);
 	}
 
@@ -52,11 +52,39 @@ function setPublicMethod(self) {
 	}
 
 	self.remove = function(item) {
-		this.items.remove(item);
+		var handled = false;
+
+		if(!!this.onBeforeRemove) {
+			var ret = this.onBeforeRemove(item);
+			if(ret === false) handled = true;
+		}
+
+		if(!handled) {
+			this.items.remove(item);
+
+			if(!!this.onAfterRemove) {
+				this.onAfterRemove(item);
+			}
+		}
 	}
 	
 	self.removeAt = function(index) {
-		this.items.splice(index, 1);
+		var handled = false;
+
+		var item = this.items()[index];
+
+		if(!!this.onBeforeRemove) {
+			var ret = this.onBeforeRemove(item);
+			if(ret === false) handled = true;
+		}
+
+		if(!handled) {
+			this.items.splice(index, 1);
+
+			if(!!this.onAfterRemove) {
+				this.onAfterRemove(item);
+			}
+		}
 	}
 
 	self.select = function(item, e) {
@@ -68,7 +96,8 @@ function setPublicMethod(self) {
 			if(this.selected().length > 0) {
 				this.selected()[0].isSelected(false);
 			}
-			this.selected.splice(0, this.selected().length);
+			
+			this.selected.removeAll();
 		}
 
 

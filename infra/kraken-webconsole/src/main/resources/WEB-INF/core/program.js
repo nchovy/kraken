@@ -53,7 +53,6 @@ define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/
 
 			if(current.length == 1) {
 				current.show();
-				program.onActive();
 			}
 			else if(current.length == 0) {
 				this.launch(program);

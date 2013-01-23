@@ -11,115 +11,63 @@ require([
 
 function(_$, ko, socket, programManager, Locale, pageManager, List, Util) {
 
+var vmTasks;
+
 	(function() {
-		var listNowRunning = [];
-
 		var container = $(".navbar-fixed-bottom .container");
-		var vm = new List.ViewModel(listNowRunning);
+		vmTasks = new List.ViewModel([]);
 
-		vm.select = function(program) {
-			var nowRunning = false;
-			//console.log(program)
-
-			$.each(container.find("li"), function(i, obj) {
-				var ctx = ko.contextFor(obj).$data;
-				console.log(ctx)
-				if(ctx.id === program.id && ctx.path === program.path) {
-					$(obj).find("a").click();
-
-					nowRunning = true;
-					return false;
-				}
-			});
-
-			if(!nowRunning) {
-				this.run(program);
-			}
-		}
-
-		vm.onSelect = function(program, el) {
+		vmTasks.onSelect = function(program) {
 			Core.Program.go(program);
-
-			container.find("li.active").removeClass("active");
-			$(el).parent().addClass("active");
 		}
 
-		vm.onActive = function(program) {
-			$("#div-launcher").hide();
-			$("#start").removeClass("active");
+		vmTasks.onBeforeRemove = function(program) {
+			if(vmTasks.length() == 1) return false;
 		}
 
-		vm.run = function(program) {
-			var items = vm.items();
-			function deactiveAll() {
-				$.each(items, function(i, obj) {
-					obj.isActive(false);
-				});
-			}
-
-			program.onSelect = function(self, e) { 
-				return vm.onSelect(self, e.delegateTarget);
-			}
-
-			program.onActive = function() {
-				deactiveAll();
-				this.isActive(true);
-				return vm.onActive(this);
-			}
-
-			program.closeProgram = function(self) {
-				var curridx = items.indexOf(program) - 1;
-				if(curridx === -1) {
-					console.log('close');
-					return;
-					//window.close();
-				}
-
-				Core.Program.exit(self);
-				vm.remove(program);
-				vm.select(items[curridx]);
-			}
-
-			deactiveAll();
-			program.isActive = ko.observable(true);
-
-			vm.add(program);
-
-			container.find("li:last-child a").click();
+		vmTasks.onAfterRemove = function(program) {
+			Core.Program.exit(program);
+			vmTasks.selectAt(vmTasks.length() - 1);
 		}
 
-		window.vm = vm;
-		// taskbar 관련하여, 이 파일에서 view 컨트롤을 담당하기 때문에, launcher에서 이 viewModel에 대한 참조가 필요함
-
-		ko.applyBindings(vm, container.get(0));
+		ko.applyBindings(vmTasks, container.get(0));
 	})();
 
 
 	(function() {
-		console.log("----launcher----");
 		Core.Program.getPrograms(function(packs, programs) {
 			
 			$.each(packs, function(i, pack) {
 
 
-				var vm = new List.ViewModel(pack.programs);
+				var vmPrograms = new List.ViewModel(pack.programs);
 
-				vm.pack = pack.name;
-				vm.onSelect = function(program, el) {
+				vmPrograms.pack = pack.name;
+				vmPrograms.run = function(program) {
 					$("#div-launcher").hide();
 					$("#start").removeClass("active");
-					parent.vm.select(program);
+
+					var found = false;
+					$.each(vmTasks.items(), function(i, obj){
+						if(obj.path === program.path) {
+							found = true;
+							return false;
+						}
+					})
+					
+					if(!found) {
+						vmTasks.add(program);
+					}
+
+					vmTasks.select(program);
 				}
 
 				if(pack.name === "System") {
-					ko.applyBindings(vm, document.getElementById("pack-system"));
+					ko.applyBindings(vmPrograms, document.getElementById("pack-system"));
 				}
 				else {
-					var page = $('<div data-bind="Kuro.List: self, tmpl: launcher"></div>')
-									.addClass("page")
-									.appendTo("#pack-all");
-
-					ko.applyBindings(vm, page.get(0));
+					var page = $('<div data-bind="Kuro.List: self, tmpl: launcher" class="page"></div>').appendTo("#pack-all");
+					ko.applyBindings(vmPrograms, page.get(0));
 				}
 			});
 
@@ -136,7 +84,7 @@ function(_$, ko, socket, programManager, Locale, pageManager, List, Util) {
 				$("#start").removeClass("active");
 				$("#div-launcher").hide();
 			}
-		})
+		});
 
 	})();
 
@@ -149,7 +97,8 @@ function(_$, ko, socket, programManager, Locale, pageManager, List, Util) {
 
 		var program = Core.Program.getProgramById(entry);
 		if(!!program) {
-			vm.select(program);
+			vmTasks.add(program);
+			vmTasks.select(program);
 		}
 
 		$("#div-launcher").hide();
