@@ -98,11 +98,20 @@ function setPublicMethod(self) {
 			}
 			
 			this.selected.removeAll();
+
+			item.isSelected(true);
+			this.selected.push(item);
 		}
+		else {
+			item.isSelected(!item.isSelected());
 
-
-		item.isSelected(true);
-		this.selected.push(item);
+			if(item.isSelected()) {
+				this.selected.push(item);
+			}
+			else {
+				this.selected.remove(item);
+			}
+		}
 
 		if(!!this.onSelect) {
 			if(e) {
