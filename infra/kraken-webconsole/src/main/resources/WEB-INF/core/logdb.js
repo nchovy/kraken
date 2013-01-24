@@ -2,7 +2,7 @@ define(["/core/Connection.js", "/component/util.js", "/lib/knockout-2.1.0.debug.
 
 // class
 var Query = function(id, query_str, is_end) {
-	var isDebug = true;
+	var isDebug = false;
 
 	if(!console.group) {
 		console.group = function() {}
@@ -289,7 +289,6 @@ var Query = function(id, query_str, is_end) {
 		}
 
 		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.stopQuery", { "id": that.activeId() }, function(m) {
-			console.log(m)
 			if(!!callback) {
 				callback();
 			}
@@ -370,8 +369,13 @@ var logdbManager = (function() {
 		return instance;
 	}
 
+	function remove(query) {
+		return queries.remove(query);
+	}
+
 	return {
 		create: create,
+		remove: remove,
 		getQueries: getQueries,
 		ViewModel: ViewModel
 	}

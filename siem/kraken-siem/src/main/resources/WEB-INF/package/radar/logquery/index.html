@@ -10,23 +10,72 @@
 	<link href="logquery.css" rel="stylesheet"/>
 	<script type="text/javascript" data-main="logquery" src="/require.js"></script>
 
-	<script type="text/html" id="qb">
+	<script type="text/html" id="tmplTabs">
+		<ul data-bind="foreach: items" class="nav">
+			<li data-bind="css: { 'active': $data.isSelected }">
+				<a href="#" data-bind="click: $parent.select.callFn($parent, $data)">
+					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
+					<span data-bind="text: $data.Logdb.activeQuery"></span>
+					<span data-bind="if: $data.isSelected">
+						<i class="icon-remove" data-bind="click: $parent.remove.callFn($parent, $data)"></i>
+					</span>
+				</a>
+			</li>
+		</ul>
+	</script>
+
+	<script type="text/html" id="tmplLogQuery">
+		<!-- ko foreach: items -->
+			<div class="box-query-and-result" data-bind="Component.LogQuery: $data, visible: $data.isSelected, attr: { 'data-id': $data.Logdb.activeId }"></div>
+		<!-- /ko -->
+		<div id="box-timeline" class="white">
+			<!--
+			<svg width="200" height="600" style="position:absolute; top:80px">
+				<path id="scalepath" d="M 0,60L 160,10L 160,515L 0,520L 0,60 Z" width="200" height="400"/>
+			</svg>
+			-->
+			<div id="timeline-toolbar">
+				<div class="btn-group pull-left" style="margin: 8px 0 0 10px">
+					<!--
+					<div class="btn btn-inverse btn-small"><i class="icon-zoom-in icon-white"></i></div>
+					<div class="btn btn-inverse btn-small"><i class="icon-zoom-out icon-white"></i></div>
+					-->
+					<div id="btnTimelineZoomIn" class="btn btn-mini"><i class="icon-zoom-in"></i></div>
+					<div id="btnTimelineZoomOut" class="btn btn-mini"><i class="icon-zoom-out"></i></div>
+					<div id="btnTimelineZoom" class="btn btn-mini">c</div>
+				</div>
+				<div class="pull-right" style="margin: 10px; font-weight: bold; font-size: 9pt" id="divTotalCount">0 log</div>
+			</div>
+			<div id="timeline-chart">
+			</div>
+			<div id="timeline-popup" style="display: none">
+				<ul>
+					<li><a tabindex="-1" href="#">Action</a></li>
+					<li><a tabindex="-1" href="#">Another action</a></li>
+					<li><a tabindex="-1" href="#">Something else</a></li>
+					<li><a tabindex="-1" href="#">Separated link</a></li>
+				</ul>
+			</div>
+		</div>
+	</script>
+
+	<script type="text/html" id="tmplQueryBar">
 		<form class="form-search" data-bind="submit: search">
 			<div class="control-group">
 				<div class="input-append">
-					<input type="search" class="search-query" style="width: 600px" data-bind="value: input" placeholder="" />
+					<input type="search" class="search-query" style="width: 400px" data-bind="value: input" placeholder="" />
 					<button type="submit" class="btn btn-primary"><i class="icon-search icon-white"></i> Search</button>
 				</div>
 				<button type="button" class="btn btn-warning" data-bind="click: stop, visible: nowQuerying">Stop</button>
 				<div class="btn-group">
-					<button class="btn" id="btnOpenModalSaveQuery"><i class="icon-star"></i> Bookmark</button>
-					<button class="btn" id="btnOpenScheduleQuery"><i class="icon-ok-circle"></i> Schedule</button>
+					<button class="btn OpenModalSaveQuery"><i class="icon-star"></i></button>
+					<button class="btn OpenScheduleQuery"><i class="icon-ok-circle"></i> Schedule</button>
 				</div>
 			</div>
 		</form>
 	</script>
 
-	<script type="text/html" id="tmpl.default.Kuro.List">
+	<script type="text/html" id="tmplQueries">
 		<div class="popover top" style="position: fixed; height: 140px; width: 350px">
 			<div class="arrow"></div>
 			<i class="icon-remove pull-right"></i>
@@ -52,6 +101,36 @@
 				</a>
 			</li>
 		</ul>
+	</script>
+
+	<script type="text/html" id="tmpl.default.Component.LogQuery">
+		<div id="box-toolbar">
+			<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
+				<div class="btn-group">
+					<button class="btn btn-small">Visualize</button>
+					<button class="btn btn-small OpenModalDownload">Download</button>
+				</div>
+				<div class="btn-group">
+					<button class="btn btn-small">Queueing</button>
+					<button class="btn btn-small">Show Running</button>
+				</div>
+				<div class="btn-group">
+					<button class="btn btn-small">Save Result</button>
+					<button class="btn btn-small">Load Result</button>
+				</div>
+				<div class="btn-group">
+					<button class="btn btn-small">?</button>
+				</div>
+				<div class="btn-group pull-right" style="margin-right: 10px">
+					<button class="btn btn-mini Minimize"><i class="icon-minus"></i></button>
+					<button class="btn btn-mini"><i class="icon-remove"></i></button>
+				</div>
+			</div>
+			<div class="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: tmplQueryBar"></div>
+		</div>
+		<div id="box-result-cont">
+			<div id="box-result"></div>
+		</div>
 	</script>
 </head>
 <body>
@@ -138,90 +217,15 @@
 <div class="navbar navbar-fixed-top">
 	<div class="navbar-inner">
 		<a class="brand" href="#" style="margin-left: -10px">Log Query</a>
-		<ul class="nav">
-			<li class="active">
-				<a href="#">
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
-					<span>local\interpark-syslog</span>
-					<span>
-						<i class="icon-remove"></i>
-					</span>
-				</a>
-			</li>
-			<li>
-				<a href="#">
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
-					<span>local\interpark-syslog</span>
-					<span>
-						<i class="icon-remove"></i>
-					</span>
-				</a>
-			</li>
-		</ul>
+		<div id="tabs" data-bind="Kuro.List: self, tmpl: tmplTabs"></div>
+		<button id="btnAddTab" class="btn btn-primary">
+			<i class="icon-plus icon-white"></i>
+		</button>
 	</div>
 </div>
 
 <div id="box-main">
-	<div id="box-query">
-		<div id="box-query-and-result">
-			<div id="box-toolbar">
-				<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
-					<div class="btn-group">
-						<button class="btn btn-small">Visualize</button>
-						<button class="btn btn-small" id="btnOpenModalDownload">Download</button>
-					</div>
-					<div class="btn-group">
-						<button class="btn btn-small">Queueing</button>
-						<button class="btn btn-small">Show Running</button>
-					</div>
-					<div class="btn-group">
-						<button class="btn btn-small">Save Result</button>
-						<button class="btn btn-small">Load Result</button>
-					</div>
-					<div class="btn-group">
-						<button class="btn btn-small">?</button>
-					</div>
-					<div class="btn-group pull-right" style="margin-right: 10px">
-						<button id="dododo3" class="btn btn-mini"><i class="icon-minus"></i></button>
-						<button class="btn btn-mini"><i class="icon-remove"></i></button>
-					</div>
-				</div>
-				<div id="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: qb"></div>
-			</div>
-			<div id="box-result-cont">
-				<div id="box-result"></div>
-			</div>
-		</div>
-		<div id="box-timeline" class="white">
-			<!--
-			<svg width="200" height="600" style="position:absolute; top:80px">
-				<path id="scalepath" d="M 0,60L 160,10L 160,515L 0,520L 0,60 Z" width="200" height="400"/>
-			</svg>
-			-->
-			<div id="timeline-toolbar">
-				<div class="btn-group pull-left" style="margin: 8px 0 0 10px">
-					<!--
-					<div class="btn btn-inverse btn-small"><i class="icon-zoom-in icon-white"></i></div>
-					<div class="btn btn-inverse btn-small"><i class="icon-zoom-out icon-white"></i></div>
-					-->
-					<div id="btnTimelineZoomIn" class="btn btn-mini"><i class="icon-zoom-in"></i></div>
-					<div id="btnTimelineZoomOut" class="btn btn-mini"><i class="icon-zoom-out"></i></div>
-					<div id="btnTimelineZoom" class="btn btn-mini">c</div>
-				</div>
-				<div class="pull-right" style="margin: 10px; font-weight: bold; font-size: 9pt" id="divTotalCount">0 log</div>
-			</div>
-			<div id="timeline-chart">
-			</div>
-			<div id="timeline-popup" style="display: none">
-				<ul>
-					<li><a tabindex="-1" href="#">Action</a></li>
-					<li><a tabindex="-1" href="#">Another action</a></li>
-					<li><a tabindex="-1" href="#">Something else</a></li>
-					<li><a tabindex="-1" href="#">Separated link</a></li>
-				</ul>
-			</div>
-		</div>
-	</div>
+	<div id="box-query" data-bind="Kuro.List: self, tmpl: tmplLogQuery"></div>
 
 	<div id="box-query-status">
 		<div style="height: 28px; padding-top:1px">
@@ -258,7 +262,7 @@
 				</div>
 			</div>
 			<div class="status-body">
-				<div id="listQueriesBody" data-bind="Kuro.List: self"></div>
+				<div id="listQueriesBody" data-bind="Kuro.List: self, tmpl: tmplQueries"></div>
 			</div>
 		</div>
 		<div class="pane" id="listQueryStatus" style="display:none">

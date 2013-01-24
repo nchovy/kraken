@@ -12,89 +12,31 @@ require(["/lib/jquery.js",
 	"/component/list.js",
 	"/component/data.grid.js",
 	"/bootstrap/js/bootstrap.amd.js",
+	"comp.logquery.js",
 	"/package/system/orgchart/testdata2.js"
 	],
-	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, json2) {
+	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, json2) {
 
-	var qbar = new QueryBar.instance();
+	var Core = parent.Core;
 
-	qbar.Logdb.on("pageLoaded", function(m) {
-		console.log(m.body);
-		var currIdx = grid1.getCurrentIndex();
-		vm.pushMany(m.body.result, currIdx);
-	});
+	var vmQueryPane = new List.ViewModel([]);
+	
+	function addTab() {
+		var lq = new LogQuery.instance();
+		LogQuery.init(lq);
 
-	qbar.Logdb.on("onTimeline", function(m) {
-		console.log("timeline:", m.body);
-
-		if(!!m.body.count) {
-			vm.totalCount(m.body.count);
-			$("#divTotalCount").text(m.body.count + " logs");
-		}
-
-		bar.updateData( convertTimeline( m.body ) );
-
-	});;
-
-	qbar.onSearch = function(self, el) {
-		$("#divTotalCount").text("0 log");
-		vm.clear();
-		grid1.clear();
+		vmQueryPane.add(lq);
+		vmQueryPane.select(lq);
 	}
 
-	qbar.nowQuerying.subscribe(function(val) {
-		if(val) {
-			$(".search-query").removeClass("complete").addClass("querying");
-		}
-		else {
-			$(".search-query").removeClass("querying").addClass("complete");
-		}
-	})
+	ko.applyBindings(vmQueryPane, document.getElementById("tabs"))
+	ko.applyBindings(vmQueryPane, document.getElementById("box-query"));
 
-
-	var vm = new QueryBar.ViewModel();
-	ko.applyBindings(qbar, document.getElementById("qbar"));
-
-	var grid1 = new Spreadsheet("#box-result", vm, {
-		"debug": false,
-		"colDataBind": function(rowidx, colidx, prop) {
-			return 'text: rowCache[' + rowidx + ']["' + prop + '"]';
-		},
-		"onRenderRow": function(idx, el) {
-			
-		},
-		"onRender": function() {
-
-		},
-		"onRenderRows": Util.throttle(function(top, bottom, el, handler) {
-			if(qbar.Logdb.activeId() === -1) return;
-
-			qbar.Logdb.getResult(qbar.Logdb.activeId(), top, bottom - top, function() {
-				console.log("after getResult", top, bottom - top)
-				try {
-					ko.applyBindings(vm, el.find("tbody")[0]);
-				}
-				catch(e) {
-					console.log(e)
-				}
-
-				handler.done();
-			});
-		}, 200)
+	$("#btnAddTab").on("click", function(e) {
+		addTab();
 	});
+	addTab();
 
-	$("#btnOpenModalSaveQuery").on("click", function(e) {
-		e.preventDefault();
-		Win.open("#modalSaveQuery");
-	})
-
-	$("#btnOpenScheduleQuery").on("click", function(e) {
-		e.preventDefault();
-	})
-
-	$("#btnOpenModalDownload").on("click", function() {
-		Win.open("#modalDownload");
-	});
 
 	$("#btnDownloadResult").on("click", function(e) {
 		e.preventDefault();
@@ -114,19 +56,7 @@ require(["/lib/jquery.js",
 
 		Win.close("#modalDownload");
 	});
-
-
-
-
-	$("#dododo3").on("click", function() {
-		if($("#box-query").hasClass("scaled")) {
-			$("#box-query").removeClass("scaled");
-		}
-		else {
-			$("#box-query").addClass("scaled")
-		}
-		
-	});
+	
 
 
 	// Variables
@@ -189,7 +119,6 @@ require(["/lib/jquery.js",
 	}
 
 	// Running Queries
-	var Core = parent.Core;
 	Core.LogDB.getQueries(function(queries) {
 		console.log(queries());
 
@@ -226,12 +155,20 @@ require(["/lib/jquery.js",
 			}
 		}
 
+		vmQueries.onAfterRemove = function(item) {
+			item.dispose(function() {
+				Core.LogDB.remove(item);
+			});
+		}
+
 		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
 	});
 
 
 	$("#btnRemoveQueries").on("click", function() {
-
+		$.each(vmQueries.selected(), function(i, q) {
+			vmQueries.remove(q);
+		});
 	})
 
 
