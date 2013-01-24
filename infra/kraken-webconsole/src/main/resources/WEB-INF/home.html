@@ -28,10 +28,57 @@
 	margin: 0;
 }
 
-.mainlauncher {
-	background-color: #333;
-	min-height: 100%;
+legend {
+	color: #ccc;
 }
+
+.blurry {
+	
+	-webkit-filter: blur(2px);
+	-ms-filter: blur(2px);
+	filter: blur(2px);
+	
+}
+
+.opa {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #000;
+	opacity: .8;
+}
+
+.mainlauncher {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+	.mainlauncher li {
+		list-style: none;
+	}
+
+	.mainlauncher li:hover {
+		cursor: pointer;
+		background-color: #104B72;
+	}
+
+	.mainlauncher li:hover a, .mainlauncher a:hover {
+		text-decoration: none;
+		color: #fff;
+	}
+
+	.mainlauncher a {
+		color: #54C8F1;
+	}
+
+	.mainlauncher a span {
+		margin-left: 5px;
+	}
 
 table, tr, td, tbody {
 	padding: 0;
@@ -55,28 +102,49 @@ table, tr, td, tbody {
 	color: #fff;
 }
 
-.page {
+.box-pack {
 	clear: both;
-	/* box-sizing: border-box; */
 }
 
-.page li {
-	float: left;
-	list-style: none;
-	/* text-align: center; */
-	width: 340px;
-	overflow: hidden;
+	.box-pack li {
+		float: left;
+		list-style: none;
+		width: 330px;
+		overflow: hidden;
+		/* background-color: #999; */
+		margin: 5px;
+	}
+
+	.box-pack ul:first-child {
+		margin-top: -5px;
+	}
+
+	.box-pack img {
+		width: 96px;
+		height: 96px;
+		margin: 10px;
+	}
+
+#pack-system {
+	padding: 0px 10px 0px 0px;
+	width: 200px;
+	border-right: 1px solid gray;
 }
 
-.page img {
-	width: 64px;
-	height: 64px;
-	margin: 10px 20px;
-}
+	#pack-system legend {
+		padding-left: 10px;
+	}
 
-legend {
-	color: white;
-}
+	#pack-system li {
+		margin: 8px 0px;
+	}
+
+	#pack-system img {
+		width: 32px;
+		height: 32px;
+		margin: 5px;
+	}
+
 	</style>
 
 	<script type="text/javascript" data-main="/script/home" src="/require.js"></script>
@@ -97,10 +165,9 @@ legend {
 	<script type="text/html" id="launcher">
 		<legend data-bind="text: pack"></legend>
 		<ul data-bind="foreach: items">
-			<li>
-				<a data-bind="attr: { href: 'home.html?program=' + path }, click: $parent.run.callFn($parent, $data)">
-					<img></img>
-					<span data-bind="text: name"></span>
+			<li data-bind="click: $parent.run.callFn($parent, $data)">
+				<a data-bind="attr: { href: 'home.html?program=' + path }">
+					<img data-bind="attr: { src: icon() }"></img><span data-bind="text: name"></span>
 				</a>
 			</li>
 		</ul>
@@ -116,9 +183,10 @@ legend {
 </div>
 
 <div class="main h-stretch" id="div-launcher">
+	<div class="opa"></div>
 	<div class="mainlauncher">
-		<div class="pull-left" id="pack-system" style="width: 220px" data-bind="Kuro.List: self, tmpl: launcher"></div>
-		<div class="pull-left" id="pack-all" style="width: 75%; border-left: 1px solid gray; padding-left: 30px"></div>
+		<div class="pull-left" id="pack-system" data-bind="Kuro.List: self, tmpl: launcher"></div>
+		<div class="pull-left" id="pack-all" style="width: 75%; padding-left: 30px"></div>
 		<div style="clear:both; height: 60px"></div>
 	</div>
 </div>

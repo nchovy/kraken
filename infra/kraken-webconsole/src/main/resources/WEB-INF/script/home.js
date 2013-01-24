@@ -18,6 +18,11 @@ var vmTasks;
 		vmTasks = new List.ViewModel([]);
 
 		vmTasks.onSelect = function(program) {
+			$("#div-launcher").hide();
+			$("#start").removeClass("active");
+
+			$(".mainframe").removeClass("blurry");
+			
 			Core.Program.go(program);
 		}
 
@@ -47,6 +52,8 @@ var vmTasks;
 					$("#div-launcher").hide();
 					$("#start").removeClass("active");
 
+					$(".mainframe").removeClass("blurry");
+
 					var found = false;
 					var foundprogram;
 					$.each(vmTasks.items(), function(i, obj){
@@ -70,7 +77,7 @@ var vmTasks;
 					ko.applyBindings(vmPrograms, document.getElementById("pack-system"));
 				}
 				else {
-					var page = $('<div data-bind="Kuro.List: self, tmpl: launcher" class="page"></div>').appendTo("#pack-all");
+					var page = $('<div data-bind="Kuro.List: self, tmpl: launcher" class="box-pack"></div>').appendTo("#pack-all");
 					ko.applyBindings(vmPrograms, page.get(0));
 				}
 			});
@@ -82,11 +89,15 @@ var vmTasks;
 		$("#start").on("click", function() {
 			if($("#div-launcher").is(":hidden")) {
 				$("#start").addClass("active");
-				$("#div-launcher").fadeIn('fast');
+				$("#div-launcher").fadeIn('fast', function() {
+					$(".mainframe").addClass("blurry");
+				});
 			}
 			else {
 				$("#start").removeClass("active");
 				$("#div-launcher").hide();
+
+				$(".mainframe").removeClass("blurry");
 			}
 		});
 

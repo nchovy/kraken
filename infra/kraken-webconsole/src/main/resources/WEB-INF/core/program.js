@@ -1,4 +1,4 @@
-define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/list.js"], function(_$, Locale, socket, List) {
+define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/list.js", "/lib/knockout-2.1.0.debug.js"], function(_$, Locale, socket, List, ko) {
 	var programManager = (function() {
 
 		var programs;
@@ -23,6 +23,16 @@ define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/
 
 					packs[0].programs.push(starter);
 					programs.push(starter);
+
+					$.each(packs, function(i, pack) {
+						$.each(pack.programs, function(j, program) {
+							program.icon = ko.observable("/images/app.png");
+							var appicon = "package/" + pack.dll + "/" + program.path + "/icon.png";
+							$.get(appicon, function() {
+								program.icon(appicon);
+							});
+						});
+					});
 
 					callback(packs, programs);
 				});
