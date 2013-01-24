@@ -134,13 +134,13 @@ public class ParallelMergeSorter {
 
 		runs.clear();
 
-		int partitionCount = Runtime.getRuntime().availableProcessors();
+		int partitionCount = getProperPartitionCount();
 		List<Partition> partitions = partitioner.partition(partitionCount, sortedRuns);
 		for (SortedRun r : sortedRuns)
 			((SortedRunImpl) r).close();
 
 		long elapsed = new Date().getTime() - begin;
-		logger.debug("kraken logdb: partitioning completed in {}ms", elapsed);
+		logger.debug("kraken logdb: [{}] partitioning completed in {}ms", partitionCount, elapsed);
 
 		// n-way merge
 		Run run = mergeAll(partitions);
@@ -150,6 +150,15 @@ public class ParallelMergeSorter {
 			return new CacheRunIterator(run.cached.iterator());
 		else
 			return new FileRunIterator(run.dataFile);
+	}
+
+	private static int getProperPartitionCount() {
+		int processors = Runtime.getRuntime().availableProcessors();
+		int count = 2;
+		while (count < processors)
+			count <<= 1;
+
+		return count;
 	}
 
 	private static class SortedRunImpl implements SortedRun {

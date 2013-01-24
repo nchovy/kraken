@@ -30,7 +30,7 @@ public class Partitioner {
 
 	public List<Partition> partition(int count, List<SortedRun> runs) {
 		if ((count & (count - 1)) > 0)
-			throw new IllegalArgumentException("count should be power of 2");
+			throw new IllegalArgumentException("count should be power of 2, count=" + count);
 
 		List<SortedRunStatus> sortedRuns = new LinkedList<SortedRunStatus>();
 		for (SortedRun run : runs)
