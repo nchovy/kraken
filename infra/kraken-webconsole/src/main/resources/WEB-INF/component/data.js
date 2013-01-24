@@ -12,7 +12,7 @@ Data.ViewModel = function (data, option) {
 	var self = this;
 	this.self = this;
 
-	this.items = ko.observableArray(data);
+	this.items = (typeof data === 'function') ? data : ko.observableArray(data);
 	this.length = ko.computed(function() {
 		return self.items().length;
 	});

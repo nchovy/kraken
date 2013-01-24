@@ -164,9 +164,8 @@ require(["/lib/jquery.js",
 
 	// Running Queries
 	Core.LogDB.getQueries(function(queries) {
-		console.log(queries());
 
-		vmQueries = new List.ViewModel(queries());
+		vmQueries = new List.ViewModel(queries);
 
 		vmQueries.isEditMode = vmQueries.canSelectMulti;
 
@@ -207,7 +206,6 @@ require(["/lib/jquery.js",
 
 		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
 	});
-
 
 	$("#btnRemoveQueries").on("click", function() {
 		$.each(vmQueries.selected(), function(i, q) {
