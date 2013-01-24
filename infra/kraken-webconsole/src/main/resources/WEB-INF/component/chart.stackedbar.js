@@ -9,7 +9,7 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 		var margin = { top: 10, right: 0, left: 50, bottom: 10 },
 			width = 100 - margin.left - margin.right,
-			height = $("#timeline-chart").height() - margin.top - margin.bottom;
+			height = $(el).height() - margin.top - margin.bottom;
 
 		var x = d3.scale.ordinal()
 			.rangeRoundBands([0, width], .1);
@@ -135,14 +135,14 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 			color.domain(d3.keys(data[0]));
 
 			data.forEach(function (d) {
-				var y0 = 0;
-				d.ages = color.domain().map(function (name) { return { name: name, y0: y0, y1: y0 += +d[name], value: d[name] }; });
-				d.ages.forEach(function (d) { d.y0 /= y0; d.y1 /= y0; });
+				if(!d.ages) {
+					var y0 = 0;
+					d.ages = color.domain().map(function (name) { return { name: name, y0: y0, y1: y0 += +d[name], value: d[name] }; });
+					d.ages.forEach(function (d) { d.y0 /= y0; d.y1 /= y0; });
+				}
 			});
 
 			data.sort(function (a, b) { return b.ages[0].y1 - a.ages[0].y1; });
-
-			console.log(data);
 
 			var state = svg.selectAll(".state")
 				.data(data)
@@ -180,7 +180,7 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 
 		$(window).on("resize", function () {
-			resize($("#timeline-chart").height() - 10 - 10)
+			resize($(el).height() - 10 - 10)
 		})
 
 

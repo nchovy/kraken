@@ -28,35 +28,6 @@
 		<!-- ko foreach: items -->
 			<div class="box-query-and-result" data-bind="Component.LogQuery: $data, visible: $data.isSelected, attr: { 'data-id': $data.Logdb.activeId }"></div>
 		<!-- /ko -->
-		<div id="box-timeline" class="white">
-			<!--
-			<svg width="200" height="600" style="position:absolute; top:80px">
-				<path id="scalepath" d="M 0,60L 160,10L 160,515L 0,520L 0,60 Z" width="200" height="400"/>
-			</svg>
-			-->
-			<div id="timeline-toolbar">
-				<div class="btn-group pull-left" style="margin: 8px 0 0 10px">
-					<!--
-					<div class="btn btn-inverse btn-small"><i class="icon-zoom-in icon-white"></i></div>
-					<div class="btn btn-inverse btn-small"><i class="icon-zoom-out icon-white"></i></div>
-					-->
-					<div id="btnTimelineZoomIn" class="btn btn-mini"><i class="icon-zoom-in"></i></div>
-					<div id="btnTimelineZoomOut" class="btn btn-mini"><i class="icon-zoom-out"></i></div>
-					<div id="btnTimelineZoom" class="btn btn-mini">c</div>
-				</div>
-				<div class="pull-right" style="margin: 10px; font-weight: bold; font-size: 9pt" id="divTotalCount">0 log</div>
-			</div>
-			<div id="timeline-chart">
-			</div>
-			<div id="timeline-popup" style="display: none">
-				<ul>
-					<li><a tabindex="-1" href="#">Action</a></li>
-					<li><a tabindex="-1" href="#">Another action</a></li>
-					<li><a tabindex="-1" href="#">Something else</a></li>
-					<li><a tabindex="-1" href="#">Separated link</a></li>
-				</ul>
-			</div>
-		</div>
 	</script>
 
 	<script type="text/html" id="tmplQueryBar">
@@ -225,7 +196,37 @@
 </div>
 
 <div id="box-main">
-	<div id="box-query" data-bind="Kuro.List: self, tmpl: tmplLogQuery"></div>
+	<div id="box-query">
+		<div id="box-query-and-result" data-bind="Kuro.List: self, tmpl: tmplLogQuery"></div>
+		<div id="box-timeline" class="white">
+			<!--
+			<svg width="200" height="600" style="position:absolute; top:80px">
+				<path id="scalepath" d="M 0,60L 160,10L 160,515L 0,520L 0,60 Z" width="200" height="400"/>
+			</svg>
+			-->
+			<div id="timeline-toolbar">
+				<div class="btn-group pull-left" style="margin: 8px 0 0 10px">
+					<!--
+					<div class="btn btn-inverse btn-small"><i class="icon-zoom-in icon-white"></i></div>
+					<div class="btn btn-inverse btn-small"><i class="icon-zoom-out icon-white"></i></div>
+					-->
+					<div id="btnTimelineZoomIn" class="btn btn-mini"><i class="icon-zoom-in"></i></div>
+					<div id="btnTimelineZoomOut" class="btn btn-mini"><i class="icon-zoom-out"></i></div>
+				</div>
+				<div class="pull-right" style="margin: 10px; font-weight: bold; font-size: 9pt" id="divTotalCount">0 log</div>
+			</div>
+			<div id="timeline-chart">
+			</div>
+			<div id="timeline-popup" style="display: none">
+				<ul>
+					<li><a tabindex="-1" href="#">Action</a></li>
+					<li><a tabindex="-1" href="#">Another action</a></li>
+					<li><a tabindex="-1" href="#">Something else</a></li>
+					<li><a tabindex="-1" href="#">Separated link</a></li>
+				</ul>
+			</div>
+		</div>
+	</div>
 
 	<div id="box-query-status">
 		<div style="height: 28px; padding-top:1px">

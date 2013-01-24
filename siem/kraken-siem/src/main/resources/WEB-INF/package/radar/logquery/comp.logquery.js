@@ -9,6 +9,7 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 			var templateEngine = new ko.nativeTemplateEngine();
 
 			function afterRender() {
+				instance.el = el;
 				var $el = $(el);
 				var $boxResult = $el.find("#box-result");
 				
@@ -87,7 +88,7 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 
 				if(!!m.body.count) {
 					qbar.vm.totalCount(m.body.count);
-					$("#divTotalCount").text(m.body.count + " logs");
+					//$("#divTotalCount").text(m.body.count + " logs");
 				}
 
 				//bar.updateData( convertTimeline( m.body ) );
@@ -95,7 +96,7 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 			});;
 
 			qbar.onSearch = function(self, el) {
-				$("#divTotalCount").text("0 log");
+				$("#divTotalCount").text("0 result");
 				qbar.vm.clear();
 				qbar.spreadsheet.clear();
 			}

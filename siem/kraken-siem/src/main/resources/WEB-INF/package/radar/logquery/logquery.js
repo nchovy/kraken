@@ -19,11 +19,53 @@ require(["/lib/jquery.js",
 
 	var Core = parent.Core;
 
+	var initTimelineMsg = {
+		"id": 6,
+		"values": [1,1,1,1,1,1,1,1,1,1],
+		//"values": [5,10,20,40,6,80,0,30,60,100],
+		"count": 100,
+		"span_field": "Minute",
+		"type": "eof",
+		"span_amount": 1,
+		"begin": "2012-06-24 23:49:00+0900"
+	};
+	var bar = new StackedBar.ViewModel("#timeline-chart", convertTimeline(initTimelineMsg));
+
 	var vmQueryPane = new List.ViewModel([]);
+
+	vmQueryPane.onSelect = function(lq) {
+		if(!!lq.timeline) {
+			bar.updateData(lq.timeline);
+		}
+		else {
+			bar.updateData(convertTimeline(initTimelineMsg));
+		}
+
+		if(!!lq.totalCount) {
+			$("#divTotalCount").text(lq.totalCount + " results");
+		}
+		else {
+			$("#divTotalCount").text("0 result");
+		}
+	}
 	
 	function addTab() {
 		var lq = new LogQuery.instance();
 		LogQuery.init(lq);
+		lq.Logdb.on("onTimeline", function(m) {
+
+			lq.timeline = convertTimeline(m.body);
+
+			if(lq.isSelected()) {
+
+				if(!!m.body.count) {
+					lq.totalCount = m.body.count;
+					$("#divTotalCount").text(lq.totalCount + " results");
+				}
+
+				bar.updateData(lq.timeline);
+			}
+		});
 
 		vmQueryPane.add(lq);
 		vmQueryPane.select(lq);
@@ -37,6 +79,8 @@ require(["/lib/jquery.js",
 	});
 	addTab();
 
+
+	// toolbar
 
 	$("#btnDownloadResult").on("click", function(e) {
 		e.preventDefault();
@@ -172,21 +216,7 @@ require(["/lib/jquery.js",
 	})
 
 
-	// Timeline
-
-	var samplemsg = 
-	{
-		"id": 6,
-		"values": [1,1,1,1,1,1,1,1,1,1],
-		//"values": [5,10,20,40,6,80,0,30,60,100],
-		"count": 100,
-		"span_field": "Minute",
-		"type": "eof",
-		"span_amount": 1,
-		"begin": "2012-06-24 23:49:00+0900"
-	};
-
-
+	// Timeline extras
 	function convertTimeline(body) {
 		var tbegin = d3.time.format("%Y-%m-%d %X").parse(body.begin.substring(0, 19))
 		//var tbegin = new Date(body.begin);
@@ -207,27 +237,6 @@ require(["/lib/jquery.js",
 
 		return [obj];
 	}
-
-	var z = convertTimeline(samplemsg);
-	var bar = new StackedBar.ViewModel("#timeline-chart", z);
-
-	$("#btnTimelineZoom").on("click", function() {
-		var newmsg = 
-		{
-			"id": 6,
-			//"values": [0,0,0,0,0,0,0,0,0,0],
-			"values": [5,4,21,4,12,23,2,11,13,17],
-			"count": 100,
-			"span_field": "Minute",
-			"type": "eof",
-			"span_amount": 1,
-			"begin": "2012-06-24 11:12:00+0900"
-		};
-		
-		bar.updateData( convertTimeline( newmsg ) );
-	})
-
-	//console.log( d3.time.format("%Y-%m-%d %X").parse("2012-06-24 11:12:00"))
 
 	// Layout
 

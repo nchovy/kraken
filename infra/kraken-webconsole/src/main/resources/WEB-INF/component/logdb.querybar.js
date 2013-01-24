@@ -7,7 +7,7 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js", "/component/window.js"
 		},
 		update: function(el, viewModelAccr, allBindingAccr, viewModel, bindingCtx) {
 			var viewModel = viewModelAccr(), allBindings = allBindingAccr();
-			viewModel.el = el;
+			//viewModel.el = el;
 
 			var gridTemplateName = (!!allBindings.tmpl) ? allBindings.tmpl.id : "tmpl.default." + className;
 			var templateEngine = new ko.nativeTemplateEngine();
