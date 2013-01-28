@@ -3,6 +3,7 @@ package org.krakenapps.socialweb.facebook.jsonobject;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
@@ -16,13 +17,14 @@ public class Page implements FacebookGraphObject{
 	private boolean is_published;
 	private boolean can_post;
 	private int likes;
-	private String location;
+	//private Dictionary location;
 	private String phone;
 	private int checkins;
-	private String pictures;
+	private String picture;
 	private String cover;
 	private String website;
 	private int talking_about_count;
+	//private Dictionary global_brand_parent_page;
 	private String access_token;
 	private FbConnection fbConnection;
 	
@@ -555,13 +557,6 @@ public class Page implements FacebookGraphObject{
 		this.likes = likes;
 	}
 
-	public String getLocation() {
-		return location;
-	}
-
-	public void setLocation(String location) {
-		this.location = location;
-	}
 
 	public String getPhone() {
 		return phone;
@@ -580,11 +575,11 @@ public class Page implements FacebookGraphObject{
 	}
 
 	public String getPictures() {
-		return pictures;
+		return picture;
 	}
 
 	public void setPictures(String pictures) {
-		this.pictures = pictures;
+		this.picture = pictures;
 	}
 
 	public String getCover() {
@@ -621,6 +616,32 @@ public class Page implements FacebookGraphObject{
 
 	@Override
 	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			name = json.getString("name");
+			link = json.getString("link");
+			category = json.getString("category");
+			is_published = json.getBoolean("is_published");
+			can_post = json.getBoolean("can_post");
+			likes = json.getInt("likes");
+			//TODO
+			JSONObject locationObject = json.getJSONObject("location");
+			
+			phone = json.getString("phone");
+			checkins = json.getInt("checkins");
+			picture = json.getString("picture");
+			website = json.getString("website");
+			talking_about_count = json.getInt("talking_about_count");
+			//TODO
+			JSONObject globalObject = json.getJSONObject("global_brand_parent_page");
+			access_token = json.getString("access_token");
+			
+			JSONObject hoursObject = json.getJSONObject("hours");
+			//TODO
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		// TODO Auto-generated method stub
 		return 0;
 	}
