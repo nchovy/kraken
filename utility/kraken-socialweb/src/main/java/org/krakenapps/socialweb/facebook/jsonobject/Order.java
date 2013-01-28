@@ -19,6 +19,7 @@ public class Order implements FacebookGraphObject{
 	private String refund_reason_code;
 	private String created_time;
 	private String updated_time;
+	FbConnection fbConnection;
 	
 	private class FbConnection{
 		public String CONN_placed = "placed";
@@ -32,6 +33,9 @@ public class Order implements FacebookGraphObject{
 		}
 	}
 
+	public Order(){
+		fbConnection = new FbConnection();
+	}
 	public String getId() {
 		return id;
 	}

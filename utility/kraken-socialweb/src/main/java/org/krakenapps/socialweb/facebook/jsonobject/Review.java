@@ -3,6 +3,7 @@ package org.krakenapps.socialweb.facebook.jsonobject;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
@@ -23,9 +24,8 @@ public class Review implements FacebookGraphObject{
 		}
 	}
 	public Review(){
-		from = new From();
-		to = new From();
 		fbConnection = new FbConnection();
+		message = null;
 	}
 	public String getId() {
 		return id;
@@ -71,7 +71,26 @@ public class Review implements FacebookGraphObject{
 	}
 	@Override
 	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
+		try {
+			id = json.getString("id");
+			
+			JSONObject fromObject = json.getJSONObject("from");
+			from = new From(fromObject.getString("id"), fromObject.getString("name"));
+			JSONObject toObject = json.getJSONObject("to");
+			from = new From(toObject.getString("id"), toObject.getString("name"));
+			
+			if(json.containsKey("message")){
+				message = json.getString("message");
+			} // because this section is optional field
+			
+			rating = json.getInt("rating");
+			created_time = json.getString("created_time");
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return 0;
 	}
 	/* (non-Javadoc)
