@@ -505,12 +505,8 @@ public class Post implements FacebookGraphObject{
 			}
 			likes.setLikeList(likeList);
 			
-			//TODO : Place parsing
 			JSONObject placeObject = json.getJSONObject("place");
-			place.setId(placeObject.getString("id"));
-			place.setName(placeObject.getString("name"));
-			place.setLongitude(placeObject.getJSONObject("location").getInt("longitude"));
-			place.setLatitude(placeObject.getJSONObject("location").getInt("latitude"));
+			place = new Place(placeObject.getString("id"), placeObject.getString("name"), placeObject.getInt("longitude") , placeObject.getInt("latitude"));
 
 			story = json.getString("story");
 

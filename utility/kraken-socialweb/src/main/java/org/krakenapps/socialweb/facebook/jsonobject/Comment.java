@@ -21,7 +21,6 @@ public class Comment implements FacebookGraphObject{
 	private FbConnection fbConnection;
 
 	public Comment(){
-		likes = new Like();
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
@@ -119,6 +118,7 @@ public class Comment implements FacebookGraphObject{
 			message = json.getString("message");
 			createTime = json.getString("created_time");
 	
+			likes = new Like();
 			JSONObject likeObject = json.getJSONObject("likes");
 			JSONArray likeArray = likeObject.getJSONArray("data");
 			ArrayList<From> likeList = new ArrayList<From>(likeObject.getInt("count"));

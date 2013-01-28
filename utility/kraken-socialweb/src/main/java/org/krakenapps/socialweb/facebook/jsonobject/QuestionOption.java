@@ -3,6 +3,7 @@ package org.krakenapps.socialweb.facebook.jsonobject;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
@@ -12,7 +13,7 @@ public class QuestionOption implements FacebookGraphObject{
 	private String id;
 	private String name;
 	private From from;
-	private int votes;
+	private int vote_count;
 	private Category object;
 	private String created_time;
 	private FbConnection fbConnection;
@@ -35,9 +36,13 @@ public class QuestionOption implements FacebookGraphObject{
 		private String id;
 		private String name;
 		private String category;
-		private String created_time;
 		public Category(){
 			
+		}
+		public Category(String id, String name, String category){
+			this.id = id;
+			this.name = name;
+			this.category = category;
 		}
 		public String getId() {
 			return id;
@@ -60,15 +65,9 @@ public class QuestionOption implements FacebookGraphObject{
 		public String getCreated_time() {
 			return created_time;
 		}
-		public void setCreated_time(String created_time) {
-			this.created_time = created_time;
-		}
 		
 	}
 	public QuestionOption(){
-		from = new From();
-		object = new Category();
-		votes = -1;
 		fbConnection = new FbConnection();
 	}
 	
@@ -102,16 +101,6 @@ public class QuestionOption implements FacebookGraphObject{
 	}
 
 
-	public int getVotes() {
-		return votes;
-	}
-
-
-	public void setVotes(int votes) {
-		this.votes = votes;
-	}
-
-
 	public Category getObject() {
 		return object;
 	}
@@ -134,7 +123,22 @@ public class QuestionOption implements FacebookGraphObject{
 
 	@Override
 	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
+		try {
+			id = json.getString("id");
+			
+			JSONObject fromObject = json.getJSONObject("from");
+			from = new From(fromObject.getString("id"), fromObject.getString("name"));
+			
+			name = json.getString("name");
+			vote_count = json.getInt("vote_count");
+			
+			JSONObject categoryObject = json.getJSONObject("object");
+			object = new Category(categoryObject.getString("id"), categoryObject.getString("name"), categoryObject.getString("category"));
+			
+			created_time = json.getString("created_time");
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 		return 0;
 	}
 

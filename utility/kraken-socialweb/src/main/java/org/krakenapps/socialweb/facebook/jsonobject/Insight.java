@@ -47,7 +47,6 @@ public class Insight implements FacebookGraphObject{
 	}
 	public Insight(){
 		fbConnection = new FbConnection();
-		values = new ArrayList<Insight.Values>();
 	}
 	public String getId() {
 		return id;
@@ -100,6 +99,8 @@ public class Insight implements FacebookGraphObject{
 			id = json.getString("id");
 			name = json.getString("name");
 			period = json.getString("period");
+			
+			values = new ArrayList<Insight.Values>();
 			JSONObject valueObject = json.getJSONObject("values");
 			JSONArray valueArray = valueObject.getJSONArray("data");
 			for(int i =0 ; i<valueArray.length(); i++){

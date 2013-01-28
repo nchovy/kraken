@@ -24,7 +24,6 @@ public class Event implements FacebookGraphObject{
 	private FbConnection fbConnection;
 
 	public Event(){
-		venue = new Venue(); 
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
@@ -125,8 +124,11 @@ public class Event implements FacebookGraphObject{
 			start_time = json.getString("start_time");
 			end_time = json.getString("end_time");
 			location = json.getString("location");
+			
+			venue = new Venue(); 
 			JSONObject venueObject = json.getJSONObject("venue");
 			venue.parse(venueObject);
+			
 			privacy = json.getString("privacy");
 			updated_time = json.getString("updated_time");
 			picture = json.getString("picture");

@@ -25,7 +25,6 @@ public class Message implements FacebookGraphObject{
 		// there is no Connection
 	}
 	public Message(){
-		to = new ArrayList<From>();
 		fbConnection = new FbConnection();
 	}
 	public String getId() {
@@ -84,6 +83,7 @@ public class Message implements FacebookGraphObject{
 			JSONObject fromObject = json.getJSONObject("from");
 			from = new From(fromObject.getString("id"),fromObject.getString("name"));
 			
+			to = new ArrayList<From>();
 			JSONObject toObject = json.getJSONObject("to");
 			JSONArray toArray = toObject.getJSONArray("data");
 			for(int i =0; i<toArray.length() ; i++){

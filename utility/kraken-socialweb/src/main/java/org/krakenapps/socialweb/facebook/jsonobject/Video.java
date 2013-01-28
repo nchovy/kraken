@@ -24,8 +24,6 @@ public class Video implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	
 	Video(){
-		from = new From();
-		tags = new From();
 		comments = new ArrayList<Comment>();
 		fbConnection = new FbConnection(); 
 	}

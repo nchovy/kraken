@@ -3,6 +3,8 @@ package org.krakenapps.socialweb.facebook.jsonobject;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
@@ -15,7 +17,7 @@ public class Thread implements FacebookGraphObject{
 	private String updated_time;
 	private int message_count;
 	private int unread_count;
-	private ArrayList<From> tags;
+	private ArrayList<String> tags;
 	private ArrayList<participant> participants;
 	private ArrayList<participant> former_participants;
 	private ArrayList<participant> senders;
@@ -75,6 +77,14 @@ public class Thread implements FacebookGraphObject{
 		private String id;
 		private String email;
 		private String name;
+		participant(){
+			
+		}
+		participant(String id , String email, String name){
+			this.id = id;
+			this.email = email;
+			this.name = name;
+		}
 		public String getId() {
 			return id;
 		}
@@ -95,8 +105,6 @@ public class Thread implements FacebookGraphObject{
 		}
 	}
 	public Thread(){
-		tags = new ArrayList<From>();
-		messages = new ArrayList<Message>();
 		fbConnection = new FbConnection();
 	}
 	
@@ -140,14 +148,6 @@ public class Thread implements FacebookGraphObject{
 		this.unread_count = unread_count;
 	}
 
-	public ArrayList<From> getTags() {
-		return tags;
-	}
-
-	public void setTags(ArrayList<From> tags) {
-		this.tags = tags;
-	}
-
 	public ArrayList<Message> getMessages() {
 		return messages;
 	}
@@ -166,7 +166,57 @@ public class Thread implements FacebookGraphObject{
 
 	@Override
 	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
+		try {
+			id = json.getString("id");
+			snippet = json.getString("snippet");
+			updated_time = json.getString("updated_time");
+			message_count = json.getInt("message_count");
+			unread_count = json.getInt("unread_count");
+			
+			tags = new ArrayList<String>();
+			JSONObject tagObject = json.getJSONObject("tags");
+			JSONArray tagArray = tagObject.getJSONArray("data");
+			for(int i = 0 ; i<tagArray.length() ; i++){
+				tags.add(tagArray.getJSONObject(i).getString("name"));
+			}
+			
+			participants = new ArrayList<Thread.participant>();
+			JSONObject participantsObject = json.getJSONObject("participants");
+			JSONArray participantsArray = participantsObject.getJSONArray("data");
+			for(int i =0; i< participantsArray.length(); i++){
+				participants.add(new participant(participantsArray.getJSONObject(i).getString("id"), participantsArray.getJSONObject(i).getString("email") , participantsArray.getJSONObject(i).getString("name")));
+			}
+			
+			former_participants = new ArrayList<Thread.participant>();
+			JSONObject formerParticipantsObject = json.getJSONObject("former_participants");
+			JSONArray formerParticipantsArray = formerParticipantsObject.getJSONArray("data");
+			for(int i =0; i< formerParticipantsArray.length(); i++){
+				former_participants.add(new participant(formerParticipantsArray.getJSONObject(i).getString("id"), formerParticipantsArray.getJSONObject(i).getString("email") , formerParticipantsArray.getJSONObject(i).getString("name")));
+			}
+			
+			senders = new ArrayList<Thread.participant>();
+			JSONObject sendersObject = json.getJSONObject("senders");
+			JSONArray sendersArray = sendersObject.getJSONArray("data");
+			for(int i =0; i< sendersArray.length(); i++){
+				senders.add(new participant(sendersArray.getJSONObject(i).getString("id"), sendersArray.getJSONObject(i).getString("email") , sendersArray.getJSONObject(i).getString("name")));
+			}
+			
+			messages = new ArrayList<Message>();
+			JSONObject messagesObject = json.getJSONObject("messages");
+			JSONArray messagesArray = messagesObject.getJSONArray("data");
+			for(int i =0 ; i< messagesArray.length() ; i++){
+				Message tmp = new Message();
+				tmp.parseJson(messagesArray.getJSONObject(i));
+				messages.add(tmp);
+			}
+			
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
 		return 0;
 	}
 

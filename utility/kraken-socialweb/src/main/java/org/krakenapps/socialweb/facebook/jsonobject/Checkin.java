@@ -26,9 +26,6 @@ public class Checkin implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	public Checkin(){
 		fbConnection = new FbConnection();
-		place = new Place();
-		application = new CheckinApplication();
-		comments = new ArrayList<Comment>(); // limited number object.
 	}
 	private class FbConnection{
 		public String CONN_comments = "comments";
@@ -162,9 +159,11 @@ public class Checkin implements FacebookGraphObject{
 			JSONObject tagsObject = json.getJSONObject("tags");
 			tags = new From(json.getString("id") , json.getString("name"));
 			
+			place = new Place();
 			JSONObject placeObject = json.getJSONObject("place");
 			place = new Place(placeObject.getString("id"), placeObject.getString("name"), placeObject.getJSONObject("location").getInt("longitude"), placeObject.getJSONObject("location").getInt("latitude"));
 			
+			application = new CheckinApplication();
 			JSONObject applicationObject = json.getJSONObject("application");
 			application = new CheckinApplication(applicationObject.getString("id"), applicationObject.getString("canvasName"), applicationObject.getString("namespace"));
 			
@@ -180,6 +179,7 @@ public class Checkin implements FacebookGraphObject{
 			
 			message = json.getString("message");
 			
+			comments = new ArrayList<Comment>(); // limited number object.
 			JSONObject commentObject = json.getJSONObject("comments");
 			JSONArray commentArray = commentObject.getJSONArray("data");
 			for(int i =0 ; i<commentObject.getInt("count"); i++){

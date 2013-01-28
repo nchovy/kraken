@@ -35,7 +35,6 @@ public class Note implements FacebookGraphObject{
 	}
 	public Note(){
 		fbConnection = new FbConnection();
-		comments = new ArrayList<Comment>();
 	}
 	public String getId() {
 		return id;
@@ -110,6 +109,7 @@ public class Note implements FacebookGraphObject{
 			subject = json.getString("subject");
 			message = json.getString("message");
 			
+			comments = new ArrayList<Comment>();
 			JSONObject commentObject = json.getJSONObject("comments");
 			JSONArray commentArray = commentObject.getJSONArray("data");
 			for(int i =0 ; i<commentObject.getInt("count"); i++){

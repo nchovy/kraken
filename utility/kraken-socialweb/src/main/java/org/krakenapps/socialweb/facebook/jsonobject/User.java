@@ -51,12 +51,8 @@ public class User implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	
 	public User(){
-		languages = new ArrayList<From>();
 		cover = new ArrayList<Cover>();
 		devices = new ArrayList<Devices>();
-		interested_in = new ArrayList<String>();
-		favorite_athletes = new ArrayList<From>();
-		favorite_team = new ArrayList<From>();
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{

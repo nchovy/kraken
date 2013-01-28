@@ -109,8 +109,10 @@ public class Group implements FacebookGraphObject{
 			id = json.getString("id");
 			version = json.getInt("version");
 			icon = json.getString("icon");
+			
 			JSONObject fromObject = json.getJSONObject("from");
 			owner = new From(fromObject.getString("id"), fromObject.getString("name"));
+			
 			name = json.getString("name");
 			description = json.getString("description");
 			link =  json.getString("link");
