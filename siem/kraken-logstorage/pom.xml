@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logstorage</artifactId>
-	<version>1.11.3</version>
+	<version>1.12.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log Storage</name>
 	<build>
@@ -23,8 +23,8 @@
 						<Bundle-SymbolicName>org.krakenapps.logstorage</Bundle-SymbolicName>
 						<Export-Package>
 							org.krakenapps.logstorage;version=${project.version},
-							org.krakenapps.logstorage.file;version=${project.version}
-							org.krakenapps.logstorage.msgbus;version=${project.version}
+							org.krakenapps.logstorage.file;version=${project.version},
+							org.krakenapps.logstorage.index;version=${project.version}
 						</Export-Package>
 						<Private-Package>
 							org.krakenapps.logstorage.engine,
@@ -33,9 +33,10 @@
 						<Import-Package>
 							org.krakenapps.msgbus;resolution:=optional,
 							org.krakenapps.msgbus.handler;resolution:=optional,
-							org.krakenapps.msgbus;resolution:=optional,
-							org.krakenapps.msgbus.handler;resolution:=optional,
-							*
+							org.krakenapps.codec;version=2.2.0,
+							org.krakenapps.confdb;version=0.10.0,
+							org.krakenapps.confdb.file;version=0.10.0,
+							!org.junit,*
 						</Import-Package>
 					</instructions>
 				</configuration>
@@ -81,11 +82,6 @@
 		<dependency>
 			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-cron</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-msgbus</artifactId>
-			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>com.jcraft</groupId>

@@ -40,6 +40,9 @@ public class Importer {
 	}
 
 	public void importData(InputStream is) throws IOException, ParseException {
+		if (is == null)
+			throw new IllegalArgumentException("import input stream cannot be null");
+
 		logger.debug("kraken confdb: start import data");
 		db.lock();
 

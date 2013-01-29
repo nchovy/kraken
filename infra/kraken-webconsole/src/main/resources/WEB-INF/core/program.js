@@ -6,7 +6,6 @@ define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/
 
 		this.getPrograms = function(callback) {
 			if(!programs || !packs) {
-				console.log("getAvailablePrograms")
 				socket.send("org.krakenapps.dom.msgbus.ProgramPlugin.getAvailablePrograms", {}, function(m) {
 					programs = m.body.programs;
 					packs = m.body.packs;
@@ -24,8 +23,6 @@ define(["/lib/jquery.js", "/core/locale.js", "/core/connection.js", "/component/
 
 					packs[0].programs.push(starter);
 					programs.push(starter);
-
-					console.log(packs)
 
 					callback(packs, programs);
 				});

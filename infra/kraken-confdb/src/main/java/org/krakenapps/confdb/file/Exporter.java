@@ -35,6 +35,9 @@ public class Exporter {
 	}
 
 	public void exportData(OutputStream os) throws IOException {
+		if (os == null)
+			throw new IllegalArgumentException("export output stream cannot be null");
+		
 		logger.debug("kraken confdb: start export data");
 		db.lock();
 		try {
