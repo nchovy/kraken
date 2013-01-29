@@ -3,6 +3,8 @@ package org.krakenapps.socialweb.facebook.jsonobject;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Achievement;
@@ -23,7 +25,7 @@ public class User implements FacebookGraphObject{
 	private String link;
 	private String username;
 	private String third_party_id;
-	private Installed installed;
+	private boolean installed;
 	private int timezone;
 	private String updated_time;
 	private boolean verified;
@@ -31,6 +33,7 @@ public class User implements FacebookGraphObject{
 	private String birthday;
 	private ArrayList<Cover> cover;
 	private ArrayList<Devices> devices;
+	//education
 	private String email;
 	private From hometown;
 	private ArrayList<String> interested_in;
@@ -51,8 +54,6 @@ public class User implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	
 	public User(){
-		cover = new ArrayList<Cover>();
-		devices = new ArrayList<Devices>();
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
@@ -146,6 +147,7 @@ public class User implements FacebookGraphObject{
 		public FbConnection(){
 		}
 	}
+	/*
 	private class Installed{
 		private String type;
 		private String id;
@@ -169,11 +171,19 @@ public class User implements FacebookGraphObject{
 			this.installed = installed;
 		}
 		
-	}
+	}*/
 	private class Cover{
 		private String id;
 		private String source;
 		private String offset_y;
+		Cover(){
+			
+		}
+		Cover(String id , String source, String offset_y){
+			this.id = id;
+			this.source = source;
+			this.offset_y = offset_y;
+		}
 		public String getId() {
 			return id;
 		}
@@ -197,6 +207,13 @@ public class User implements FacebookGraphObject{
 	private class Devices{
 		private String os;
 		private String hardware;
+		Devices(){
+			
+		}
+		Devices(String os, String hardward){
+			this.os = os;
+			this.hardware = hardware;
+		}
 		public String getOs() {
 			return os;
 		}
@@ -421,14 +438,6 @@ public class User implements FacebookGraphObject{
 		this.third_party_id = third_party_id;
 	}
 
-	public Installed getInstalled() {
-		return installed;
-	}
-
-	public void setInstalled(Installed installed) {
-		this.installed = installed;
-	}
-
 	public int getTimezone() {
 		return timezone;
 	}
@@ -615,7 +624,92 @@ public class User implements FacebookGraphObject{
 
 	@Override
 	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
+		try {
+			id = json.getString("id");
+			name = json.getString("name");
+			first_name = json.getString("first_name");
+			middle_name = json.getString("middle_name");
+			last_name = json.getString("last_name");
+			gender = json.getString("gender");
+			locale = json.getString("locale");
+			
+			languages = new ArrayList<From>();
+			JSONObject languageObject = json.getJSONObject("languages");
+			JSONArray languageArray = languageObject.getJSONArray("data");
+			for(int i=0; i<languageArray.length(); i++){
+				languages.add(new From(languageArray.getJSONObject(i).getString("id") , languageArray.getJSONObject(i).getString("name")));
+			}
+			
+			link = json.getString("link");
+			username = json.getString("username");
+			//age_range
+			
+			third_party_id = json.getString("third_party_id");
+			installed = json.getBoolean("installed");
+			timezone = json.getInt("timezone");
+			updated_time = json.getString("updated_time");
+			verified = json.getBoolean("verfied");
+			bio = json.getString("bio");
+			birthday = json.getString("birthday");
+		
+			cover = new ArrayList<Cover>();
+			JSONObject coverObject = json.getJSONObject("cover");
+			JSONArray coverArray = json.getJSONArray("data");
+			for(int i=0; i<coverArray.length() ; i++){
+				cover.add(new Cover(coverArray.getJSONObject(i).getString("id"), coverArray.getJSONObject(i).getString("source") , coverArray.getJSONObject(i).getString("offset_y")));
+			}
+			
+			devices = new ArrayList<Devices>();
+			JSONObject deviceObject = json.getJSONObject("devices");
+			JSONArray deviceArray = json.getJSONArray("data");
+			for(int i=0; i<deviceArray.length() ; i++){
+				devices.add(new Devices(deviceArray.getJSONObject(i).getString("os"), deviceArray.getJSONObject(i).getString("hardward")));
+			}
+			email = json.getString("email");
+			
+			JSONObject hometownObject = json.getJSONObject("hometown");
+			hometown = new From(hometownObject.getString("id"), hometownObject.getString("name"));
+			
+			/*interested_in = new ArrayList<String>();
+			JSONObject interestedObject = json.getJSONObject("interested_in");
+			JSONArray interestedArray = interestedObject.getJSONArray("data");
+			for(int i =0; i<interestedArray.length() ; i++){
+				interested_in.add(interestedArray.getString(i));
+			}*/ // need to confirm how it looks like in object
+			
+			JSONObject locationObject = json.getJSONObject("location");
+			location = new From(locationObject.getString("id"), locationObject.getString("name"));
+			
+			political = json.getString("political");
+			//paytment_pricepoints
+			
+			favorite_athletes = new ArrayList<From>();
+			JSONObject athleteObject = json.getJSONObject("favorite_athletes");
+			JSONArray athleteArray = athleteObject.getJSONArray("data");
+			for(int i = 0 ; i< athleteArray.length(); i++){
+				favorite_athletes.add( new From(athleteArray.getJSONObject(i).getString("id"), athleteArray.getJSONObject(i).getString("id")));
+			}
+			
+			favorite_team = new ArrayList<From>();
+			JSONObject teamObject = json.getJSONObject("favorite_team");
+			JSONArray teamArray = athleteObject.getJSONArray("data");
+			for(int i = 0 ; i< teamArray.length(); i++){
+				favorite_team.add( new From(teamArray.getJSONObject(i).getString("id"), teamArray.getJSONObject(i).getString("id")));
+			}
+			picture = json.getString("picture");
+			quotes = json.getString("quptes");
+			relationship_status = json.getString("relationship_status");
+			religion = json.getString("religion");
+			//security setting
+			JSONObject significantObject = json.getJSONObject("significant_other");
+			significant_other = new From(significantObject.getString("id"), significantObject.getString("name"));
+			website = json.getString("website");
+			//work
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return 0;
 	}
 

@@ -292,9 +292,8 @@ public class Photo implements FacebookGraphObject{
 			JSONArray tagsArray = tagsObject.getJSONArray("data");
 			ArrayList<Tag> tagsList = new ArrayList<Tag>(tagsArray.length());
 			for(int i=0; i<tagsArray.length(); i++){
-				tagsList.add(new Tag(tagsArray.getJSONObject(i).getInt("x"),tagsArray.getJSONObject(i).getInt("y")));
+				tags.add(new Tag(tagsArray.getJSONObject(i).getInt("x"),tagsArray.getJSONObject(i).getInt("y")));
 			}
-			tags = tagsList;
 			
 			name = json.getString("name");
 			JSONObject nameTagObject = json.getJSONObject("name_tags");

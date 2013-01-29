@@ -22,9 +22,6 @@ public class AchievementInstance implements FacebookGraphObject{
 	private FbConnection fbConnection;
 	
 	public AchievementInstance(){
-		likes = new Like();
-		achievement = new Achievement();
-		comments = new ArrayList<Comment>();
 		fbConnection = new FbConnection();
 	}
 	
@@ -42,12 +39,14 @@ public class AchievementInstance implements FacebookGraphObject{
 			JSONObject applicationObject = json.getJSONObject("application");
 			application = new From(applicationObject.getString("id"),applicationObject.getString("name"));
 			
+			achievement = new Achievement();
 			JSONObject achiveObject = json.getJSONObject("achivement");
 			achievement.setId(achiveObject.getString("id"));
 			achievement.setUrl(achiveObject.getString("url"));
 			achievement.setType(achiveObject.getString("type"));
 			achievement.setTitle(achiveObject.getString("title"));
 			
+			likes = new Like();
 			JSONObject likeObject = json.getJSONObject("likes");
 			JSONArray likeArray = likeObject.getJSONArray("data");
 			ArrayList<From> likeList = new ArrayList<From>(likeObject.getInt("count"));
@@ -56,6 +55,7 @@ public class AchievementInstance implements FacebookGraphObject{
 			}
 			likes = new Like(likeList , likeObject.getInt("count"));
 			
+			comments = new ArrayList<Comment>();
 			JSONObject commentObject = json.getJSONObject("comments");
 			JSONArray commentArray = commentObject.getJSONArray("data");
 			for(int i =0 ; i<commentObject.getInt("count"); i++){
