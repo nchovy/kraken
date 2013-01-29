@@ -10,7 +10,6 @@ require([
 ], 
 
 function(_$, ko, socket, programManager, Locale, pageManager, List, Util) {
-	console.log(Locale);
 
 	(function() {
 		var listNowRunning = [];
@@ -149,7 +148,6 @@ function(_$, ko, socket, programManager, Locale, pageManager, List, Util) {
 		}
 
 		var program = Core.Program.getProgramById(entry);
-		console.log(program)
 		if(!!program) {
 			vm.select(program);
 		}

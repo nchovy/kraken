@@ -15,6 +15,10 @@
  */
 package org.krakenapps.logstorage.index;
 
+/**
+ * @since 0.9
+ * @author xeraph
+ */
 class InvertedIndexKey {
 	public String term;
 	public String key;

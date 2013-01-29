@@ -7,7 +7,9 @@ Data.ViewModel = function (data, option) {
 	this.self = this;
 
 	this.items = ko.observableArray(data);
-	this.selected;
+
+	this.canSelectMulti = ko.observable(false);
+	this.selected = ko.observableArray([]);
 
 	function bindEvent(collection) {
 		$.each(collection, function(i, obj) {
@@ -58,21 +60,35 @@ function setPublicMethod(self) {
 	}
 
 	self.select = function(item, e) {
+		if(this.canSelectMulti() === undefined) { 
+			this.canSelectMulti(false)
+		}
+
+		if(!this.canSelectMulti()) {
+			if(this.selected().length > 0) {
+				this.selected()[0].isSelected(false);
+			}
+			this.selected.splice(0, this.selected().length);
+		}
+
+
+		item.isSelected(true);
+		this.selected.push(item);
+
 		if(!!this.onSelect) {
 			if(e) {
-				this.onSelect(item, e.delegateTarget);
+				this.onSelect(item, e);
 			}
 			else {
 				this.onSelect(item);
 			}
 		}
-			
-		if(this.selected !== undefined) {
-			this.selected.isSelected(false);
-		}
-		
-		item.isSelected(true);
-		this.selected = item;
+	}
+
+	self.selectAll = function(toggle) {
+		$.each(this.items(), function(i, obj) {
+			obj.isSelected(toggle);
+		});
 	}
 
 	self.selectAt = function(idx) {

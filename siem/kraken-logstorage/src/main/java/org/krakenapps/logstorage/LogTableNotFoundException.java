@@ -20,7 +20,7 @@ public class LogTableNotFoundException extends RuntimeException {
 	private String tableName;
 
 	public LogTableNotFoundException(String tableName) {
-		super(tableName + " not found");
+		super("table " + tableName + " not found");
 		this.tableName = tableName;
 	}
 

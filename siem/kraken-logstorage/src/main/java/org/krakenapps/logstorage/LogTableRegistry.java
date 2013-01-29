@@ -33,7 +33,7 @@ public interface LogTableRegistry {
 	void renameTable(String currentName, String newName);
 
 	void dropTable(String tableName);
-
+	
 	Set<String> getTableMetadataKeys(String tableName);
 
 	String getTableMetadata(String tableName, String key);

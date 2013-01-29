@@ -5,14 +5,21 @@ require(["/lib/jquery.js",
 	"/component/util.js",
 	"/component/logdb.querybar.js",
 	"/component/spreadsheet.js",
-	"/component/chart.column.js",
-	"/lib/knockout.mapping-latest.debug.js"
+	"/component/chart.stackedbar.js",
+	"/lib/knockout.mapping-latest.debug.js",
+	"/component/window.js",
+	"/component/dd.js",
+	"/component/list.js",
+	"/component/data.grid.js",
+	"/bootstrap/js/bootstrap.amd.js",
+	"/package/system/orgchart/testdata2.js"
 	],
-	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, Column, komap) {
+	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, json2) {
 
 	var qbar = new QueryBar.instance();
 
 	qbar.Logdb.on("pageLoaded", function(m) {
+		console.log(m.body);
 		var currIdx = grid1.getCurrentIndex();
 		vm.pushMany(m.body.result, currIdx);
 	});
@@ -20,36 +27,20 @@ require(["/lib/jquery.js",
 	qbar.Logdb.on("onTimeline", function(m) {
 		console.log("timeline:", m.body);
 
-
 		if(!!m.body.count) {
-			vm.totalCount(m.body.count)
+			vm.totalCount(m.body.count);
+			$("#divTotalCount").text(m.body.count + " logs");
 		}
 
-		var tobj = convertTimeline(m.body);
-		for(var i = 0; i < tobj.length; i++) {
-			tvm.items()[i].value(tobj[i].value())
-			tvm.items()[i].bar.label(tobj[i].name)
-		}
-		
-		/*
-		tvm.items.removeAll();
+		bar.updateData( convertTimeline( m.body ) );
 
-		$.each(tobj, function(i, obj){
-			tvm.add(obj);
-		})
-		*/
-		
 	});;
 
-	qbar.Logdb.on("loaded", function(m) {
-
-	})
-
 	qbar.onSearch = function(self, el) {
+		$("#divTotalCount").text("0 log");
 		vm.clear();
 		grid1.clear();
 	}
-
 
 	qbar.nowQuerying.subscribe(function(val) {
 		if(val) {
@@ -62,12 +53,9 @@ require(["/lib/jquery.js",
 
 
 	var vm = new QueryBar.ViewModel();
-
-
 	ko.applyBindings(qbar, document.getElementById("qbar"));
 
-
-	var grid1 = new Spreadsheet("#qresult", vm, {
+	var grid1 = new Spreadsheet("#box-result", vm, {
 		"debug": false,
 		"colDataBind": function(rowidx, colidx, prop) {
 			return 'text: rowCache[' + rowidx + ']["' + prop + '"]';
@@ -79,8 +67,10 @@ require(["/lib/jquery.js",
 
 		},
 		"onRenderRows": Util.throttle(function(top, bottom, el, handler) {
-			qbar.Logdb.getResult(qbar.Logdb.getId(), top, bottom - top, function() {
-				console.log("after getResult")
+			if(qbar.Logdb.activeId() === -1) return;
+
+			qbar.Logdb.getResult(qbar.Logdb.activeId(), top, bottom - top, function() {
+				console.log("after getResult", top, bottom - top)
 				try {
 					ko.applyBindings(vm, el.find("tbody")[0]);
 				}
@@ -93,30 +83,177 @@ require(["/lib/jquery.js",
 		}, 200)
 	});
 
+	$("#btnOpenModalSaveQuery").on("click", function(e) {
+		e.preventDefault();
+		Win.open("#modalSaveQuery");
+	})
+
+	$("#btnOpenScheduleQuery").on("click", function(e) {
+		e.preventDefault();
+	})
+
+	$("#btnOpenModalDownload").on("click", function() {
+		Win.open("#modalDownload");
+	});
+
+	$("#btnDownloadResult").on("click", function(e) {
+		e.preventDefault();
+
+		Socket.send("org.krakenapps.msgbus.TokenPlugin.issueToken", {
+			"token_data": {
+				"query_id": qbar.Logdb.getId(),
+				"offset": 0,
+				"limit": 40,
+				"file_name": "hello.csv",
+				"type": "csv",
+				"charset": "utf-8"
+			}
+		}, function(m) {
+			console.log("Token_id", m.body.token_id);
+		})
+
+		Win.close("#modalDownload");
+	});
+
+
+
+
+	$("#dododo3").on("click", function() {
+		if($("#box-query").hasClass("scaled")) {
+			$("#box-query").removeClass("scaled");
+		}
+		else {
+			$("#box-query").addClass("scaled")
+		}
+		
+	});
+
+
+	// Variables
+	var vmQueries;
+
+	// Pane
+
+	$("#pane-change li a").on("click", function() {
+		$("#box-query-status .pane").hide();
+
+		var target = $(this).data("target");
+
+		$("#" + target).show();
+
+
+		$(this).parents("#pane-change").prev(".btn").find("span.ltext").text($(this).text());
+	});
+	
+
+	$(".toggle-edit").on("click", function() {
+		$(".mode-edit").addClass("roll").fadeIn('fast');
+		$(".mode-default").addClass("up").fadeOut('fast');
+
+		vmQueries.isEditMode(true);
+		vmQueries.selectAll(false);
+	});
+
+	$(".toggle-default").on("click", function() {
+		$(".mode-edit").addClass("up").fadeOut('fast');
+		$(".mode-default").addClass("roll").fadeIn('fast');
+
+		vmQueries.isEditMode(false);
+		vmQueries.selectAll(false);
+	});
+
+	function selectOnEditMode(data) {
+		var countSelected = vmQueries.items().filter(function(q) {
+			return q.isSelected();
+		}).length;
+
+		$("#btnRemoveQueries").text("Remove(" + countSelected + ")");
+	}
+
+	function selectOnDefaultMode(data, e) {
+		var offset = $(vmQueries.el).find("li.active").offset();
+
+		var popover = $(vmQueries.el).find(".popover")
+			.addClass("in")
+			.css("top", (offset.top - 140) + "px")
+			.css("left", e.pageX + "px")
+			.show();
+
+		function hidePopover(e) {
+			e.stopPropagation();
+			popover.hide();
+			$("#box-query *").off("click", hidePopover);
+		}
+
+		$("#box-query *").on("click", hidePopover);
+	}
+
+	// Running Queries
+	var Core = parent.Core;
+	Core.LogDB.getQueries(function(queries) {
+		console.log(queries());
+
+		vmQueries = new List.ViewModel(queries());
+
+		vmQueries.isEditMode = vmQueries.canSelectMulti;
+
+		vmQueries.singleSelected = ko.computed(function() {
+			var blank = {
+				activeId: ko.observable("activeId"),
+				activeQuery: ko.observable("activeQuery")
+			};
+
+			if(!this.isEditMode()) {
+				if(this.selected().length > 0) {
+					return this.selected()[0];
+				}
+				else {
+					return blank;
+				}
+			}
+			else {
+				return blank;
+			}
+		}, vmQueries);
+
+		vmQueries.onSelect = function(data, e) {
+			if(vmQueries.isEditMode()) {
+				selectOnEditMode.call(this, data);
+			}
+			else {
+				console.log(vmQueries.selected.length)
+				selectOnDefaultMode.call(this, data, e);
+			}
+		}
+
+		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
+	});
+
+
+	$("#btnRemoveQueries").on("click", function() {
+
+	})
+
+
+	// Timeline
+
 	var samplemsg = 
-        {
-            "id": 6,
-            "values": [
-                5,
-                10,
-                20,
-                40,
-                6,
-                80,
-                0,
-                30,
-                60,
-                100
-            ],
-            "count": 100,
-            "span_field": "Minute",
-            "type": "eof",
-            "span_amount": 1,
-            "begin": "2012-06-24 23:49:00+0900"
-        };
+	{
+		"id": 6,
+		"values": [1,1,1,1,1,1,1,1,1,1],
+		//"values": [5,10,20,40,6,80,0,30,60,100],
+		"count": 100,
+		"span_field": "Minute",
+		"type": "eof",
+		"span_amount": 1,
+		"begin": "2012-06-24 23:49:00+0900"
+	};
+
 
 	function convertTimeline(body) {
-		var tbegin = new Date(body.begin);
+		var tbegin = d3.time.format("%Y-%m-%d %X").parse(body.begin.substring(0, 19))
+		//var tbegin = new Date(body.begin);
+		//console.log(tbegin)
 		
 		var diff = 0, span = 0;
 		if(body.span_field === "Minute") {
@@ -125,100 +262,42 @@ require(["/lib/jquery.js",
 			tbegin = new Date(tbegin.getTime() - span)
 		}
 
-		return body.values.map(function(v) {
+		var obj = {};
+		body.values.forEach(function(v) {
 			tbegin = new Date(tbegin.getTime() + diff * span)
-			//console.log(tbegin.getISOTimeString())
-			return {
-				"value": ko.observable(v),
-				"name": tbegin.getISOTimeString()
-			}
+			obj[tbegin.getISOTimeString()] = v;
 		});
+
+		return [obj];
 	}
 
-	var mm = convertTimeline(samplemsg);
-	
-	var tvm = new Column.ViewModel(mm, {
-		"valueKey": "value",
-		"labelKey": "name"
-	});
+	var z = convertTimeline(samplemsg);
+	var bar = new StackedBar.ViewModel("#timeline-chart", z);
 
-
-	tvm.addRefLineY = function(el) {
-		if(el.nodeType == 1) {
-			//console.log(el)
-			var y;
-			if(el.nodeName === "line") {
-				y = $(el).attr("y1");
-				$(el).attr("y1", y - 30);
-			}
-			else if(el.nodeName === "text") {
-				y = $(el).attr("y");
-				$(el).attr("y", y - 30);
-			}
-			
-			$(el).css("opacity", "0").animate({
-				opacity: 1,
-				svgY: y,
-				svgY1: y,
-				svgY2: y
-			}, 500);	
-		}
-	}
-
-	tvm.removeRefLineY = function(el) {
-		if(el.nodeType == 1) {
-			//console.log(el)
-
-
-			$(el).animate({
-				opacity: 0,
-			}, 200, function() {
-				$(el).remove();
-			})
-
-		}	
-	}
-
-	tvm.addItem = function(el) {
-		if(el.nodeType == 1) {
-			if(el.nodeName === "rect") {
-				$(el).css("opacity", "0").animate({
-					opacity: 1
-				}, 500);
-			}
-		}
-	}
-
-
-	ko.applyBindings(tvm, document.getElementById("qtimeline"))
-	
-	
-	$("#dododo").on("click", function() {
-		max = max * 1.5;
-		var r = Math.floor(Math.random() * max);
-		console.log(tvm.items()[1].value(), "=>", r);
-
-		tvm.items()[1].value(r)
-
-		console.log("maxValue", tvm.getMaxValue())
-	});
-
-	var max = 100;
-
-	$("#dododo2").on("click", function() {
-		/*
-		tvm.refLineY.push({
-				"value": 1,
-				"scaled": 10
-			})
-		*/
-		max = max * 1.5;
-		var r = Math.floor(Math.random() * max);
-		//console.log(r)
+	$("#btnTimelineZoom").on("click", function() {
+		var newmsg = 
+		{
+			"id": 6,
+			//"values": [0,0,0,0,0,0,0,0,0,0],
+			"values": [5,4,21,4,12,23,2,11,13,17],
+			"count": 100,
+			"span_field": "Minute",
+			"type": "eof",
+			"span_amount": 1,
+			"begin": "2012-06-24 11:12:00+0900"
+		};
 		
-		tvm.add({
-				"value": ko.observable(r),
-				"name": "2012-06-2g"
-			})
+		bar.updateData( convertTimeline( newmsg ) );
 	})
+
+	//console.log( d3.time.format("%Y-%m-%d %X").parse("2012-06-24 11:12:00"))
+
+	// Layout
+
+	if($.browser.msie && parseInt($.browser.version) < 10) {
+		console.log("added flexie!")
+		$('<link href="logquery9.css" rel="stylesheet"/>').appendTo("head");
+
+		require(["/lib/flexie.amd.js"]);
+	}
 });
