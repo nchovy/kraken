@@ -80,24 +80,23 @@ require(["/lib/jquery.js",
 		LogQuery.init(lq, category20(len));
 
 		lq.Logdb.on("onTimeline", function(m) {
-
-			lq.timeline = convertTimeline(m.body);
-
-			if(lq.isSelected()) {
-
-				if(!!m.body.count) {
-					lq.totalCount = m.body.count;
-					$("#divTotalCount").text(lq.totalCount + " results");
-				}
-
-				bar.updateData(lq.timeline);
-			}
+			onTimeline(m, lq);
 		});
 
 		vmQueryPane.add(lq);
 		vmQueryPane.select(lq);
 
 		return lq;
+	}
+
+	function onTimeline(m, lq) {
+		lq.timeline = convertTimeline(m.body);
+		lq.totalCount = m.body.count;
+
+		if(lq.isSelected()) {
+			$("#divTotalCount").text(lq.totalCount + " results");
+			bar.updateData(lq.timeline);
+		}
 	}
 
 	ko.applyBindings(vmQueryPane, document.getElementById("tabs"))
@@ -259,10 +258,14 @@ require(["/lib/jquery.js",
 				vmQueryPane.select(existTab);
 			}
 			else {
+				console.log(query)
 				// new tab
+				if(!query.isEnd()) {
+					query.registerTrap();
+				}
 				var lq = addTab(query);
 				lq.vm.totalCount(query.totalCount());
-				console.log(query)
+				
 			}
 
 			hidePopover();
@@ -308,12 +311,18 @@ require(["/lib/jquery.js",
 		//var tbegin = new Date(body.begin);
 		//console.log(tbegin)
 		
-		var diff = 0, span = 0;
+		var diff = 1 * body.span_amount;
+		var span = 0;
 		if(body.span_field === "Minute") {
-			diff = 1 * body.span_amount;
 			span = 60000;
-			tbegin = new Date(tbegin.getTime() - span)
 		}
+		else if(body.span_field === "Hour") {
+			span = 3600000;
+		}
+		else if(body.span_field === "Day") {
+			span = 86400000;
+		}
+		tbegin = new Date(tbegin.getTime() - span);
 
 		var obj = {};
 		body.values.forEach(function(v) {
