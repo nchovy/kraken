@@ -75,6 +75,16 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 			qbar.self = qbar;
 			qbar.name = className;
 
+			qbar.tabName = ko.computed(function() {
+				var qtext = qbar.Logdb.activeQuery();
+				if(!!qtext) {
+					return qtext;
+				}
+				else {
+					return "(New Query)";
+				}
+			})
+
 			qbar.vm = new QueryBar.ViewModel();
 
 			qbar.Logdb.on("pageLoaded", function(m) {

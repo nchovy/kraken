@@ -15,7 +15,7 @@
 			<li data-bind="css: { 'active': $data.isSelected }">
 				<a href="#" data-bind="click: $parent.select.callFn($parent, $data)">
 					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
-					<span data-bind="text: $data.Logdb.activeQuery"></span>
+					<span data-bind="text: $data.tabName"></span>
 					<span data-bind="if: $data.isSelected">
 						<i class="icon-remove" data-bind="click: $parent.remove.callFn($parent, $data)"></i>
 					</span>
@@ -53,19 +53,19 @@
 			<h3 class="popover-title" data-bind="text: $root.singleSelected().activeQuery"></h3>
 			<div class="popover-content" style="position: relative; height: 75px">
 				<p data-bind="text: $root.singleSelected().activeQuery"></p>
-				<button class="btn btn-primary">View Result</button>
+				<button data-bind="click: $root.clickViewResult.callFn($root, $root.singleSelected())" class="btn btn-primary">View Result</button>
 				<button class="btn">Status</button>
 			</div>
 		</div>
 		<ul data-bind="foreach: items" class="nav nav-pills nav-stacked">
-			<li data-bind="css: { 'active': $data.isSelected }">
+			<li data-bind="css: { 'active': $data.isSelected }, visible: $data.activeId() != -1">
 				<a href="#" data-bind="click: function() { $parent.select.callFn($parent, $data, event)(); }">
 					<input type="checkbox" data-bind="visible: $parent.isEditMode, checked: $data.isSelected"/>
 					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px 5px; border: 1px solid #ccc"></span>
 					<span style="width: 30px" data-bind="text: $data.activeId"></span>
 					<span data-bind="text: $data.activeQuery"></span>
 					<small>3 hours ago</small>
-					<button data-bind="visible: !$parent.isEditMode()" class="btn btn-mini btn-info pull-right" style="margin-top: -5px"><i class="icon-chevron-right icon-white"></i></button>
+					<button data-bind="visible: !$parent.isEditMode(), click: $root.clickViewResult.callFn($root, $data), clickBubble: false" class="btn btn-mini btn-info pull-right" style="margin-top: -5px"><i class="icon-chevron-right icon-white"></i></button>
 					<span class="pull-right" style="width: 50px; color: red" data-bind="text: $data.isSelected"></span>
 					<span class="pull-right" style="width: 50px; color: blue" data-bind="text: $data.isEnd"></span>
 					<span class="pull-right" style="width: 100px">Scheduled</span>

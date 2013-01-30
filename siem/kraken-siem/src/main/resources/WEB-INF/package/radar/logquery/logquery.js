@@ -48,10 +48,28 @@ require(["/lib/jquery.js",
 			$("#divTotalCount").text("0 result");
 		}
 	}
+
+	vmQueryPane.onBeforeRemove = function() {
+		if(vmQueryPane.length() == 1) return false;
+	}
+
+	vmQueryPane.onAfterRemove = function(data) {
+		vmQueryPane.selectAt(vmQueryPane.length() - 1);
+		vmQueries.remove(data.Logdb)
+	}
 	
-	function addTab() {
-		var lq = new LogQuery.instance();
+	function addTab(query) {
+		var lq;
+		if(!!query) {
+			lq = new LogQuery.instance({
+				"query": query
+			});
+		}
+		else {
+			lq = new LogQuery.instance();
+		}
 		LogQuery.init(lq);
+
 		lq.Logdb.on("onTimeline", function(m) {
 
 			lq.timeline = convertTimeline(m.body);
@@ -69,6 +87,8 @@ require(["/lib/jquery.js",
 
 		vmQueryPane.add(lq);
 		vmQueryPane.select(lq);
+
+		return lq;
 	}
 
 	ko.applyBindings(vmQueryPane, document.getElementById("tabs"))
@@ -144,7 +164,18 @@ require(["/lib/jquery.js",
 		$("#btnRemoveQueries").text("Remove(" + countSelected + ")");
 	}
 
+	function hidePopover(e) {
+		if(!!e) {
+			e.stopPropagation();
+		}
+
+		var popover = $(vmQueries.el).find(".popover");
+		popover.hide();
+		$("#box-query *").off("click", hidePopover);
+	}
+
 	function selectOnDefaultMode(data, e) {
+		console.log(vmQueries)
 		var offset = $(vmQueries.el).find("li.active").offset();
 
 		var popover = $(vmQueries.el).find(".popover")
@@ -153,19 +184,12 @@ require(["/lib/jquery.js",
 			.css("left", e.pageX + "px")
 			.show();
 
-		function hidePopover(e) {
-			e.stopPropagation();
-			popover.hide();
-			$("#box-query *").off("click", hidePopover);
-		}
-
 		$("#box-query *").on("click", hidePopover);
 	}
 
 	// Running Queries
 	Core.LogDB.getQueries(function(queries) {
-
-		vmQueries = new List.ViewModel(queries);
+		vmQueries = queries;
 
 		vmQueries.isEditMode = vmQueries.canSelectMulti;
 
@@ -188,17 +212,40 @@ require(["/lib/jquery.js",
 			}
 		}, vmQueries);
 
+		vmQueries.clickViewResult = function(query) {
+			var qid = query.activeId();
+
+			var existTab;
+			vmQueryPane.items().filter(function(t) {
+				if(t.Logdb.activeId() == qid) {
+					existTab = t;
+				}
+			});
+
+			if(!!existTab) {
+				// active tab
+				vmQueryPane.select(existTab);
+			}
+			else {
+				// new tab
+				var lq = addTab(query);
+				lq.vm.totalCount(query.totalCount())
+			}
+
+			hidePopover();
+		}
+
 		vmQueries.onSelect = function(data, e) {
 			if(vmQueries.isEditMode()) {
 				selectOnEditMode.call(this, data);
 			}
 			else {
-				console.log(vmQueries.selected.length)
 				selectOnDefaultMode.call(this, data, e);
 			}
 		}
 
 		vmQueries.onAfterRemove = function(item) {
+			if(item.activeId() === -1) return;
 			item.dispose(function() {
 				Core.LogDB.remove(item);
 			});
@@ -209,7 +256,16 @@ require(["/lib/jquery.js",
 
 	$("#btnRemoveQueries").on("click", function() {
 		$.each(vmQueries.selected(), function(i, q) {
-			vmQueries.remove(q);
+			//vmQueries.remove(q);
+
+			vmQueryPane.items().filter(function(t) {
+				if(t.Logdb.activeId() == q.activeId()) {
+					if(vmQueryPane.items().length == 1) {
+						addTab();
+					}
+					vmQueryPane.remove(t);
+				}
+			});
 		});
 	})
 

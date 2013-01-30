@@ -43,17 +43,23 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js", "/component/window.js"
 			this.self = this;
 			this.name = className;
 
+			this.Logdb;
+
 			if(!!option) {
-				//console.log("has option")
-				queryPageSize = option.queryPageSize;
+				queryPageSize = option.queryPageSize || 15;
+
+				if(!!option.query) {
+					this.Logdb = option.query;
+				}
 			}
 
+			if(!this.Logdb) {
+				this.Logdb = logdbManager.create();
+			}
 
-			this.Logdb = logdbManager.create();
+			//var inputStr = "table limit=10000 local\\interpark-syslog";
 
-			var inputStr = "table limit=10000 local\\interpark-syslog";
-
-			this.input = ko.observable(inputStr);
+			this.input = ko.observable(this.Logdb.activeQuery());
 
 			this.nowQuerying = ko.observable(false);
 
