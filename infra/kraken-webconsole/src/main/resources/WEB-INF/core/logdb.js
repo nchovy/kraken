@@ -2,7 +2,7 @@ define(["/core/Connection.js", "/component/util.js", "/lib/knockout-2.1.0.debug.
 
 // class
 var Query = function(id, query_str, is_end, total_count) {
-	var isDebug = false;
+	var isDebug = true;
 
 	if(!console.group) {
 		console.group = function() {}
@@ -109,20 +109,27 @@ var Query = function(id, query_str, is_end, total_count) {
 				return;
 			}
 
-			var query_id = m.body.id;
-			var request_count = 0;
+			var queryId = m.body.id;
+			that.activeId(queryId);
+			that.activeQuery(querystr);
 
-			function checkRegister() {
-				request_count++;
-				if(request_count === 2) {
-					afterCreateQuery(querystr, query_id);
-				}
-			}
-
-			socket.registerTrap("logstorage-query-" + query_id, onTrap, checkRegister);
-			socket.registerTrap("logstorage-query-timeline-" + query_id, onTimeline, checkRegister);
-			//socket.debugTrap();
+			that.registerTrap();
 		})
+	}
+
+	this.registerTrap = function() {
+
+		var request_count = 0;
+
+		function checkRegister() {
+			request_count++;
+			if(request_count === 2) {
+				afterCreateQuery(that.activeQuery(), that.activeId());
+			}
+		}
+
+		socket.registerTrap("logstorage-query-" + that.activeId(), onTrap, checkRegister);
+		socket.registerTrap("logstorage-query-timeline-" + that.activeId(), onTimeline, checkRegister);
 	}
 
 	function afterCreateQuery(query, queryId) {
@@ -132,7 +139,6 @@ var Query = function(id, query_str, is_end, total_count) {
 		clearQuery({
 			except: [queryId],
 			callback: function() {
-				that.activeQuery(query);
 				startQuery(queryId);
 			}
 		});
@@ -155,9 +161,6 @@ var Query = function(id, query_str, is_end, total_count) {
 				}
 
 				callback.starting(queryId);
-				
-				that.activeId(queryId);
-
 			}
 		);
 	}
@@ -376,8 +379,12 @@ var logdbManager = (function() {
 		});
 	}
 
-	function create() {
+	function create(option) {
 		var instance = new Query();
+		if(!!option.callback) {
+			option.callback(instance);
+		}
+
 		queries.add(instance);
 		console.log(instance)
 		return instance;

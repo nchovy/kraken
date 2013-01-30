@@ -54,7 +54,10 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js", "/component/window.js"
 			}
 
 			if(!this.Logdb) {
-				this.Logdb = logdbManager.create();
+				var logdbOption;
+				if(!!option.logdbOption) logdbOption = option.logdbOption;
+				
+				this.Logdb = logdbManager.create(logdbOption);
 			}
 
 			//var inputStr = "table limit=10000 local\\interpark-syslog";

@@ -55,7 +55,6 @@ require(["/lib/jquery.js",
 
 	vmQueryPane.onAfterRemove = function(data) {
 		vmQueryPane.selectAt(vmQueryPane.length() - 1);
-		vmQueries.remove(data.Logdb)
 	}
 
 	var category20 = d3.scale.category20();
@@ -68,7 +67,14 @@ require(["/lib/jquery.js",
 			});
 		}
 		else {
-			lq = new LogQuery.instance();
+			lq = new LogQuery.instance({
+				logdbOption: {
+					callback: function(query) {
+						// additional property
+						query.color = ko.computed(coloringQuery, query)
+					}
+				}
+			});
 		}
 		var len = vmQueryPane.length();
 		LogQuery.init(lq, category20(len));
@@ -190,28 +196,31 @@ require(["/lib/jquery.js",
 		$("#box-query *").on("click", hidePopover);
 	}
 
+	function coloringQuery() {
+		var self = this;
+		var hasMatch = false;
+		var color;
+		vmQueryPane.items().filter(function(t) {
+			if(t.Logdb.activeId() == self.activeId()) {
+				hasMatch = true;
+				color = t.color;
+			}
+		});
+
+		if(hasMatch) {
+			return color;
+		}
+		else {
+			return null;
+		}
+	}
+
 	// Running Queries
 	Core.LogDB.getQueries(function(queries) {
 		vmQueries = queries;
 
 		$.each(vmQueries.items(), function(i, q) {
-			q.color = ko.computed(function() {
-				var hasMatch = false;
-				var color;
-				vmQueryPane.items().filter(function(t) {
-					if(t.Logdb.activeId() == q.activeId()) {
-						hasMatch = true;
-						color = t.color;
-					}
-				});
-
-				if(hasMatch) {
-					return color;
-				}
-				else {
-					return null;
-				}
-			});
+			q.color = ko.computed(coloringQuery, q);
 		})
 
 		vmQueries.isEditMode = vmQueries.canSelectMulti;
@@ -252,7 +261,8 @@ require(["/lib/jquery.js",
 			else {
 				// new tab
 				var lq = addTab(query);
-				lq.vm.totalCount(query.totalCount())
+				lq.vm.totalCount(query.totalCount());
+				console.log(query)
 			}
 
 			hidePopover();
@@ -269,17 +279,16 @@ require(["/lib/jquery.js",
 
 		vmQueries.onAfterRemove = function(item) {
 			if(item.activeId() === -1) return;
-			item.dispose(function() {
-				Core.LogDB.remove(item);
-			});
+			item.dispose();
 		}
 
 		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
 	});
 
 	$("#btnRemoveQueries").on("click", function() {
+		console.log(vmQueries.selected())
 		$.each(vmQueries.selected(), function(i, q) {
-			//vmQueries.remove(q);
+			vmQueries.remove(q);
 
 			vmQueryPane.items().filter(function(t) {
 				if(t.Logdb.activeId() == q.activeId()) {
