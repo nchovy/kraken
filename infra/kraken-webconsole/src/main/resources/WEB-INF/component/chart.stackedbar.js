@@ -107,7 +107,7 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 		init(z);
 
-		function resize(height) {
+		function resize() {
 
 			y = d3.scale.linear()
 				.rangeRound([height, 0]);
@@ -180,7 +180,8 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 
 		$(window).on("resize", function () {
-			resize($(el).height() - 10 - 10)
+			height = $(el).height() - margin.top - margin.bottom;
+			resize();
 		})
 
 
