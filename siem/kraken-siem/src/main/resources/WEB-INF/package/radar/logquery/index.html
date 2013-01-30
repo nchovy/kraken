@@ -14,7 +14,7 @@
 		<ul data-bind="foreach: items" class="nav">
 			<li data-bind="css: { 'active': $data.isSelected }">
 				<a href="#" data-bind="click: $parent.select.callFn($parent, $data)">
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
+					<span data-bind="style: { backgroundColor: $data.color }" style="display: inline-block; line-height: 10%; width: 10px; height: 10px; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
 					<span data-bind="text: $data.tabName"></span>
 					<span data-bind="if: $data.isSelected">
 						<i class="icon-remove" data-bind="click: $parent.remove.callFn($parent, $data)"></i>
@@ -61,7 +61,8 @@
 			<li data-bind="css: { 'active': $data.isSelected }, visible: $data.activeId() != -1">
 				<a href="#" data-bind="click: function() { $parent.select.callFn($parent, $data, event)(); }">
 					<input type="checkbox" data-bind="visible: $parent.isEditMode, checked: $data.isSelected"/>
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px 5px; border: 1px solid #ccc"></span>
+					<span data-bind="style: { 'backgroundColor': $data.color, 'display': !!$data.color() ? 'inline-block' : 'none'}" class="coloring" style="border: 1px solid #ccc"></span>
+					<span data-bind="style: { 'display': !$data.color() ? 'inline-block' : 'none'}" class="coloring" style="border: 1px solid transparent"></span>
 					<span style="width: 30px" data-bind="text: $data.activeId"></span>
 					<span data-bind="text: $data.activeQuery"></span>
 					<small>3 hours ago</small>

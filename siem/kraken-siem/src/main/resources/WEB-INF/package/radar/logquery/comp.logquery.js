@@ -70,10 +70,12 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 	ko[className] = {
 		name: className,
 		instance: QueryBar.instance,
-		init: function(qbar) {
+		init: function(qbar, color) {
 
 			qbar.self = qbar;
 			qbar.name = className;
+
+			qbar.color = color;
 
 			qbar.tabName = ko.computed(function() {
 				var qtext = qbar.Logdb.activeQuery();

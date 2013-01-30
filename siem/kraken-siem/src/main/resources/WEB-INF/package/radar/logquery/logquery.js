@@ -16,7 +16,7 @@ require(["/lib/jquery.js",
 	"/package/system/orgchart/testdata2.js"
 	],
 	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, json2) {
-
+	
 	var Core = parent.Core;
 
 	var initTimelineMsg = {
@@ -57,6 +57,8 @@ require(["/lib/jquery.js",
 		vmQueryPane.selectAt(vmQueryPane.length() - 1);
 		vmQueries.remove(data.Logdb)
 	}
+
+	var category20 = d3.scale.category20();
 	
 	function addTab(query) {
 		var lq;
@@ -68,7 +70,8 @@ require(["/lib/jquery.js",
 		else {
 			lq = new LogQuery.instance();
 		}
-		LogQuery.init(lq);
+		var len = vmQueryPane.length();
+		LogQuery.init(lq, category20(len));
 
 		lq.Logdb.on("onTimeline", function(m) {
 
@@ -190,6 +193,26 @@ require(["/lib/jquery.js",
 	// Running Queries
 	Core.LogDB.getQueries(function(queries) {
 		vmQueries = queries;
+
+		$.each(vmQueries.items(), function(i, q) {
+			q.color = ko.computed(function() {
+				var hasMatch = false;
+				var color;
+				vmQueryPane.items().filter(function(t) {
+					if(t.Logdb.activeId() == q.activeId()) {
+						hasMatch = true;
+						color = t.color;
+					}
+				});
+
+				if(hasMatch) {
+					return color;
+				}
+				else {
+					return null;
+				}
+			});
+		})
 
 		vmQueries.isEditMode = vmQueries.canSelectMulti;
 

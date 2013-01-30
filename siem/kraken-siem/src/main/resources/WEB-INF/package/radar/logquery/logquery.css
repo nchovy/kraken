@@ -287,3 +287,12 @@ th {
 .state rect:hover {
 	transform: translate(-5, 0);
 }
+
+
+.coloring {
+	line-height: 10%;
+	width: 10px;
+	height: 10px;
+	padding: 0px;
+	margin: 0px 5px;
+}
