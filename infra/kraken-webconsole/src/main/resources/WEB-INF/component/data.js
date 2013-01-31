@@ -61,6 +61,7 @@ function setPublicMethod(self) {
 
 		if(!handled) {
 			this.items.remove(item);
+			this.selected.remove(item);
 
 			if(!!this.onAfterRemove) {
 				this.onAfterRemove(item);
@@ -79,7 +80,8 @@ function setPublicMethod(self) {
 		}
 
 		if(!handled) {
-			this.items.splice(index, 1);
+			this.items.remove(item);
+			this.selected.remove(item);
 
 			if(!!this.onAfterRemove) {
 				this.onAfterRemove(item);

@@ -402,6 +402,8 @@ var logdbManager = (function() {
 	}
 
 	function remove(query) {
+		if(query.activeId() === -1) return;
+		query.dispose();
 		return queries.remove(query);
 	}
 

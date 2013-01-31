@@ -14,9 +14,10 @@ require(["/lib/jquery.js",
 	"/bootstrap/js/bootstrap.amd.js",
 	"comp.logquery.js",
 	"/lib/jquery.timeago.js",
+	"/component/util.js",
 	"/package/system/orgchart/testdata2.js"
 	],
-	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, Timeago, json2) {
+	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, Timeago, Util, json2) {
 
 	var Core = parent.Core;
 
@@ -151,6 +152,7 @@ require(["/lib/jquery.js",
 	
 
 	$(".toggle-edit").on("click", function() {
+		hidePopover();
 		$(".mode-edit").addClass("roll").fadeIn('fast');
 		$(".mode-default").addClass("up").fadeOut('fast');
 
@@ -158,13 +160,15 @@ require(["/lib/jquery.js",
 		vmQueries.selectAll(false);
 	});
 
-	$(".toggle-default").on("click", function() {
+	function toggleDefault() {
 		$(".mode-edit").addClass("up").fadeOut('fast');
 		$(".mode-default").addClass("roll").fadeIn('fast');
 
 		vmQueries.isEditMode(false);
 		vmQueries.selectAll(false);
-	});
+	}
+
+	$(".toggle-default").on("click", toggleDefault);
 
 	function selectOnEditMode(data) {
 		var countSelected = vmQueries.items().filter(function(q) {
@@ -305,9 +309,9 @@ require(["/lib/jquery.js",
 			}
 		}
 
-		vmQueries.onAfterRemove = function(item) {
-			if(item.activeId() === -1) return;
-			item.dispose();
+		vmQueries.onAfterRemove = function(query) {
+			if(query.activeId() === -1) return;
+			query.dispose();
 		}
 
 		vmQueries.closePopover = function() {
@@ -319,12 +323,13 @@ require(["/lib/jquery.js",
 	});
 
 	$("#btnRemoveQueries").on("click", function() {
-		console.log(vmQueries.selected())
+		var willremoved = [];
 		$.each(vmQueries.selected(), function(i, q) {
-			vmQueries.remove(q);
+			var activeId = q.activeId();
+			willremoved.push(q);
 
 			vmQueryPane.items().filter(function(t) {
-				if(t.Logdb.activeId() == q.activeId()) {
+				if(t.Logdb.activeId() == activeId) {
 					if(vmQueryPane.items().length == 1) {
 						addTab();
 					}
@@ -332,7 +337,14 @@ require(["/lib/jquery.js",
 				}
 			});
 		});
-	})
+
+		$.each(willremoved, function(i, q) {
+			vmQueries.remove(q);
+		});
+
+		$(this).text("Remove");
+		toggleDefault();
+	});
 
 
 	// Timeline extras
