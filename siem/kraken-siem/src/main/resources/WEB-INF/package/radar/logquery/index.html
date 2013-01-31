@@ -65,7 +65,7 @@
 					<span data-bind="style: { 'display': !$data.color() ? 'inline-block' : 'none'}" class="coloring" style="border: 1px solid transparent"></span>
 					<span style="width: 30px" data-bind="text: $data.activeId"></span>
 					<span data-bind="text: $data.activeQuery"></span>
-					<small>3 hours ago</small>
+					<small class="timeago" data-bind="attr: { title: $data.lastStarted }"></small>
 					<button data-bind="visible: !$parent.isEditMode(), click: $root.clickViewResult.callFn($root, $data), clickBubble: false" class="btn btn-mini btn-info pull-right" style="margin-top: -5px"><i class="icon-chevron-right icon-white"></i></button>
 					<span class="pull-right" style="width: 50px; color: red" data-bind="text: $data.isSelected"></span>
 					<span class="pull-right" style="width: 50px; color: blue" data-bind="text: $data.isEnd"></span>

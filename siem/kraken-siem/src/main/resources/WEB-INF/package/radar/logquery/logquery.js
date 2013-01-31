@@ -13,10 +13,11 @@ require(["/lib/jquery.js",
 	"/component/data.grid.js",
 	"/bootstrap/js/bootstrap.amd.js",
 	"comp.logquery.js",
+	"/lib/jquery.timeago.js",
 	"/package/system/orgchart/testdata2.js"
 	],
-	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, json2) {
-	
+	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, Timeago, json2) {
+
 	var Core = parent.Core;
 
 	var initTimelineMsg = {
@@ -286,6 +287,7 @@ require(["/lib/jquery.js",
 		}
 
 		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
+		$(".timeago").timeago();
 	});
 
 	$("#btnRemoveQueries").on("click", function() {

@@ -1,7 +1,8 @@
 define(["/core/Connection.js", "/component/util.js", "/lib/knockout-2.1.0.debug.js", "/core/logdb.viewmodel.js", "/component/list.js"], function(socket, Util, ko, ViewModel, List) {
 
 // class
-var Query = function(id, query_str, is_end, total_count) {
+var Query = function(jobj) {
+
 	var isDebug = true;
 
 	if(!console.group) {
@@ -11,10 +12,20 @@ var Query = function(id, query_str, is_end, total_count) {
 		console.groupEnd = function() {}
 	}
 
-	this.activeQuery = ko.observable(query_str);
+	var query_string, id, is_end, total_count, last_started;
+	if(!!jobj) {
+		query_string = jobj.query_string;
+		id = jobj.id;
+		is_end = jobj.is_end;
+		total_count = jobj.commands[jobj.commands.length - 1].push_count;
+		last_started = jobj.last_started;
+	}
+
+	this.activeQuery = ko.observable(query_string);
 	this.activeId = ko.observable(id || -1);
 	this.isEnd = ko.observable(is_end || false);
-	this.totalCount = ko.observable(total_count || 0)
+	this.totalCount = ko.observable(total_count || 0);
+	this.lastStarted = last_started;
 
 	var activePage = 1, pagesize = 15;
 	var that = this;
@@ -368,7 +379,7 @@ var logdbManager = (function() {
 				});
 
 				if(!isExist) {
-					var query = new Query(jobj.id, jobj.query_string, jobj.is_end, jobj.commands[jobj.commands.length - 1].push_count);
+					var query = new Query(jobj);
 					queries.add(query);
 				}
 			});
