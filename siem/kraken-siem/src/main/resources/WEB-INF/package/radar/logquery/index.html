@@ -119,6 +119,23 @@
 </head>
 <body>
 
+<aside id="modalRenameField" class="modal hidden">
+	<form class="form-horizontal" id="formRenameField">
+		<legend>Rename Field</legend>
+		<div class="control-group">
+			<label class="control-label" data-form="before"></label>
+			<div class="controls">
+				<input type="text" data-form="name">
+			</div>
+		</div>
+		<div class="control-group">
+			<div class="controls">
+				<button class="btn btn-primary" id="btnRenameField">Rename</button>
+				<button class="btn modal-close">Cancel</button>
+			</div>
+		</div>
+	</form>
+</aside>
 
 <aside id="modalSaveQuery" class="modal hidden">
 	<form class="form-horizontal">

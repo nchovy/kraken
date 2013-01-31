@@ -1,5 +1,61 @@
-define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/component/spreadsheet.js", "/component/util.js", "/component/window.js"], function(ko, QueryBar, Spreadsheet, Util, Win) {
+define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/component/spreadsheet.js", "/component/util.js", "/component/window.js", "/component/form.js"], function(ko, QueryBar, Spreadsheet, Util, Win, Form) {
 	var className = "Component.LogQuery";
+
+	var dropdownCellHTML = function(txt) { 
+		return '<div class="spret-caret btn-group pull-right" style=" margin-right: 0px; margin-left: -18px">\
+			<button data-toggle="dropdown" class="btn btn-mini" style="line-height: 16px; padding: 1px 4px; border-radius: 4px">\
+				<span class="caret"></span>\
+			</button>\
+			<ul class="dropdown-menu">\
+				<li class="dropdown-submenu">\
+					<a href="#">결과 내 검색</a>\
+					<ul class="dropdown-menu">\
+						<li><span style="padding: 3px 20px; color: #999">결과 내 &gt; ' + txt + '</span></li>\
+						<li class="divider"></li>\
+						<li><a href="#">같은 결과</a></li>\
+						<li><a href="#">같지 않은 결과</a></li>\
+						<li><a href="#">포함한 결과</a></li>\
+					</ul>\
+				</li>\
+				<li class="dropdown-submenu">\
+					<a href="#">다시 검색</a>\
+					<ul class="dropdown-menu">\
+						<li><span style="padding: 3px 20px; color: #999">다시 검색 &gt; ' + txt + '</span></li>\
+						<li class="divider"></li>\
+						<li><a href="#">같은 결과</a></li>\
+						<li><a href="#">같지 않은 결과</a></li>\
+						<li><a href="#">포함한 결과</a></li>\
+					</ul>\
+				</li>\
+			</ul>\
+		</div>';
+	}
+
+	var dropdownCellHeaderHTML = function(txt) { 
+		return '<div class="spret-caret-header btn-group pull-right" style=" margin-right: 0px; margin-left: -18px">\
+			<a data-toggle="dropdown" class="close" style="line-height: 16px; padding: 1px 4px; border-radius: 4px">\
+				<span class="caret" style="vertical-align: middle"></span>\
+			</a>\
+			<ul class="dropdown-menu">\
+				<li><a href="#" data-bind="click: $parent.sortBy.callFn(this, $data)">정렬 (내림차순)</a></li>\
+				<li class="dropdown-submenu">\
+					<a href="#">통계</a>\
+					<ul class="dropdown-menu">\
+						<li><a href="#">상위 N개</a></li>\
+						<li><a href="#">개수</a></li>\
+						<li><a href="#">고유값의 개수</a></li>\
+						<li><a href="#">최대</a></li>\
+						<li><a href="#">최소</a></li>\
+						<li><a href="#">평균</a></li>\
+					</ul>\
+				</li>\
+				<li><a href="#" data-bind="click: $parent.lookup.callFn(this, $data)">값 변환</a></li>\
+				<li><a href="#" data-bind="click: $parent.renameAs.callFn(this, $data)">이름 변경</a></li>\
+				<li><a href="#" data-bind="click: $parent.hideField.callFn(this, $data)">필드 숨기기</a></li>\
+				<li><a href="#" data-bind="click: $parent.filterBy.callFn(this, $data)">필터링</a></li>\
+			</ul>\
+		</div>';
+	}
 
 	ko.bindingHandlers[className] = {
 		init: function(el, viewModelAccr, allBindingAccr, viewModel, bindingCtx) {
@@ -16,6 +72,19 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 				setTimeout(function() {
 					instance.spreadsheet = new Spreadsheet($boxResult, instance.vm, {
 						"debug": false,
+						"headerTemplate": '<span data-bind="text: headerText"></span>' + dropdownCellHeaderHTML(""),
+						"onCellClick": function(el, e) {
+							$(".spret-caret").remove();
+							var txt = $(el).text();
+
+							
+							var caret = $(dropdownCellHTML(txt));
+							caret.on("mousedown", function(e) {
+								e.stopPropagation();
+							});
+
+							$(el).append(caret);
+						},
 						"colDataBind": function(rowidx, colidx, prop) {
 							return 'text: rowCache[' + rowidx + ']["' + prop + '"]';
 						},
@@ -88,6 +157,49 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 			})
 
 			qbar.vm = new QueryBar.ViewModel();
+
+			qbar.vm.sortBy = function(data) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				qbar.input(originalQuery + " | sort by " + data.rowText);
+				qbar.search();
+			}
+
+			qbar.vm.lookup = function(data) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				
+			}			
+
+			qbar.vm.renameAs = function(data) {
+				Form.clear("#formRenameField");
+				Win.open("#modalRenameField");
+
+				$("#modalRenameField label[data-form=before]").text(data.rowText + " → ");
+
+				$("#btnRenameField").on("click", function(e) {
+					e.preventDefault();
+
+					var newval = $("#modalRenameField input[data-form=name]").val();
+					var originalQuery = qbar.Logdb.activeQuery();
+
+					qbar.input(originalQuery + " | rename " + data.rowText + " as " + newval);
+					qbar.search();
+
+					Win.close("#modalRenameField");
+					$(this).off("click");
+				});
+			}
+
+			qbar.vm.hideField = function(data) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				qbar.input(originalQuery + " | fields - " + data.rowText);
+				qbar.search();
+			}
+
+			qbar.vm.filterBy = function(data) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				
+			}
+
 
 			qbar.Logdb.on("pageLoaded", function(m) {
 				console.log(m.body);

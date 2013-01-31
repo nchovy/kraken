@@ -17,7 +17,8 @@ function Spret(el, data, options) {
 		"onRender": function() {},
 		"onScroll": function() {},
 		"onSelect": function() {},
-		"onSelectEnd": function() {}
+		"onSelectEnd": function() {},
+		"headerTemplate": '<span data-bind="text: headerText"></span>'
 	};
 
 	options = $.extend(defaultoptions, options);
@@ -61,7 +62,7 @@ function Spret(el, data, options) {
 			originalColumns = data.columns();
 
 			$defbody = $('<tr><td></td></tr>').appendTo($('<tbody>').appendTo($canvas));
-			$colheader.attr("data-bind", "foreach: columns").html('<th data-bind="text: headerText"></th>');
+			$colheader.attr("data-bind", "foreach: columns").html('<th>' + options.headerTemplate + '</th>');
 
 			ko.applyBindings(data, $colheader[0]);
 
@@ -79,7 +80,10 @@ function Spret(el, data, options) {
 							"headerText": "#"
 						});
 
-						$container.find("th:first-child").addClass("spret-idx").width(40);
+						$container.find("th:first-child")
+							.addClass("spret-idx")
+							.width(40)
+							.text("#");
 					}
 				}
 
@@ -387,6 +391,8 @@ function Spret(el, data, options) {
 			//console.log(ir, ic)
 			//cursor.$cursor.show();
 			cursor.set([ir, ic]);
+
+			trigger("onCellClick", this, e);
 		}
 	}
 
