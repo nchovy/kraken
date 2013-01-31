@@ -49,12 +49,24 @@
 	<script type="text/html" id="tmplQueries">
 		<div class="popover top" style="position: fixed; height: 140px; width: 350px">
 			<div class="arrow"></div>
-			<i class="icon-remove pull-right"></i>
-			<h3 class="popover-title" data-bind="text: $root.singleSelected().activeQuery"></h3>
+			<button type="button" style="margin: 7px" class="close" data-bind="click: $root.closePopover">&times;</button>
+			<h3 class="popover-title">
+				<span style="color: silver" data-bind="text: $root.singleSelected().activeId"></span>
+			 	<span style="font-weight: bold" data-bind="text: $root.singleSelected().activeQuery"></span>
+			</h3>
 			<div class="popover-content" style="position: relative; height: 75px">
-				<p data-bind="text: $root.singleSelected().activeQuery"></p>
-				<button data-bind="click: $root.clickViewResult.callFn($root, $root.singleSelected())" class="btn btn-primary">View Result</button>
-				<button class="btn">Status</button>
+				<div>
+					<label style="display: inline-block; width: 80px">Status</label>
+					<div style="display: inline" data-bind="text: $root.singleSelected().statusText"></div>
+					<small style="font-style: italic"><a href="#">more...</a></small>
+				</div>
+				<div>
+					<label style="display: inline-block; width: 80px">Started At</label>
+					<div style="display: inline" data-bind="text: $root.singleSelected().lastStarted"></div>
+				</div>
+				<div style="bottom: 0; position: absolute">
+					<button data-bind="click: $root.clickViewResult.callFn($root, $root.singleSelected())" class="btn btn-primary">View Result</button>
+				</div>
 			</div>
 		</div>
 		<ul data-bind="foreach: items" class="nav nav-pills nav-stacked">

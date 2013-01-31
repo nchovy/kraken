@@ -73,6 +73,7 @@ require(["/lib/jquery.js",
 					callback: function(query) {
 						// additional property
 						query.color = ko.computed(coloringQuery, query)
+						query.statusText = ko.computed(getQueryStatus, query);
 					}
 				}
 			});
@@ -187,10 +188,22 @@ require(["/lib/jquery.js",
 		console.log(vmQueries)
 		var offset = $(vmQueries.el).find("li.active").offset();
 
+		function getPos(x, boxwidth) {
+			if($(window).width() - (boxwidth / 2) < x) {
+				return x - boxwidth;
+			}
+			else if(x < (boxwidth / 2)) {
+				return 20;
+			}
+			else {
+				return x - (boxwidth / 2);
+			}
+		}
+
 		var popover = $(vmQueries.el).find(".popover")
 			.addClass("in")
 			.css("top", (offset.top - 140) + "px")
-			.css("left", e.pageX + "px")
+			.css("left", getPos(e.pageX, 350) + "px")
 			.show();
 
 		$("#box-query *").on("click", hidePopover);
@@ -215,12 +228,22 @@ require(["/lib/jquery.js",
 		}
 	}
 
+	function getQueryStatus() {
+		if(this.isEnd()) {
+			return "End";
+		}
+		else {
+			return "Running";
+		}
+	}
+
 	// Running Queries
 	Core.LogDB.getQueries(function(queries) {
 		vmQueries = queries;
 
 		$.each(vmQueries.items(), function(i, q) {
 			q.color = ko.computed(coloringQuery, q);
+			q.statusText = ko.computed(getQueryStatus, q);
 		})
 
 		vmQueries.isEditMode = vmQueries.canSelectMulti;
@@ -284,6 +307,10 @@ require(["/lib/jquery.js",
 		vmQueries.onAfterRemove = function(item) {
 			if(item.activeId() === -1) return;
 			item.dispose();
+		}
+
+		vmQueries.closePopover = function() {
+			hidePopover();
 		}
 
 		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
