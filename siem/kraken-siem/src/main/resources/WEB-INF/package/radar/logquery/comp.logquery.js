@@ -12,9 +12,9 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 					<ul class="dropdown-menu">\
 						<li><span style="padding: 3px 20px; color: #999">결과 내 &gt; ' + txt + '</span></li>\
 						<li class="divider"></li>\
-						<li><a href="#">같은 결과</a></li>\
-						<li><a href="#">같지 않은 결과</a></li>\
-						<li><a href="#">포함한 결과</a></li>\
+						<li><a href="#" data-event-click="equal">같은 결과</a></li>\
+						<li><a href="#" data-event-click="notEqual">같지 않은 결과</a></li>\
+						<li><a href="#" data-event-click="contain">포함한 결과</a></li>\
 					</ul>\
 				</li>\
 				<li class="dropdown-submenu">\
@@ -75,15 +75,21 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 						"headerTemplate": '<span data-bind="text: headerText"></span>' + dropdownCellHeaderHTML(""),
 						"onCellClick": function(el, e) {
 							$(".spret-caret").remove();
-							var txt = $(el).text();
 
-							
+							var txt = $(el).text();
 							var caret = $(dropdownCellHTML(txt));
 							caret.on("mousedown", function(e) {
 								e.stopPropagation();
 							});
 
 							$(el).append(caret);
+
+							$(el).find("a[data-event-click]").on("click", function(e) {
+
+								var colname = $(el).attr("data-bind").split("[")[2].split("]")[0].replace(/\"/gi, "");
+								var fn = $(this).attr("data-event-click");
+								instance.vm[fn].call(this, colname, txt)
+							})
 						},
 						"colDataBind": function(rowidx, colidx, prop) {
 							return 'text: rowCache[' + rowidx + ']["' + prop + '"]';
@@ -198,6 +204,31 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 			qbar.vm.filterBy = function(data) {
 				var originalQuery = qbar.Logdb.activeQuery();
 				
+			}
+
+
+			qbar.vm.equal = function(colname, txt) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				var q = originalQuery + " | search " + colname + " == \"" + txt + "\"";
+				
+				qbar.input(q);
+				qbar.search();
+			}
+
+			qbar.vm.notEqual = function(colname, txt) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				var q = originalQuery + " | search " + colname + " != \"" + txt + "\"";
+				
+				qbar.input(q);
+				qbar.search();
+			}
+
+			qbar.vm.contain = function(colname, txt) {
+				var originalQuery = qbar.Logdb.activeQuery();
+				var q = originalQuery + " | search " + colname + " contain \"" + txt + "\"";
+				
+				qbar.input(q);
+				qbar.search();
 			}
 
 
