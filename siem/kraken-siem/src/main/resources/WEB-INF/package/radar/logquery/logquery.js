@@ -200,10 +200,11 @@ require(["/lib/jquery.js",
 			}
 		}
 
-		var popover = $(vmQueries.el).find(".popover")
-			.addClass("in")
+		var popover = $(vmQueries.el).find(".popover");
+
+		popover.addClass("in")
 			.css("top", (offset.top - 140) + "px")
-			.css("left", getPos(e.pageX, 350) + "px")
+			.css("left", getPos(e.pageX, popover.width()) + "px")
 			.show();
 
 		$("#box-query *").on("click", hidePopover);

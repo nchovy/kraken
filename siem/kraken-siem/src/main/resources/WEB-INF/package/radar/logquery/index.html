@@ -47,12 +47,12 @@
 	</script>
 
 	<script type="text/html" id="tmplQueries">
-		<div class="popover top" style="position: fixed; height: 140px; width: 350px">
+		<div class="popover top" style="position: fixed; height: 140px; width: auto">
 			<div class="arrow"></div>
 			<button type="button" style="margin: 7px" class="close" data-bind="click: $root.closePopover">&times;</button>
-			<h3 class="popover-title">
+			<h3 class="popover-title" style="height: 20px; padding: 8px 48px 8px 14px">
 				<span style="color: silver" data-bind="text: $root.singleSelected().activeId"></span>
-			 	<span style="font-weight: bold" data-bind="text: $root.singleSelected().activeQuery"></span>
+			 	<span style="font-weight: bold; white-space: nowrap" data-bind="text: $root.singleSelected().activeQuery"></span>
 			</h3>
 			<div class="popover-content" style="position: relative; height: 75px">
 				<div>
