@@ -16,17 +16,47 @@
 package org.krakenapps.logdb.query.parser;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryParseException;
 import org.krakenapps.logdb.query.aggregator.AggregationField;
 import org.krakenapps.logdb.query.aggregator.AggregationFunction;
+import org.krakenapps.logdb.query.aggregator.Average;
 import org.krakenapps.logdb.query.aggregator.Count;
+import org.krakenapps.logdb.query.aggregator.First;
+import org.krakenapps.logdb.query.aggregator.Last;
+import org.krakenapps.logdb.query.aggregator.Max;
+import org.krakenapps.logdb.query.aggregator.Min;
+import org.krakenapps.logdb.query.aggregator.PerDay;
+import org.krakenapps.logdb.query.aggregator.PerHour;
+import org.krakenapps.logdb.query.aggregator.PerMinute;
+import org.krakenapps.logdb.query.aggregator.PerSecond;
+import org.krakenapps.logdb.query.aggregator.Range;
 import org.krakenapps.logdb.query.aggregator.Sum;
 import org.krakenapps.logdb.query.expr.Expression;
 
 public class AggregationParser {
 	private static final String AS = " as ";
+	private static Map<String, Class<? extends AggregationFunction>> t;
+
+	static {
+		t = new HashMap<String, Class<? extends AggregationFunction>>();
+		t.put("c", Count.class);
+		t.put("count", Count.class);
+		t.put("sum", Sum.class);
+		t.put("avg", Average.class);
+		t.put("first", First.class);
+		t.put("last", Last.class);
+		t.put("max", Max.class);
+		t.put("min", Min.class);
+		t.put("per_day", PerDay.class);
+		t.put("per_hour", PerHour.class);
+		t.put("per_minute", PerMinute.class);
+		t.put("per_second", PerSecond.class);
+		t.put("range", Range.class);
+	}
 
 	public static AggregationField parse(String s) {
 		// find 'as' keyword
@@ -68,11 +98,14 @@ public class AggregationParser {
 		}
 
 		// find function
-		if (funcName.equals("c") || funcName.equals("count"))
-			return new Count(exprs);
-		else if (funcName.equals("sum"))
-			return new Sum(exprs);
+		Class<?> c = t.get(funcName);
+		if (c == null)
+			throw new LogQueryParseException("invalid-aggregation-function", -1, "function name token is [" + funcName + "]");
 
-		throw new LogQueryParseException("invalid-aggregation-function", -1, "function name token is [" + funcName + "]");
+		try {
+			return (AggregationFunction) c.getConstructors()[0].newInstance(exprs);
+		} catch (Throwable e) {
+			throw new LogQueryParseException("cannot-create-aggregation-function", -1, e.getMessage());
+		}
 	}
 }
