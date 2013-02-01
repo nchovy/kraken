@@ -16,8 +16,6 @@
 package org.krakenapps.logdb.query;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
@@ -33,7 +31,6 @@ import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryCommand.Status;
 import org.krakenapps.logdb.LogResultSet;
 import org.krakenapps.logdb.LogTimelineCallback;
-import org.krakenapps.logdb.SyntaxProvider;
 import org.krakenapps.logdb.query.command.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,66 +41,15 @@ public class LogQueryImpl implements LogQuery {
 
 	private final int id = nextId.getAndIncrement();
 	private String queryString;
-	private List<LogQueryCommand> commands = new ArrayList<LogQueryCommand>();
+	private List<LogQueryCommand> commands;
 	private Date lastStarted;
 	private Result result;
 	private Set<LogQueryCallback> logQueryCallbacks = new CopyOnWriteArraySet<LogQueryCallback>();
 	private Set<LogTimelineCallback> timelineCallbacks = new CopyOnWriteArraySet<LogTimelineCallback>();
 
-	public LogQueryImpl(SyntaxProvider syntaxProvider, String queryString) {
+	public LogQueryImpl(String queryString, List<LogQueryCommand> commands) {
 		this.queryString = queryString;
-
-		for (String q : split(queryString)) {
-			q = q.trim();
-			try {
-				LogQueryCommand cmd = syntaxProvider.eval(this, q);
-				commands.add(cmd);
-			} catch (ParseException e) {
-				throw new IllegalArgumentException("invalid query command: " + q);
-			}
-		}
-
-		if (commands.isEmpty())
-			throw new IllegalArgumentException("empty query");
-
-		boolean setReducer = false;
-		for (int i = 0; i < commands.size(); i++) {
-			LogQueryCommand command = commands.get(i);
-			if (i < commands.size() - 1)
-				command.setNextCommand(commands.get(i + 1));
-			if (command.isReducer() && !setReducer && i > 0) {
-				setReducer = true;
-				commands.get(i - 1).setCallbackTimeline(true);
-			}
-		}
-		if (!setReducer)
-			commands.get(commands.size() - 1).setCallbackTimeline(true);
-	}
-
-	private static List<String> split(String query) {
-		List<String> l = new ArrayList<String>();
-		StringBuilder sb = new StringBuilder();
-		char before = 0;
-		boolean b = false;
-
-		for (char c : query.toCharArray()) {
-			if (c == '"' && before != '\\') {
-				b = !b;
-				sb.append(c);
-			} else {
-				if (c == '|' && !b) {
-					l.add(sb.toString());
-					sb = new StringBuilder();
-				} else
-					sb.append(c);
-			}
-			before = c;
-		}
-
-		if (sb.length() > 0)
-			l.add(sb.toString());
-
-		return l;
+		this.commands = commands;
 	}
 
 	@Override

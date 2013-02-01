@@ -28,8 +28,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
-import org.krakenapps.logdb.DataSource;
-import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
@@ -64,9 +62,6 @@ public class LogQueryPlugin {
 	private LogStorage storage;
 
 	@Requires
-	private DataSourceRegistry dataSourceRegistry;
-
-	@Requires
 	private PushApi pushApi;
 
 	private ConcurrentMap<Session, List<LogQuery>> queries = new ConcurrentHashMap<Session, List<LogQuery>>();
@@ -97,20 +92,6 @@ public class LogQueryPlugin {
 		m.put("date", log.getDate());
 		m.put("data", log.getData());
 		return m;
-	}
-
-	@MsgbusMethod
-	public void getDataSources(Request req, Response resp) {
-		List<Object> result = new ArrayList<Object>();
-		for (DataSource dataSource : dataSourceRegistry.getAll()) {
-			Map<String, Object> m = new HashMap<String, Object>();
-			m.put("name", dataSource.getName());
-			m.put("type", dataSource.getType());
-			m.put("node_guid", dataSource.getNodeGuid());
-			m.put("metadata", dataSource.getMetadata());
-			result.add(m);
-		}
-		resp.put("sources", result);
 	}
 
 	@MsgbusMethod

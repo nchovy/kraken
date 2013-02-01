@@ -25,12 +25,16 @@ public class Search extends LogQueryCommand {
 	private List<Term> terms;
 
 	public Search(List<Term> terms) {
-		this(null, terms);
+		this(terms, null);
 	}
 
-	public Search(Integer limit, List<Term> terms) {
-		this.limit = limit;
+	public Search(List<Term> terms, Integer limit) {
 		this.terms = terms;
+		this.limit = limit;
+	}
+	
+	public List<Term> getTerms() {
+		return terms;
 	}
 
 	@Override

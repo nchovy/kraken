@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,34 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.k;
-import static org.krakenapps.bnf.Syntax.ref;
-
 import java.util.Arrays;
 import java.util.Map;
 
-import org.krakenapps.bnf.Binding;
-import org.krakenapps.bnf.Syntax;
-import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommandParser;
+import org.krakenapps.logdb.LogQueryContext;
 import org.krakenapps.logdb.query.command.Search;
 import org.krakenapps.logdb.query.command.Term;
 
-public class SearchParser implements LogQueryParser {
+public class SearchParser implements LogQueryCommandParser {
+
 	@Override
-	public void addSyntax(Syntax syntax) {
-		syntax.add("search", this, k("search "), ref("option"), ref("term"));
-		syntax.addRoot("search");
+	public String getCommandName() {
+		return "search";
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
-	public Object parse(Binding b) {
-		Map<String, String> option = (Map<String, String>) b.getChildren()[1].getValue();
+	@SuppressWarnings("unchecked")
+	public LogQueryCommand parse(LogQueryContext context, String commandString) {
+		ParseResult r = QueryTokenizer.parseOptions(commandString, "search".length());
+		Map<String, String> options = (Map<String, String>) r.value;
+
 		Integer limit = null;
+		if (options.containsKey("limit"))
+			limit = Integer.parseInt(options.get("limit"));
 
-		if (option.containsKey("limit"))
-			limit = Integer.parseInt(option.get("limit"));
-
-		// List<Term> terms = (List<Term>) b.getChildren()[2].getValue();
-		Term term = (Term) b.getChildren()[2].getValue();
-		return new Search(limit, Arrays.asList(term));
+		r = TermParser.parseTerm(commandString, r.next);
+		Term term = (Term) r.value;
+		return new Search(Arrays.asList(term), limit);
 	}
 }

@@ -2,18 +2,18 @@ package org.krakenapps.logdb;
 
 import java.util.Map;
 
-public class BaseLogScript implements LogScript {
+public class BaseLogScript implements LogQueryScript {
 
 	@Override
 	public void init(Map<String, Object> params) {
 	}
 
 	@Override
-	public void handle(LogScriptInput input, LogScriptOutput output) {
+	public void handle(LogQueryScriptInput input, LogQueryScriptOutput output) {
 	}
 
 	@Override
-	public void eof(LogScriptOutput output) {
+	public void eof(LogQueryScriptOutput output) {
 	}
 
 }
