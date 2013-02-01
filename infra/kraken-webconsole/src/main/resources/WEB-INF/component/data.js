@@ -48,6 +48,7 @@ function setPublicMethod(self) {
 	}
 
 	self.insert = function(item, index) {
+		bindEvent([item]);
 		this.items.splice(index, 0, item);
 	}
 
@@ -59,14 +60,17 @@ function setPublicMethod(self) {
 			if(ret === false) handled = true;
 		}
 
+		var _return = [];
 		if(!handled) {
-			this.items.remove(item);
+			_return = this.items.remove(item);
 			this.selected.remove(item);
 
 			if(!!this.onAfterRemove) {
 				this.onAfterRemove(item);
 			}
 		}
+
+		return _return;
 	}
 	
 	self.removeAt = function(index) {
@@ -79,14 +83,17 @@ function setPublicMethod(self) {
 			if(ret === false) handled = true;
 		}
 
+		var _return = [];
 		if(!handled) {
-			this.items.remove(item);
+			_return = this.items.remove(item);
 			this.selected.remove(item);
 
 			if(!!this.onAfterRemove) {
 				this.onAfterRemove(item);
 			}
 		}
+
+		return _return;
 	}
 
 	self.select = function(item, e) {
@@ -126,9 +133,18 @@ function setPublicMethod(self) {
 	}
 
 	self.selectAll = function(toggle) {
-		$.each(this.items(), function(i, obj) {
-			obj.isSelected(toggle);
-		});
+		var self = this;
+		if(toggle) {
+			$.each(this.items(), function(i, obj) {
+				self.select(obj);
+			});
+		}
+		else {
+			$.each(this.items(), function(i, obj) {
+				obj.isSelected(false);
+				self.selected.removeAll();
+			});
+		}
 	}
 
 	self.selectAt = function(idx) {
