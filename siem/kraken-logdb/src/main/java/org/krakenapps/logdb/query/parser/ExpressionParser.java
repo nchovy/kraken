@@ -20,12 +20,16 @@ import java.util.List;
 import java.util.Stack;
 
 import org.krakenapps.logdb.LogQueryParseException;
+import org.krakenapps.logdb.query.expr.Abs;
+import org.krakenapps.logdb.query.expr.Add;
+import org.krakenapps.logdb.query.expr.Div;
 import org.krakenapps.logdb.query.expr.EvalField;
-import org.krakenapps.logdb.query.expr.EvalFunctions.Abs;
-import org.krakenapps.logdb.query.expr.EvalFunctions.Min;
 import org.krakenapps.logdb.query.expr.Expression;
+import org.krakenapps.logdb.query.expr.Min;
+import org.krakenapps.logdb.query.expr.Mul;
+import org.krakenapps.logdb.query.expr.Neg;
 import org.krakenapps.logdb.query.expr.NumberConstant;
-import org.krakenapps.logdb.query.expr.NumericalExpressions;
+import org.krakenapps.logdb.query.expr.Sub;
 
 public class ExpressionParser {
 
@@ -39,7 +43,7 @@ public class ExpressionParser {
 				// is unary op?
 				if (op.unary) {
 					Expression expr = exprStack.pop();
-					exprStack.add(new NumericalExpressions.Neg(expr));
+					exprStack.add(new Neg(expr));
 					continue;
 				}
 
@@ -51,17 +55,13 @@ public class ExpressionParser {
 				Expression lhs = exprStack.pop();
 
 				if (op == OpTerm.Add) {
-					NumericalExpressions.Add add = new NumericalExpressions.Add(lhs, rhs);
-					exprStack.add(add);
+					exprStack.add(new Add(lhs, rhs));
 				} else if (op == OpTerm.Sub) {
-					NumericalExpressions.Sub sub = new NumericalExpressions.Sub(lhs, rhs);
-					exprStack.add(sub);
+					exprStack.add(new Sub(lhs, rhs));
 				} else if (op == OpTerm.Mul) {
-					NumericalExpressions.Mul mul = new NumericalExpressions.Mul(lhs, rhs);
-					exprStack.add(mul);
+					exprStack.add(new Mul(lhs, rhs));
 				} else if (op == OpTerm.Div) {
-					NumericalExpressions.Div div = new NumericalExpressions.Div(lhs, rhs);
-					exprStack.add(div);
+					exprStack.add(new Div(lhs, rhs));
 				}
 
 			} else if (term instanceof TokenTerm) {
