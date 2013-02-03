@@ -21,16 +21,14 @@ public class Facebook {
 	String graph = "https://graph.facebook.com/";
 	String search = "https://graph.facebook.com/search?";
 	String fql = graph+"/fql?q=";
-	String appId;
 	String accessToken;
 	String callbackURL;
 
-	public Facebook(String app , String token , String URL){
-		appId = app;
+	public Facebook( String token , String URL){
 		accessToken = token;
 		callbackURL = URL;
 	}
-	public JSONObject getBasicInfo(String userId, String objectId) throws IOException{
+	public JSONObject getBasicInfo(String userId, String objectId) throws IOException, JSONException{
 		URL url = new URL(graph+userId+"/"+objectId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -40,31 +38,32 @@ public class Facebook {
 			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
+//			System.out.println(tmp);
 			bf.append(tmp);
 		}
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	
 	public JSONObject getBasicInfo(String userId) throws IOException, JSONException{
 		URL url = new URL(graph+userId+"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
-		BufferedReader bf = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 		
 		StringBuffer me = new StringBuffer();
 		while(true){
-			String tmp = bf.readLine();
+			String tmp = br.readLine();
 			if(tmp == null) 
 				break;
+//			System.out.println(tmp);
 			me.append(tmp);
 		}
-		new JSONObject(me);
-		return new JSONObject(me);
+		return new JSONObject(me.toString());
 	}
 	/*
 	 * use following getSpecificInfo function like this Facebook fb = new Facebook();
-	 * fb.getSpecificInfo(Album.getId+"/"+Album.Connection.CONN_photos);
-	 * fb.getSpecificInfo(Album.getId+"/"+Album.Connection.CONN_likes); 
+	 * fb.getSpecificInfo(Album.getId()+"/"+Album.Connection.CONN_photos);
+	 * fb.getSpecificInfo(Album.getId()+"/"+Album.Connection.CONN_likes); 
 	 * Album is object parsed json 
 	 * */
 	public ArrayList<JSONArray> getSpecificInfo(String objectId) throws Exception{
@@ -84,7 +83,22 @@ public class Facebook {
 		return objectArray;
 	}
 	
-	
+	public ArrayList<JSONArray> getSpecificInfo(String objectId , String connection) throws Exception{
+		ArrayList<JSONArray> objectArray = new ArrayList<JSONArray>();
+		JSONObject tmpObject;
+		String url =graph+objectId+"/"+connection+"?access_token="+accessToken;
+		tmpObject = getPaging(url);
+		objectArray.add((JSONArray)tmpObject.get("data"));
+		if(tmpObject.containsKey("paging")){
+			while(((JSONObject)tmpObject.get("paging")).containsKey("next")){
+				tmpObject = getPaging( ((JSONObject)tmpObject.get("paging")).getString("next") );
+				if(((JSONArray)tmpObject.get("data")).length() >0){
+					objectArray.add((JSONArray)tmpObject.get("data"));
+				}
+			}
+		}
+		return objectArray;
+	}
 	public JSONObject getPaging(String nextUrl) throws Exception{
 		URL url = new URL(nextUrl);
 		URLConnection conn = url.openConnection();
@@ -98,12 +112,12 @@ public class Facebook {
 				break;
 			bf.append(tmp);
 		}
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	
 	/*designed searching method*/
 	
-	public JSONObject getSearchResult(String searchCommend , String types) throws IOException{
+	public JSONObject getSearchResult(String searchCommend , String types) throws IOException, JSONException{
 		URL url = new URL(graph+"q="+searchCommend+"&type="+types +"?access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
@@ -116,13 +130,12 @@ public class Facebook {
 				break;
 			bf.append(tmp);
 		}
-		new JSONObject(bf);
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	
 	//TODO fql design
-	public JSONObject getFqlOnlinePresence(String userId) throws IOException{
-		URL url = new URL(fql+"SELECT%20online_presence%20FROM%20user%20WHERE%20uid=me()&access_token="+accessToken);
+	public JSONObject getFqlOnlinePresence(String userId) throws IOException, JSONException{
+		URL url = new URL(fql+"SELECT%20online_presence%20FROM%20user%20WHERE%20uid="+userId+"&access_token="+accessToken);
 		URLConnection conn = url.openConnection();
 		conn.setDoOutput(true);
 		BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -134,8 +147,7 @@ public class Facebook {
 				break;
 			bf.append(tmp);
 		}
-		new JSONObject(bf);
-		return new JSONObject(bf);
+		return new JSONObject(bf.toString());
 	}
 	//getter and setter
 	public String getGraph() {
@@ -144,14 +156,6 @@ public class Facebook {
 
 	public void setGraph(String graph) {
 		this.graph = graph;
-	}
-
-	public String getAppId() {
-		return appId;
-	}
-
-	public void setAppId(String appId) {
-		this.appId = appId;
 	}
 
 	public String getAccessToken() {

@@ -12,6 +12,11 @@ public class Like {
 		this.likeList = new ArrayList<From>();
 	}
 
+	public Like(ArrayList<From> likeList , int count) {
+		this.likeList = likeList;
+		this.count = count;
+	}
+	
 	public int getCount() {
 		return count;
 	}

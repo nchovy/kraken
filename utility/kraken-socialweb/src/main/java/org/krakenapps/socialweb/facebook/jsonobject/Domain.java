@@ -1,6 +1,10 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import java.util.Set;
+
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 
 public class Domain implements FacebookGraphObject{
 
@@ -33,12 +37,6 @@ public class Domain implements FacebookGraphObject{
 		this.name = name;
 	}
 
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
 	public FbConnection getFbConnection() {
 		return fbConnection;
 	}
@@ -46,5 +44,25 @@ public class Domain implements FacebookGraphObject{
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
 	}
-	
+
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			name = json.getString("name");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return 0;
+	}
 }

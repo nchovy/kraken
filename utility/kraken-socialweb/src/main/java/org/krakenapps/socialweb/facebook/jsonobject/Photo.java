@@ -1,8 +1,12 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
 import java.util.ArrayList;
+import java.util.Set;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.*;
 
 public class Photo implements FacebookGraphObject{
@@ -12,6 +16,7 @@ public class Photo implements FacebookGraphObject{
 	private ArrayList<Tag> tags; 
 	private String name;
 	private ArrayList<NameTag> name_tags;
+	private String icon;
 	private String picture;
 	private String source;
 	private int height;
@@ -73,6 +78,10 @@ public class Photo implements FacebookGraphObject{
 		public Tag(){
 			
 		}
+		public Tag(int x , int y){
+			this.x = x;
+			this.y = y;
+		}
 		public int getX() {
 			return x;
 		}
@@ -92,6 +101,11 @@ public class Photo implements FacebookGraphObject{
 		private String type;
 		public NameTag(){
 			
+		}
+		public NameTag(String id , String name, String type){
+			this.id = id;
+			this.name = name;
+			this.type = type;
 		}
 		public String getId() {
 			return id;
@@ -119,6 +133,11 @@ public class Photo implements FacebookGraphObject{
 		public Image(){
 			
 		}
+		public Image(String source , int height, int width){
+			this.source = source;
+			this.height = height;
+			this.width = width;
+		}
 		public String getSource() {
 			return source;
 		}
@@ -140,8 +159,6 @@ public class Photo implements FacebookGraphObject{
 	}
 	
 	public Photo(){
-		from = new From();
-		place = new Place();
 		fbConnection = new FbConnection();
 	}
 	public String getId() {
@@ -266,6 +283,59 @@ public class Photo implements FacebookGraphObject{
 
 	@Override
 	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			JSONObject fromObject = json.getJSONObject("from");
+			from = new From(fromObject.getString("id"),fromObject.getString("name"));
+
+			JSONObject tagsObject = json.getJSONObject("tags");
+			JSONArray tagsArray = tagsObject.getJSONArray("data");
+			ArrayList<Tag> tagsList = new ArrayList<Tag>(tagsArray.length());
+			for(int i=0; i<tagsArray.length(); i++){
+				tags.add(new Tag(tagsArray.getJSONObject(i).getInt("x"),tagsArray.getJSONObject(i).getInt("y")));
+			}
+			
+			name = json.getString("name");
+			JSONObject nameTagObject = json.getJSONObject("name_tags");
+			JSONArray nameTagArray = nameTagObject.getJSONArray("data");
+			ArrayList<NameTag> nameTagList = new ArrayList<Photo.NameTag>(nameTagArray.length());
+			for(int i=0; i< nameTagArray.length(); i++){
+				nameTagList.add(new NameTag(nameTagArray.getJSONObject(i).getString("id"),nameTagArray.getJSONObject(i).getString("name"), nameTagArray.getJSONObject(i).getString("type")));
+			}
+			name_tags = nameTagList;
+			
+			icon = json.getString("icon");
+			picture = json.getString("picture");
+			source = json.getString("source");
+			height = json.getInt("height");
+			width = json.getInt("width");
+			
+			JSONObject imagesObejct = json.getJSONObject("images");
+			JSONArray imagesArray = imagesObejct.getJSONArray("data");
+			ArrayList<Image> imagesList= new ArrayList<Image>(imagesArray.length());
+			for(int i=0; i< imagesArray.length(); i++){
+				imagesList.add(new Image(imagesArray.getJSONObject(i).getString("source"), imagesArray.getJSONObject(i).getInt("height"), imagesArray.getJSONObject(i).getInt("width")));
+			}
+			images = imagesList;
+			
+			link = json.getString("link");
+			
+			JSONObject placeObject = json.getJSONObject("place");
+			place = new Place(placeObject.getString("id"), placeObject.getString("name"), placeObject.getInt("longitude") , placeObject.getInt("latitude"));
+			
+			created_time = json.getString("created_time");
+			updated_time = json.getString("updated_time");
+			position = json.getInt("position");
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
 		// TODO Auto-generated method stub
 		return 0;
 	}

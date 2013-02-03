@@ -2,10 +2,18 @@ package org.krakenapps.socialweb.facebook.jsonobject.fieldelement;
 
 public class CheckinApplication {
 
-	String id;
-	String canvasName;
-	String namespace;
+	private String id;
+	private String canvasName;
+	private String namespace;
 
+	public CheckinApplication(){
+		
+	}
+	public CheckinApplication(String id, String canvasName, String namespace){
+		this.id = id;
+		this.canvasName = canvasName;
+		this.namespace = namespace; 
+	}
 	public String getId() {
 		return id;
 	}

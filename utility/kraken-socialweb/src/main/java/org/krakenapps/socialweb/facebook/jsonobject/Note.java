@@ -1,8 +1,12 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
 import java.util.ArrayList;
+import java.util.Set;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
 import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Like;
 
@@ -31,7 +35,6 @@ public class Note implements FacebookGraphObject{
 	}
 	public Note(){
 		fbConnection = new FbConnection();
-		from = new From();
 	}
 	public String getId() {
 		return id;
@@ -99,8 +102,41 @@ public class Note implements FacebookGraphObject{
 
 	@Override
 	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("string");
+			JSONObject fromObject = json.getJSONObject("from");
+			from = new From(fromObject.getString("id"),fromObject.getString("name"));
+			subject = json.getString("subject");
+			message = json.getString("message");
+			
+			comments = new ArrayList<Comment>();
+			JSONObject commentObject = json.getJSONObject("comments");
+			JSONArray commentArray = commentObject.getJSONArray("data");
+			for(int i =0 ; i<commentObject.getInt("count"); i++){
+				Comment tmp = new Comment();
+				tmp.setId(commentArray.getJSONObject(i).getString("id"));
+				tmp.setFrom(new From(commentArray.getJSONObject(i).getJSONObject("from").getString("id"), commentArray.getJSONObject(i).getJSONObject("from").getString("name")));
+				tmp.setMessage(commentArray.getJSONObject(i).getString("message"));
+				tmp.setCreateTime(commentArray.getJSONObject(i).getString("created_time"));
+				comments.add(tmp);
+			}
+			
+			created_time = json.getString("created_time");
+			updated_time = json.getString("updated_time");
+			icon = json.getString("icon");
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return 0;
+	}
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
 		// TODO Auto-generated method stub
-		
 		return 0;
 	}
 	
