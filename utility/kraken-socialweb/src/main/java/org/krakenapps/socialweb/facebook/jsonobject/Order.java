@@ -1,6 +1,11 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import java.util.Set;
+
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
+import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
 
 
 public class Order implements FacebookGraphObject{
@@ -9,11 +14,12 @@ public class Order implements FacebookGraphObject{
 	private String from;
 	private int amount;
 	private String status; // settled, disputed, refunded, cancelled
-	private String application;
+	private From application;
 	private String country;
 	private String refund_reason_code;
 	private String created_time;
 	private String updated_time;
+	FbConnection fbConnection;
 	
 	private class FbConnection{
 		public String CONN_placed = "placed";
@@ -26,10 +32,9 @@ public class Order implements FacebookGraphObject{
 			
 		}
 	}
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
+
+	public Order(){
+		fbConnection = new FbConnection();
 	}
 	public String getId() {
 		return id;
@@ -55,10 +60,11 @@ public class Order implements FacebookGraphObject{
 	public void setStatus(String status) {
 		this.status = status;
 	}
-	public String getApplication() {
+	
+	public From getApplication() {
 		return application;
 	}
-	public void setApplication(String application) {
+	public void setApplication(From application) {
 		this.application = application;
 	}
 	public String getCountry() {
@@ -84,6 +90,35 @@ public class Order implements FacebookGraphObject{
 	}
 	public void setUpdated_time(String updated_time) {
 		this.updated_time = updated_time;
+	}
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			from = json.getString("from");
+			amount = json.getInt("amount");
+			status = json.getString("status");
+			
+			JSONObject applicationObject = json.getJSONObject("application");
+			application = new From(applicationObject.getString("id"),applicationObject.getString("name"));
+			
+			country = json.getString("country");
+			refund_reason_code = json.getString("refund_reason_code");
+			created_time = json.getString("created_time");
+			updated_time = json.getString("updated_time");
+			
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 	

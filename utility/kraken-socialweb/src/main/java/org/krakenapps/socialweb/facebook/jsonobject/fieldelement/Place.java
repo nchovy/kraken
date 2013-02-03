@@ -2,31 +2,19 @@ package org.krakenapps.socialweb.facebook.jsonobject.fieldelement;
 
 public class Place {
 
-	String id;
-	String name;
-	Location location;
+	private String id;
+	private String name;
+	private int longitude;
+	private int latitude;
 	
-	private class Location{
-		private int longitude;
-		private int latitude;
-		public int getLongitude() {
-			return longitude;
-		}
-		public void setLongitude(int longitude) {
-			this.longitude = longitude;
-		}
-		public int getLatitude() {
-			return latitude;
-		}
-		public void setLatitude(int latitude) {
-			this.latitude = latitude;
-		}
-		
-	}
 	public Place(){
-		location = null;
 	}
-	
+	public Place(String id , String name, int lng, int lat){
+		this.id = id;
+		this.name = name;
+		this.longitude = lng;
+		this.latitude = lat;
+	}
 	public String getId() {
 		return id;
 	}
@@ -42,13 +30,17 @@ public class Place {
 	public void setName(String name) {
 		this.name = name;
 	}
-
-	public Location getLocation() {
-		return location;
+	public int getLongitude() {
+		return longitude;
+	}
+	public void setLongitude(int longitude) {
+		this.longitude = longitude;
+	}
+	public int getLatitude() {
+		return latitude;
+	}
+	public void setLatitude(int latitude) {
+		this.latitude = latitude;
 	}
 
-	public void setLocation(Location location) {
-		this.location = location;
-	}
-	
 }

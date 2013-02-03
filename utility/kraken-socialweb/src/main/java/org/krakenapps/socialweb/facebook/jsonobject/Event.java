@@ -1,27 +1,29 @@
 package org.krakenapps.socialweb.facebook.jsonobject;
 
+import java.util.Set;
+
+import org.json.JSONException;
 import org.json.JSONObject;
-import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.Owner;
+import org.krakenapps.socialweb.facebook.graphapi.objectcode.Permissions;
+import org.krakenapps.socialweb.facebook.jsonobject.fieldelement.From;
 
 
 public class Event implements FacebookGraphObject{
 
-	String id;
-	Owner owner;
-	String name;
-	String description;
-	String start_time;
-	String end_time;
-	String location;
-	Venue venue;
-	String privacy;
-	String updated_time;
-	String picture;
-	FbConnection fbConnection;
+	private String id;
+	private From owner;
+	private String name;
+	private String description;
+	private String start_time;
+	private String end_time;
+	private String location;
+	private Venue venue;
+	private String privacy;
+	private String updated_time;
+	private String picture;
+	private FbConnection fbConnection;
 
 	public Event(){
-		owner = new Owner();
-		venue = new Venue(); 
 		fbConnection = new FbConnection();
 	}
 	private class FbConnection{
@@ -38,21 +40,17 @@ public class Event implements FacebookGraphObject{
 		public String CONN_videos = "videos";
 		// connection is null
 	}
-	@Override
-	public int parseJson(JSONObject json) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 	public String getId() {
 		return id;
 	}
 	public void setId(String id) {
 		this.id = id;
 	}
-	public Owner getOwner() {
+	
+	public From getOwner() {
 		return owner;
 	}
-	public void setOwner(Owner owner) {
+	public void setOwner(From owner) {
 		this.owner = owner;
 	}
 	public String getName() {
@@ -115,18 +113,67 @@ public class Event implements FacebookGraphObject{
 	public void setFbConnection(FbConnection fbConnection) {
 		this.fbConnection = fbConnection;
 	}
+	@Override
+	public int parseJson(JSONObject json) {
+		try {
+			id = json.getString("id");
+			JSONObject fromObject = json.getJSONObject("from");
+			owner = new From(fromObject.getString("id"), fromObject.getString("name"));
+			name = json.getString("name");
+			description = json.getString("description");
+			start_time = json.getString("start_time");
+			end_time = json.getString("end_time");
+			location = json.getString("location");
+			
+			venue = new Venue(); 
+			JSONObject venueObject = json.getJSONObject("venue");
+			venue.parse(venueObject);
+			
+			privacy = json.getString("privacy");
+			updated_time = json.getString("updated_time");
+			picture = json.getString("picture");
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		
+		return 0;
+	}
+	/* (non-Javadoc)
+	 * @see org.krakenapps.socialweb.facebook.jsonobject.FacebookGraphObject#parseJson(org.json.JSONObject, java.util.Set)
+	 */
+	@Override
+	public int parseJson(JSONObject json, Set<Permissions> permit) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 	
 }
 
 class Venue{
-	String id;
-	String street;
-	String city;
-	String state;
-	String zip;
-	String country;
-	String latitude;
-	String longitude;
+	private String id;
+	private String street;
+	private String city;
+	private String state;
+	private String zip;
+	private String country;
+	private String latitude;
+	private String longitude;
+	public void parse(JSONObject json){
+		try {
+			id = json.getString("id");
+			street = json.getString("street");
+			city = json.getString("city");
+			state = json.getString("state");
+			zip = json.getString("zip");
+			country = json.getString("country");
+			latitude = json.getString("latitude");
+			longitude = json.getString("longitude");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 	public String getId() {
 		return id;
 	}

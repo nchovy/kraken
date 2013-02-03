@@ -11,7 +11,7 @@
   <artifactId>kraken-socialweb</artifactId>
   <version>1.0.0</version>
   <packaging>bundle</packaging>
-  <name>YOUR_PROJECT_NAME</name>
+  <name>kraken-socialweb</name>
   <dependencies>
     <dependency>
       <groupId>org.krakenapps</groupId>
