@@ -16,20 +16,36 @@
 package org.krakenapps.logdb.query.expr;
 
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
-import org.krakenapps.logdb.query.command.NumberUtil;
 
-public class Mul extends BinaryExpression {
-	public Mul(Expression lhs, Expression rhs) {
+public class Or extends BinaryExpression {
+
+	public Or(Expression lhs, Expression rhs) {
 		super(lhs, rhs);
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return NumberUtil.mul(lhs.eval(map), rhs.eval(map));
+		Object lo = lhs.eval(map);
+		Object ro = rhs.eval(map);
+
+		boolean l = false;
+		boolean r = false;
+
+		if (lo instanceof Boolean)
+			l = (Boolean) lo;
+		else
+			l = lo != null;
+
+		if (ro instanceof Boolean)
+			r = (Boolean) ro;
+		else
+			r = ro != null;
+
+		return l || r;
 	}
 
 	@Override
 	public String toString() {
-		return "(" + lhs + " * " + rhs + ")";
+		return "(" + lhs + " or " + rhs + ")";
 	}
 }

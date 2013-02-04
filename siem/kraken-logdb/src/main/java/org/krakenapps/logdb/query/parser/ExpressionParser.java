@@ -22,13 +22,23 @@ import java.util.Stack;
 import org.krakenapps.logdb.LogQueryParseException;
 import org.krakenapps.logdb.query.expr.Abs;
 import org.krakenapps.logdb.query.expr.Add;
+import org.krakenapps.logdb.query.expr.And;
+import org.krakenapps.logdb.query.expr.Case;
 import org.krakenapps.logdb.query.expr.Div;
+import org.krakenapps.logdb.query.expr.Eq;
 import org.krakenapps.logdb.query.expr.EvalField;
 import org.krakenapps.logdb.query.expr.Expression;
+import org.krakenapps.logdb.query.expr.Gt;
+import org.krakenapps.logdb.query.expr.Gte;
+import org.krakenapps.logdb.query.expr.If;
+import org.krakenapps.logdb.query.expr.Lt;
+import org.krakenapps.logdb.query.expr.Lte;
 import org.krakenapps.logdb.query.expr.Min;
 import org.krakenapps.logdb.query.expr.Mul;
 import org.krakenapps.logdb.query.expr.Neg;
+import org.krakenapps.logdb.query.expr.Neq;
 import org.krakenapps.logdb.query.expr.NumberConstant;
+import org.krakenapps.logdb.query.expr.Or;
 import org.krakenapps.logdb.query.expr.Sub;
 
 public class ExpressionParser {
@@ -49,21 +59,49 @@ public class ExpressionParser {
 
 				// reversed order by stack
 				if (exprStack.size() < 2)
-					throw new LogQueryParseException("broken-expression", -1);
+					throw new LogQueryParseException("broken-expression", -1, "operator is [" + op + "]");
 
 				Expression rhs = exprStack.pop();
 				Expression lhs = exprStack.pop();
 
-				if (op == OpTerm.Add) {
+				switch (op) {
+				case Add:
 					exprStack.add(new Add(lhs, rhs));
-				} else if (op == OpTerm.Sub) {
+					break;
+				case Sub:
 					exprStack.add(new Sub(lhs, rhs));
-				} else if (op == OpTerm.Mul) {
+					break;
+				case Mul:
 					exprStack.add(new Mul(lhs, rhs));
-				} else if (op == OpTerm.Div) {
+					break;
+				case Div:
 					exprStack.add(new Div(lhs, rhs));
+					break;
+				case Gte:
+					exprStack.add(new Gte(lhs, rhs));
+					break;
+				case Lte:
+					exprStack.add(new Lte(lhs, rhs));
+					break;
+				case Lt:
+					exprStack.add(new Lt(lhs, rhs));
+					break;
+				case Gt:
+					exprStack.add(new Gt(lhs, rhs));
+					break;
+				case And:
+					exprStack.add(new And(lhs, rhs));
+					break;
+				case Or:
+					exprStack.add(new Or(lhs, rhs));
+					break;
+				case Eq:
+					exprStack.add(new Eq(lhs, rhs));
+					break;
+				case Neq:
+					exprStack.add(new Neq(lhs, rhs));
+					break;
 				}
-
 			} else if (term instanceof TokenTerm) {
 				// parse token expression (variable or numeric constant)
 				TokenTerm t = (TokenTerm) term;
@@ -75,13 +113,17 @@ public class ExpressionParser {
 			} else {
 				// parse function expression
 				FuncTerm f = (FuncTerm) term;
-				String name = f.tokens.remove(0);
+				String name = f.tokens.remove(0).trim();
 				List<Expression> args = parseArgs(f.tokens);
 
 				if (name.equals("abs")) {
 					exprStack.add(new Abs(args.get(0)));
 				} else if (name.equals("min")) {
 					exprStack.add(new Min(args));
+				} else if (name.equals("case")) {
+					exprStack.add(new Case(args));
+				} else if (name.equals("if")) {
+					exprStack.add(new If(args));
 				}
 			}
 		}
@@ -150,7 +192,7 @@ public class ExpressionParser {
 
 			if (isDelimiter(token)) {
 				// need to pop operator and write to output?
-				if (needPop(token, opStack, output)) {
+				while (needPop(token, opStack, output)) {
 					Term last = opStack.pop();
 					output.add(last);
 				}
@@ -221,7 +263,7 @@ public class ExpressionParser {
 	private static boolean isOperator(String token) {
 		if (token == null)
 			return false;
-		return isDelimiter(token.charAt(0));
+		return isDelimiter(token);
 	}
 
 	public static List<Term> tokenize(String s) {
@@ -298,31 +340,62 @@ public class ExpressionParser {
 		if (begin > end)
 			return null;
 
-		begin = skipSpaces(s, begin);
-		int p = findNextDelimiter(s, begin, end);
-		if (p < begin) {
+		ParseResult r = findNextDelimiter(s, begin, end);
+		if (r.next < begin) {
 			// no operator, return whole string
 			String token = s.substring(begin, end + 1);
 			return new ParseResult(token, end + 1);
-		} else if (p == begin) {
+		} else if (r.next == begin) {
 			// return operator
-			char c = s.charAt(p);
-			return new ParseResult(Character.toString(c), p + 1);
+			int len = ((String) r.value).length();
+			return new ParseResult((String) r.value, r.next + len);
 		} else {
 			// return term
-			String token = s.substring(begin, p);
-			return new ParseResult(token, p);
+			String token = s.substring(begin, r.next);
+			if (!token.trim().isEmpty())
+				return new ParseResult(token, r.next);
+			else {
+				return nextToken(s, skipSpaces(s, begin), end);
+			}
 		}
 	}
 
-	private static int findNextDelimiter(String s, int begin, int end) {
-		for (int i = begin; i <= end; i++) {
-			char c = s.charAt(i);
-			if (isDelimiter(c))
-				return i;
+	private static ParseResult findNextDelimiter(String s, int begin, int end) {
+		// check parens, comma and operators
+		ParseResult r = new ParseResult(null, -1);
+
+		min(r, "(", s.indexOf('(', begin), end);
+		min(r, ")", s.indexOf(')', begin), end);
+		min(r, ",", s.indexOf(',', begin), end);
+		for (OpTerm op : OpTerm.values()) {
+			min(r, op.symbol, s.indexOf(op.symbol, begin), end);
 		}
 
-		return -1;
+		return r;
+	}
+
+	private static boolean isDelimiter(String s) {
+		String d = s.trim();
+
+		if (d.equals("(") || d.equals(")") || d.equals(","))
+			return true;
+
+		for (OpTerm op : OpTerm.values())
+			if (op.symbol.equals(s))
+				return true;
+
+		return false;
+	}
+
+	private static void min(ParseResult r, String symbol, int p, int end) {
+		if (p < 0)
+			return;
+
+		boolean change = p >= 0 && p <= end && (r.next == -1 || p < r.next);
+		if (change) {
+			r.value = symbol;
+			r.next = p;
+		}
 	}
 
 	private static boolean isDelimiter(Term t) {
@@ -335,10 +408,6 @@ public class ExpressionParser {
 		}
 
 		return false;
-	}
-
-	private static boolean isDelimiter(char c) {
-		return c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ',';
 	}
 
 	private static interface Term {
@@ -358,7 +427,8 @@ public class ExpressionParser {
 	}
 
 	private static enum OpTerm implements Term {
-		Add("+", 2), Sub("-", 2), Mul("*", 3), Div("/", 3), Neg("-", 4, false, true);
+		Add("+", 3), Sub("-", 3), Mul("*", 4), Div("/", 4), Neg("-", 5, false, true), Gte(">=", 2), Lte("<=", 2), Gt(">", 2), Lt(
+				"<", 2), Eq("==", 1), Neq("!=", 1), IsNull(" is null", 1, true, true), And(" and ", 0), Or(" or ", 0);
 
 		OpTerm(String symbol, int precedence) {
 			this(symbol, precedence, true, false);

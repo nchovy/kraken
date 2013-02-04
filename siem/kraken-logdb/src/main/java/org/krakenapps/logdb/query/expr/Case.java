@@ -15,21 +15,37 @@
  */
 package org.krakenapps.logdb.query.expr;
 
-import org.krakenapps.logdb.LogQueryCommand.LogMap;
-import org.krakenapps.logdb.query.command.NumberUtil;
+import java.util.List;
 
-public class Mul extends BinaryExpression {
-	public Mul(Expression lhs, Expression rhs) {
-		super(lhs, rhs);
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
+
+public class Case implements Expression {
+	private List<Expression> exprs;
+
+	public Case(List<Expression> exprs) {
+		this.exprs = exprs;
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return NumberUtil.mul(lhs.eval(map), rhs.eval(map));
+		for (int i = 0; i < exprs.size();) {
+			Expression cond = exprs.get(i++);
+			Expression value = exprs.get(i++);
+
+			Object condResult = cond.eval(map);
+			if ((condResult instanceof Boolean)) {
+				if ((Boolean) condResult)
+					return value.eval(map);
+			} else if (condResult != null)
+				return value.eval(map);
+		}
+
+		return null;
 	}
 
 	@Override
 	public String toString() {
-		return "(" + lhs + " * " + rhs + ")";
+		return "case(" + exprs + ")";
 	}
+
 }

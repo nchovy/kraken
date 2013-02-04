@@ -16,20 +16,22 @@
 package org.krakenapps.logdb.query.expr;
 
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
-import org.krakenapps.logdb.query.command.NumberUtil;
+import org.krakenapps.logdb.query.ObjectComparator;
 
-public class Mul extends BinaryExpression {
-	public Mul(Expression lhs, Expression rhs) {
+public class Gt extends BinaryExpression {
+	private ObjectComparator cmp = new ObjectComparator();
+
+	public Gt(Expression lhs, Expression rhs) {
 		super(lhs, rhs);
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return NumberUtil.mul(lhs.eval(map), rhs.eval(map));
+		return cmp.compare(lhs.eval(map), rhs.eval(map)) > 0;
 	}
 
 	@Override
 	public String toString() {
-		return "(" + lhs + " * " + rhs + ")";
+		return "(" + lhs + " > " + rhs + ")";
 	}
 }

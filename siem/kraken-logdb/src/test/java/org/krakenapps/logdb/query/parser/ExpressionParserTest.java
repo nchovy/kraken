@@ -71,4 +71,92 @@ public class ExpressionParserTest {
 		}
 	}
 
+	@Test
+	public void testGreaterThanEqual() {
+		Expression exp = ExpressionParser.parse("10 >= 3");
+		assertTrue((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("3 >= 3");
+		assertTrue((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testGreaterThan() {
+		Expression exp = ExpressionParser.parse("10 > 3");
+		assertTrue((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("3 > 3");
+		assertFalse((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testLesserThanEqual() {
+		Expression exp = ExpressionParser.parse("3 <= 5");
+		assertTrue((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("3 <= 3");
+		assertTrue((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testLesserThan() {
+		Expression exp = ExpressionParser.parse("3 < 5");
+		assertTrue((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("3 < 3");
+		assertFalse((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testBooleanArithmeticPrecendence() {
+		Expression exp = ExpressionParser.parse("1 == 3-2 or 2 == 2");
+		assertTrue((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testEq() {
+		Expression exp = ExpressionParser.parse("1 == 0");
+		assertFalse((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testAnd() {
+		Expression exp = ExpressionParser.parse("10 >= 3 and 1 == 0");
+		assertFalse((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testAndOr() {
+		Expression exp = ExpressionParser.parse("10 >= 3 and (1 == 0 or 2 == 2)");
+		System.out.println(exp);
+		assertTrue((Boolean) exp.eval(null));
+	}
+
+	@Test
+	public void testIf() {
+		Expression exp = ExpressionParser.parse("if(field >= 10, 10, field)");
+		System.out.println(exp);
+
+		LogMap m1 = new LogMap();
+		m1.put("field", 15);
+		assertEquals(10L, exp.eval(m1));
+
+		LogMap m2 = new LogMap();
+		m2.put("field", 3);
+		assertEquals(3, exp.eval(m2));
+	}
+
+	@Test
+	public void testCase() {
+		Expression exp = ExpressionParser.parse("case(field >= 10, 10, field < 10, field)");
+		System.out.println(exp);
+
+		LogMap m1 = new LogMap();
+		m1.put("field", 15);
+		assertEquals(10L, exp.eval(m1));
+
+		LogMap m2 = new LogMap();
+		m2.put("field", 3);
+		assertEquals(3, exp.eval(m2));
+	}
 }
