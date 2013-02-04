@@ -128,14 +128,12 @@ public class ExpressionParserTest {
 	@Test
 	public void testAndOr() {
 		Expression exp = ExpressionParser.parse("10 >= 3 and (1 == 0 or 2 == 2)");
-		System.out.println(exp);
 		assertTrue((Boolean) exp.eval(null));
 	}
 
 	@Test
 	public void testIf() {
 		Expression exp = ExpressionParser.parse("if(field >= 10, 10, field)");
-		System.out.println(exp);
 
 		LogMap m1 = new LogMap();
 		m1.put("field", 15);
@@ -149,7 +147,6 @@ public class ExpressionParserTest {
 	@Test
 	public void testCase() {
 		Expression exp = ExpressionParser.parse("case(field >= 10, 10, field < 10, field)");
-		System.out.println(exp);
 
 		LogMap m1 = new LogMap();
 		m1.put("field", 15);
@@ -158,5 +155,11 @@ public class ExpressionParserTest {
 		LogMap m2 = new LogMap();
 		m2.put("field", 3);
 		assertEquals(3, exp.eval(m2));
+	}
+
+	@Test
+	public void testConcat() {
+		Expression exp = ExpressionParser.parse("concat(\"hello\", \"world\")");
+		assertEquals("helloworld", exp.eval(null));
 	}
 }

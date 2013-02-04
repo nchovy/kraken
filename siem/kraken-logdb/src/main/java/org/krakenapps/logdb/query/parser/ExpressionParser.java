@@ -24,6 +24,7 @@ import org.krakenapps.logdb.query.expr.Abs;
 import org.krakenapps.logdb.query.expr.Add;
 import org.krakenapps.logdb.query.expr.And;
 import org.krakenapps.logdb.query.expr.Case;
+import org.krakenapps.logdb.query.expr.Concat;
 import org.krakenapps.logdb.query.expr.Div;
 import org.krakenapps.logdb.query.expr.Eq;
 import org.krakenapps.logdb.query.expr.EvalField;
@@ -39,6 +40,7 @@ import org.krakenapps.logdb.query.expr.Neg;
 import org.krakenapps.logdb.query.expr.Neq;
 import org.krakenapps.logdb.query.expr.NumberConstant;
 import org.krakenapps.logdb.query.expr.Or;
+import org.krakenapps.logdb.query.expr.StringConstant;
 import org.krakenapps.logdb.query.expr.Sub;
 
 public class ExpressionParser {
@@ -124,6 +126,8 @@ public class ExpressionParser {
 					exprStack.add(new Case(args));
 				} else if (name.equals("if")) {
 					exprStack.add(new If(args));
+				} else if (name.equals("concat")) {
+					exprStack.add(new Concat(args));
 				}
 			}
 		}
@@ -132,6 +136,10 @@ public class ExpressionParser {
 	}
 
 	private static Expression parseTokenExpr(Stack<Expression> exprStack, String token) {
+		// is quoted?
+		if (token.startsWith("\"") && token.endsWith("\""))
+			return new StringConstant(token.substring(1, token.length() - 1));
+
 		try {
 			long v = Long.parseLong(token);
 			return new NumberConstant(v);
