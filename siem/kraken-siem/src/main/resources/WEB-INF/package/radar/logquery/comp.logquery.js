@@ -105,13 +105,13 @@ define(["/lib/knockout-2.1.0.debug.js", "/component/logdb.querybar.js", "/compon
 
 							instance.Logdb.getResult(instance.Logdb.activeId(), top, bottom - top, function() {
 								console.log("after getResult", top, bottom - top)
-								try {
+								//try {
 									ko.applyBindings(instance.vm, el.find("tbody")[0]);
-								}
+								/*}
 								catch(e) {
 									console.log(e)
 								}
-
+*/
 								handler.done();
 							});
 						}, 200)

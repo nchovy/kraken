@@ -32,6 +32,7 @@ require(["/lib/jquery.js",
 		"begin": "2012-06-24 23:49:00+0900"
 	};
 	var bar = new StackedBar.ViewModel("#timeline-chart", convertTimeline(initTimelineMsg));
+	var label1 = $('<small>').appendTo("#timeline-chart");
 
 	var vmQueryPane = new List.ViewModel([]);
 
@@ -95,10 +96,13 @@ require(["/lib/jquery.js",
 	function onTimeline(m, lq) {
 		lq.timeline = convertTimeline(m.body);
 		lq.totalCount = m.body.count;
+		lq.rawBody = m.body;
 
 		if(lq.isSelected()) {
 			$("#divTotalCount").text(lq.totalCount + " results");
 			bar.updateData(lq.timeline);
+
+			label1.text(lq.rawBody.begin.split(" ")[0])
 		}
 	}
 
@@ -367,15 +371,36 @@ require(["/lib/jquery.js",
 		tbegin = new Date(tbegin.getTime() - span);
 
 		var obj = {};
-		body.values.forEach(function(v) {
+		body.values.forEach(function(v, i) {
 			tbegin = new Date(tbegin.getTime() + diff * span)
-			obj[tbegin.getISOTimeString()] = v;
+			if(body.span_field === "Day") {
+				obj[tbegin.getISODateOnlyString()] = v;
+			}
+			else {
+				obj[tbegin.getISOTimeString()] = v;
+			}
+
+			if(i == 9) {
+				tbegin = new Date(tbegin.getTime() + diff * span)
+				if(body.span_field === "Day") {
+					obj[tbegin.getISODateOnlyString()] = 0;
+				}
+				else {
+					obj[tbegin.getISOTimeString()] = 0;
+				}
+				
+			}
 		});
 
+		console.log(obj)
 		return [obj];
 	}
 
 	// Layout
+	$("#closeQueryStatus").on("click", function() {
+		$("#box-query-status").hide();
+	})
+
 
 	if($.browser.msie && parseInt($.browser.version) < 10) {
 		console.log("added flexie!")
