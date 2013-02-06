@@ -32,10 +32,15 @@ import org.krakenapps.logdb.query.expr.Expression;
 import org.krakenapps.logdb.query.expr.Gt;
 import org.krakenapps.logdb.query.expr.Gte;
 import org.krakenapps.logdb.query.expr.If;
+import org.krakenapps.logdb.query.expr.IsNotNull;
+import org.krakenapps.logdb.query.expr.IsNull;
+import org.krakenapps.logdb.query.expr.IsNum;
+import org.krakenapps.logdb.query.expr.IsStr;
 import org.krakenapps.logdb.query.expr.Left;
 import org.krakenapps.logdb.query.expr.Len;
 import org.krakenapps.logdb.query.expr.Lt;
 import org.krakenapps.logdb.query.expr.Lte;
+import org.krakenapps.logdb.query.expr.Match;
 import org.krakenapps.logdb.query.expr.Min;
 import org.krakenapps.logdb.query.expr.Mul;
 import org.krakenapps.logdb.query.expr.Neg;
@@ -157,6 +162,16 @@ public class ExpressionParser {
 					exprStack.add(new Len(args));
 				} else if (name.equals("substr")) {
 					exprStack.add(new Substr(args));
+				} else if (name.equals("isnull")) {
+					exprStack.add(new IsNull(args));
+				} else if (name.equals("isnotnull")) {
+					exprStack.add(new IsNotNull(args));
+				} else if (name.equals("isnum")) {
+					exprStack.add(new IsNum(args));
+				} else if (name.equals("isstr")) {
+					exprStack.add(new IsStr(args));
+				} else if (name.equals("match")) {
+					exprStack.add(new Match(args));
 				} else {
 					throw new LogQueryParseException("unsupported-function", -1, "function name is " + name);
 				}
@@ -480,7 +495,7 @@ public class ExpressionParser {
 
 	private static enum OpTerm implements Term {
 		Add("+", 3), Sub("-", 3), Mul("*", 4), Div("/", 4), Neg("-", 5, false, true), Gte(">=", 2), Lte("<=", 2), Gt(">", 2), Lt(
-				"<", 2), Eq("==", 1), Neq("!=", 1), IsNull(" is null", 1, true, true), And(" and ", 0), Or(" or ", 0);
+				"<", 2), Eq("==", 1), Neq("!=", 1), And(" and ", 0), Or(" or ", 0);
 
 		OpTerm(String symbol, int precedence) {
 			this(symbol, precedence, true, false);

@@ -204,4 +204,17 @@ public class ExpressionParserTest {
 		assertEquals("def", exp.eval(m));
 	}
 
+	@Test
+	public void testMatch() {
+		String s = "210.119.122.32";
+		LogMap m = new LogMap();
+		m.put("line", s);
+
+		Expression exp = ExpressionParser.parse("match(line, \"210.*\")");
+		assertTrue((Boolean) exp.eval(m));
+
+		exp = ExpressionParser.parse("match(line, \"192.*\")");
+		assertFalse((Boolean) exp.eval(m));
+
+	}
 }
