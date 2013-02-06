@@ -15,14 +15,11 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import java.util.Arrays;
-import java.util.Map;
-
 import org.krakenapps.logdb.LogQueryCommand;
 import org.krakenapps.logdb.LogQueryCommandParser;
 import org.krakenapps.logdb.LogQueryContext;
 import org.krakenapps.logdb.query.command.Search;
-import org.krakenapps.logdb.query.command.Term;
+import org.krakenapps.logdb.query.expr.Expression;
 
 public class SearchParser implements LogQueryCommandParser {
 
@@ -32,17 +29,9 @@ public class SearchParser implements LogQueryCommandParser {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		ParseResult r = QueryTokenizer.parseOptions(commandString, "search".length());
-		Map<String, String> options = (Map<String, String>) r.value;
-
-		Integer limit = null;
-		if (options.containsKey("limit"))
-			limit = Integer.parseInt(options.get("limit"));
-
-		r = TermParser.parseTerm(commandString, r.next);
-		Term term = (Term) r.value;
-		return new Search(Arrays.asList(term), limit);
+		String exprToken = commandString.substring("search".length()).trim();
+		Expression expr = ExpressionParser.parse(exprToken);
+		return new Search(expr);
 	}
 }

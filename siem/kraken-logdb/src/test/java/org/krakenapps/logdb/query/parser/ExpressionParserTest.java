@@ -215,6 +215,20 @@ public class ExpressionParserTest {
 
 		exp = ExpressionParser.parse("match(line, \"192.*\")");
 		assertFalse((Boolean) exp.eval(m));
+	}
 
+	@Test
+	public void testWildcard() {
+		Expression exp = ExpressionParser.parse("\"210.119.122.32\" == \"210*\"");
+		assertTrue((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("\"210.119.122.32\" == \"*32\"");
+		assertTrue((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("\"210.119.122.32\" == \"119*\"");
+		assertFalse((Boolean) exp.eval(null));
+
+		exp = ExpressionParser.parse("\"210.119.122.32\" == \"119\"");
+		assertFalse((Boolean) exp.eval(null));
 	}
 }

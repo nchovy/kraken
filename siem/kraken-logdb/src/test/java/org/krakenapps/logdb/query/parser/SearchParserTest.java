@@ -15,26 +15,26 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import java.util.List;
+import static org.junit.Assert.*;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
+import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.query.command.Search;
-import org.krakenapps.logdb.query.command.Term;
-import org.krakenapps.logdb.query.command.Term.Operator;
+import org.krakenapps.logdb.query.expr.Expression;
 
 public class SearchParserTest {
 	@Test
-	public void testContain() {
+	public void testWildSearch() {
 		SearchParser p = new SearchParser();
-		Search search = (Search) p.parse(null, "search sip contain \"10.1.\" ");
-		List<Term> terms = search.getTerms();
+		Search search = (Search) p.parse(null, "search sip == \"10.1.*\" ");
+		Expression expr = search.getExpression();
 
-		Term term = terms.get(0);
-		assertEquals("sip", term.getLh());
-		assertEquals("10.1.", term.getRh());
-		assertFalse(term.isLhString());
-		assertTrue(term.isRhString());
-		assertEquals(Operator.Contain, term.getOperator());
+		LogMap map = new LogMap();
+		map.put("sip", "10.1.2.2");
+		assertTrue((Boolean) expr.eval(map));
+
+		map = new LogMap();
+		map.put("sip", "10.2.2.2");
+		assertFalse((Boolean) expr.eval(map));
 	}
 }

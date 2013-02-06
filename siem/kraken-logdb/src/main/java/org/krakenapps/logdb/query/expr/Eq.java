@@ -15,19 +15,69 @@
  */
 package org.krakenapps.logdb.query.expr;
 
+import java.util.regex.Pattern;
+
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.query.ObjectComparator;
 
 public class Eq extends BinaryExpression {
 	private ObjectComparator cmp = new ObjectComparator();
+	private Pattern p;
 
 	public Eq(Expression lhs, Expression rhs) {
 		super(lhs, rhs);
+
+		if (rhs instanceof StringConstant) {
+			String needle = (String) rhs.eval(null);
+			p = tryBuildPattern(needle);
+		}
+	}
+
+	public static Pattern tryBuildPattern(String s) {
+		boolean wildcard = false;
+		boolean escape = false;
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("^");
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c == '\\') {
+				if (escape)
+					sb.append('\\');
+
+				escape = !escape;
+				continue;
+			}
+
+			if (c == '*' && !escape) {
+				wildcard = true;
+				sb.append(".*");
+			} else {
+				sb.append(c);
+			}
+		}
+		sb.append("$");
+
+		if (wildcard)
+			return Pattern.compile(sb.toString());
+		return null;
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return cmp.compare(lhs.eval(map), rhs.eval(map)) == 0;
+		Object l = lhs.eval(map);
+		if (l == null)
+			return false;
+
+		if (p != null) {
+			return p.matcher(l.toString()).find();
+		} else {
+			Object r = rhs.eval(map);
+			if (r == null)
+				return false;
+
+			return cmp.compare(l, r) == 0;
+		}
 	}
 
 	@Override
