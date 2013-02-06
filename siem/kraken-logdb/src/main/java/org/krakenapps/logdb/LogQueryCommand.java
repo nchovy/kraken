@@ -165,5 +165,13 @@ public abstract class LogQueryCommand {
 		public Map<String, Object> map() {
 			return map;
 		}
+
+		@Override
+		public String toString() {
+			if (map != null)
+				return map.toString();
+			return "null";
+		}
+
 	}
 }
