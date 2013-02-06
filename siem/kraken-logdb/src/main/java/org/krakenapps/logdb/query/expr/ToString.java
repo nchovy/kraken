@@ -15,23 +15,39 @@
  */
 package org.krakenapps.logdb.query.expr;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 
-public class StringConstant implements Expression {
+public class ToString implements Expression {
+	private Expression valueExpr;
+	private String format;
+	private SimpleDateFormat dateFormat;
 
-	private String str;
-
-	public StringConstant(String str) {
-		this.str = str;
+	public ToString(List<Expression> exprs) {
+		this.valueExpr = exprs.get(0);
+		if (exprs.size() > 1) {
+			this.format = (String) exprs.get(1).eval(null);
+			this.dateFormat = new SimpleDateFormat(format);
+		}
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return str;
+		Object value = valueExpr.eval(map);
+		if (value == null)
+			return null;
+
+		if (value instanceof Date)
+			return dateFormat.format(value);
+
+		return value.toString();
 	}
 
 	@Override
 	public String toString() {
-		return "\"" + str + "\"";
+		return "string(" + valueExpr + ", " + format + ")";
 	}
 }

@@ -15,23 +15,42 @@
  */
 package org.krakenapps.logdb.query.expr;
 
+import java.util.List;
+
+import org.krakenapps.logdb.LogQueryParseException;
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 
-public class StringConstant implements Expression {
+public class ToLong implements Expression {
+	private Expression valueExpr;
 
-	private String str;
+	// 10 for decimal (reserved extension)
+	private int radix;
 
-	public StringConstant(String str) {
-		this.str = str;
+	public ToLong(List<Expression> exprs) {
+		this.valueExpr = exprs.get(0);
+		this.radix = 10;
+		if (exprs.size() > 1)
+			this.radix = (Integer) exprs.get(1).eval(null);
+
+		if (radix != 10)
+			throw new LogQueryParseException("invalid-argument", -1, "radix should be 10");
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return str;
+		try {
+			Object v = valueExpr.eval(map);
+			if (v == null)
+				return null;
+			return Long.parseLong(v.toString(), radix);
+		} catch (Throwable t) {
+			return null;
+		}
 	}
 
 	@Override
 	public String toString() {
-		return "\"" + str + "\"";
+		return "long(" + valueExpr + ", " + radix + ")";
 	}
+
 }

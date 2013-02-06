@@ -103,9 +103,9 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 	private void prepareQueryParsers() {
 		@SuppressWarnings("unchecked")
-		List<Class<? extends LogQueryCommandParser>> parserClazzes = Arrays.asList(DropParser.class, TableParser.class,
-				SearchParser.class, StatsParser.class, FieldsParser.class, SortParser.class, TimechartParser.class,
-				RenameParser.class, EvalParser.class);
+		List<Class<? extends LogQueryCommandParser>> parserClazzes = Arrays.asList(DropParser.class, SearchParser.class,
+				StatsParser.class, FieldsParser.class, SortParser.class, TimechartParser.class, RenameParser.class,
+				EvalParser.class);
 
 		List<LogQueryCommandParser> parsers = new ArrayList<LogQueryCommandParser>();
 		for (Class<? extends LogQueryCommandParser> clazz : parserClazzes) {

@@ -15,23 +15,35 @@
  */
 package org.krakenapps.logdb.query.expr;
 
+import java.util.List;
+
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
 
-public class StringConstant implements Expression {
+public class Left implements Expression {
+	private Expression valueExpr;
+	private int length;
 
-	private String str;
-
-	public StringConstant(String str) {
-		this.str = str;
+	public Left(List<Expression> exprs) {
+		this.valueExpr = exprs.get(0);
+		this.length = Integer.parseInt(exprs.get(1).eval(null).toString());
 	}
 
 	@Override
 	public Object eval(LogMap map) {
-		return str;
+		Object value = valueExpr.eval(map);
+		if (value == null)
+			return null;
+
+		String s = value.toString();
+		if (s.length() < length)
+			return s;
+
+		return s.substring(0, length);
 	}
 
 	@Override
 	public String toString() {
-		return "\"" + str + "\"";
+		return "left(" + valueExpr + ", " + length + ")";
 	}
+
 }

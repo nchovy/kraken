@@ -32,6 +32,8 @@ import org.krakenapps.logdb.query.expr.Expression;
 import org.krakenapps.logdb.query.expr.Gt;
 import org.krakenapps.logdb.query.expr.Gte;
 import org.krakenapps.logdb.query.expr.If;
+import org.krakenapps.logdb.query.expr.Left;
+import org.krakenapps.logdb.query.expr.Len;
 import org.krakenapps.logdb.query.expr.Lt;
 import org.krakenapps.logdb.query.expr.Lte;
 import org.krakenapps.logdb.query.expr.Min;
@@ -40,12 +42,20 @@ import org.krakenapps.logdb.query.expr.Neg;
 import org.krakenapps.logdb.query.expr.Neq;
 import org.krakenapps.logdb.query.expr.NumberConstant;
 import org.krakenapps.logdb.query.expr.Or;
+import org.krakenapps.logdb.query.expr.Right;
 import org.krakenapps.logdb.query.expr.StringConstant;
 import org.krakenapps.logdb.query.expr.Sub;
+import org.krakenapps.logdb.query.expr.Substr;
+import org.krakenapps.logdb.query.expr.ToDate;
+import org.krakenapps.logdb.query.expr.ToInt;
+import org.krakenapps.logdb.query.expr.ToLong;
+import org.krakenapps.logdb.query.expr.ToString;
+import org.krakenapps.logdb.query.expr.Trim;
 
 public class ExpressionParser {
 
 	public static Expression parse(String s) {
+		System.out.println("parse - " + s);
 		List<Term> terms = tokenize(s);
 		List<Term> output = convertToPostfix(terms);
 		Stack<Expression> exprStack = new Stack<Expression>();
@@ -128,6 +138,28 @@ public class ExpressionParser {
 					exprStack.add(new If(args));
 				} else if (name.equals("concat")) {
 					exprStack.add(new Concat(args));
+				} else if (name.equals("str")) {
+					exprStack.add(new ToString(args));
+				} else if (name.equals("long")) {
+					exprStack.add(new ToLong(args));
+				} else if (name.equals("int")) {
+					exprStack.add(new ToInt(args));
+				} else if (name.equals("date")) {
+					exprStack.add(new ToDate(args));
+				} else if (name.equals("string")) {
+					exprStack.add(new ToString(args));
+				} else if (name.equals("left")) {
+					exprStack.add(new Left(args));
+				} else if (name.equals("right")) {
+					exprStack.add(new Right(args));
+				} else if (name.equals("trim")) {
+					exprStack.add(new Trim(args));
+				} else if (name.equals("len")) {
+					exprStack.add(new Len(args));
+				} else if (name.equals("substr")) {
+					exprStack.add(new Substr(args));
+				} else {
+					throw new LogQueryParseException("unsupported-function", -1, "function name is " + name);
 				}
 			}
 		}
@@ -348,12 +380,25 @@ public class ExpressionParser {
 		if (begin > end)
 			return null;
 
+		// use r.next as a position here (need +1 for actual next)
 		ParseResult r = findNextDelimiter(s, begin, end);
 		if (r.next < begin) {
 			// no operator, return whole string
 			String token = s.substring(begin, end + 1);
 			return new ParseResult(token, end + 1);
 		} else if (r.next == begin) {
+			// check if next token is quoted string
+			if (r.value.equals("\"")) {
+				int p = s.indexOf('"', r.next + 1);
+				if (p < 0) {
+					String quoted = s.substring(r.next);
+					return new ParseResult(quoted, s.length());
+				} else {
+					String quoted = s.substring(r.next, p + 1);
+					return new ParseResult(quoted, p + 1);
+				}
+			}
+
 			// return operator
 			int len = ((String) r.value).length();
 			return new ParseResult((String) r.value, r.next + len);
@@ -371,7 +416,7 @@ public class ExpressionParser {
 	private static ParseResult findNextDelimiter(String s, int begin, int end) {
 		// check parens, comma and operators
 		ParseResult r = new ParseResult(null, -1);
-
+		min(r, "\"", s.indexOf('"', begin), end);
 		min(r, "(", s.indexOf('(', begin), end);
 		min(r, ")", s.indexOf(')', begin), end);
 		min(r, ",", s.indexOf(',', begin), end);

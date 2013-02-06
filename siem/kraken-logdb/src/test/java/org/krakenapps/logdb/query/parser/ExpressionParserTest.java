@@ -17,6 +17,8 @@ package org.krakenapps.logdb.query.parser;
 
 import static org.junit.Assert.*;
 
+import java.util.Calendar;
+
 import org.junit.Test;
 import org.krakenapps.logdb.LogQueryParseException;
 import org.krakenapps.logdb.LogQueryCommand.LogMap;
@@ -162,4 +164,44 @@ public class ExpressionParserTest {
 		Expression exp = ExpressionParser.parse("concat(\"hello\", \"world\")");
 		assertEquals("helloworld", exp.eval(null));
 	}
+
+	@Test
+	public void testToDate() {
+		Calendar c = Calendar.getInstance();
+		c.set(Calendar.YEAR, 2013);
+		c.set(Calendar.MONTH, 1);
+		c.set(Calendar.DAY_OF_MONTH, 6);
+		c.set(Calendar.HOUR_OF_DAY, 11);
+		c.set(Calendar.MINUTE, 26);
+		c.set(Calendar.SECOND, 33);
+		c.set(Calendar.MILLISECOND, 0);
+
+		LogMap m = new LogMap();
+		m.put("date", "2013-02-06 11:26:33");
+
+		Expression exp = ExpressionParser.parse("date(date, \"yyyy-MM-dd HH:mm:ss\")");
+		Object v = exp.eval(m);
+		assertEquals(c.getTime(), v);
+	}
+
+	@Test
+	public void testSubstr() {
+		String s = "abcdefg";
+
+		LogMap m = new LogMap();
+		m.put("line", s);
+
+		Expression exp = ExpressionParser.parse("substr(line,0,7)");
+		assertEquals("abcdefg", exp.eval(m));
+
+		exp = ExpressionParser.parse("substr(line,0,0)");
+		assertEquals("", exp.eval(m));
+
+		exp = ExpressionParser.parse("substr(line,8,10)");
+		assertNull(exp.eval(m));
+
+		exp = ExpressionParser.parse("substr(line,3,6)");
+		assertEquals("def", exp.eval(m));
+	}
+
 }
