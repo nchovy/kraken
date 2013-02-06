@@ -55,7 +55,6 @@ import org.krakenapps.logdb.query.expr.Trim;
 public class ExpressionParser {
 
 	public static Expression parse(String s) {
-		System.out.println("parse - " + s);
 		List<Term> terms = tokenize(s);
 		List<Term> output = convertToPostfix(terms);
 		Stack<Expression> exprStack = new Stack<Expression>();

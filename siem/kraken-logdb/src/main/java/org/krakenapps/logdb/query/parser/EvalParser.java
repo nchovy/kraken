@@ -33,7 +33,6 @@ public class EvalParser implements LogQueryCommandParser {
 
 	@Override
 	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		System.out.println(commandString);
 		// find assignment symbol
 		int p = QueryTokenizer.findKeyword(commandString, "=");
 		if (p < 0)
