@@ -19,8 +19,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.krakenapps.logdb.query.FileBufferList;
-
 public abstract class LogQueryCommand {
 	public static enum Status {
 		Waiting, Running, End, Finalizing
@@ -90,26 +88,6 @@ public abstract class LogQueryCommand {
 			}
 			next.status = Status.Running;
 			next.push(m);
-		}
-	}
-
-	@Deprecated
-	public void push(FileBufferList<Map<String, Object>> buf) {
-		if (buf != null) {
-			for (Map<String, Object> m : buf)
-				push(new LogMap(m));
-			buf.close();
-		}
-	}
-
-	@Deprecated
-	protected final void write(FileBufferList<Map<String, Object>> buf) {
-		pushCount += buf.size();
-		if (next != null && next.status != Status.End) {
-			next.status = Status.Running;
-			next.push(buf);
-		} else {
-			buf.close();
 		}
 	}
 
@@ -187,5 +165,13 @@ public abstract class LogQueryCommand {
 		public Map<String, Object> map() {
 			return map;
 		}
+
+		@Override
+		public String toString() {
+			if (map != null)
+				return map.toString();
+			return "null";
+		}
+
 	}
 }

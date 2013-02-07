@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Future Systems
+ * Copyright 2013 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,66 +15,56 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import static org.krakenapps.bnf.Syntax.*;
-
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-import org.krakenapps.bnf.Binding;
-import org.krakenapps.bnf.Parser;
-import org.krakenapps.bnf.Syntax;
-import org.krakenapps.logdb.LogQueryParser;
-import org.krakenapps.logdb.query.StringPlaceholder;
-import org.krakenapps.logdb.query.command.Function;
+import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.LogQueryCommandParser;
+import org.krakenapps.logdb.LogQueryContext;
+import org.krakenapps.logdb.LogQueryParseException;
+import org.krakenapps.logdb.query.aggregator.AggregationField;
 import org.krakenapps.logdb.query.command.Stats;
 
-public class StatsParser implements LogQueryParser {
+public class StatsParser implements LogQueryCommandParser {
+	private static final String COMMAND = "stats";
+	private static final String BY = " by ";
+
 	@Override
-	public void addSyntax(Syntax syntax) {
-		syntax.add("stats2", this, k("stats2 "), ref("option"), ref("function"), option(k("by "), ref("stats_field")));
-		syntax.add("stats_field", new StatsFieldParser(), new StringPlaceholder(new char[] { ' ', ',' }),
-				option(ref("stats_field")));
-		syntax.addRoot("stats2");
+	public String getCommandName() {
+		return COMMAND;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
-	public Object parse(Binding b) {
-		List<String> keyFields = null;
-		Function[] func = ((List<Function>) b.getChildren()[2].getValue()).toArray(new Function[0]);
+	public LogQueryCommand parse(LogQueryContext context, String commandString) {
+		// stats <aggregation function holder> by <stats-fields>
 
-		if (b.getChildren().length < 4)
-			keyFields = new ArrayList<String>();
-		else
-			keyFields = (List<String>) b.getChildren()[3].getChildren()[1].getValue();
+		String aggsPart = commandString.substring(COMMAND.length());
+		List<String> clauses = new ArrayList<String>();
 
-		return new Stats(keyFields, func);
-	}
+		// parse clauses
+		int byPos = QueryTokenizer.findKeyword(commandString, BY, 0);
+		if (byPos > 0) {
+			aggsPart = commandString.substring(COMMAND.length(), byPos);
+			String clausePart = commandString.substring(byPos + BY.length());
 
-	public class StatsFieldParser implements Parser {
-		@Override
-		public Object parse(Binding b) {
-			List<String> fields = new ArrayList<String>();
-			parse(b, fields);
-			return fields;
+			if (clausePart.trim().endsWith(","))
+				throw new LogQueryParseException("missing-clause", commandString.length());
+
+			// trim
+			for (String clause : clausePart.split(","))
+				clauses.add(clause.trim());
 		}
 
-		@SuppressWarnings("unchecked")
-		private void parse(Binding b, List<String> fields) {
-			if (b.getValue() != null)
-				fields.add((String) b.getValue());
-			else {
-				for (Binding c : b.getChildren()) {
-					if (c.getValue() != null) {
-						if (c.getValue() instanceof Collection)
-							fields.addAll((List<? extends String>) c.getValue());
-						else
-							fields.add((String) c.getValue());
-					} else
-						parse(c, fields);
-				}
-			}
+		// parse aggregations
+		List<String> aggTerms = QueryTokenizer.parseByComma(aggsPart);
+		List<AggregationField> fields = new ArrayList<AggregationField>();
+
+		for (String aggTerm : aggTerms) {
+			AggregationField field = AggregationParser.parse(aggTerm);
+			fields.add(field);
 		}
+
+		return new Stats(fields, clauses);
 	}
+
 }

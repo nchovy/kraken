@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,37 +32,24 @@ import org.krakenapps.api.ScriptArgument;
 import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.logdb.CsvLookupRegistry;
-import org.krakenapps.logdb.DataSource;
-import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommand.LogMap;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogResultSet;
-import org.krakenapps.logdb.LogScriptFactory;
-import org.krakenapps.logdb.LogScriptRegistry;
+import org.krakenapps.logdb.LogQueryScriptFactory;
+import org.krakenapps.logdb.LogQueryScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
-import org.krakenapps.logdb.mapreduce.MapReduceQueryStatus;
-import org.krakenapps.logdb.mapreduce.MapReduceService;
-import org.krakenapps.logdb.mapreduce.RemoteQuery;
-import org.krakenapps.logdb.query.command.RpcFrom;
-import org.krakenapps.rpc.RpcConnection;
-import org.krakenapps.rpc.RpcConnectionProperties;
 
 public class LogDBScript implements Script {
 	private LogQueryService qs;
-	private DataSourceRegistry dsr;
-	private MapReduceService mapreduce;
-	private LogScriptRegistry scriptRegistry;
+	private LogQueryScriptRegistry scriptRegistry;
 	private CsvLookupRegistry csvRegistry;
 	private ScriptContext context;
 	private LookupHandlerRegistry lookup;
 
-	public LogDBScript(LogQueryService qs, DataSourceRegistry dsr, MapReduceService arbiter, LogScriptRegistry scriptRegistry,
-			LookupHandlerRegistry lookup, CsvLookupRegistry csvRegistry) {
+	public LogDBScript(LogQueryService qs, LogQueryScriptRegistry scriptRegistry, LookupHandlerRegistry lookup,
+			CsvLookupRegistry csvRegistry) {
 		this.qs = qs;
-		this.dsr = dsr;
-		this.mapreduce = arbiter;
 		this.scriptRegistry = scriptRegistry;
 		this.lookup = lookup;
 		this.csvRegistry = csvRegistry;
@@ -131,38 +117,10 @@ public class LogDBScript implements Script {
 		for (String workspace : scriptRegistry.getWorkspaceNames()) {
 			context.println("Workspace: " + workspace);
 			for (String name : scriptRegistry.getScriptFactoryNames(workspace)) {
-				LogScriptFactory factory = scriptRegistry.getScriptFactory(workspace, name);
+				LogQueryScriptFactory factory = scriptRegistry.getScriptFactory(workspace, name);
 				context.println("  " + name + " - " + factory);
 			}
 		}
-	}
-
-	public void datasources(String[] args) {
-		context.println("Data Sources");
-		context.println("--------------");
-		for (DataSource ds : dsr.getAll())
-			context.println(ds);
-	}
-
-	@ScriptUsage(description = "print datasource metadata", arguments = {
-			@ScriptArgument(name = "node", type = "string", description = "node guid or 'local'"),
-			@ScriptArgument(name = "name", type = "string", description = "data source name") })
-	public void datasource(String[] args) {
-		String nodeGuid = args[0];
-		String name = args[1];
-
-		DataSource found = null;
-		for (DataSource ds : dsr.getAll())
-			if (ds.getNodeGuid().equals(nodeGuid) && ds.getName().equals(name))
-				found = ds;
-
-		if (found == null) {
-			context.println("data source not found");
-			return;
-		}
-
-		for (String key : found.getMetadata().keySet())
-			context.println(key + ": " + found.getMetadata().get(key));
 	}
 
 	public void queries(String[] args) {
@@ -286,118 +244,6 @@ public class LogDBScript implements Script {
 		context.println("Log DB Nodes");
 		context.println("--------------");
 
-	}
-
-	public void remoteQueries(String[] args) {
-		context.println("Remote Queries");
-		context.println("----------------------");
-
-		for (RemoteQuery q : mapreduce.getRemoteQueries()) {
-			context.println(q);
-		}
-	}
-
-	public void upstreams(String[] args) {
-		context.println("Upstream Connections");
-		context.println("----------------------");
-		for (RpcConnection conn : mapreduce.getUpstreamConnections())
-			context.println(conn);
-	}
-
-	public void downstreams(String[] args) {
-		context.println("Downstream Connections");
-		context.println("----------------------");
-		for (RpcConnection conn : mapreduce.getDownstreamConnections())
-			context.println(conn);
-	}
-
-	@ScriptUsage(description = "connect to arbiter", arguments = {
-			@ScriptArgument(name = "host", type = "string", description = "host address"),
-			@ScriptArgument(name = "port", type = "int", description = "port"),
-			@ScriptArgument(name = "password", type = "string", description = "password") })
-	public void connect(String[] args) {
-		String host = args[0];
-		int port = Integer.valueOf(args[1]);
-
-		RpcConnectionProperties props = new RpcConnectionProperties(host, port);
-		props.setPassword(args[2]);
-		RpcConnection conn = mapreduce.connect(props);
-		if (conn != null)
-			context.println("connected " + conn);
-		else
-			context.printf("cannot connect to %s:%d\n", host, port);
-	}
-
-	@ScriptUsage(description = "disconnect from arbiter", arguments = { @ScriptArgument(name = "guid", type = "string", description = "rpc peer guid") })
-	public void disconnect(String[] args) {
-		mapreduce.disconnect(args[0]);
-		context.println("disconnected");
-	}
-
-	/**
-	 * print all mapreduce queries
-	 */
-	public void mrqueries(String[] args) {
-		context.println("MapReduce Queries");
-		context.println("-----------------");
-
-		for (MapReduceQueryStatus q : mapreduce.getQueries())
-			context.println(q);
-	}
-
-	public void mrquery(String[] args) throws IOException {
-		MapReduceQueryStatus q = mapreduce.createQuery(args[0]);
-		if (q == null) {
-			context.println("mapreduce query failed");
-			return;
-		}
-
-		context.println("starting " + q);
-		mapreduce.startQuery(q.getGuid());
-
-		LogQuery lq = q.getReduceQuery().getQuery();
-		do {
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-			}
-		} while (!lq.isEnd());
-
-		LogResultSet rs = lq.getResult();
-		try {
-			while (rs.hasNext())
-				printMap(rs.next());
-		} finally {
-			rs.close();
-		}
-
-		qs.removeQuery(lq.getId());
-	}
-
-	@ScriptUsage(description = "push to rpcfrom", arguments = {
-			@ScriptArgument(name = "guid", type = "string", description = "dist query guid"),
-			@ScriptArgument(name = "sample string", type = "string", description = "sample string") })
-	public void rpcfrom(String[] args) {
-		RpcFrom rpc = mapreduce.getRpcFrom(args[0]);
-		if (rpc == null) {
-			context.println("rpc not found");
-			return;
-		}
-
-		Map<String, Object> data = new HashMap<String, Object>();
-		data.put("data", args[1]);
-		rpc.push(new LogMap(data));
-	}
-
-	@ScriptUsage(description = "eof to rpcfrom", arguments = { @ScriptArgument(name = "guid", type = "string", description = "dist query guid") })
-	public void rpceof(String[] args) {
-		RpcFrom rpc = mapreduce.getRpcFrom(args[0]);
-		if (rpc == null) {
-			context.println("rpc not found");
-			return;
-		}
-
-		rpc.eof();
 	}
 
 	public void lookuphandlers(String[] args) {

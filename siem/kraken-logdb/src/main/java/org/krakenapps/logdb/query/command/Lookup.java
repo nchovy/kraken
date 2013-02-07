@@ -22,21 +22,37 @@ import org.krakenapps.logdb.LookupHandlerRegistry;
 public class Lookup extends LogQueryCommand {
 	private LookupHandlerRegistry registry;
 	private String handlerName;
-	private String srcField;
-	private String localSrcField;
-	private String dstField;
-	private String localDstField;
+	private String lookupInputField;
+	private String sourceField;
+	private String lookupOutputField;
+	private String targetField;
 
 	public Lookup(String handlerName, String srcField, String dstField) {
 		this(handlerName, srcField, srcField, dstField, dstField);
 	}
 
-	public Lookup(String handlerName, String localSrcField, String srcField, String dstField, String localDstField) {
+	public Lookup(String handlerName, String sourceField, String lookupInputField, String lookupOutputField, String targetField) {
 		this.handlerName = handlerName;
-		this.srcField = srcField;
-		this.localSrcField = localSrcField;
-		this.dstField = dstField;
-		this.localDstField = localDstField;
+		this.sourceField = sourceField;
+		this.lookupInputField = lookupInputField;
+		this.lookupOutputField = lookupOutputField;
+		this.targetField = targetField;
+	}
+
+	public String getSourceField() {
+		return sourceField;
+	}
+
+	public String getLookupInputField() {
+		return lookupInputField;
+	}
+
+	public String getLookupOutputField() {
+		return lookupOutputField;
+	}
+
+	public String getTargetField() {
+		return targetField;
 	}
 
 	public void setLogQueryService(LookupHandlerRegistry registry) {
@@ -45,10 +61,10 @@ public class Lookup extends LogQueryCommand {
 
 	@Override
 	public void push(LogMap m) {
-		Object value = m.get(localSrcField);
+		Object value = m.get(sourceField);
 		LookupHandler handler = registry.getLookupHandler(handlerName);
 		if (handler != null)
-			m.put(localDstField, handler.lookup(srcField, dstField, value));
+			m.put(targetField, handler.lookup(lookupInputField, lookupOutputField, value));
 		write(m);
 	}
 

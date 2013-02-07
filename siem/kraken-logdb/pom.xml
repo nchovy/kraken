@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb</artifactId>
-	<version>0.9.0</version>
+	<version>0.10.0</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log DB</name>
 	<build>
@@ -25,8 +25,9 @@
 						<Private-Package>
 							org.krakenapps.logdb.impl,
 							org.krakenapps.logdb.query,
-							org.krakenapps.logdb.mapreduce,
 							org.krakenapps.logdb.query.command,
+							org.krakenapps.logdb.query.aggregator,
+							org.krakenapps.logdb.query.expr,
 							org.krakenapps.logdb.query.parser,
 							org.krakenapps.logdb.sort,
 							org.krakenapps.logdb.msgbus
@@ -69,10 +70,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-rpc</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.krakenapps</groupId>
 			<artifactId>kraken-codec</artifactId>
 		</dependency>
 		<dependency>
@@ -92,8 +89,10 @@
 			<artifactId>kraken-opencsv</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-bnf</artifactId>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.9.5</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

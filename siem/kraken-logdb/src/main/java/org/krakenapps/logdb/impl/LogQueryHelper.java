@@ -76,7 +76,7 @@ public class LogQueryHelper {
 			Fields fields = null;
 			for (LogQueryCommand command : query.getCommands()) {
 				if (command instanceof Fields) {
-					if (!((Fields) command).isRemove())
+					if (!((Fields) command).isSelector())
 						fields = (Fields) command;
 				}
 			}
