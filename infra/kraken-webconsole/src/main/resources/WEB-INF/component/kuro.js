@@ -69,6 +69,10 @@ Array.prototype.removeAt = function(idx) {
 	this.splice(idx, 1);
 }
 
+Array.prototype.removeAll = function() {
+	//this.splice(0, this.length);
+	this.length = 0;
+}
 
 var Kuro = (function() {
 	function namespace(string) {

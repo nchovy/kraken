@@ -13,7 +13,7 @@ html {
 		height: 72%;
 	}
 
-		#box-query-and-result {
+		#box-query-and-result, .box-query-and-result {
 			display: box;
 			box-orient: vertical;
 			box-flex: 1;

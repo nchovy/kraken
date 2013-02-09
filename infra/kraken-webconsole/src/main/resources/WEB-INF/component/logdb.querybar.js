@@ -1,4 +1,4 @@
-define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js"], function(ko, logdbManager) {
+define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js", "/component/window.js"], function(ko, logdbManager, Win) {
 	var className = "Kuro.Logdb.Querybar";
 
 	ko.bindingHandlers[className] = {
@@ -7,11 +7,30 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js"], function(ko, logdbMan
 		},
 		update: function(el, viewModelAccr, allBindingAccr, viewModel, bindingCtx) {
 			var viewModel = viewModelAccr(), allBindings = allBindingAccr();
+			//viewModel.el = el;
 
 			var gridTemplateName = (!!allBindings.tmpl) ? allBindings.tmpl.id : "tmpl.default." + className;
 			var templateEngine = new ko.nativeTemplateEngine();
 			
-			ko.renderTemplate(gridTemplateName, viewModel, { templateEngine: templateEngine }, el);
+			ko.renderTemplate(gridTemplateName, viewModel, {
+				"templateEngine": templateEngine,
+				"afterRender": afterRender
+			}, el);
+
+
+			function afterRender() {
+				var $el = $(el);
+
+				$el.find(".btn.OpenModalSaveQuery").on("click", function(e) {
+					e.preventDefault();
+					Win.open("#modalSaveQuery");
+				});
+
+				$el.find(".btn.OpenScheduleQuery").on("click", function(e) {
+					e.preventDefault();
+					console.log("schedule query")
+				});
+			}
 		}
 	}	
 	
@@ -24,17 +43,26 @@ define(["/lib/knockout-2.1.0.debug.js", "/core/logdb.js"], function(ko, logdbMan
 			this.self = this;
 			this.name = className;
 
+			this.Logdb;
+
 			if(!!option) {
-				//console.log("has option")
-				queryPageSize = option.queryPageSize;
+				queryPageSize = option.queryPageSize || 15;
+
+				if(!!option.query) {
+					this.Logdb = option.query;
+				}
 			}
 
+			if(!this.Logdb) {
+				var logdbOption;
+				if(!!option.logdbOption) logdbOption = option.logdbOption;
+				
+				this.Logdb = logdbManager.create(logdbOption);
+			}
 
-			this.Logdb = logdbManager.create();
+			//var inputStr = "table limit=10000 local\\interpark-syslog";
 
-			var inputStr = "table limit=10000 local\\interpark-syslog";
-
-			this.input = ko.observable(inputStr);
+			this.input = ko.observable(this.Logdb.activeQuery());
 
 			this.nowQuerying = ko.observable(false);
 

@@ -30,22 +30,26 @@ var ViewModel = function() {
 		var now = new Date();
 
 		$.each(result, function(i, obj) {
-			// columns render
+
+			var columnOrder = [];
 			for(prop in obj) {
-				if(columnsText().indexOf(prop) == -1) {
+				columnOrder.push(prop);
+			}
+
+			columnOrder.sort();
+			
+			$.each(columnOrder, function(j, col) {
+				if(columnsText().indexOf(col) == -1) {
 					var headerObj = {
-						headerText: prop,
-						rowText: prop,
+						headerText: col,
+						rowText: col,
 						clickHeader: null,
 						sortedStatus: ""
 					};
 					
 					self.columns.push(headerObj);
 				}
-			}
-
-			
-			//if(self.rowCache[offset + i]) return false;
+			});
 
 			self.rowCache[offset + i] = obj;
 		})

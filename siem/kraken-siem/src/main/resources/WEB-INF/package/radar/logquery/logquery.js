@@ -12,89 +12,110 @@ require(["/lib/jquery.js",
 	"/component/list.js",
 	"/component/data.grid.js",
 	"/bootstrap/js/bootstrap.amd.js",
+	"comp.logquery.js",
+	"/lib/jquery.timeago.js",
+	"/component/util.js",
 	"/package/system/orgchart/testdata2.js"
 	],
-	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, json2) {
+	function(_$, _$svganim, ko, Socket, Util, QueryBar, Spreadsheet, StackedBar, komap, Win, DD, List, Grid, Bootstrap, LogQuery, Timeago, Util, json2) {
 
-	var qbar = new QueryBar.instance();
+	var Core = parent.Core;
 
-	qbar.Logdb.on("pageLoaded", function(m) {
-		console.log(m.body);
-		var currIdx = grid1.getCurrentIndex();
-		vm.pushMany(m.body.result, currIdx);
-	});
+	var initTimelineMsg = {
+		"id": 6,
+		"values": [1,1,1,1,1,1,1,1,1,1],
+		//"values": [5,10,20,40,6,80,0,30,60,100],
+		"count": 100,
+		"span_field": "Minute",
+		"type": "eof",
+		"span_amount": 1,
+		"begin": "2012-06-24 23:49:00+0900"
+	};
+	var bar = new StackedBar.ViewModel("#timeline-chart", convertTimeline(initTimelineMsg));
+	var label1 = $('<small>').appendTo("#timeline-chart");
 
-	qbar.Logdb.on("onTimeline", function(m) {
-		console.log("timeline:", m.body);
+	var vmQueryPane = new List.ViewModel([]);
 
-		if(!!m.body.count) {
-			vm.totalCount(m.body.count);
-			$("#divTotalCount").text(m.body.count + " logs");
-		}
-
-		bar.updateData( convertTimeline( m.body ) );
-
-	});;
-
-	qbar.onSearch = function(self, el) {
-		$("#divTotalCount").text("0 log");
-		vm.clear();
-		grid1.clear();
-	}
-
-	qbar.nowQuerying.subscribe(function(val) {
-		if(val) {
-			$(".search-query").removeClass("complete").addClass("querying");
+	vmQueryPane.onSelect = function(lq) {
+		if(!!lq.timeline) {
+			bar.updateData(lq.timeline);
 		}
 		else {
-			$(".search-query").removeClass("querying").addClass("complete");
+			bar.updateData(convertTimeline(initTimelineMsg));
 		}
-	})
 
+		if(!!lq.totalCount) {
+			$("#divTotalCount").text(lq.totalCount + " results");
+		}
+		else {
+			$("#divTotalCount").text("0 result");
+		}
+	}
 
-	var vm = new QueryBar.ViewModel();
-	ko.applyBindings(qbar, document.getElementById("qbar"));
+	vmQueryPane.onBeforeRemove = function() {
+		if(vmQueryPane.length() == 1) return false;
+	}
 
-	var grid1 = new Spreadsheet("#box-result", vm, {
-		"debug": false,
-		"colDataBind": function(rowidx, colidx, prop) {
-			return 'text: rowCache[' + rowidx + ']["' + prop + '"]';
-		},
-		"onRenderRow": function(idx, el) {
-			
-		},
-		"onRender": function() {
+	vmQueryPane.onAfterRemove = function(data) {
+		vmQueryPane.selectAt(vmQueryPane.length() - 1);
+	}
 
-		},
-		"onRenderRows": Util.throttle(function(top, bottom, el, handler) {
-			if(qbar.Logdb.activeId() === -1) return;
-
-			qbar.Logdb.getResult(qbar.Logdb.activeId(), top, bottom - top, function() {
-				console.log("after getResult", top, bottom - top)
-				try {
-					ko.applyBindings(vm, el.find("tbody")[0]);
-				}
-				catch(e) {
-					console.log(e)
-				}
-
-				handler.done();
+	var category20 = d3.scale.category20();
+	
+	function addTab(query) {
+		var lq;
+		if(!!query) {
+			lq = new LogQuery.instance({
+				"query": query
 			});
-		}, 200)
+		}
+		else {
+			lq = new LogQuery.instance({
+				logdbOption: {
+					callback: function(query) {
+						// additional property
+						query.color = ko.computed(coloringQuery, query)
+						query.statusText = ko.computed(getQueryStatus, query);
+					}
+				}
+			});
+		}
+		var len = vmQueryPane.length();
+		LogQuery.init(lq, category20(len));
+
+		lq.Logdb.on("onTimeline", function(m) {
+			onTimeline(m, lq);
+		});
+
+		vmQueryPane.add(lq);
+		vmQueryPane.select(lq);
+
+		return lq;
+	}
+
+	function onTimeline(m, lq) {
+		lq.timeline = convertTimeline(m.body);
+		lq.totalCount = m.body.count;
+		lq.rawBody = m.body;
+
+		if(lq.isSelected()) {
+			$("#divTotalCount").text(lq.totalCount + " results");
+			bar.updateData(lq.timeline);
+
+			label1.text(lq.rawBody.begin.split(" ")[0])
+		}
+	}
+
+	ko.applyBindings(vmQueryPane, document.getElementById("tabs"))
+	ko.applyBindings(vmQueryPane, document.getElementById("box-query"));
+
+	$("#btnAddTab").on("click", function(e) {
+		addTab();
 	});
+	addTab();
 
-	$("#btnOpenModalSaveQuery").on("click", function(e) {
-		e.preventDefault();
-		Win.open("#modalSaveQuery");
-	})
 
-	$("#btnOpenScheduleQuery").on("click", function(e) {
-		e.preventDefault();
-	})
-
-	$("#btnOpenModalDownload").on("click", function() {
-		Win.open("#modalDownload");
-	});
+	// toolbar
 
 	$("#btnDownloadResult").on("click", function(e) {
 		e.preventDefault();
@@ -114,19 +135,7 @@ require(["/lib/jquery.js",
 
 		Win.close("#modalDownload");
 	});
-
-
-
-
-	$("#dododo3").on("click", function() {
-		if($("#box-query").hasClass("scaled")) {
-			$("#box-query").removeClass("scaled");
-		}
-		else {
-			$("#box-query").addClass("scaled")
-		}
-		
-	});
+	
 
 
 	// Variables
@@ -147,6 +156,7 @@ require(["/lib/jquery.js",
 	
 
 	$(".toggle-edit").on("click", function() {
+		hidePopover();
 		$(".mode-edit").addClass("roll").fadeIn('fast');
 		$(".mode-default").addClass("up").fadeOut('fast');
 
@@ -154,13 +164,15 @@ require(["/lib/jquery.js",
 		vmQueries.selectAll(false);
 	});
 
-	$(".toggle-default").on("click", function() {
+	function toggleDefault() {
 		$(".mode-edit").addClass("up").fadeOut('fast');
 		$(".mode-default").addClass("roll").fadeIn('fast');
 
 		vmQueries.isEditMode(false);
 		vmQueries.selectAll(false);
-	});
+	}
+
+	$(".toggle-default").on("click", toggleDefault);
 
 	function selectOnEditMode(data) {
 		var countSelected = vmQueries.items().filter(function(q) {
@@ -170,30 +182,78 @@ require(["/lib/jquery.js",
 		$("#btnRemoveQueries").text("Remove(" + countSelected + ")");
 	}
 
+	function hidePopover(e) {
+		if(!!e) {
+			e.stopPropagation();
+		}
+
+		var popover = $(vmQueries.el).find(".popover");
+		popover.hide();
+		$("#box-query *").off("click", hidePopover);
+	}
+
 	function selectOnDefaultMode(data, e) {
+		console.log(vmQueries)
 		var offset = $(vmQueries.el).find("li.active").offset();
 
-		var popover = $(vmQueries.el).find(".popover")
-			.addClass("in")
-			.css("top", (offset.top - 140) + "px")
-			.css("left", e.pageX + "px")
-			.show();
-
-		function hidePopover(e) {
-			e.stopPropagation();
-			popover.hide();
-			$("#box-query *").off("click", hidePopover);
+		function getPos(x, boxwidth) {
+			if($(window).width() - (boxwidth / 2) < x) {
+				return x - boxwidth;
+			}
+			else if(x < (boxwidth / 2)) {
+				return 20;
+			}
+			else {
+				return x - (boxwidth / 2);
+			}
 		}
+
+		var popover = $(vmQueries.el).find(".popover");
+
+		popover.addClass("in")
+			.css("top", (offset.top - 140) + "px")
+			.css("left", getPos(e.pageX, popover.width()) + "px")
+			.show();
 
 		$("#box-query *").on("click", hidePopover);
 	}
 
-	// Running Queries
-	var Core = parent.Core;
-	Core.LogDB.getQueries(function(queries) {
-		console.log(queries());
+	function coloringQuery() {
+		var self = this;
+		var hasMatch = false;
+		var color;
+		vmQueryPane.items().filter(function(t) {
+			if(t.Logdb.activeId() == self.activeId()) {
+				hasMatch = true;
+				color = t.color;
+			}
+		});
 
-		vmQueries = new List.ViewModel(queries());
+		if(hasMatch) {
+			return color;
+		}
+		else {
+			return null;
+		}
+	}
+
+	function getQueryStatus() {
+		if(this.isEnd()) {
+			return "End";
+		}
+		else {
+			return "Running";
+		}
+	}
+
+	// Running Queries
+	Core.LogDB.getQueries(function(queries) {
+		vmQueries = queries;
+
+		$.each(vmQueries.items(), function(i, q) {
+			q.color = ko.computed(coloringQuery, q);
+			q.statusText = ko.computed(getQueryStatus, q);
+		})
 
 		vmQueries.isEditMode = vmQueries.canSelectMulti;
 
@@ -216,83 +276,131 @@ require(["/lib/jquery.js",
 			}
 		}, vmQueries);
 
+		vmQueries.clickViewResult = function(query) {
+			var qid = query.activeId();
+
+			var existTab;
+			vmQueryPane.items().filter(function(t) {
+				if(t.Logdb.activeId() == qid) {
+					existTab = t;
+				}
+			});
+
+			if(!!existTab) {
+				// active tab
+				vmQueryPane.select(existTab);
+			}
+			else {
+				console.log(query)
+				// new tab
+				if(!query.isEnd()) {
+					query.registerTrap();
+				}
+				var lq = addTab(query);
+				lq.vm.totalCount(query.totalCount());
+				
+			}
+
+			hidePopover();
+		}
+
 		vmQueries.onSelect = function(data, e) {
 			if(vmQueries.isEditMode()) {
 				selectOnEditMode.call(this, data);
 			}
 			else {
-				console.log(vmQueries.selected.length)
 				selectOnDefaultMode.call(this, data, e);
 			}
 		}
 
+		vmQueries.onAfterRemove = function(query) {
+			if(query.activeId() === -1) return;
+			query.dispose();
+		}
+
+		vmQueries.closePopover = function() {
+			hidePopover();
+		}
+
 		ko.applyBindings(vmQueries, $("#listQueriesBody")[0]);
+		$(".timeago").timeago();
+	});
+
+	$("#btnRemoveQueries").on("click", function() {
+		var willremoved = [];
+		$.each(vmQueries.selected(), function(i, q) {
+			var activeId = q.activeId();
+			willremoved.push(q);
+
+			vmQueryPane.items().filter(function(t) {
+				if(t.Logdb.activeId() == activeId) {
+					if(vmQueryPane.items().length == 1) {
+						addTab();
+					}
+					vmQueryPane.remove(t);
+				}
+			});
+		});
+
+		$.each(willremoved, function(i, q) {
+			vmQueries.remove(q);
+		});
+
+		$(this).text("Remove");
+		toggleDefault();
 	});
 
 
-	$("#btnRemoveQueries").on("click", function() {
-
-	})
-
-
-	// Timeline
-
-	var samplemsg = 
-	{
-		"id": 6,
-		"values": [1,1,1,1,1,1,1,1,1,1],
-		//"values": [5,10,20,40,6,80,0,30,60,100],
-		"count": 100,
-		"span_field": "Minute",
-		"type": "eof",
-		"span_amount": 1,
-		"begin": "2012-06-24 23:49:00+0900"
-	};
-
-
+	// Timeline extras
 	function convertTimeline(body) {
 		var tbegin = d3.time.format("%Y-%m-%d %X").parse(body.begin.substring(0, 19))
 		//var tbegin = new Date(body.begin);
 		//console.log(tbegin)
 		
-		var diff = 0, span = 0;
+		var diff = 1 * body.span_amount;
+		var span = 0;
 		if(body.span_field === "Minute") {
-			diff = 1 * body.span_amount;
 			span = 60000;
-			tbegin = new Date(tbegin.getTime() - span)
 		}
+		else if(body.span_field === "Hour") {
+			span = 3600000;
+		}
+		else if(body.span_field === "Day") {
+			span = 86400000;
+		}
+		tbegin = new Date(tbegin.getTime() - span);
 
 		var obj = {};
-		body.values.forEach(function(v) {
+		body.values.forEach(function(v, i) {
 			tbegin = new Date(tbegin.getTime() + diff * span)
-			obj[tbegin.getISOTimeString()] = v;
+			if(body.span_field === "Day") {
+				obj[tbegin.getISODateOnlyString()] = v;
+			}
+			else {
+				obj[tbegin.getISOTimeString()] = v;
+			}
+
+			if(i == 9) {
+				tbegin = new Date(tbegin.getTime() + diff * span)
+				if(body.span_field === "Day") {
+					obj[tbegin.getISODateOnlyString()] = 0;
+				}
+				else {
+					obj[tbegin.getISOTimeString()] = 0;
+				}
+				
+			}
 		});
 
+		console.log(obj)
 		return [obj];
 	}
 
-	var z = convertTimeline(samplemsg);
-	var bar = new StackedBar.ViewModel("#timeline-chart", z);
-
-	$("#btnTimelineZoom").on("click", function() {
-		var newmsg = 
-		{
-			"id": 6,
-			//"values": [0,0,0,0,0,0,0,0,0,0],
-			"values": [5,4,21,4,12,23,2,11,13,17],
-			"count": 100,
-			"span_field": "Minute",
-			"type": "eof",
-			"span_amount": 1,
-			"begin": "2012-06-24 11:12:00+0900"
-		};
-		
-		bar.updateData( convertTimeline( newmsg ) );
+	// Layout
+	$("#closeQueryStatus").on("click", function() {
+		$("#box-query-status").hide();
 	})
 
-	//console.log( d3.time.format("%Y-%m-%d %X").parse("2012-06-24 11:12:00"))
-
-	// Layout
 
 	if($.browser.msie && parseInt($.browser.version) < 10) {
 		console.log("added flexie!")

@@ -10,42 +10,75 @@
 	<link href="logquery.css" rel="stylesheet"/>
 	<script type="text/javascript" data-main="logquery" src="/require.js"></script>
 
-	<script type="text/html" id="qb">
+	<script type="text/html" id="tmplTabs">
+		<ul data-bind="foreach: items" class="nav">
+			<li data-bind="css: { 'active': $data.isSelected }">
+				<a href="#" data-bind="click: $parent.select.callFn($parent, $data)">
+					<span data-bind="style: { backgroundColor: $data.color }" style="display: inline-block; line-height: 10%; width: 10px; height: 10px; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
+					<span data-bind="text: $data.tabName"></span>
+					<span data-bind="if: $data.isSelected">
+						<i class="icon-remove" data-bind="click: $parent.remove.callFn($parent, $data)"></i>
+					</span>
+				</a>
+			</li>
+		</ul>
+	</script>
+
+	<script type="text/html" id="tmplLogQuery">
+		<!-- ko foreach: items -->
+			<div class="box-query-and-result" data-bind="Component.LogQuery: $data, visible: $data.isSelected, attr: { 'data-id': $data.Logdb.activeId }"></div>
+		<!-- /ko -->
+	</script>
+
+	<script type="text/html" id="tmplQueryBar">
 		<form class="form-search" data-bind="submit: search">
 			<div class="control-group">
 				<div class="input-append">
-					<input type="search" class="search-query" style="width: 600px" data-bind="value: input" placeholder="" />
+					<input type="search" class="search-query" style="width: 400px" data-bind="value: input" placeholder="" />
 					<button type="submit" class="btn btn-primary"><i class="icon-search icon-white"></i> Search</button>
 				</div>
 				<button type="button" class="btn btn-warning" data-bind="click: stop, visible: nowQuerying">Stop</button>
 				<div class="btn-group">
-					<button class="btn" id="btnOpenModalSaveQuery"><i class="icon-star"></i> Bookmark</button>
-					<button class="btn" id="btnOpenScheduleQuery"><i class="icon-ok-circle"></i> Schedule</button>
+					<button class="btn OpenModalSaveQuery"><i class="icon-star"></i></button>
+					<button class="btn OpenScheduleQuery"><i class="icon-ok-circle"></i> Schedule</button>
 				</div>
 			</div>
 		</form>
 	</script>
 
-	<script type="text/html" id="tmpl.default.Kuro.List">
-		<div class="popover top" style="position: fixed; height: 140px; width: 350px">
+	<script type="text/html" id="tmplQueries">
+		<div class="popover top" style="position: fixed; height: 140px; width: auto">
 			<div class="arrow"></div>
-			<i class="icon-remove pull-right"></i>
-			<h3 class="popover-title" data-bind="text: $root.singleSelected().activeQuery"></h3>
+			<button type="button" style="margin: 7px" class="close" data-bind="click: $root.closePopover">&times;</button>
+			<h3 class="popover-title" style="height: 20px; padding: 8px 48px 8px 14px">
+				<span style="color: silver" data-bind="text: $root.singleSelected().activeId"></span>
+			 	<span style="font-weight: bold; white-space: nowrap" data-bind="text: $root.singleSelected().activeQuery"></span>
+			</h3>
 			<div class="popover-content" style="position: relative; height: 75px">
-				<p data-bind="text: $root.singleSelected().activeQuery"></p>
-				<button class="btn btn-primary">View Result</button>
-				<button class="btn">Status</button>
+				<div>
+					<label style="display: inline-block; width: 80px">Status</label>
+					<div style="display: inline" data-bind="text: $root.singleSelected().statusText"></div>
+					<small style="font-style: italic"><a href="#">more...</a></small>
+				</div>
+				<div>
+					<label style="display: inline-block; width: 80px">Started At</label>
+					<div style="display: inline" data-bind="text: $root.singleSelected().lastStarted"></div>
+				</div>
+				<div style="bottom: 0; position: absolute">
+					<button data-bind="click: $root.clickViewResult.callFn($root, $root.singleSelected())" class="btn btn-primary">View Result</button>
+				</div>
 			</div>
 		</div>
 		<ul data-bind="foreach: items" class="nav nav-pills nav-stacked">
-			<li data-bind="css: { 'active': $data.isSelected }">
+			<li data-bind="css: { 'active': $data.isSelected }, visible: $data.activeId() != -1">
 				<a href="#" data-bind="click: function() { $parent.select.callFn($parent, $data, event)(); }">
 					<input type="checkbox" data-bind="visible: $parent.isEditMode, checked: $data.isSelected"/>
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px 5px; border: 1px solid #ccc"></span>
+					<span data-bind="style: { 'backgroundColor': $data.color, 'display': !!$data.color() ? 'inline-block' : 'none'}" class="coloring" style="border: 1px solid #ccc"></span>
+					<span data-bind="style: { 'display': !$data.color() ? 'inline-block' : 'none'}" class="coloring" style="border: 1px solid transparent"></span>
 					<span style="width: 30px" data-bind="text: $data.activeId"></span>
 					<span data-bind="text: $data.activeQuery"></span>
-					<small>3 hours ago</small>
-					<button data-bind="visible: !$parent.isEditMode()" class="btn btn-mini btn-info pull-right" style="margin-top: -5px"><i class="icon-chevron-right icon-white"></i></button>
+					<small class="timeago" data-bind="attr: { title: $data.lastStarted }"></small>
+					<button data-bind="visible: !$parent.isEditMode(), click: $root.clickViewResult.callFn($root, $data), clickBubble: false" class="btn btn-mini btn-info pull-right" style="margin-top: -5px"><i class="icon-chevron-right icon-white"></i></button>
 					<span class="pull-right" style="width: 50px; color: red" data-bind="text: $data.isSelected"></span>
 					<span class="pull-right" style="width: 50px; color: blue" data-bind="text: $data.isEnd"></span>
 					<span class="pull-right" style="width: 100px">Scheduled</span>
@@ -53,9 +86,56 @@
 			</li>
 		</ul>
 	</script>
+
+	<script type="text/html" id="tmpl.default.Component.LogQuery">
+		<div id="box-toolbar">
+			<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
+				<div class="btn-group">
+					<button class="btn btn-small">Visualize</button>
+					<button class="btn btn-small OpenModalDownload">Download</button>
+				</div>
+				<div class="btn-group">
+					<button class="btn btn-small">Queueing</button>
+					<button class="btn btn-small">Show Running</button>
+				</div>
+				<div class="btn-group">
+					<button class="btn btn-small">Save Result</button>
+					<button class="btn btn-small">Load Result</button>
+				</div>
+				<div class="btn-group">
+					<button class="btn btn-small">?</button>
+				</div>
+				<div class="btn-group pull-right" style="margin-right: 10px">
+					<button class="btn btn-mini Minimize"><i class="icon-minus"></i></button>
+					<button class="btn btn-mini"><i class="icon-remove"></i></button>
+				</div>
+			</div>
+			<div class="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: tmplQueryBar"></div>
+		</div>
+		<div id="box-result-cont">
+			<div id="box-result"></div>
+		</div>
+	</script>
 </head>
 <body>
 
+<aside id="modalRenameField" class="modal hidden">
+	<form class="form-horizontal" id="formRenameField">
+		<legend>Rename Field</legend>
+		<div class="control-group">
+			<label class="control-label" data-form="before"></label>
+			<div class="controls">
+				<input type="text" data-form="name">
+			</div>
+		</div>
+		<div class="control-group">
+			<div class="controls">
+				<button class="btn btn-primary" id="btnRenameField">Rename</button>
+				<button class="btn modal-close">Cancel</button>
+			</div>
+		</div>
+	</form>
+</aside>
 
 <aside id="modalSaveQuery" class="modal hidden">
 	<form class="form-horizontal">
@@ -138,60 +218,16 @@
 <div class="navbar navbar-fixed-top">
 	<div class="navbar-inner">
 		<a class="brand" href="#" style="margin-left: -10px">Log Query</a>
-		<ul class="nav">
-			<li class="active">
-				<a href="#">
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
-					<span>local\interpark-syslog</span>
-					<span>
-						<i class="icon-remove"></i>
-					</span>
-				</a>
-			</li>
-			<li>
-				<a href="#">
-					<span style="display: inline-block; line-height: 10%; width: 10px; height: 10px; background-color: #F8CAD7; padding: 0px; margin: 0px; border: 1px solid #ccc"></span>
-					<span>local\interpark-syslog</span>
-					<span>
-						<i class="icon-remove"></i>
-					</span>
-				</a>
-			</li>
-		</ul>
+		<div id="tabs" data-bind="Kuro.List: self, tmpl: tmplTabs"></div>
+		<button id="btnAddTab" class="btn btn-primary">
+			<i class="icon-plus icon-white"></i>
+		</button>
 	</div>
 </div>
 
 <div id="box-main">
 	<div id="box-query">
-		<div id="box-query-and-result">
-			<div id="box-toolbar">
-				<div class="btn-toolbar" style="margin-top: 15px; margin-left: 10px">
-					<div class="btn-group">
-						<button class="btn btn-small">Visualize</button>
-						<button class="btn btn-small" id="btnOpenModalDownload">Download</button>
-					</div>
-					<div class="btn-group">
-						<button class="btn btn-small">Queueing</button>
-						<button class="btn btn-small">Show Running</button>
-					</div>
-					<div class="btn-group">
-						<button class="btn btn-small">Save Result</button>
-						<button class="btn btn-small">Load Result</button>
-					</div>
-					<div class="btn-group">
-						<button class="btn btn-small">?</button>
-					</div>
-					<div class="btn-group pull-right" style="margin-right: 10px">
-						<button id="dododo3" class="btn btn-mini"><i class="icon-minus"></i></button>
-						<button class="btn btn-mini"><i class="icon-remove"></i></button>
-					</div>
-				</div>
-				<div id="qbar" data-bind="Kuro.Logdb.Querybar: self, tmpl: qb"></div>
-			</div>
-			<div id="box-result-cont">
-				<div id="box-result"></div>
-			</div>
-		</div>
+		<div id="box-query-and-result" data-bind="Kuro.List: self, tmpl: tmplLogQuery"></div>
 		<div id="box-timeline" class="white">
 			<!--
 			<svg width="200" height="600" style="position:absolute; top:80px">
@@ -206,7 +242,6 @@
 					-->
 					<div id="btnTimelineZoomIn" class="btn btn-mini"><i class="icon-zoom-in"></i></div>
 					<div id="btnTimelineZoomOut" class="btn btn-mini"><i class="icon-zoom-out"></i></div>
-					<div id="btnTimelineZoom" class="btn btn-mini">c</div>
 				</div>
 				<div class="pull-right" style="margin: 10px; font-weight: bold; font-size: 9pt" id="divTotalCount">0 log</div>
 			</div>
@@ -239,7 +274,7 @@
 			</div>
 			<div class="pull-right btn-group">
 				<button class="btn btn-mini"><i class="icon-fullscreen"></i></button>
-				<button class="btn btn-mini"><i class="icon-remove"></i></button>
+				<button id="closeQueryStatus" class="btn btn-mini"><i class="icon-remove"></i></button>
 			</div>
 			<div style="clear: both"></div>
 		</div>
@@ -258,7 +293,7 @@
 				</div>
 			</div>
 			<div class="status-body">
-				<div id="listQueriesBody" data-bind="Kuro.List: self"></div>
+				<div id="listQueriesBody" data-bind="Kuro.List: self, tmpl: tmplQueries"></div>
 			</div>
 		</div>
 		<div class="pane" id="listQueryStatus" style="display:none">

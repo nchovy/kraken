@@ -9,7 +9,7 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 		var margin = { top: 10, right: 0, left: 50, bottom: 10 },
 			width = 100 - margin.left - margin.right,
-			height = $("#timeline-chart").height() - margin.top - margin.bottom;
+			height = $(el).height() - margin.top - margin.bottom;
 
 		var x = d3.scale.ordinal()
 			.rangeRoundBands([0, width], .1);
@@ -26,9 +26,43 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 			.append("g")
 				.attr("transform", "translate(" + margin.left + ",0)");
 
+
+		var tooltip;
+
+		function onMouseOver(d) {
+			this.isMouseOver = true;
+			tooltip.find(".tooltip-inner").text(d.value);
+			tooltip.addClass("in");
+
+			d3.select(this).transition()
+				.attr("x", -20)
+				.attr("width", x.rangeBand() + 20)
+				.attr("fill-opacity", "1");
+		}
+
+		function onMouseMove(i, e) {
+			if(!this.isMouseOver) return;
+			
+			var coord = d3.svg.mouse(this);
+			tooltip.css("left", "70px").css("top", coord[1] + "px");
+		}
+
+		function onMouseOut(i, e) {
+			if(!this.isMouseOver) return;
+			
+			var coord = d3.svg.mouse(this);
+			tooltip.css("left", "70px").css("top", coord[1] + "px");
+			
+			d3.select(this).transition()
+				.attr("x", 0)
+				.attr("width", x.rangeBand())
+				.attr("fill-opacity", ".5");
+
+			tooltip.removeClass("in");
+		}
+
 		function init(data) {
 			_data = data;
-
 
 			color.domain(d3.keys(data[0]));
 
@@ -48,7 +82,7 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 					.attr("class", "state")
 					.attr("transform", function (d) { return "translate(" + x(d.State) + ", " + margin.top + ")"; });
 
-			var tooltip = $('<div class="tooltip fade left"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>').appendTo(el);
+			tooltip = $('<div class="tooltip fade left"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>').appendTo(el);
 
 			var rect = state.selectAll("rect")
 				.data(function (d) { return d.ages; })
@@ -58,32 +92,9 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 					.attr("height", function (d) { return y(d.y0) - y(d.y1); })
 					.attr("fill-opacity", ".5")
 					.style("fill", function (d) { return color(d.name); })
-					.on("mouseover", function(d) {
-						this.isMouseOver = true;
-						tooltip.find(".tooltip-inner").text(d.value);
-						tooltip.addClass("in");
-
-						d3.select(this).transition()
-							.attr("x", -20)
-							.attr("width", x.rangeBand() + 20)
-							.attr("fill-opacity", "1");
-					})
-					.on("mousemove", function(i, e){
-						if(!this.isMouseOver) return;
-						
-						var coord = d3.svg.mouse(this);
-						tooltip.css("left", "70px").css("top", coord[1] + "px");
-						
-					})
-					.on("mouseout", function() {
-						this.isMouseOver = false;
-						tooltip.removeClass("in");
-
-						d3.select(this).transition()
-							.attr("x", 0)
-							.attr("width", x.rangeBand())
-							.attr("fill-opacity", ".5");
-					})
+					.on("mouseover", onMouseOver)
+					.on("mousemove", onMouseMove)
+					.on("mouseout", onMouseOut)
 					.on("click", function(d) {
 
 						//$("#timeline-popup").slideDown().css("top", (y(d.y1) + 90) + "px");
@@ -91,7 +102,9 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 					})
 
 			var legend = svg.select(".state:last-child").selectAll(".legend")
-				.data(function (d) { return d.ages; })
+				.data(function (d) {
+					return d.ages;
+				})
 				.enter().append("g")
 					.attr("class", "legend")
 					.attr("transform", function (d) { return "translate(-50," + y(d.y0) + ")"; });
@@ -107,7 +120,7 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 		init(z);
 
-		function resize(height) {
+		function resize() {
 
 			y = d3.scale.linear()
 				.rangeRound([height, 0]);
@@ -135,32 +148,44 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 			color.domain(d3.keys(data[0]));
 
 			data.forEach(function (d) {
-				var y0 = 0;
-				d.ages = color.domain().map(function (name) { return { name: name, y0: y0, y1: y0 += +d[name], value: d[name] }; });
-				d.ages.forEach(function (d) { d.y0 /= y0; d.y1 /= y0; });
+				if(!d.ages) {
+					var y0 = 0;
+					d.ages = color.domain().map(function (name) { return { name: name, y0: y0, y1: y0 += +d[name], value: d[name] }; });
+					d.ages.forEach(function (d) { d.y0 /= y0; d.y1 /= y0; });
+				}
 			});
 
 			data.sort(function (a, b) { return b.ages[0].y1 - a.ages[0].y1; });
-
-			console.log(data);
 
 			var state = svg.selectAll(".state")
 				.data(data)
 
 			var rect = state.selectAll("rect")
-				.data(function (d) { return d.ages; })
+				.data(function (d) {
+					return d.ages;
+				})
 				.attr("data-count", function(d) {
 					if(y(d.y0) - y(d.y1) < 1) {
 						d.tooSmall = true;
 					}
 					return d.value;
 				})
+				.on("mouseover", null)
+				.on("mousemove", null)
+				.on("mouseout", null)
 				.transition()
 					.attr("y", function (d) { return y(d.y1); })
 					.attr("height", function (d) {
 						return y(d.y0) - y(d.y1); 
+					})
+					.each("end", function (d) {
+						
+						d3.select(this)
+							.on("mouseover", onMouseOver)
+							.on("mousemove", onMouseMove)
+							.on("mouseout", onMouseOut)
 					});
-
+			
 			var legend = svg.select(".state:last-child").selectAll(".legend")
 			  .data(function (d) { return d.ages; })
 			  .transition()
@@ -168,9 +193,10 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 			var text = svg.select(".state:last-child").selectAll("text")
 				.data(function (d) { return d.ages; })
-				.text(function (d) { 
+				.text(function (d, i) { 
 					if(!!d.tooSmall) {
-						return "";
+						if(i == 10) return d.name;
+						else return "";
 					}
 					else {
 						return d.name;
@@ -180,7 +206,8 @@ define(["/lib/jquery.js", "/lib/d3.v2.amd.js", "/component/kuro.js"], function (
 
 
 		$(window).on("resize", function () {
-			resize($("#timeline-chart").height() - 10 - 10)
+			height = $(el).height() - margin.top - margin.bottom;
+			resize();
 		})
 
 

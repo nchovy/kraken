@@ -1,7 +1,8 @@
-define(["/core/Connection.js", "/component/util.js", "/lib/knockout-2.1.0.debug.js", "/core/logdb.viewmodel.js"], function(socket, Util, ko, ViewModel) {
+define(["/core/Connection.js", "/component/util.js", "/lib/knockout-2.1.0.debug.js", "/core/logdb.viewmodel.js", "/component/list.js"], function(socket, Util, ko, ViewModel, List) {
 
 // class
-var Query = function(id, query_str, is_end) {
+var Query = function(jobj) {
+
 	var isDebug = true;
 
 	if(!console.group) {
@@ -11,9 +12,20 @@ var Query = function(id, query_str, is_end) {
 		console.groupEnd = function() {}
 	}
 
-	this.activeQuery = ko.observable(query_str);
+	var query_string, id, is_end, total_count, last_started;
+	if(!!jobj) {
+		query_string = jobj.query_string;
+		id = jobj.id;
+		is_end = jobj.is_end;
+		total_count = jobj.commands[jobj.commands.length - 1].push_count;
+		last_started = jobj.last_started;
+	}
+
+	this.activeQuery = ko.observable(query_string);
 	this.activeId = ko.observable(id || -1);
 	this.isEnd = ko.observable(is_end || false);
+	this.totalCount = ko.observable(total_count || 0);
+	this.lastStarted = last_started;
 
 	var activePage = 1, pagesize = 15;
 	var that = this;
@@ -25,7 +37,7 @@ var Query = function(id, query_str, is_end) {
 				console.group("created");
 			}
 
-			that.isEnd = false;
+			that.isEnd(false);
 
 			if(!!eventObj.created) {
 				$.each(eventObj.created, function(i, fn) { 
@@ -70,7 +82,7 @@ var Query = function(id, query_str, is_end) {
 				console.log(m);
 			}
 
-			that.isEnd = true;
+			that.isEnd(true);
 
 			if(!!eventObj.loaded) {
 				$.each(eventObj.loaded, function(i, fn) { 
@@ -108,20 +120,27 @@ var Query = function(id, query_str, is_end) {
 				return;
 			}
 
-			var query_id = m.body.id;
-			var request_count = 0;
+			var queryId = m.body.id;
+			that.activeId(queryId);
+			that.activeQuery(querystr);
 
-			function checkRegister() {
-				request_count++;
-				if(request_count === 2) {
-					afterCreateQuery(querystr, query_id);
-				}
-			}
-
-			socket.registerTrap("logstorage-query-" + query_id, onTrap, checkRegister);
-			socket.registerTrap("logstorage-query-timeline-" + query_id, onTimeline, checkRegister);
-			//socket.debugTrap();
+			that.registerTrap();
 		})
+	}
+
+	this.registerTrap = function() {
+
+		var request_count = 0;
+
+		function checkRegister() {
+			request_count++;
+			if(request_count === 2) {
+				afterCreateQuery(that.activeQuery(), that.activeId());
+			}
+		}
+
+		socket.registerTrap("logstorage-query-" + that.activeId(), onTrap, checkRegister);
+		socket.registerTrap("logstorage-query-timeline-" + that.activeId(), onTimeline, checkRegister);
 	}
 
 	function afterCreateQuery(query, queryId) {
@@ -131,7 +150,6 @@ var Query = function(id, query_str, is_end) {
 		clearQuery({
 			except: [queryId],
 			callback: function() {
-				that.activeQuery(query);
 				startQuery(queryId);
 			}
 		});
@@ -154,9 +172,6 @@ var Query = function(id, query_str, is_end) {
 				}
 
 				callback.starting(queryId);
-				
-				that.activeId(queryId);
-
 			}
 		);
 	}
@@ -232,6 +247,8 @@ var Query = function(id, query_str, is_end) {
 				getResult(id, 0)
 			}
 
+			that.totalCount(m.body.total_count);
+
 			callback.loaded(m);
 		}
 		else {
@@ -289,7 +306,14 @@ var Query = function(id, query_str, is_end) {
 		}
 
 		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.stopQuery", { "id": that.activeId() }, function(m) {
-			console.log(m)
+			if(!!callback) {
+				callback();
+			}
+		});
+	}
+
+	function removeQuery(item, callback) {
+		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.removeQuery", { "id": item.activeId() }, function(m) {
 			if(!!callback) {
 				callback();
 			}
@@ -298,17 +322,18 @@ var Query = function(id, query_str, is_end) {
 
 
 	this.dispose = function(callback) {
-		this.stop(function() {
-			if(isDebug) {
-				console.log("dispose")
-			}
+		if(isDebug) {
+			console.log("dispose")
+		}
 
-			socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.removeQuery", { "id": that.activeId() }, function(m) {
-				if(!!callback) {
-					callback();
-				}
-			});
-		})
+		if(that.isEnd()) {
+			removeQuery(that, callback);
+		}
+		else {
+			that.stop(function() {
+				removeQuery(that, callback);
+			})
+		}
 	}
 
 	this.getResult = getResult;
@@ -336,7 +361,8 @@ var Query = function(id, query_str, is_end) {
 }
 
 var logdbManager = (function() {
-	var queries = ko.observableArray([]);
+	//var queries = ko.observableArray([]);
+	var queries = new List.ViewModel([]);
 
 	function getQueries(callback) {
 		socket.send("org.krakenapps.logdb.msgbus.LogQueryPlugin.queries", {}, function(m) {
@@ -348,13 +374,13 @@ var logdbManager = (function() {
 
 			$.each(m.body.queries, function(i, jobj) {
 				var isExist = false;
-				$.each(queries(), function(j, qobj) {
+				$.each(queries.items(), function(j, qobj) {
 					if(qobj.activeId() == jobj.id) isExist = true;
 				});
 
 				if(!isExist) {
-					var query = new Query(jobj.id, jobj.query_string, jobj.is_end);
-					queries.push(query);
+					var query = new Query(jobj);
+					queries.add(query);
 				}
 			});
 
@@ -364,14 +390,26 @@ var logdbManager = (function() {
 		});
 	}
 
-	function create() {
+	function create(option) {
 		var instance = new Query();
-		queries.push(instance);
+		if(!!option.callback) {
+			option.callback(instance);
+		}
+
+		queries.add(instance);
+		console.log(instance)
 		return instance;
+	}
+
+	function remove(query) {
+		if(query.activeId() === -1) return;
+		query.dispose();
+		return queries.remove(query);
 	}
 
 	return {
 		create: create,
+		remove: remove,
 		getQueries: getQueries,
 		ViewModel: ViewModel
 	}

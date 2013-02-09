@@ -2,24 +2,23 @@ define(["/lib/knockout-2.1.0.debug.js", '/component/kuro.js'], function(ko, $K) 
 
 var Data = $K.namespace("Data");
 
+function bindEvent(collection) {
+	$.each(collection, function(i, obj) {
+		obj.isSelected = ko.observable(false);
+	});
+}
+
 Data.ViewModel = function (data, option) {
 	var self = this;
 	this.self = this;
 
-	this.items = ko.observableArray(data);
+	this.items = (typeof data === 'function') ? data : ko.observableArray(data);
+	this.length = ko.computed(function() {
+		return self.items().length;
+	});
 
 	this.canSelectMulti = ko.observable(false);
 	this.selected = ko.observableArray([]);
-
-	function bindEvent(collection) {
-		$.each(collection, function(i, obj) {
-			obj.onSelect = function(that, e) {
-				self.select(that, e);
-			}
-
-			obj.isSelected = ko.observable(false);
-		})
-	}
 
 	function observeValue(collection) {
 		if(!!option) {
@@ -44,19 +43,57 @@ Data.ViewModel = function (data, option) {
 function setPublicMethod(self) {
 
 	self.add = function(item) {
+		bindEvent([item]);
 		this.items.push(item);
 	}
 
 	self.insert = function(item, index) {
+		bindEvent([item]);
 		this.items.splice(index, 0, item);
 	}
 
 	self.remove = function(item) {
-		this.items.remove(item);
+		var handled = false;
+
+		if(!!this.onBeforeRemove) {
+			var ret = this.onBeforeRemove(item);
+			if(ret === false) handled = true;
+		}
+
+		var _return = [];
+		if(!handled) {
+			_return = this.items.remove(item);
+			this.selected.remove(item);
+
+			if(!!this.onAfterRemove) {
+				this.onAfterRemove(item);
+			}
+		}
+
+		return _return;
 	}
 	
 	self.removeAt = function(index) {
-		this.items.splice(index, 1);
+		var handled = false;
+
+		var item = this.items()[index];
+
+		if(!!this.onBeforeRemove) {
+			var ret = this.onBeforeRemove(item);
+			if(ret === false) handled = true;
+		}
+
+		var _return = [];
+		if(!handled) {
+			_return = this.items.remove(item);
+			this.selected.remove(item);
+
+			if(!!this.onAfterRemove) {
+				this.onAfterRemove(item);
+			}
+		}
+
+		return _return;
 	}
 
 	self.select = function(item, e) {
@@ -68,12 +105,22 @@ function setPublicMethod(self) {
 			if(this.selected().length > 0) {
 				this.selected()[0].isSelected(false);
 			}
-			this.selected.splice(0, this.selected().length);
+			
+			this.selected.removeAll();
+
+			item.isSelected(true);
+			this.selected.push(item);
 		}
+		else {
+			item.isSelected(!item.isSelected());
 
-
-		item.isSelected(true);
-		this.selected.push(item);
+			if(item.isSelected()) {
+				this.selected.push(item);
+			}
+			else {
+				this.selected.remove(item);
+			}
+		}
 
 		if(!!this.onSelect) {
 			if(e) {
@@ -86,9 +133,18 @@ function setPublicMethod(self) {
 	}
 
 	self.selectAll = function(toggle) {
-		$.each(this.items(), function(i, obj) {
-			obj.isSelected(toggle);
-		});
+		var self = this;
+		if(toggle) {
+			$.each(this.items(), function(i, obj) {
+				self.select(obj);
+			});
+		}
+		else {
+			$.each(this.items(), function(i, obj) {
+				obj.isSelected(false);
+				self.selected.removeAll();
+			});
+		}
 	}
 
 	self.selectAt = function(idx) {
