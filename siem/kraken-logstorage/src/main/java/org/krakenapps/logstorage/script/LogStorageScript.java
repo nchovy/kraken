@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -35,6 +36,9 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import org.krakenapps.api.Script;
 import org.krakenapps.api.ScriptArgument;
@@ -48,10 +52,10 @@ import org.krakenapps.logstorage.IndexConfigSpec;
 import org.krakenapps.logstorage.IndexTokenizerFactory;
 import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
-import org.krakenapps.logstorage.LogIndexSchema;
 import org.krakenapps.logstorage.LogIndexCursor;
 import org.krakenapps.logstorage.LogIndexItem;
 import org.krakenapps.logstorage.LogIndexQuery;
+import org.krakenapps.logstorage.LogIndexSchema;
 import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogIndexerStatus;
 import org.krakenapps.logstorage.LogKey;
@@ -636,69 +640,111 @@ public class LogStorageScript implements Script {
 		context.println("set");
 	}
 
-	@ScriptUsage(description = "", arguments = {
+	@ScriptUsage(description = "import text log file", arguments = {
 			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "path", type = "string", description = "iis file path") })
-	public void loadTest(String[] args) {
-		Date begin = new Date();
-
+			@ScriptArgument(name = "file path", type = "string", description = "text log file path"),
+			@ScriptArgument(name = "offset", type = "int", description = "skip offset", optional = true),
+			@ScriptArgument(name = "limit", type = "int", description = "load limit count", optional = true) })
+	public void importTextFile(String[] args) throws IOException {
 		String tableName = args[0];
 		File file = new File(args[1]);
-		int loadLimit = 400000;
+		int offset = 0;
+		if (args.length > 2)
+			offset = Integer.valueOf(args[2]);
 
-		if (args.length > 2) {
-			loadLimit = Integer.parseInt(args[2]);
+		int limit = Integer.MAX_VALUE;
+		if (args.length > 3)
+			limit = Integer.valueOf(args[3]);
+
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			importFromStream(tableName, fis, offset, limit);
+		} catch (Exception e) {
+			context.println("import failed, " + e.getMessage());
+			logger.error("kraken logstorage: cannot import text file " + file.getAbsolutePath(), e);
+		} finally {
+			if (fis != null)
+				fis.close();
+		}
+	}
+
+	@ScriptUsage(description = "import zipped text log file", arguments = {
+			@ScriptArgument(name = "table name", type = "string", description = "table name"),
+			@ScriptArgument(name = "zip file path", type = "string", description = "zip file path"),
+			@ScriptArgument(name = "entry path", type = "string", description = "zip entry of text log file path"),
+			@ScriptArgument(name = "offset", type = "int", description = "skip offset", optional = true),
+			@ScriptArgument(name = "limit", type = "int", description = "load limit count", optional = true) })
+	public void importZipFile(String[] args) throws ZipException, IOException {
+		String tableName = args[0];
+		String filePath = args[1];
+		String entryPath = args[2];
+		File file = new File(args[1]);
+		int offset = 0;
+		if (args.length > 3)
+			offset = Integer.valueOf(args[3]);
+
+		int limit = Integer.MAX_VALUE;
+		if (args.length > 4)
+			limit = Integer.valueOf(args[4]);
+
+		ZipFile zipFile = new ZipFile(file);
+		ZipEntry entry = zipFile.getEntry(entryPath);
+		if (entry == null) {
+			context.println("entry [" + entryPath + "] not found in zip file [" + filePath + "]");
+			return;
 		}
 
+		InputStream is = null;
 		try {
-			FileInputStream fis = new FileInputStream(file);
-			BufferedReader br = new BufferedReader(new InputStreamReader(fis), 16384 * 1024); // 16MB
-			String line = null;
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			is = zipFile.getInputStream(entry);
+			importFromStream(tableName, is, offset, limit);
+		} catch (Exception e) {
+			context.println("import failed, " + e.getMessage());
+			logger.error("kraken logstorage: cannot import zipped text file " + file.getAbsolutePath(), e);
+		} finally {
+			if (is != null)
+				is.close();
+		}
+	}
 
-			tableRegistry.setTableMetadata(tableName, "logparser", "delimiter");
-			tableRegistry.setTableMetadata(tableName, "delimiter_target", "log");
-			tableRegistry.setTableMetadata(tableName, "delimiter", " ");
+	private void importFromStream(String tableName, InputStream fis, int offset, int limit) throws IOException {
+		Date begin = new Date();
+		int count = 0;
+		BufferedReader br = new BufferedReader(new InputStreamReader(fis), 16384 * 1024); // 16MB
+		String line = null;
 
-			int count = 0;
-			while (count < loadLimit) {
-				line = br.readLine();
-				if (line == null)
-					break;
+		int i = 0;
+		while (true) {
+			line = br.readLine();
+			if (line == null)
+				break;
 
-				if (line.startsWith("#")) {
-					if (line.startsWith("#Fields: "))
-						tableRegistry.setTableMetadata(tableName, "column_headers",
-								line.replace("#Fields: ", "").replace(" ", ","));
-					continue;
-				}
+			if (count >= limit)
+				break;
 
-				StringTokenizer t = new StringTokenizer(line, " ");
+			if (i++ < offset)
+				continue;
 
-				Date date = dateFormat.parse(t.nextToken() + " " + t.nextToken());
-				Map<String, Object> m = new HashMap<String, Object>();
-				m.put("line", line);
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("line", line);
 
-				Log log = new Log(tableName, new Date(), m);
-				try {
-					storage.write(log);
-				} catch (IllegalArgumentException e) {
-					context.println("skip " + date + " , " + e.getMessage());
-				}
-
-				count++;
-
-				if (count % 1000 == 0)
-					context.println("loaded " + count);
+			Log log = new Log(tableName, new Date(), m);
+			try {
+				storage.write(log);
+			} catch (IllegalArgumentException e) {
+				context.println("skip " + line + ", " + e.getMessage());
 			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
-			context.println(e.getMessage());
+			count++;
+
+			if (count % 10000 == 0)
+				context.println("loaded " + count);
 		}
 
 		long milliseconds = new Date().getTime() - begin.getTime();
-		context.println(Long.toString(milliseconds) + " ms");
+		long speed = count / (milliseconds / 1000);
+		context.println("loaded " + count + " logs in " + milliseconds + " ms, " + speed + " logs/sec");
 	}
 
 	@ScriptUsage(description = "benchmark table fullscan", arguments = {
