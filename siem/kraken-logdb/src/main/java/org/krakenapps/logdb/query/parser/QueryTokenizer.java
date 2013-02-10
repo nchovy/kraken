@@ -71,6 +71,7 @@ public class QueryTokenizer {
 			} catch (LogQueryParseException e) {
 				if (e.getType().equals("need-string-token"))
 					break;
+				throw e;
 			}
 		}
 
