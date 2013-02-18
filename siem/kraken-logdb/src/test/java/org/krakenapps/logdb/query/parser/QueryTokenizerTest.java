@@ -51,4 +51,12 @@ public class QueryTokenizerTest {
 		p = QueryTokenizer.findKeyword("sum(min(1, 2)), 1", ",");
 		assertEquals(14, p);
 	}
+
+	@Test
+	public void testQuote() {
+		String s = "table limit=1 iis | rex field=line \"(?<d>\\\\d+-\\\\d+-\\\\d+)\" | eval d2 = date(d, \"yyyy-MM-dd HH:mm:ss\") | fields d, d2";
+		System.out.println(s);
+		List<String> commands = QueryTokenizer.parseCommands(s);
+		System.out.println(commands.get(1));
+	}
 }

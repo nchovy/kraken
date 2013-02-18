@@ -50,10 +50,13 @@ public class RexParser implements LogQueryCommandParser {
 
 		Pattern placeholder = Pattern.compile("\\(\\?<(.*?)>(.*?)\\)");
 		String regexToken = commandString.substring(r.next);
+		System.out.println("before: " + regexToken);
 		if (!QueryTokenizer.isQuoted(regexToken))
 			throw new LogQueryParseException("invalid-regex", commandString.length());
 
 		regexToken = QueryTokenizer.removeQuotes(regexToken);
+		System.out.println("after: " + regexToken);
+		regexToken = toNonCapturingGroup(regexToken);
 
 		Matcher matcher = placeholder.matcher(regexToken);
 		while (matcher.find())
@@ -64,11 +67,29 @@ public class RexParser implements LogQueryCommandParser {
 			if (!matcher.find())
 				break;
 
-			regexToken = matcher.replaceFirst("(" + matcher.group(2) + ")");
+			// supporess special meaning of $ and \
+			String quoted = Matcher.quoteReplacement("(" + matcher.group(2) + ")");
+			regexToken = matcher.replaceFirst(quoted);
 		}
 
+		System.out.println("regex: " + regexToken);
 		Pattern p = Pattern.compile(regexToken);
 		return new Rex(field, p, names.toArray(new String[0]));
+	}
+
+	private String toNonCapturingGroup(String s) {
+		StringBuilder sb = new StringBuilder();
+
+		char last = ' ';
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (last == '(' && c != '?')
+				sb.append("?:");
+			sb.append(c);
+			last = c;
+		}
+
+		return sb.toString();
 	}
 
 }

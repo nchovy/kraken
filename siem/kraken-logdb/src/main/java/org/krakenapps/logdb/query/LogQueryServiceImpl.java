@@ -34,14 +34,13 @@ import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCommandParser;
 import org.krakenapps.logdb.LogQueryEventListener;
 import org.krakenapps.logdb.LogQueryParserService;
+import org.krakenapps.logdb.LogQueryScriptRegistry;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogQueryStatus;
-import org.krakenapps.logdb.LogQueryScriptRegistry;
 import org.krakenapps.logdb.LookupHandlerRegistry;
 import org.krakenapps.logdb.query.parser.DropParser;
 import org.krakenapps.logdb.query.parser.EvalParser;
 import org.krakenapps.logdb.query.parser.FieldsParser;
-import org.krakenapps.logdb.query.parser.FulltextParser;
 import org.krakenapps.logdb.query.parser.LookupParser;
 import org.krakenapps.logdb.query.parser.OutputCsvParser;
 import org.krakenapps.logdb.query.parser.RenameParser;
@@ -54,7 +53,6 @@ import org.krakenapps.logdb.query.parser.TableParser;
 import org.krakenapps.logdb.query.parser.TextFileParser;
 import org.krakenapps.logdb.query.parser.TimechartParser;
 import org.krakenapps.logdb.query.parser.ZipFileParser;
-import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.osgi.framework.BundleContext;
@@ -68,9 +66,6 @@ public class LogQueryServiceImpl implements LogQueryService {
 
 	@Requires
 	private LogStorage logStorage;
-
-	@Requires
-	private LogIndexer logIndexer;
 
 	@Requires
 	private LogTableRegistry tableRegistry;
@@ -118,7 +113,6 @@ public class LogQueryServiceImpl implements LogQueryService {
 		}
 
 		// add table and lookup (need some constructor injection)
-		parsers.add(new FulltextParser(logStorage, logIndexer));
 		parsers.add(new TableParser(logStorage, tableRegistry, parserFactoryRegistry));
 		parsers.add(new LookupParser(lookupRegistry));
 		parsers.add(new ScriptParser(bc, scriptRegistry));

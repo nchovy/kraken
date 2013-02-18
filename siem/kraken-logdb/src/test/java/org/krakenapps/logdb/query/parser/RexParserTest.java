@@ -81,7 +81,7 @@ public class RexParserTest {
 		map.put("note", s);
 
 		RexParser parser = new RexParser();
-		Rex rex = (Rex) parser.parse(null, "rex field=note \"NAT\\[(?<nat>.*?)\\]  R\\[(?<r>.*?)\\]\"");
+		Rex rex = (Rex) parser.parse(null, "rex field=note \"N(A|B)T\\[(?<nat>.*?)\\]  R\\[(?<r>.*?)\\]\"");
 		DummyOutput out = new DummyOutput();
 		rex.setNextCommand(out);
 
@@ -90,5 +90,13 @@ public class RexParserTest {
 
 		assertEquals("313", map2.get("nat"));
 		assertEquals("16", map2.get("r"));
+	}
+
+	@Test
+	public void testEscape() {
+		String s = "rex field=line \"(?<d>\\d+-\\d+-\\d+)\"";
+		RexParser parser = new RexParser();
+		Rex rex = (Rex) parser.parse(null, s);
+		assertEquals("(\\d+-\\d+-\\d+)", rex.getPattern().toString());
 	}
 }

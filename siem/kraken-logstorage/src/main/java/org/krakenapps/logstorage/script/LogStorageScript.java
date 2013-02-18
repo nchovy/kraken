@@ -30,12 +30,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -46,19 +42,7 @@ import org.krakenapps.api.ScriptContext;
 import org.krakenapps.api.ScriptUsage;
 import org.krakenapps.confdb.ConfigDatabase;
 import org.krakenapps.confdb.ConfigService;
-import org.krakenapps.logstorage.BatchIndexingStatus;
-import org.krakenapps.logstorage.BatchIndexingTask;
-import org.krakenapps.logstorage.IndexConfigSpec;
-import org.krakenapps.logstorage.IndexTokenizerFactory;
-import org.krakenapps.logstorage.IndexTokenizerRegistry;
 import org.krakenapps.logstorage.Log;
-import org.krakenapps.logstorage.LogIndexCursor;
-import org.krakenapps.logstorage.LogIndexItem;
-import org.krakenapps.logstorage.LogIndexQuery;
-import org.krakenapps.logstorage.LogIndexSchema;
-import org.krakenapps.logstorage.LogIndexer;
-import org.krakenapps.logstorage.LogIndexerStatus;
-import org.krakenapps.logstorage.LogKey;
 import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
@@ -76,18 +60,13 @@ public class LogStorageScript implements Script {
 	private ScriptContext context;
 	private LogTableRegistry tableRegistry;
 	private LogStorage storage;
-	private LogIndexer indexer;
 	private LogStorageMonitor monitor;
-	private IndexTokenizerRegistry tokenizerRegistry;
 	private ConfigService conf;
 
-	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, LogIndexer indexer, LogStorageMonitor monitor,
-			IndexTokenizerRegistry tokenizerRegistry, ConfigService conf) {
+	public LogStorageScript(LogTableRegistry tableRegistry, LogStorage archive, LogStorageMonitor monitor, ConfigService conf) {
 		this.tableRegistry = tableRegistry;
 		this.storage = archive;
-		this.indexer = indexer;
 		this.monitor = monitor;
-		this.tokenizerRegistry = tokenizerRegistry;
 		this.conf = conf;
 	}
 
@@ -118,255 +97,6 @@ public class LogStorageScript implements Script {
 
 		storage.setRetentionPolicy(p);
 		context.println("set");
-	}
-
-	@ScriptUsage(description = "purge index files in specified date range", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name"),
-			@ScriptArgument(name = "from day", type = "string", description = "yyyyMMdd format"),
-			@ScriptArgument(name = "to day", type = "string", description = "yyyyMMdd format") })
-	public void purgeIndexRange(String[] args) {
-		String tableName = args[0];
-		String indexName = args[1];
-
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-		try {
-			Date fromDay = dateFormat.parse(args[2]);
-			Date toDay = dateFormat.parse(args[3]);
-			indexer.purge(tableName, indexName, fromDay, toDay);
-			context.println("purge completed");
-		} catch (Throwable t) {
-			context.println("cannot purge index range, " + t.getMessage());
-			logger.error("kraken logstorage: cannot purge index range, table=" + tableName + ", index=" + indexName, t);
-		}
-	}
-
-	public void batchIndexTasks(String[] args) {
-		context.println("Batch Indexing Tasks");
-		context.println("------------------------");
-		SimpleDateFormat dayFormat = new SimpleDateFormat("yyyy-MM-dd");
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-		for (BatchIndexingTask task : indexer.getBatchIndexingTasks()) {
-			long elapsed = (System.currentTimeMillis() - task.getSince().getTime()) / 1000;
-			String since = dateFormat.format(task.getSince());
-
-			context.println(String.format("table [%s] index [%s] since %s (elapsed %dsec)", task.getTableName(),
-					task.getIndexName(), since, elapsed));
-
-			ArrayList<BatchIndexingStatus> builds = new ArrayList<BatchIndexingStatus>(task.getBuilds().values());
-			Collections.sort(builds);
-			for (BatchIndexingStatus s : builds)
-				context.println(String.format("\tday=%s, logs=%s, tokens=%s, done=%s", dayFormat.format(s.getDay()),
-						s.getLogCount(), s.getTokenCount(), s.isDone()));
-		}
-	}
-
-	@ScriptUsage(description = "print all indexing configurations", arguments = { @ScriptArgument(name = "table name", type = "string", description = "table name") })
-	public void indexes(String[] args) {
-		String tableName = args[0];
-		if (!tableRegistry.exists(tableName)) {
-			context.println("table does not exists");
-			return;
-		}
-
-		Set<String> indexNames = indexer.getIndexNames(tableName);
-		if (indexNames.isEmpty()) {
-			context.println("no index found");
-			return;
-		}
-
-		context.println("Index for table [" + tableName + "]");
-		context.println("-------------------------------");
-		for (String indexName : indexNames) {
-			LogIndexSchema c = indexer.getIndexConfig(tableName, indexName);
-			context.println(c);
-		}
-	}
-
-	@ScriptUsage(description = "print specific index configuration", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name") })
-	public void index(String[] args) {
-		String tableName = args[0];
-		String indexName = args[1];
-
-		if (!tableRegistry.exists(tableName)) {
-			context.println("table does not exists");
-			return;
-		}
-
-		LogIndexSchema schema = indexer.getIndexConfig(tableName, indexName);
-		if (schema == null) {
-			context.println("index [" + indexName + "] not found");
-			return;
-		}
-
-		context.println("Index Detail");
-		context.println("------------------");
-		List<Date> days = indexer.getIndexedDays(tableName, indexName);
-		Date min = null;
-		Date max = null;
-		for (Date day : days) {
-			if (min == null)
-				min = day;
-			else if (day.before(min))
-				min = day;
-
-			if (max == null)
-				max = day;
-			else if (day.after(max))
-				max = day;
-		}
-
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-		String dateRange = "N/A";
-		if (min != null && max != null)
-			dateRange = dateFormat.format(min) + " ~ " + dateFormat.format(max);
-
-		context.println("Table Name: " + schema.getTableName());
-		context.println("Index Name (ID): " + schema.getIndexName() + " (" + schema.getId() + ")");
-		context.println("Indexed Days: " + dateRange);
-		context.println("Tokenizer: " + schema.getTokenizerName());
-		context.println("");
-
-		context.println("Tokenizer Config");
-		context.println("------------------");
-
-		for (Entry<String, String> pair : schema.getTokenizerConfigs().entrySet()) {
-			context.println(pair.getKey() + ": " + pair.getValue());
-		}
-
-		long total = 0;
-		File dir = indexer.getIndexDirectory(tableName, indexName);
-		if (dir.exists()) {
-			for (File f : dir.listFiles())
-				total += f.length();
-		}
-
-		context.println();
-		context.println("Storage Consumption");
-		context.println("---------------------");
-		NumberFormat nf = NumberFormat.getNumberInstance();
-		context.println(nf.format(total) + " bytes");
-	}
-
-	public void indexTokenizers(String[] args) {
-		context.println("Index Tokenizers");
-		for (IndexTokenizerFactory f : tokenizerRegistry.getFactories())
-			context.println("[" + f.getName() + "] " + f);
-	}
-
-	@ScriptUsage(description = "search index", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name"),
-			@ScriptArgument(name = "term", type = "string", description = "search term") })
-	public void searchIndex(String[] args) {
-		String tableName = args[0];
-		String indexName = args[1];
-		String term = args[2];
-		LogIndexCursor c = null;
-		try {
-			long begin = System.currentTimeMillis();
-			LogIndexQuery q = new LogIndexQuery();
-			q.setTableName(tableName);
-			q.setIndexName(indexName);
-			q.setTerm(term);
-
-			long count = 0;
-			int tableId = tableRegistry.getTableId(tableName);
-			c = indexer.search(q);
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			while (c.hasNext()) {
-				LogIndexItem item = c.next();
-				Log log = storage.getLog(new LogKey(tableId, item.getDay(), (int) item.getLogId()));
-				String dateString = dateFormat.format(log.getDate());
-				context.println(log.getTableName() + " (" + dateString + ") #" + log.getId() + " " + log.getData());
-				count++;
-			}
-
-			long elapsed = System.currentTimeMillis() - begin;
-			context.println("total " + count + " logs, elapsed " + elapsed + "ms");
-		} catch (IOException e) {
-			context.println("search failed, " + e.getMessage());
-		} finally {
-			if (c != null)
-				c.close();
-		}
-	}
-
-	@ScriptUsage(description = "create index", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name") })
-	public void createIndex(String[] args) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-		String tableName = args[0];
-		String indexName = args[1];
-		try {
-			String tokenizerName = readLine("tokenizer? ");
-
-			IndexTokenizerFactory factory = tokenizerRegistry.getFactory(tokenizerName);
-			if (factory == null) {
-				context.println("tokenizer [" + tokenizerName + "] not found");
-				return;
-			}
-
-			context.println("index tokenizer configurations..");
-			Map<String, String> tokenizerConfigs = new HashMap<String, String>();
-			for (IndexConfigSpec spec : factory.getConfigSpecs()) {
-				while (true) {
-					String optional = spec.isRequired() ? "" : " (optional, enter to skip)";
-					String line = readLine(spec.getName() + optional + "? ");
-					if (line != null) {
-						tokenizerConfigs.put(spec.getKey(), line);
-						break;
-					} else if (!spec.isRequired())
-						break;
-				}
-			}
-
-			String minDayStr = readLine("min day (yyyymmdd or enter to skip)? ");
-			Date minDay = null;
-			if (minDayStr != null)
-				minDay = dateFormat.parse(minDayStr);
-
-			String buildPast = readLine("build index for past log (y/n)? ");
-			boolean buildPastIndex = buildPast != null && buildPast.equalsIgnoreCase("y");
-
-			LogIndexSchema config = new LogIndexSchema();
-			config.setTableName(tableName);
-			config.setIndexName(indexName);
-			config.setBuildPastIndex(buildPastIndex);
-			config.setMinIndexDay(minDay);
-			config.setTokenizerName(tokenizerName);
-			config.setTokenizerConfigs(tokenizerConfigs);
-
-			indexer.createIndex(config);
-			context.println("created index " + indexName + " for table " + tableName);
-		} catch (Throwable t) {
-			context.println(t.getMessage());
-			logger.error("kraken logstorage: cannot create index for table " + tableName, t);
-		}
-	}
-
-	private String readLine(String question) throws InterruptedException {
-		context.print(question);
-		String line = context.readLine();
-		if (line.trim().isEmpty())
-			return null;
-
-		return line;
-	}
-
-	@ScriptUsage(description = "drop index", arguments = {
-			@ScriptArgument(name = "table name", type = "string", description = "table name"),
-			@ScriptArgument(name = "index name", type = "string", description = "index name") })
-	public void dropIndex(String[] args) {
-		String tableName = args[0];
-		String indexName = args[1];
-
-		indexer.dropIndex(tableName, indexName);
-		context.println("dropped");
 	}
 
 	@ScriptUsage(description = "migrate old properties to new confdb metadata")
@@ -806,16 +536,6 @@ public class LogStorageScript implements Script {
 		}
 	}
 
-	@ScriptUsage(description = "print all online indexer statuses")
-	public void indexers(String[] args) {
-		context.println("Online Indexers");
-		context.println("------------------");
-
-		for (LogIndexerStatus s : indexer.getIndexerStatuses()) {
-			context.println(s);
-		}
-	}
-
 	@ScriptUsage(description = "", arguments = {
 			@ScriptArgument(name = "count", type = "integer", description = "log count", optional = true),
 			@ScriptArgument(name = "repeat", type = "integer", description = "repeat count", optional = true) })
@@ -890,15 +610,6 @@ public class LogStorageScript implements Script {
 
 		@Override
 		public void onLog(Log log) {
-			if (log.getData().containsKey("_data")) {
-				String line = (String) log.getData().get("_data");
-
-				// simulate same condition (compares to map write condition)
-				StringTokenizer t = new StringTokenizer(line, " ");
-				while (t.hasMoreTokens()) {
-					t.nextToken();
-				}
-			}
 		}
 
 		@Override

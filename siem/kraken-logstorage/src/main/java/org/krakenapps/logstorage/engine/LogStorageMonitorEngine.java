@@ -33,7 +33,6 @@ import org.krakenapps.cron.PeriodicJob;
 import org.krakenapps.logstorage.DiskLackAction;
 import org.krakenapps.logstorage.DiskLackCallback;
 import org.krakenapps.logstorage.DiskSpaceType;
-import org.krakenapps.logstorage.LogIndexer;
 import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogStorageMonitor;
@@ -56,9 +55,6 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 
 	@Requires
 	private LogStorage storage;
-
-	@Requires
-	private LogIndexer indexer;
 
 	@Requires
 	private ConfigService conf;
@@ -189,27 +185,10 @@ public class LogStorageMonitorEngine implements LogStorageMonitor {
 			return;
 		}
 
-		int retentionDays = p.getRetentionDays();
-
 		// purge tables
 		Date logBaseline = storage.getPurgeBaseline(tableName);
 		if (logBaseline != null)
 			storage.purge(tableName, null, logBaseline);
-
-		// purge index files
-		for (String indexName : indexer.getIndexNames(tableName)) {
-			Date indexBaseline = indexer.getPurgeBaseline(tableName, indexName);
-			if (indexBaseline == null)
-				continue;
-
-			if (logger.isTraceEnabled()) {
-				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-				logger.trace("kraken logstorage: table [{}] retention days [{}] purging index [{}] baseline [{}]", new Object[] {
-						tableName, retentionDays, indexName, dateFormat.format(indexBaseline) });
-			}
-
-			indexer.purge(tableName, indexName, null, indexBaseline);
-		}
 	}
 
 	private void checkDiskLack() {
