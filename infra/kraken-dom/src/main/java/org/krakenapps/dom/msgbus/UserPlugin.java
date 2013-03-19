@@ -18,6 +18,7 @@ package org.krakenapps.dom.msgbus;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -74,18 +75,18 @@ public class UserPlugin {
 		Collection<User> users = userApi.getUsers(domain);
 
 		Collection<String> loginNames = new ArrayList<String>();
-		List<String> failedLoginNames = new ArrayList<String>();
+		Map<String, String> failedList = new HashMap<String, String>();
 		for (User u : users) {
 			if (u.getLoginName().equals("admin")) {
-				failedLoginNames.add(u.getLoginName());
+				failedList.put(u.getLoginName(), "no-permission");
 				continue;
 			}
 			if (adminLoginName.equals(u.getLoginName())) {
-				failedLoginNames.add(u.getLoginName());
+				failedList.put(u.getLoginName(), "no-permission");
 				continue;
 			}
 			if (!adminApi.canManage(domain, admin, u)) {
-				failedLoginNames.add(u.getLoginName());
+				failedList.put(u.getLoginName(), "no-permission");
 				continue;
 			}
 
@@ -96,7 +97,7 @@ public class UserPlugin {
 		long end = new Date().getTime();
 		if (logger.isTraceEnabled())
 			logger.trace("kraken dom: remove [{}] users, [{}] milliseconds elapsed", loginNames.size(), end - start);
-		resp.put("failed_login_names", failedLoginNames);
+		resp.put("failed_list", failedList);
 	}
 
 	@MsgbusMethod
@@ -126,13 +127,13 @@ public class UserPlugin {
 		List<Config> configs = userApi.getConfigs(req.getOrgDomain(), null, true, Predicates.in("login_name", loginNames), 0,
 				Integer.MAX_VALUE);
 
-		List<String> failures = new ArrayList<String>();
+		Map<String, String> failedList = new HashMap<String, String>();
 		List<ConfigUpdateRequest<User>> updates = new ArrayList<ConfigUpdateRequest<User>>();
 		for (Config c : configs) {
 			// try to check role
 			User u = c.getDocument(User.class, conf.getParseCallback(domain));
 			if (!adminApi.canManage(req.getOrgDomain(), admin, u)) {
-				failures.add(u.getLoginName());
+				failedList.put(u.getLoginName(), "no-permission");
 				continue;
 			}
 			u.setOrgUnit(orgUnit);
@@ -141,7 +142,7 @@ public class UserPlugin {
 
 		userApi.updateUsers(domain, updates);
 
-		resp.put("failed_login_names", failures);
+		resp.put("failed_list", failedList);
 	}
 
 	@MsgbusMethod
@@ -262,20 +263,20 @@ public class UserPlugin {
 			throw new MsgbusException("dom", "admin-not-found");
 
 		List<String> loginNames = new ArrayList<String>();
-		List<String> failedLoginNames = new ArrayList<String>();
+		Map<String, String> failedList = new HashMap<String, String>();
 
 		Collection<User> users = userApi.getUsers(req.getOrgDomain(), (List<String>) req.get("login_names"));
 		for (User user : users) {
 			if (user.getLoginName().equals("admin")) {
-				failedLoginNames.add(user.getLoginName());
+				failedList.put(user.getLoginName(), "no-permission");
 				continue;
 			}
 			if (adminLoginName.equals(user.getLoginName())) {
-				failedLoginNames.add(user.getLoginName());
+				failedList.put(user.getLoginName(), "cannot-remove-self");
 				continue;
 			}
 			if (!adminApi.canManage(req.getOrgDomain(), admin, user)) {
-				failedLoginNames.add(user.getLoginName());
+				failedList.put(user.getLoginName(), "no-permission");
 				continue;
 			}
 
@@ -285,7 +286,7 @@ public class UserPlugin {
 		userApi.removeUsers(req.getOrgDomain(), loginNames);
 
 		// return failed users
-		resp.put("failed_login_names", failedLoginNames);
+		resp.put("failed_list", failedList);
 	}
 
 	@MsgbusMethod
@@ -316,5 +317,5 @@ public class UserPlugin {
 		for (UserExtensionProvider provider : userApi.getExtensionProviders())
 			schemas.add(provider.getExtensionName());
 		resp.put("schemas", schemas);
-	}		
+	}
 }

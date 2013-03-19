@@ -359,4 +359,3 @@ public class Importer {
 		}
 	}
 }
->>>>>>> logstorage-indexing

@@ -194,4 +194,3 @@ public class Exporter {
 		}
 	}
 }
->>>>>>> logstorage-indexing
