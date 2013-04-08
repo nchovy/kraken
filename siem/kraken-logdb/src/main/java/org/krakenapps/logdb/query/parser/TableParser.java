@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Future Systems
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 package org.krakenapps.logdb.query.parser;
 
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.ref;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -22,19 +25,19 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
 import org.krakenapps.log.api.LoggerConfigOption;
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
-import org.krakenapps.logdb.LogQueryParseException;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Table;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 
-public class TableParser implements LogQueryCommandParser {
+public class TableParser implements LogQueryParser {
 	private LogStorage logStorage;
 	private LogTableRegistry tableRegistry;
 	private LogParserFactoryRegistry parserFactoryRegistry;
@@ -46,16 +49,16 @@ public class TableParser implements LogQueryCommandParser {
 	}
 
 	@Override
-	public String getCommandName() {
-		return "table";
+	public void addSyntax(Syntax syntax) {
+		syntax.add("table", this, k("table "), ref("option"), new StringPlaceholder());
+		syntax.addRoot("table");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		QueryTokens tokens = QueryTokenizer.tokenize(commandString);
-		Map<String, String> options = tokens.options();
-		String tableName = tokens.lastArg();
-
+	public Object parse(Binding b) {
+		Map<String, String> options = (Map<String, String>) b.getChildren()[1].getValue();
+		String tableName = (String) b.getChildren()[2].getValue();
 		Date from = null;
 		Date to = null;
 		int offset = 0;
@@ -80,15 +83,8 @@ public class TableParser implements LogQueryCommandParser {
 
 		if (options.containsKey("offset"))
 			offset = Integer.parseInt(options.get("offset"));
-
-		if (offset < 0)
-			throw new LogQueryParseException("negative-offset", -1);
-
 		if (options.containsKey("limit"))
 			limit = Integer.parseInt(options.get("limit"));
-
-		if (limit < 0)
-			throw new LogQueryParseException("negative-limit", -1);
 
 		String parserName = tableRegistry.getTableMetadata(tableName, "logparser");
 		LogParserFactory parserFactory = parserFactoryRegistry.get(parserName);

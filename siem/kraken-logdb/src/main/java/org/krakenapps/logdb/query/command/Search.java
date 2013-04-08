@@ -15,38 +15,43 @@
  */
 package org.krakenapps.logdb.query.command;
 
+import java.util.List;
+
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.expr.Expression;
 
 public class Search extends LogQueryCommand {
-	private Expression expr;
+	private Integer limit;
+	private Integer count;
+	private List<Term> terms;
 
-	public Search(Expression expr) {
-		this.expr = expr;
+	public Search(List<Term> terms) {
+		this(null, terms);
 	}
 
-	public Expression getExpression() {
-		return expr;
+	public Search(Integer limit, List<Term> terms) {
+		this.limit = limit;
+		this.terms = terms;
 	}
 
 	@Override
 	public void init() {
 		super.init();
+		count = 0;
 	}
 
 	@Override
 	public void push(LogMap m) {
-		boolean ret;
-		Object o = expr.eval(m);
-		if (o instanceof Boolean)
-			ret = (Boolean) o;
-		else
-			ret = o != null;
-
-		if (!ret)
-			return;
+		for (Term term : terms) {
+			if (!term.eval(m))
+				return;
+		}
 
 		write(m);
+
+		if (limit != null && ++count == limit) {
+			eof();
+			return;
+		}
 	}
 
 	@Override

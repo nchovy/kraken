@@ -97,14 +97,6 @@ public class Table extends LogQueryCommand {
 		this.limit = limit;
 	}
 
-	public Date getFrom() {
-		return from;
-	}
-
-	public Date getTo() {
-		return to;
-	}
-
 	@Override
 	public void start() {
 		try {

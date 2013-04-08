@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Future Systems
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,44 +15,64 @@
  */
 package org.krakenapps.logdb.query.parser;
 
+import static org.krakenapps.bnf.Syntax.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
-import org.krakenapps.logdb.LogQueryParseException;
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Fields;
 
-public class FieldsParser implements LogQueryCommandParser {
-
+public class FieldsParser implements LogQueryParser {
 	@Override
-	public String getCommandName() {
-		return "fields";
+	public void addSyntax(Syntax syntax) {
+		syntax.add("fields", this, k("fields "), repeat(new StringPlaceholder(new char[] { ' ', ',' })));
+		syntax.addRoot("fields");
 	}
 
 	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		QueryTokens tokens = QueryTokenizer.tokenize(commandString);
-
+	public Object parse(Binding b) {
+		boolean remove = false;
 		List<String> fields = new ArrayList<String>();
-		List<String> args = tokens.substrings(1);
 
-		boolean selector = true;
-		if (args.get(0).equals("-")) {
-			selector = false;
-			args.remove(0);
+		Binding c = b.getChildren()[1];
+
+		if (c.getValue() != null) {
+			if (c.getValue().equals("-"))
+				remove = true;
+			else
+				fields.add((String) c.getValue());
+
+			if (c.getChildren() != null) {
+				for (int i = 0; i < c.getChildren().length; i++)
+					parse(c.getChildren()[i], fields);
+			}
+		} else {
+			if (c.getChildren() != null) {
+				int i = 0;
+				if (c.getChildren()[0].getValue().equals("-")) {
+					remove = true;
+					i = 1;
+				}
+
+				for (; i < c.getChildren().length; i++)
+					parse(c.getChildren()[i], fields);
+			}
 		}
 
-		if (args.size() == 0)
-			throw new LogQueryParseException("no-field-args", -1);
+		return new Fields(remove, fields);
+	}
 
-		for (String t : args) {
-			String[] csv = t.split(",");
-			for (String s : csv)
-				fields.add(s);
+	private void parse(Binding b, List<String> fields) {
+		if (b.getValue() != null)
+			fields.add((String) b.getValue());
+
+		if (b.getChildren() != null) {
+			for (int i = 0; i < b.getChildren().length; i++)
+				parse(b.getChildren()[i], fields);
 		}
-
-		return new Fields(fields, selector);
 	}
 }

@@ -15,6 +15,9 @@
  */
 package org.krakenapps.logdb.query.parser;
 
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.ref;
+
 import java.io.File;
 import java.io.InputStream;
 import java.util.Map;
@@ -22,16 +25,17 @@ import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.StringPlaceholder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ZipFileParser implements LogQueryCommandParser {
+public class ZipFileParser implements LogQueryParser {
 	private final Logger logger = LoggerFactory.getLogger(ZipFileParser.class);
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
@@ -40,18 +44,12 @@ public class ZipFileParser implements LogQueryCommandParser {
 	}
 
 	@Override
-	public String getCommandName() {
-		return "zipfile";
-	}
-
-	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
+	public Object parse(Binding b) {
 		try {
-			QueryTokens tokens = QueryTokenizer.tokenize(commandString);
-			Map<String, String> options = tokens.options();
-
-			String filePath = tokens.reverseArg(1);
-			String entryPath = tokens.lastArg();
+			@SuppressWarnings("unchecked")
+			Map<String, String> options = (Map<String, String>) b.getChildren()[1].getValue();
+			String filePath = (String) b.getChildren()[2].getValue();
+			String entryPath = (String) b.getChildren()[3].getValue();
 
 			int offset = 0;
 			if (options.containsKey("offset"))
@@ -102,4 +100,11 @@ public class ZipFileParser implements LogQueryCommandParser {
 
 		return p;
 	}
+
+	@Override
+	public void addSyntax(Syntax syntax) {
+		syntax.add("zipfile", this, k("zipfile "), ref("option"), new StringPlaceholder(), new StringPlaceholder());
+		syntax.addRoot("zipfile");
+	}
+
 }

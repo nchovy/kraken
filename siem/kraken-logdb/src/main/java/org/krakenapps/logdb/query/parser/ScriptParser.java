@@ -1,56 +1,59 @@
-/*
- * Copyright 2013 Future Systems
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.krakenapps.logdb.query.parser;
 
+import static org.krakenapps.bnf.Syntax.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
-import org.krakenapps.logdb.LogQueryScript;
-import org.krakenapps.logdb.LogQueryScriptRegistry;
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogScript;
+import org.krakenapps.logdb.LogScriptRegistry;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Script;
 import org.osgi.framework.BundleContext;
 
-public class ScriptParser implements LogQueryCommandParser {
+public class ScriptParser implements LogQueryParser {
 	private BundleContext bc;
-	private LogQueryScriptRegistry scriptRegistry;
+	private LogScriptRegistry scriptRegistry;
 
-	public ScriptParser(BundleContext bc, LogQueryScriptRegistry scriptRegistry) {
+	public ScriptParser(BundleContext bc, LogScriptRegistry scriptRegistry) {
 		this.bc = bc;
 		this.scriptRegistry = scriptRegistry;
 	}
 
 	@Override
-	public String getCommandName() {
-		return "script";
+	public void addSyntax(Syntax syntax) {
+		syntax.add("script", this, k("script "), new StringPlaceholder(), repeat(rule(new StringPlaceholder())));
+		syntax.addRoot("script");
 	}
 
 	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		QueryTokens tokens = QueryTokenizer.tokenize(commandString);
-		String name = tokens.firstArg();
-		LogQueryScript script = scriptRegistry.newScript("localhost", name, null);
+	public Object parse(Binding b) {
+		String name = (String) b.getChildren()[1].getValue();
+		LogScript script = scriptRegistry.newScript("localhost", name, null);
 		if (script == null)
 			throw new IllegalArgumentException("log script not found: " + name);
-
+		
 		// TODO: parameter passing
 		script.init(null);
 
-		List<String> args = tokens.substrings(2, tokens.size() - 1);
+		List<String> args = new ArrayList<String>();
+		if (b.getChildren().length >= 3)
+			parseArgs(args, b.getChildren()[2]);
+
 		return new Script(bc, script, args.toArray(new String[0]));
+	}
+
+	private void parseArgs(List<String> args, Binding b) {
+		if (b.getValue() != null)
+			args.add((String) b.getValue());
+		else {
+			if (b.getChildren() != null) {
+				for (Binding c : b.getChildren())
+					parseArgs(args, c);
+			}
+		}
 	}
 }

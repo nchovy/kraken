@@ -16,151 +16,99 @@
 package org.krakenapps.logdb.query.command;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.query.ObjectComparator;
-import org.krakenapps.logdb.query.aggregator.AggregationField;
-import org.krakenapps.logdb.query.aggregator.AggregationFunction;
-import org.krakenapps.logdb.query.aggregator.PerTime;
-import org.krakenapps.logdb.sort.CloseableIterator;
-import org.krakenapps.logdb.sort.Item;
-import org.krakenapps.logdb.sort.ParallelMergeSorter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.krakenapps.logdb.query.FileBufferMap;
+import org.krakenapps.logdb.query.command.Function.Sum;
 
 public class Timechart extends LogQueryCommand {
-	private final Logger logger = LoggerFactory.getLogger(Timechart.class);
-
-	public static class TimeSpan {
-		public int amount;
-		public TimeUnit unit;
-
-		public TimeSpan(int amount, TimeUnit unit) {
-			this.amount = amount;
-			this.unit = unit;
-		}
-	}
-
-	public static enum TimeUnit {
+	public static enum Span {
 		Second(Calendar.SECOND, 1000L), Minute(Calendar.MINUTE, 60 * 1000L), Hour(Calendar.HOUR_OF_DAY, 60 * 60 * 1000L), Day(
-				Calendar.DAY_OF_MONTH, 24 * 60 * 60 * 1000L), Week(Calendar.WEEK_OF_YEAR, 7 * 24 * 60 * 60 * 1000L), Month(
-				Calendar.MONTH, 0L), Year(Calendar.YEAR, 0L);
+				Calendar.DAY_OF_MONTH, 24 * 60 * 60 * 1000L), Week(Calendar.WEEK_OF_YEAR, 7 * 24 * 60 * 60 * 1000L), Month(Calendar.MONTH,
+				0L), Year(Calendar.YEAR, 0L);
 
 		private int calendarField;
 		private long millis;
 
-		private TimeUnit(int calendarField, long millis) {
+		private Span(int calendarField, long millis) {
 			this.calendarField = calendarField;
 			this.millis = millis;
 		}
 	}
 
-	// sort by timechart key, and merge incrementally in eof()
-	private ParallelMergeSorter sorter;
-
-	// definition of aggregation fields
-	private List<AggregationField> fields;
-
-	// clone template functions
-	private AggregationFunction[] funcs;
-
-	// flush waiting buffer. merge in memory as many as possible
-	private HashMap<TimechartKey, AggregationFunction[]> buffer;
-
-	private TimeSpan timeSpan;
-
-	// span time in milliseconds. e.g. '172,800,000' for '2d'
-	private long spanMillis;
-
-	// key field name ('by' clause of command)
+	private FileBufferMap<Date, Object[]> data;
+	private Map<Date, Long> amount;
+	private Span spanField;
+	private int spanAmount;
+	private Function[] values;
 	private String keyField;
 
-	public Timechart(List<AggregationField> fields, String keyField, TimeSpan timeSpan) {
-		this.fields = fields;
+	public Timechart(Function[] values, String keyField) {
+		this(Span.Day, 1, values, keyField);
+	}
+
+	public Timechart(Span spanField, int spanAmount, Function[] values, String keyField) {
+		this.spanField = spanField;
+		this.spanAmount = spanAmount;
+		this.values = values;
 		this.keyField = keyField;
-		this.timeSpan = timeSpan;
-
-		// set up clone templates
-		this.funcs = new AggregationFunction[fields.size()];
-		for (int i = 0; i < fields.size(); i++)
-			this.funcs[i] = fields.get(i).getFunction();
-	}
-
-	public List<AggregationField> getAggregationFields() {
-		return fields;
-	}
-
-	public TimeSpan getTimeSpan() {
-		return timeSpan;
-	}
-
-	public String getKeyField() {
-		return keyField;
 	}
 
 	@Override
 	public void init() {
 		super.init();
-		this.sorter = new ParallelMergeSorter(new ItemComparer());
-		this.buffer = new HashMap<TimechartKey, AggregationFunction[]>();
-		this.spanMillis = getSpanMillis();
-
-		logger.debug("kraken logdb: span millis [{}] for query [{}]", spanMillis, logQuery);
+		try {
+			this.data = new FileBufferMap<Date, Object[]>(FunctionCodec.instance);
+		} catch (IOException e) {
+		}
+		this.amount = new HashMap<Date, Long>();
 	}
 
-	private long getSpanMillis() {
-		Date d = new Date();
-		Calendar c = Calendar.getInstance();
-		c.setTime(d);
-		c.add(timeSpan.unit.calendarField, timeSpan.amount);
-		return c.getTimeInMillis() - d.getTime();
-	}
-
+	@SuppressWarnings("unchecked")
 	@Override
 	public void push(LogMap m) {
-		Date time = getKey((Date) m.get("_time"));
-		String keyFieldValue = null;
+		Date row = getKey((Date) m.get("_time"));
+		if (!data.containsKey(row)) {
+			Object[] v = new Object[values.length];
+			for (int i = 0; i < values.length; i++)
+				v[i] = new HashMap<String, Function>();
+			data.put(row, v);
+
+			Calendar c = Calendar.getInstance();
+			c.setTime(row);
+			c.add(spanField.calendarField, spanAmount);
+			amount.put(row, c.getTimeInMillis() - row.getTime());
+		}
+
+		String key = null;
 		if (keyField != null) {
 			if (m.get(keyField) == null)
 				return;
-			keyFieldValue = m.get(keyField).toString();
+			key = m.get(keyField).toString();
 		}
 
-		// bucket is identified by truncated time and key field value. each
-		// bucket has function array.
-		TimechartKey key = new TimechartKey(time, keyFieldValue);
+		Object[] blocks = data.get(row);
+		for (int i = 0; i < blocks.length; i++) {
+			Map<String, Function> block = (Map<String, Function>) blocks[i];
 
-		// find or create flush waiting bucket
-		AggregationFunction[] fs = buffer.get(key);
-		if (fs == null) {
-			fs = new AggregationFunction[funcs.length];
-			for (int i = 0; i < fs.length; i++) {
-				fs[i] = funcs[i].clone();
-
-				// set span milliseconds for average evaluation per span
-				if (fs[i] instanceof PerTime)
-					((PerTime) fs[i]).setAmount(spanMillis);
+			String k = (key != null) ? key : values[i].toString();
+			if (!block.containsKey(k)) {
+				Function f = values[i].clone();
+				if (f instanceof PerTime)
+					((PerTime) f).amount = amount.get(row);
+				block.put(k, f);
 			}
 
-			buffer.put(key, fs);
-		}
-
-		// aggregate for each functions
-		for (AggregationFunction f : fs)
-			f.apply(m);
-
-		// flush if flood
-		try {
-			if (buffer.size() > 50000)
-				flush();
-		} catch (IOException e) {
-			throw new IllegalStateException("timechart sort failed, query " + logQuery, e);
+			Function func = block.get(k);
+			m.get(func.getTarget());
+			func.put(m);
 		}
 	}
 
@@ -169,180 +117,67 @@ public class Timechart extends LogQueryCommand {
 		return true;
 	}
 
-	private void flush() throws IOException {
-		for (TimechartKey key : buffer.keySet()) {
-			AggregationFunction[] fs = buffer.get(key);
-			Object[] l = new Object[fs.length];
-			int i = 0;
-			for (AggregationFunction f : fs)
-				l[i++] = f.serialize();
-
-			sorter.add(new Item(new Object[] { key.time, key.key }, l));
-		}
-
-		buffer.clear();
-	}
-
+	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
 		this.status = Status.Finalizing;
+		
+		List<Date> sortedKey = new ArrayList<Date>(data.keySet());
+		Collections.sort(sortedKey);
+		for (Date key : sortedKey) {
+			Object[] values = data.get(key);
 
-		CloseableIterator it = null;
-		try {
-			// last flush
-			flush();
-
-			// reclaim buffer (GC support)
-			buffer = null;
-
-			// sort
-			it = sorter.sort();
-
-			mergeAndWrite(it);
-		} catch (IOException e) {
-			throw new IllegalStateException("timechart sort failed, query " + logQuery, e);
-		} finally {
-			if (it != null) {
-				try {
-					// close and delete final sorted run file
-					it.close();
-				} catch (IOException e) {
-				}
-			}
-			super.eof();
-		}
-
-		// support sorter cache GC when query processing is ended
-		sorter = null;
-
-		super.eof();
-	}
-
-	private void mergeAndWrite(CloseableIterator it) {
-		Date lastTime = null;
-
-		// value of key field
-		String lastKeyFieldValue = null;
-		AggregationFunction[] fs = null;
-		HashMap<String, Object> output = new HashMap<String, Object>();
-
-		while (it.hasNext()) {
-			Item item = it.next();
-
-			// timechart key (truncated time & key value)
-			Object[] itemKeys = (Object[]) item.getKey();
-			Date time = (Date) itemKeys[0];
-			String keyFieldValue = (String) itemKeys[1];
-
-			// init functions at first time
-			if (fs == null) {
-				fs = new AggregationFunction[funcs.length];
-				for (int i = 0; i < funcs.length; i++)
-					fs[i] = loadFunction(item, i);
-
-				lastTime = time;
-				lastKeyFieldValue = keyFieldValue;
-				continue;
-			}
-
-			// if key value is changed
-			boolean reset = false;
-			if (lastKeyFieldValue != null && !lastKeyFieldValue.equals(keyFieldValue)) {
-				setOutputAndReset(output, fs, lastKeyFieldValue);
-				reset = true;
-			}
-
-			// until _time is changed
-			if (lastTime != null && !lastTime.equals(time)) {
-				if (!reset)
-					setOutputAndReset(output, fs, lastKeyFieldValue);
-
-				// write to next pipeline
-				output.put("_time", lastTime);
-				write(new LogMap(output));
-				output = new HashMap<String, Object>();
-
-				// change merge set
-				fs = new AggregationFunction[funcs.length];
-				for (int i = 0; i < funcs.length; i++)
-					fs[i] = loadFunction(item, i);
-
-				lastTime = time;
-				lastKeyFieldValue = keyFieldValue;
-				continue;
-			}
-
-			// merge all
-			int i = 0;
-			for (AggregationFunction f : fs) {
-				AggregationFunction f2 = loadFunction(item, i);
-				f.merge(f2);
-				i++;
-			}
-
-			lastTime = time;
-			lastKeyFieldValue = keyFieldValue;
-		}
-
-		// write last item (can be null if input count is 0)
-		if (lastTime != null) {
-			output.put("_time", lastTime);
-			setOutputAndReset(output, fs, lastKeyFieldValue);
-			write(new LogMap(output));
-		}
-	}
-
-	private void setOutputAndReset(Map<String, Object> output, AggregationFunction[] fs, String keyFieldValue) {
-		if (keyField != null) {
-			if (fs.length > 1) {
-				for (AggregationFunction f : fs) {
-					// field name format is func:keyfieldvalue (when
-					// by-clause is provided)
-					output.put(f.toString() + ":" + keyFieldValue, f.eval());
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("_time", key);
+			if (values.length == 1) {
+				for (String k : ((Map<String, Function>) values[0]).keySet()) {
+					Function v = ((Map<String, Function>) values[0]).get(k);
+					m.put(k, v.getResult());
 				}
 			} else {
-				output.put(keyFieldValue, fs[0].eval());
+				for (Object value : values) {
+					for (String k : ((Map<String, Function>) value).keySet()) {
+						Function v = ((Map<String, Function>) value).get(k);
+						if (keyField != null)
+							m.put(v.toString() + ":" + k, v.getResult());
+						else
+							m.put(k, v.getResult());
+					}
+				}
 			}
-		} else {
-			for (AggregationFunction f : fs)
-				output.put(f.getName(), f.eval());
+			write(new LogMap(m));
 		}
-	}
+		data.close();
+		data = null;
+		amount = null;
 
-	private AggregationFunction loadFunction(Item item, int i) {
-		Object[] l = (Object[]) ((Object[]) item.getValue())[i];
-		AggregationFunction f2 = funcs[i].clone();
-		f2.deserialize(l);
-		return f2;
+		super.eof();
 	}
 
 	private Date getKey(Date date) {
 		long time = date.getTime();
 
-		TimeUnit spanField = timeSpan.unit;
-		int spanAmount = timeSpan.amount;
-
-		if (spanField == TimeUnit.Second || spanField == TimeUnit.Minute || spanField == TimeUnit.Hour
-				|| spanField == TimeUnit.Day || spanField == TimeUnit.Week) {
+		if (spanField == Span.Second || spanField == Span.Minute || spanField == Span.Hour || spanField == Span.Day
+				|| spanField == Span.Week) {
 			time += 291600000L; // base to Monday, 00:00:00
 			time -= time % (spanField.millis * spanAmount);
 			time -= 291600000L;
 		} else {
 			Calendar c = Calendar.getInstance();
-			c.setTimeInMillis(time - time % TimeUnit.Second.millis);
+			c.setTimeInMillis(time - time % Span.Second.millis);
 			c.set(Calendar.SECOND, 0);
 			c.set(Calendar.MINUTE, 0);
 			c.set(Calendar.HOUR_OF_DAY, 0);
 			c.set(Calendar.DAY_OF_MONTH, 1);
 
-			if (spanField == TimeUnit.Month) {
+			if (spanField == Span.Month) {
 				int monthOffset = c.get(Calendar.YEAR) * 12;
 				int month = monthOffset + c.get(Calendar.MONTH);
 				month -= month % spanAmount;
 				month -= monthOffset;
 				c.add(Calendar.MONTH, month);
 				time = c.getTimeInMillis();
-			} else if (spanField == TimeUnit.Year) {
+			} else if (spanField == Span.Year) {
 				int year = c.get(Calendar.YEAR);
 				c.set(Calendar.YEAR, year - (year % spanAmount));
 				time = c.getTimeInMillis();
@@ -352,74 +187,61 @@ public class Timechart extends LogQueryCommand {
 		return new Date(time);
 	}
 
-	private static class ItemComparer implements Comparator<Item> {
-		private ObjectComparator cmp = new ObjectComparator();
+	public static final Map<String, Class<? extends Function>> func;
+	static {
+		func = new HashMap<String, Class<? extends Function>>();
+		func.put("per_second", PerSecond.class);
+		func.put("per_minute", PerMinute.class);
+		func.put("per_hour", PerHour.class);
+		func.put("per_day", PerDay.class);
+	}
+
+	public static abstract class PerTime extends Sum {
+		private long amount;
+
+		abstract protected long getTimeLength();
+
+		public long getAmount() {
+			return amount;
+		}
+
+		public void setAmount(long amount) {
+			this.amount = amount;
+		}
 
 		@Override
-		public int compare(Item o1, Item o2) {
-			return cmp.compare(o1.getKey(), o2.getKey());
+		public Object getResult() {
+			if (super.getResult() == null)
+				return null;
+			return NumberUtil.div(super.getResult(), (double) amount / (double) getTimeLength());
 		}
 	}
 
-	private static class TimechartKey implements Comparable<TimechartKey> {
-		// truncated time by span amount
-		public Date time;
-
-		// value of key field ('by' clause, can be null)
-		public String key;
-
-		public TimechartKey(Date time, String key) {
-			this.time = time;
-			this.key = key;
-		}
-
+	public static class PerSecond extends PerTime {
 		@Override
-		public int compareTo(TimechartKey o) {
-			if (o == null)
-				return -1;
-
-			int diff = (int) (time.getTime() - o.time.getTime());
-			if (diff != 0)
-				return diff;
-
-			if (key == null && o.key != null)
-				return -1;
-			else if (key != null && o.key == null)
-				return 1;
-
-			diff = key.compareTo(o.key);
-			return diff;
+		protected long getTimeLength() {
+			return 1000L;
 		}
+	}
 
+	public static class PerMinute extends PerTime {
 		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((key == null) ? 0 : key.hashCode());
-			result = prime * result + ((time == null) ? 0 : time.hashCode());
-			return result;
+		protected long getTimeLength() {
+			return 60 * 1000L;
 		}
+	}
 
+	public static class PerHour extends PerTime {
 		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			TimechartKey other = (TimechartKey) obj;
-			if (key == null) {
-				if (other.key != null)
-					return false;
-			} else if (!key.equals(other.key))
-				return false;
-			if (time == null) {
-				if (other.time != null)
-					return false;
-			} else if (!time.equals(other.time))
-				return false;
-			return true;
+		protected long getTimeLength() {
+			return 60 * 60 * 1000L;
+		}
+	}
+
+	public static class PerDay extends PerTime {
+		@Override
+		protected long getTimeLength() {
+			return 24 * 60 * 60 * 1000L;
 		}
 	}
 }

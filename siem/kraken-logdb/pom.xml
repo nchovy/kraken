@@ -9,7 +9,7 @@
 		<version>1.0.0</version>
 	</parent>
 	<artifactId>kraken-logdb</artifactId>
-	<version>0.10.0</version>
+	<version>0.9.1</version>
 	<packaging>bundle</packaging>
 	<name>Kraken Log DB</name>
 	<build>
@@ -25,9 +25,8 @@
 						<Private-Package>
 							org.krakenapps.logdb.impl,
 							org.krakenapps.logdb.query,
+							org.krakenapps.logdb.mapreduce,
 							org.krakenapps.logdb.query.command,
-							org.krakenapps.logdb.query.aggregator,
-							org.krakenapps.logdb.query.expr,
 							org.krakenapps.logdb.query.parser,
 							org.krakenapps.logdb.sort,
 							org.krakenapps.logdb.msgbus
@@ -38,7 +37,7 @@
 							org.krakenapps.logstorage;version="1.12.0",
 							org.krakenapps.logstorage.file;version="1.12.0",
 							*
-						</Import-Package>
+					    </Import-Package>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -61,16 +60,6 @@
 			<artifactId>kraken-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-simple</artifactId>
-			<version>1.5.6</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo</artifactId>
 		</dependency>
@@ -80,7 +69,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
-			<artifactId>kraken-confdb</artifactId>
+			<artifactId>kraken-rpc</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.krakenapps</groupId>
@@ -103,10 +92,8 @@
 			<artifactId>kraken-opencsv</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.9.5</version>
-			<scope>test</scope>
+			<groupId>org.krakenapps</groupId>
+			<artifactId>kraken-bnf</artifactId>
 		</dependency>
 	</dependencies>
 </project>

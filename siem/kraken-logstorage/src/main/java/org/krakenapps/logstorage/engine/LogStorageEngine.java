@@ -52,6 +52,7 @@ import org.krakenapps.logstorage.Log;
 import org.krakenapps.logstorage.LogCallback;
 import org.krakenapps.logstorage.LogCursor;
 import org.krakenapps.logstorage.LogKey;
+import org.krakenapps.logstorage.LogRestoreService;
 import org.krakenapps.logstorage.LogRetentionPolicy;
 import org.krakenapps.logstorage.LogSearchCallback;
 import org.krakenapps.logstorage.LogStorage;
@@ -85,6 +86,9 @@ public class LogStorageEngine implements LogStorage {
 
 	@Requires
 	private ConfigService conf;
+
+	@Requires
+	private LogRestoreService logRestore;
 
 	// online writers
 	private ConcurrentMap<OnlineWriterKey, OnlineWriter> onlineWriters;
@@ -285,6 +289,7 @@ public class LogStorageEngine implements LogStorage {
 				logger.error(
 						"kraken logstorage: cannot fix index [" + indexPath.getAbsoluteFile() + "], data ["
 								+ dataPath.getAbsolutePath() + "]", e);
+				logRestore.restoreByDelete(tableName);
 			}
 		}
 		logger.info("kraken logstorage: all table verifications are completed");

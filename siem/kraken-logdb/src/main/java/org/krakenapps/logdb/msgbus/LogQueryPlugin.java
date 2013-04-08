@@ -28,12 +28,15 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Requires;
+import org.krakenapps.logdb.DataSource;
+import org.krakenapps.logdb.DataSourceRegistry;
 import org.krakenapps.logdb.LogQuery;
 import org.krakenapps.logdb.LogQueryCallback;
 import org.krakenapps.logdb.LogQueryService;
 import org.krakenapps.logdb.LogTimelineCallback;
 import org.krakenapps.logdb.impl.LogQueryHelper;
 import org.krakenapps.logstorage.Log;
+import org.krakenapps.logstorage.LogRestoreService;
 import org.krakenapps.logstorage.LogStorage;
 import org.krakenapps.logstorage.LogTableRegistry;
 import org.krakenapps.msgbus.MsgbusException;
@@ -60,6 +63,12 @@ public class LogQueryPlugin {
 
 	@Requires
 	private LogStorage storage;
+
+	@Requires
+	private LogRestoreService logRestore;
+
+	@Requires
+	private DataSourceRegistry dataSourceRegistry;
 
 	@Requires
 	private PushApi pushApi;
@@ -95,6 +104,20 @@ public class LogQueryPlugin {
 	}
 
 	@MsgbusMethod
+	public void getDataSources(Request req, Response resp) {
+		List<Object> result = new ArrayList<Object>();
+		for (DataSource dataSource : dataSourceRegistry.getAll()) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("name", dataSource.getName());
+			m.put("type", dataSource.getType());
+			m.put("node_guid", dataSource.getNodeGuid());
+			m.put("metadata", dataSource.getMetadata());
+			result.add(m);
+		}
+		resp.put("sources", result);
+	}
+
+	@MsgbusMethod
 	public void queries(Request req, Response resp) {
 		List<Object> result = LogQueryHelper.getQueries(service);
 		resp.put("queries", result);
@@ -116,6 +139,7 @@ public class LogQueryPlugin {
 			}
 		} catch (Exception e) {
 			logger.error("kraken logdb: cannot create query", e);
+			logRestore.restoreByDelete();
 			throw new MsgbusException("logdb", e.getMessage());
 		}
 	}

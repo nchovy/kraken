@@ -20,30 +20,28 @@ import java.util.Comparator;
 import java.util.Map;
 
 import org.krakenapps.logdb.LogQueryCommand;
+import org.krakenapps.logdb.query.FileBufferList;
 import org.krakenapps.logdb.query.ObjectComparator;
-import org.krakenapps.logdb.sort.CloseableIterator;
-import org.krakenapps.logdb.sort.Item;
-import org.krakenapps.logdb.sort.ParallelMergeSorter;
 
 public class Sort extends LogQueryCommand {
 	private Integer limit;
 	private SortField[] fields;
-	private ParallelMergeSorter sorter;
+	private FileBufferList<Map<String, Object>> buf;
 	private boolean reverse;
 
-	public Sort(SortField[] fields) {
+	public Sort(SortField[] fields) throws IOException {
 		this(null, fields, false);
 	}
 
-	public Sort(Integer limit, SortField[] fields) {
+	public Sort(Integer limit, SortField[] fields) throws IOException {
 		this(limit, fields, false);
 	}
 
-	public Sort(SortField[] fields, boolean reverse) {
+	public Sort(SortField[] fields, boolean reverse) throws IOException {
 		this(null, fields, reverse);
 	}
 
-	public Sort(Integer limit, SortField[] fields, boolean reverse) {
+	public Sort(Integer limit, SortField[] fields, boolean reverse) throws IOException {
 		this.limit = limit;
 		this.fields = fields;
 		this.reverse = reverse;
@@ -52,7 +50,10 @@ public class Sort extends LogQueryCommand {
 	@Override
 	public void init() {
 		super.init();
-		this.sorter = new ParallelMergeSorter(new DefaultComparator());
+		try {
+			this.buf = new FileBufferList<Map<String, Object>>(new DefaultComparator());
+		} catch (IOException e) {
+		}
 	}
 
 	public Integer getLimit() {
@@ -69,11 +70,7 @@ public class Sort extends LogQueryCommand {
 
 	@Override
 	public void push(LogMap m) {
-		try {
-			sorter.add(new Item(m.map(), null));
-		} catch (IOException e) {
-			throw new IllegalStateException("sort failed, query " + logQuery, e);
-		}
+		buf.add(m.map());
 	}
 
 	@Override
@@ -81,63 +78,42 @@ public class Sort extends LogQueryCommand {
 		return true;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public void eof() {
 		this.status = Status.Finalizing;
-		// TODO: use LONG instead!
-		int count = limit != null ? limit : Integer.MAX_VALUE;
-
-		CloseableIterator it = null;
-		try {
-			it = sorter.sort();
-
-			while (it.hasNext()) {
-				Object o = it.next();
-				if (--count < 0)
-					break;
-
-				Map<String, Object> value = (Map<String, Object>) ((Item) o).getKey();
-				write(new LogMap(value));
-			}
-
-		} catch (IOException e) {
-		} finally {
-			// close and delete sorted run file
-			if (it != null) {
-				try {
-					it.close();
-				} catch (IOException e) {
+		if (limit == null) {
+			write(buf);
+		} else {
+			if (buf != null) {
+				int count = limit;
+				for (Map<String, Object> m : buf) {
+					if (--count < 0)
+						break;
+					write(new LogMap(m));
 				}
+				buf.close();
 			}
+			buf = null;
 		}
-
-		// support sorter cache GC when query processing is ended
-		sorter = null;
-
 		super.eof();
 	}
 
-	private class DefaultComparator implements Comparator<Item> {
+	private class DefaultComparator implements Comparator<Map<String, Object>> {
 		private ObjectComparator cmp = new ObjectComparator();
 
-		@SuppressWarnings("unchecked")
 		@Override
-		public int compare(Item o1, Item o2) {
-			Map<String, Object> m1 = (Map<String, Object>) o1.getKey();
-			Map<String, Object> m2 = (Map<String, Object>) o2.getKey();
-
+		public int compare(Map<String, Object> m1, Map<String, Object> m2) {
 			for (SortField field : fields) {
-				Object v1 = m1.get(field.name);
-				Object v2 = m2.get(field.name);
+				Object o1 = m1.get(field.name);
+				Object o2 = m2.get(field.name);
 
-				if (v1 == null && v2 == null)
+				if (o1 == null && o2 == null)
 					continue;
-				else if (v1 == null && v2 != null)
+				else if (o1 == null && o2 != null)
 					return 1;
 
-				if (!v1.equals(v2)) {
-					int result = cmp.compare(v1, v2);
+				if (!o1.equals(o2)) {
+					int result = cmp.compare(o1, o2);
 
 					if (!field.asc)
 						result *= -1;

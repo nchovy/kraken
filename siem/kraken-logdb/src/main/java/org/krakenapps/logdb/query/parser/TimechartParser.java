@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Future Systems
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,102 +15,76 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.option;
+import static org.krakenapps.bnf.Syntax.ref;
+import static org.krakenapps.bnf.Syntax.rule;
+
 import java.util.List;
 import java.util.Map;
 
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
-import org.krakenapps.logdb.LogQueryParseException;
-import org.krakenapps.logdb.query.aggregator.AggregationField;
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.FunctionPlaceholder;
+import org.krakenapps.logdb.query.StringPlaceholder;
+import org.krakenapps.logdb.query.command.Function;
 import org.krakenapps.logdb.query.command.Timechart;
-import org.krakenapps.logdb.query.command.Timechart.TimeSpan;
-import org.krakenapps.logdb.query.command.Timechart.TimeUnit;
+import org.krakenapps.logdb.query.command.Timechart.Span;
 
-public class TimechartParser implements LogQueryCommandParser {
-	private static final String COMMAND = "timechart";
-	private static final String BY = " by ";
-
+public class TimechartParser implements LogQueryParser {
 	@Override
-	public String getCommandName() {
-		return COMMAND;
+	public void addSyntax(Syntax syntax) {
+		// @formatter:off
+		syntax.add("timechart2", new TimechartParser(), k("timechart2 "), ref("option"), ref("timechart_function2"),
+				option(rule(k("by "), new StringPlaceholder())));
+		syntax.add("timechart_function2", new FunctionParser(), new FunctionPlaceholder(Timechart.func),
+				option(k("as "), new StringPlaceholder(new char[] { ' ', ',' })), option(ref("timechart_function2")));
+		syntax.addRoot("timechart2");
+		// @formatter:on
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		// timechart <options> <aggregation functions> by <clause>
-		ParseResult r = QueryTokenizer.parseOptions(commandString, COMMAND.length());
-
-		@SuppressWarnings("unchecked")
-		Map<String, String> options = (Map<String, String>) r.value;
-
-		String argsPart = commandString.substring(r.next);
-		String aggsPart = argsPart;
-
-		List<String> clauses = new ArrayList<String>();
-
-		// parse clauses
-		int byPos = QueryTokenizer.findKeyword(argsPart, BY, 0);
-		if (byPos > 0) {
-			aggsPart = argsPart.substring(0, byPos);
-			String clausePart = argsPart.substring(byPos + BY.length());
-			clauses = Arrays.asList(clausePart.split(","));
-		}
-
-		// parse aggregations
-		List<String> aggTerms = QueryTokenizer.parseByComma(aggsPart);
-		List<AggregationField> fields = new ArrayList<AggregationField>();
-
-		for (String aggTerm : aggTerms) {
-			AggregationField field = AggregationParser.parse(aggTerm);
-			fields.add(field);
-		}
-
-		if (fields.size() == 0)
-			throw new LogQueryParseException("need-aggregation-field", COMMAND.length());
-
-		// parse timespan option
-		TimeSpan timeSpan = null;
-		if (options.containsKey("span"))
-			timeSpan = parseTimeSpan(options.get("span"));
-
-		if (timeSpan == null)
-			timeSpan = new TimeSpan(1, TimeUnit.Day);
-
-		String clause = null;
-		if (!clauses.isEmpty())
-			clause = clauses.get(0);
-
-		return new Timechart(fields, clause, timeSpan);
-	}
-
-	private static TimeSpan parseTimeSpan(String value) {
-		TimeUnit unit = null;
+	public Object parse(Binding b) {
+		Function[] func = ((List<Function>) b.getChildren()[2].getValue()).toArray(new Function[0]);
+		Map<String, String> option = (Map<String, String>) b.getChildren()[1].getValue();
+		Span field = null;
 		Integer amount = null;
-		int i;
-		for (i = 0; i < value.length(); i++) {
-			char c = value.charAt(i);
-			if (!('0' <= c && c <= '9'))
-				break;
+		String keyField = null;
+
+		if (b.getChildren().length >= 4)
+			keyField = (String) b.getChildren()[3].getChildren()[1].getValue();
+
+		if (option.containsKey("span")) {
+			String value = option.get("span");
+			int i;
+			for (i = 0; i < value.length(); i++) {
+				char c = value.charAt(i);
+				if (!('0' <= c && c <= '9'))
+					break;
+			}
+			String f = value.substring(i);
+			if (f.equalsIgnoreCase("s"))
+				field = Span.Second;
+			else if (f.equalsIgnoreCase("m"))
+				field = Span.Minute;
+			else if (f.equalsIgnoreCase("h"))
+				field = Span.Hour;
+			else if (f.equalsIgnoreCase("d"))
+				field = Span.Day;
+			else if (f.equalsIgnoreCase("w"))
+				field = Span.Week;
+			else if (f.equalsIgnoreCase("mon"))
+				field = Span.Month;
+			else if (f.equalsIgnoreCase("y"))
+				field = Span.Year;
+			amount = Integer.parseInt(value.substring(0, i));
 		}
-		String f = value.substring(i);
-		if (f.equalsIgnoreCase("s"))
-			unit = TimeUnit.Second;
-		else if (f.equalsIgnoreCase("m"))
-			unit = TimeUnit.Minute;
-		else if (f.equalsIgnoreCase("h"))
-			unit = TimeUnit.Hour;
-		else if (f.equalsIgnoreCase("d"))
-			unit = TimeUnit.Day;
-		else if (f.equalsIgnoreCase("w"))
-			unit = TimeUnit.Week;
-		else if (f.equalsIgnoreCase("mon"))
-			unit = TimeUnit.Month;
-		else if (f.equalsIgnoreCase("y"))
-			unit = TimeUnit.Year;
-		amount = Integer.parseInt(value.substring(0, i));
-		return new TimeSpan(amount, unit);
+
+		if (field == null)
+			return new Timechart(func, keyField);
+		else
+			return new Timechart(field, amount, func, keyField);
 	}
 }

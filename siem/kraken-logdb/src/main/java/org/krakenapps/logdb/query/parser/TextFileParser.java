@@ -1,34 +1,23 @@
-/*
- * Copyright 2013 Future Systems
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.krakenapps.logdb.query.parser;
+
+import static org.krakenapps.bnf.Syntax.k;
+import static org.krakenapps.bnf.Syntax.ref;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Map;
 import java.util.Properties;
 
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
 import org.krakenapps.log.api.LogParser;
 import org.krakenapps.log.api.LogParserFactory;
 import org.krakenapps.log.api.LogParserFactoryRegistry;
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.TextFile;
 
-public class TextFileParser implements LogQueryCommandParser {
+public class TextFileParser implements LogQueryParser {
 
 	private LogParserFactoryRegistry parserFactoryRegistry;
 
@@ -37,17 +26,12 @@ public class TextFileParser implements LogQueryCommandParser {
 	}
 
 	@Override
-	public String getCommandName() {
-		return "textfile";
-	}
-
-	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		QueryTokens tokens = QueryTokenizer.tokenize(commandString);
-		Map<String, String> options = tokens.options();
-		String filePath = tokens.lastArg();
-
+	public Object parse(Binding b) {
 		try {
+			@SuppressWarnings("unchecked")
+			Map<String, String> options = (Map<String, String>) b.getChildren()[1].getValue();
+			String filePath = (String) b.getChildren()[2].getValue();
+
 			int offset = 0;
 			if (options.containsKey("offset"))
 				offset = Integer.valueOf(options.get("offset"));
@@ -82,6 +66,12 @@ public class TextFileParser implements LogQueryCommandParser {
 		}
 
 		return p;
+	}
+
+	@Override
+	public void addSyntax(Syntax syntax) {
+		syntax.add("textfile", this, k("textfile "), ref("option"), new StringPlaceholder());
+		syntax.addRoot("textfile");
 	}
 
 }

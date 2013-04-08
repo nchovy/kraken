@@ -20,44 +20,44 @@ import java.util.List;
 import org.krakenapps.logdb.LogQueryCommand;
 
 public class Fields extends LogQueryCommand {
+	private boolean remove;
 	private List<String> fields;
-	private boolean selector;
 
 	public Fields(List<String> fields) {
-		this(fields, true);
+		this(false, fields);
 	}
 
-	public Fields(List<String> fields, boolean selector) {
+	public Fields(boolean remove, List<String> fields) {
+		this.remove = remove;
 		this.fields = fields;
-		this.selector = selector;
 	}
 
 	@Override
 	public void push(LogMap m) {
-		if (selector) {
+		if (remove) {
+			for (String field : fields)
+				m.remove(field);
+		} else {
 			LogMap newMap = new LogMap();
 			for (String field : fields) {
 				Object data = m.get(field);
 				newMap.put(field, data);
 			}
 			m = newMap;
-		} else {
-			for (String field : fields)
-				m.remove(field);
 		}
 		write(m);
 	}
 
 	@Override
 	public boolean isReducer() {
-		return false;
+		return (remove == fields.contains(headerColumn.get("date")));
+	}
+
+	public boolean isRemove() {
+		return remove;
 	}
 
 	public List<String> getFields() {
 		return fields;
-	}
-
-	public boolean isSelector() {
-		return selector;
 	}
 }

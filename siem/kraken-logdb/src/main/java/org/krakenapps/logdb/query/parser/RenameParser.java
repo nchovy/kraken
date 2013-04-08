@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Future Systems
+ * Copyright 2011 Future Systems
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +15,25 @@
  */
 package org.krakenapps.logdb.query.parser;
 
-import org.krakenapps.logdb.LogQueryCommand;
-import org.krakenapps.logdb.LogQueryCommandParser;
-import org.krakenapps.logdb.LogQueryContext;
-import org.krakenapps.logdb.LogQueryParseException;
+import static org.krakenapps.bnf.Syntax.*;
+
+import org.krakenapps.bnf.Binding;
+import org.krakenapps.bnf.Syntax;
+import org.krakenapps.logdb.LogQueryParser;
+import org.krakenapps.logdb.query.StringPlaceholder;
 import org.krakenapps.logdb.query.command.Rename;
 
-public class RenameParser implements LogQueryCommandParser {
-
+public class RenameParser implements LogQueryParser {
 	@Override
-	public String getCommandName() {
-		return "rename";
+	public void addSyntax(Syntax syntax) {
+		syntax.add("rename", this, k("rename "), new StringPlaceholder(), k("as "), new StringPlaceholder());
+		syntax.addRoot("rename");
 	}
 
 	@Override
-	public LogQueryCommand parse(LogQueryContext context, String commandString) {
-		QueryTokens tokens = QueryTokenizer.tokenize(commandString);
-		if (tokens.size() < 3)
-			throw new LogQueryParseException("as-token-not-found", commandString.length());
-		
-		if (tokens.size() < 4)
-			throw new LogQueryParseException("to-field-not-found", commandString.length());
-
-		if (!tokens.string(2).equalsIgnoreCase("as"))
-			throw new LogQueryParseException("invalid-as-position", -1);
-		
-
-		String from = tokens.firstArg();
-		String to = tokens.lastArg();
+	public Object parse(Binding b) {
+		String from = (String) b.getChildren()[1].getValue();
+		String to = (String) b.getChildren()[3].getValue();
 		return new Rename(from, to);
 	}
 }

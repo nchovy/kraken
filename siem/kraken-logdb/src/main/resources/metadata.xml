@@ -1,11 +1,14 @@
 <ipojo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="org.apache.felix.ipojo http://felix.apache.org/ipojo/schemas/CURRENT/core.xsd"
 	xmlns="org.apache.felix.ipojo">
+	<instance component="logdb-rpc" />
 	<instance component="logdb-script-factory" />
 	<instance component="logdb-msgbus" />
 	<instance component="logdb-query" />
+	<instance component="logdb-mapreduce" />
+	<instance component="logdb-syntax-provider" />
 	<instance component="logdb-lookup-registry" />
+	<instance component="log-script-registry" />
+	<instance component="data-source-registry" />
 	<instance component="logdb-csv-lookup-registry" />
-	<instance component="logdb-query-parser-service" />
-	<instance component="logdb-query-script-registry" />
 </ipojo>
