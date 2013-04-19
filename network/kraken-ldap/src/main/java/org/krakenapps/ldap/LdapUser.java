@@ -28,6 +28,7 @@ public class LdapUser {
 	private boolean domainAdmin;
 	private boolean allowDialIn;
 	private int logonCount;
+	private int userAccountControl;
 	private String[] memberOf;
 	private String distinguishedName;
 	private String userPrincipalName;
@@ -55,6 +56,7 @@ public class LdapUser {
 		if (accountName == null)
 			accountName = getString(attrs, idAttr);
 		this.domainAdmin = getInt(attrs, "adminCount") > 0;
+		this.userAccountControl = getInt(attrs, "userAccountControl");
 		this.allowDialIn = "TRUE".equals(getString(attrs, "msNPAllowDialin"));
 		this.logonCount = getInt(attrs, "logonCount");
 		this.memberOf = getStringArray(attrs, "memberOf");
@@ -132,6 +134,10 @@ public class LdapUser {
 
 	public int getLogonCount() {
 		return logonCount;
+	}
+
+	public int getUserAccountControl() {
+		return userAccountControl;
 	}
 
 	public String[] getMemberOf() {

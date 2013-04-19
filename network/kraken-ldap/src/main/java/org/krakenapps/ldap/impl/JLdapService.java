@@ -15,7 +15,6 @@
  */
 package org.krakenapps.ldap.impl;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
@@ -30,8 +29,6 @@ import java.util.StringTokenizer;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
-import javax.swing.JProgressBar;
-
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Requires;
@@ -44,7 +41,6 @@ import org.krakenapps.ldap.LdapUser;
 import org.krakenapps.ldap.LdapProfile;
 import org.krakenapps.ldap.LdapServerType;
 import org.krakenapps.ldap.LdapService;
-import org.krakenapps.ldap.LdapProfile.CertificateType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -380,7 +376,8 @@ public class JLdapService implements LdapService {
 		return s;
 	}
 
-	private LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
+	@Override
+	public LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout) {
 		if (profile.getDc() == null)
 			throw new IllegalArgumentException("ldap domain controller should be not null");
 

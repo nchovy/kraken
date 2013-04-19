@@ -17,6 +17,8 @@ package org.krakenapps.ldap;
 
 import java.util.Collection;
 
+import com.novell.ldap.LDAPConnection;
+
 public interface LdapService {
 	Collection<LdapProfile> getProfiles();
 
@@ -43,4 +45,6 @@ public interface LdapService {
 	void changePassword(LdapProfile profile, String uid, String newPassword);
 
 	void changePassword(LdapProfile profile, String uid, String newPassword, int timeout);
+
+	LDAPConnection openLdapConnection(LdapProfile profile, Integer timeout);
 }

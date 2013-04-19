@@ -95,6 +95,9 @@ public class DomSyncService implements LdapSyncService, Runnable {
 
 		for (LdapProfile profile : ldap.getProfiles()) {
 			try {
+				if (profile.getSyncInterval() == 0)
+					continue;
+
 				Date d = profile.getLastSync();
 				Date now = new Date();
 				long span = -1;
