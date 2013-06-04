@@ -38,6 +38,7 @@ public class LdapUser {
 	private String givenName;
 	private String title;
 	private String department;
+	private String departmentNumber;
 	private String mail;
 	private String mobile;
 	private Date lastLogon;
@@ -69,6 +70,7 @@ public class LdapUser {
 		this.givenName = getString(attrs, "givenName");
 		this.title = getString(attrs, "title");
 		this.department = getString(attrs, "department");
+		this.departmentNumber = getString(attrs, "departmentNumber");
 		this.mail = getString(attrs, "mail");
 		this.mobile = getString(attrs, "mobile");
 		this.lastLogon = getTimestamp(attrs, "lastLogon");
@@ -174,6 +176,10 @@ public class LdapUser {
 
 	public String getDepartment() {
 		return department;
+	}
+
+	public String getDepartmentNumber() {
+		return departmentNumber;
 	}
 
 	public String getMail() {
