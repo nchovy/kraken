@@ -261,7 +261,7 @@ public class AdminApiImpl implements AdminApi {
 			checkAcl(session, admin);
 
 			if (!admin.isEnabled()) {
-				int lockTime = 180;
+				int lockTime = 300;
 				Object param = orgApi.getOrganizationParameter(domain, "login_lock_time");
 				if (param != null) {
 					try {
