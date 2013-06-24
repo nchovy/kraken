@@ -60,7 +60,15 @@ public class OrganizationUnitApiImpl extends DefaultEntityEventProvider<Organiza
 
 	@Override
 	public Collection<OrganizationUnit> getOrganizationUnits(String domain) {
+		return getOrganizationUnits(domain, true);
+	}
+
+	@Override
+	public Collection<OrganizationUnit> getOrganizationUnits(String domain, boolean includeChildren) {
 		Collection<OrganizationUnit> orgUnits = cfg.all(domain, cls);
+		if (!includeChildren)
+			return orgUnits;
+
 		for (OrganizationUnit orgUnit : orgUnits)
 			orgUnit.setChildren(getChildrens(domain, orgUnit.getGuid()));
 		return orgUnits;

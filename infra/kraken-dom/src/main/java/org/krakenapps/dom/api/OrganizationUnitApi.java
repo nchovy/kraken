@@ -22,6 +22,8 @@ import org.krakenapps.dom.model.OrganizationUnit;
 public interface OrganizationUnitApi extends EntityEventProvider<OrganizationUnit> {
 	Collection<OrganizationUnit> getOrganizationUnits(String domain);
 
+	Collection<OrganizationUnit> getOrganizationUnits(String domain, boolean includeChildren);
+
 	OrganizationUnit findOrganizationUnit(String domain, String guid);
 
 	OrganizationUnit getOrganizationUnit(String domain, String guid);

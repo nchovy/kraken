@@ -49,7 +49,6 @@ import org.krakenapps.ca.CertificateRequest;
 import org.krakenapps.ca.RevocationReason;
 import org.krakenapps.ca.util.CertificateBuilder;
 import org.krakenapps.ca.util.CertificateExporter;
-import org.krakenapps.confdb.BaseConfigDatabaseListener;
 import org.krakenapps.confdb.Config;
 import org.krakenapps.confdb.ConfigCollection;
 import org.krakenapps.confdb.ConfigDatabase;

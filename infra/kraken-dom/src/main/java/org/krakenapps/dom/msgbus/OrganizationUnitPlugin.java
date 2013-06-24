@@ -54,7 +54,10 @@ public class OrganizationUnitPlugin {
 
 	@MsgbusMethod
 	public void getOrganizationUnits(Request req, Response resp) {
-		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits(req.getOrgDomain());
+		boolean includeChildren = true;
+		if (req.has("include_children"))
+			includeChildren = req.getBoolean("include_children");
+		Collection<OrganizationUnit> orgUnits = orgUnitApi.getOrganizationUnits(req.getOrgDomain(), includeChildren);
 		resp.put("org_units", PrimitiveConverter.serialize(orgUnits));
 	}
 
