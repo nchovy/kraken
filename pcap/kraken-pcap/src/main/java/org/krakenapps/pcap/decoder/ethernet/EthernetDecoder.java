@@ -16,6 +16,7 @@
 
 package org.krakenapps.pcap.decoder.ethernet;
 
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,9 @@ import org.krakenapps.pcap.util.Buffer;
 public class EthernetDecoder {
 	private Set<EthernetProcessor> callbacks;
 	private final Map<Integer, Set<EthernetProcessor>> typeCallbacks;
-
+	private static final int IEEE_8021AQ = 0x8100;
+	private static final int IEEE_8021AD = 0x9100;
+	
 	public EthernetDecoder() {
 		callbacks = new CopyOnWriteArraySet<EthernetProcessor>();
 		typeCallbacks = new ConcurrentHashMap<Integer, Set<EthernetProcessor>>();
@@ -68,6 +71,16 @@ public class EthernetDecoder {
 		MacAddress destination = getMacAddress(packet.getPacketData());
 		MacAddress source = getMacAddress(packet.getPacketData());
 		int type = getEtherType(packet.getPacketData());
+		
+		if (type == IEEE_8021AQ) {
+		    IEEE_802_1Q iee802_1aqTag = get802_1qTag(packet.getPacketData());
+		    type = getEtherType(packet.getPacketData());
+		    if (type == IEEE_8021AD) {
+			IEEE_802_1Q iee802_1adTag = get802_1qTag(packet.getPacketData());
+			type = getEtherType(packet.getPacketData());		    
+		    }
+		}
+		
 		Buffer buffer = packet.getPacketData();
 		buffer.discardReadBytes();
 
@@ -96,5 +109,28 @@ public class EthernetDecoder {
 
 		for (EthernetProcessor processor : processors)
 			processor.process(frame.dup());
+	}
+	
+	/**
+	 * @see http://en.wikipedia.org/wiki/IEEE_802.1Q
+	 * @param data
+	 * @return
+	 */
+	private IEEE_802_1Q get802_1qTag(Buffer data) {
+	    byte[] tagField = new byte[2];
+	    data.gets(tagField, 0, 2);
+	    BitSet bits = BitSet.valueOf(tagField);
+	    int pcp = convertBitToInt(bits.get(0, 3));
+	    int dei = convertBitToInt(bits.get(3, 4));
+	    int vid = convertBitToInt(bits.get(4, 16));
+	    return new IEEE_802_1Q(pcp, dei, vid);
+	}
+
+	private int convertBitToInt(BitSet bits) {
+	    int value = 0;
+	    for (int i = 0; i < bits.length(); ++i) {
+		value += bits.get(i) ? (1 << i) : 0;
+	    }
+	    return value;
 	}
 }
