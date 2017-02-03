@@ -30,61 +30,122 @@ import org.krakenapps.lookup.mac.Vendor;
 @Component(name = "mac-lookup-service")
 @Provides
 public class DefaultMacLookupService implements MacLookupService {
-	private Map<String, Vendor> ouiMap;
 
-	public DefaultMacLookupService() {
-		ouiMap = new HashMap<String, Vendor>();
+    private Map<String, Vendor> ouiMap;
 
-		InputStream in = this.getClass().getResourceAsStream("/mac-oui.txt");
-		InputStreamReader isr = null;
-		if (in == null) {
-			isr = new InputStreamReader(ClassLoader.getSystemResourceAsStream("mac-oui.txt"));
-		} else {
-			isr = new InputStreamReader(in);
-		}
-		BufferedReader br = new BufferedReader(isr);
+    private String _txtPath;
+    private String _txtName;
 
-		while (true) {
-			String line;
-			try {
-				line = br.readLine();
-				if (line == null)
-					break;
+    public DefaultMacLookupService() {
 
-				Vendor vendor = buildVendor(line);
-				if (vendor != null)
-					ouiMap.put(vendor.getOui(), vendor);
-			} catch (IOException e) {
-				e.printStackTrace();
-				break;
-			}
-		}
-	}
+        ouiMap = new HashMap<String, Vendor>();
 
-	@Override
-	public Vendor find(String oui) {
-		if (oui == null)
-			return null;
+        InputStream in = this.getClass().getResourceAsStream("/mac-oui.txt");
+        InputStreamReader isr = null;
+        if (in == null) {
+            isr = new InputStreamReader(ClassLoader.getSystemResourceAsStream("mac-oui.txt"));
+        } else {
+            isr = new InputStreamReader(in);
+        }
+        BufferedReader br = new BufferedReader(isr);
 
-		return ouiMap.get(oui.toUpperCase());
-	}
+        while (true) {
+            String line;
+            try {
+                line = br.readLine();
+                if (line == null) {
+                    break;
+                }
 
-	@Override
-	public Vendor findByMac(String mac) {
-		mac = mac.trim().replace("-", "").replace(":", "");
-		return find(mac.substring(0, 6));
-	}
+                Vendor vendor = buildVendor(line);
+                if (vendor != null) {
+                    ouiMap.put(vendor.getOui(), vendor);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                break;
+            }
+        }
+    }
 
-	private Vendor buildVendor(String line) {
-		Vendor vendor = new Vendor();
-		String[] tokens = line.split("\\|");
-		if (tokens.length != 4)
-			return null;
+    public DefaultMacLookupService(String txtPath, String txtName) {
 
-		vendor.setOui(tokens[0]);
-		vendor.setName(tokens[1]);
-		vendor.setAddress(tokens[2]);
-		vendor.setCountry(tokens[3]);
-		return vendor;
-	}
+        _txtPath = txtPath;
+        _txtName = txtName;
+        ouiMap = new HashMap<String, Vendor>();
+
+        InputStream in = this.getClass().getResourceAsStream(txtPath+txtName);
+        InputStreamReader isr = null;
+        if (in == null) {
+            isr = new InputStreamReader(ClassLoader.getSystemResourceAsStream(txtName));
+        } else {
+            isr = new InputStreamReader(in);
+        }
+        BufferedReader br = new BufferedReader(isr);
+
+        while (true) {
+            String line;
+            try {
+                line = br.readLine();
+                if (line == null) {
+                    break;
+                }
+
+                Vendor vendor = buildVendor(line);
+                if (vendor != null) {
+                    ouiMap.put(vendor.getOui(), vendor);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                break;
+            }
+        }
+
+    }
+
+    @Override
+    public Vendor find(String oui) {
+        if (oui == null) {
+            return null;
+        }
+
+        return ouiMap.get(oui.toUpperCase());
+    }
+
+    @Override
+    public Vendor findByMac(String mac) {
+        mac = mac.trim().replace("-", "").replace(":", "");
+        return find(mac.substring(0, 6));
+    }
+
+    private Vendor buildVendor(String line) {
+        Vendor vendor = new Vendor();
+        String[] tokens = line.split("\\|");
+        if (tokens.length != 4) {
+            return null;
+        }
+
+        vendor.setOui(tokens[0]);
+        vendor.setName(tokens[1]);
+        vendor.setAddress(tokens[2]);
+        vendor.setCountry(tokens[3]);
+        return vendor;
+    }
+
+    public void setFile (String txtPath, String txtName){
+        _txtPath = txtPath;
+        _txtName = txtName;
+    }
+    
+    public String getFile (){
+        return _txtPath+_txtName;
+    }
+    
+    public String [] getFileArray (){
+        String [] aux = new String[2];
+        aux[0]=_txtPath;
+        aux[1]=_txtName;
+        return aux;
+    }
+           
 }
